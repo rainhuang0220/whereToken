@@ -67,6 +67,10 @@ wheretoken completion zsh          # also bash, fish, powershell
 
 Checked-in scripts: [`completions/`](completions/). Manual page: [`docs/wheretoken.1`](docs/wheretoken.1).
 
+```bash
+wheretoken completion zsh > ~/.zfunc/_wheretoken   # then add ~/.zfunc to fpath
+```
+
 **Tool ≠ vendor.** Claude Code running MiniMax still counts as tool Claude Code, vendor MiniMax.
 
 Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failure, `2` usage (unknown command / tool / vendor / model).
@@ -83,7 +87,7 @@ Opens [http://127.0.0.1:8787](http://127.0.0.1:8787). **刷新** rescans disk (a
 
 ## Privacy
 
-Read-only local ledgers. HTTP binds `127.0.0.1` only. No telemetry. The CLI never prints JWTs or access tokens. Do not paste secrets into issues.
+Read-only local ledgers. HTTP binds `127.0.0.1` only. No telemetry. The CLI never prints JWTs or access tokens. Do not paste secrets into issues. See [`SECURITY.md`](SECURITY.md).
 
 Paths come from the current user home (`os.UserHomeDir`, XDG, `~/Library/Application Support`, `%APPDATA%`). Missing dirs are skipped. Extra homes: `WHERETOKEN_EXTRA_ROOTS` (Unix `:`, Windows `;`, commas also work). Codex also reads `CODEX_HOME`. `WHERETOKEN_HOME` / `--home` fake a home for tests. `NO_COLOR` and `WHERETOKEN_ASCII=1` control the table.
 

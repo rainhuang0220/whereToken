@@ -27,7 +27,7 @@ FLAGS
   --model NAME         slice by model id
   --claude --kimi --codex --opencode --cursor --trae
                        same as --tool=that-id
-  --json               JSON on stdout (tables are the default)
+  --json               JSON on stdout (schema 1; tables stay the default)
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
@@ -59,8 +59,11 @@ EXAMPLES
   wheretoken
   wheretoken --today
   wheretoken --cursor
+  wheretoken --today --cursor
   wheretoken --tool=claude --json
+  wheretoken --offline --quiet
   wheretoken serve
+  wheretoken completion zsh
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
 `
