@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
@@ -46,9 +49,33 @@ func run(args []string) error {
 		}
 		return nil
 	case "serve":
-		fmt.Fprintln(os.Stderr, "not implemented")
-		os.Exit(2)
-		return nil
+		fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+		port := fs.Int("port", 8787, "port")
+		home := fs.String("home", "", "override home directory")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		h := resolveHome(*home)
+		start, end := *port, *port
+		if *port == 8787 {
+			end = 8797
+		}
+		var lastErr error
+		for p := start; p <= end; p++ {
+			addr := fmt.Sprintf("127.0.0.1:%d", p)
+			ln, err := net.Listen("tcp", addr)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "http://%s\n", addr)
+			srv := &http.Server{Addr: addr, Handler: httpapi.NewMux(h)}
+			return srv.Serve(ln)
+		}
+		if lastErr == nil {
+			lastErr = fmt.Errorf("no port available")
+		}
+		return lastErr
 	default:
 		return fmt.Errorf("unknown command %q", cmd)
 	}
