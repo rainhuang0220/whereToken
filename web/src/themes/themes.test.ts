@@ -189,3 +189,56 @@ describe('no leftover kiln paint outside the pack', () => {
     }
   })
 })
+
+function ruleBody(css: string, selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]+)\\}`))
+  expect(match, `missing ${selector} rule`).toBeTruthy()
+  return match![1]
+}
+
+describe('flat GitHub-like kiln wall', () => {
+  const css = readFileSync(join(SRC_ROOT, 'styles.css'), 'utf8')
+
+  it('does not use 3D shadows, glow, glass blend, or tile pop animation', () => {
+    expect(css).not.toMatch(/box-shadow\s*:/)
+    expect(css).not.toMatch(/translateY\s*\(/)
+    expect(css).not.toMatch(/mix-blend-mode/)
+    expect(css).not.toMatch(/@keyframes\s+fire-in/)
+    expect(css).not.toMatch(/radial-gradient/)
+  })
+
+  it('does not wash panels with transparent color-mix fog outside selection', () => {
+    const stripped = css.replace(/::selection\s*\{[^}]+\}/g, '')
+    expect(stripped).not.toMatch(/color-mix\([^;{}]+transparent/)
+  })
+
+  it('renders bricks as tiny-radius flat fills with a clay/mortar hairline', () => {
+    const brick = ruleBody(css, '.brick')
+    expect(brick).toMatch(/border-radius:\s*2px/)
+    expect(brick).toMatch(/background:\s*var\(--clay\)/)
+    expect(brick).toMatch(/border:\s*1px solid var\(--(?:clay|mortar)\)/)
+    expect(brick).not.toMatch(/animation\s*:/)
+    expect(brick).not.toMatch(/transform\s*:/)
+  })
+
+  it('keeps empty days as a visible clay fill, not a transparent hole', () => {
+    const empty = ruleBody(css, ".brick[data-kind='empty']")
+    expect(empty).toMatch(/background:\s*var\(--clay\)/)
+    expect(empty).not.toMatch(/background:\s*transparent/)
+    const future = ruleBody(css, ".brick[data-kind='future']")
+    expect(future).not.toMatch(/background:\s*transparent/)
+  })
+
+  it('marks the peak day with a 2px flat outline instead of a halo', () => {
+    const peak = ruleBody(css, '.brick.peak')
+    expect(peak).toMatch(/outline:\s*2px solid var\(--ember-4\)/)
+    expect(peak).not.toMatch(/box-shadow/)
+  })
+
+  it('does not lift bricks on hover', () => {
+    const hover = ruleBody(css, '.brick:hover')
+    expect(hover).not.toMatch(/translateY/)
+    expect(hover).not.toMatch(/transform/)
+  })
+})

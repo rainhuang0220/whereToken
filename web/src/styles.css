@@ -24,33 +24,6 @@ body {
   font-family: var(--font-ui);
 }
 
-body {
-  background-image:
-    radial-gradient(ellipse 90% 55% at 12% -8%, color-mix(in srgb, var(--glow) 16%, transparent), transparent 52%),
-    radial-gradient(ellipse 50% 40% at 100% 100%, color-mix(in srgb, var(--ember-1) 55%, transparent), transparent 60%);
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 8;
-  opacity: 0.07;
-  background-image: repeating-radial-gradient(
-    circle at 18% 32%,
-    color-mix(in srgb, var(--hi) 35%, transparent) 0 0.6px,
-    transparent 0.8px 3px
-  );
-  mix-blend-mode: overlay;
-}
-
-html[data-theme='moss'] body::before,
-html[data-theme='porcelain'] body::before {
-  mix-blend-mode: multiply;
-  opacity: 0.045;
-}
-
 ::selection {
   background: color-mix(in srgb, var(--ember-3) 42%, var(--void));
   color: var(--bone);
@@ -95,7 +68,7 @@ html[data-theme='porcelain'] body::before {
   justify-content: space-between;
   align-items: flex-end;
   gap: 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--copper) 35%, transparent);
+  border-bottom: 1px solid var(--copper);
   padding-bottom: 0.85rem;
 }
 
@@ -134,7 +107,7 @@ h1 {
 }
 
 .lever:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ember-3) 12%, transparent);
+  background: var(--clay);
   border-color: var(--ember-4);
 }
 
@@ -155,8 +128,8 @@ h1 {
   width: 1.55rem;
   height: 1.55rem;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--copper) 50%, transparent);
-  background: color-mix(in srgb, var(--clay) 70%, var(--void));
+  border: 1px solid var(--copper);
+  background: var(--clay);
   color: var(--bone);
   font-family: var(--font-display);
   font-size: 0.8rem;
@@ -267,10 +240,7 @@ h1 {
   gap: var(--gap);
   background: var(--mortar);
   padding: 5px;
-  border: 1px solid color-mix(in srgb, var(--copper) 42%, transparent);
-  box-shadow:
-    inset 0 0 18px color-mix(in srgb, var(--lo) 55%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--hi) 6%, transparent);
+  border: 1px solid var(--copper);
 }
 
 .brick {
@@ -284,16 +254,10 @@ h1 {
   height: var(--cell);
   padding: 0;
   margin: 0;
-  border: 0;
-  border-radius: 1px;
+  border: 1px solid var(--mortar);
+  border-radius: 2px;
   background: var(--clay);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--hi) 22%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--lo) 50%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--hi) 16%, transparent);
   cursor: default;
-  animation: fire-in 0.28s ease-out both;
-  animation-delay: calc(var(--w, 0) * 12ms);
 }
 
 .brick[data-kind='empty'] {
@@ -301,29 +265,21 @@ h1 {
 }
 
 .brick[data-kind='future'] {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--copper) 28%, transparent);
+  background: var(--mortar);
+  border-color: var(--clay);
 }
 
 .brick[data-kind='lit'][data-level='1'] { background: var(--ember-1); }
 .brick[data-kind='lit'][data-level='2'] { background: var(--ember-2); }
 .brick[data-kind='lit'][data-level='3'] { background: var(--ember-3); }
-.brick[data-kind='lit'][data-level='4'] {
-  background: var(--ember-4);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--hi) 45%, transparent),
-    0 0 8px color-mix(in srgb, var(--ember-4) 45%, transparent);
+.brick[data-kind='lit'][data-level='4'] { background: var(--ember-4); }
+
+.brick:hover {
+  outline: 1px solid var(--copper);
 }
 
 .brick.peak {
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--hi) 50%, transparent),
-    0 0 12px color-mix(in srgb, var(--ember-4) 80%, transparent);
-  outline: 1px solid var(--ember-4);
-}
-
-.brick:hover {
-  transform: translateY(-1px);
+  outline: 2px solid var(--ember-4);
 }
 
 .legend,
@@ -348,12 +304,9 @@ h1 {
   display: block;
   width: var(--cell);
   height: var(--cell);
-  border-radius: 1px;
+  border-radius: 2px;
   background: var(--clay);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--hi) 22%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--lo) 50%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--hi) 16%, transparent);
+  border: 1px solid var(--mortar);
 }
 
 .legend i[data-kind='lit'][data-level='1'] { background: var(--ember-1); }
@@ -365,7 +318,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border-left: 1px solid color-mix(in srgb, var(--copper) 35%, transparent);
+  border-left: 1px solid var(--copper);
   padding-left: 1.1rem;
 }
 
@@ -409,8 +362,8 @@ h1 {
   grid-template-columns: 1.6fr repeat(5, 1fr);
   gap: 0;
   margin: 0 0 1.6rem;
-  border-top: 1px solid color-mix(in srgb, var(--copper) 40%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--copper) 40%, transparent);
+  border-top: 1px solid var(--copper);
+  border-bottom: 1px solid var(--copper);
 }
 
 .read-lead,
@@ -419,7 +372,7 @@ h1 {
 }
 
 .read-cell {
-  border-left: 1px solid color-mix(in srgb, var(--copper) 22%, transparent);
+  border-left: 1px solid var(--mortar);
 }
 
 .read-k {
@@ -472,7 +425,7 @@ table {
 th,
 td {
   padding: 0.4rem 0.28rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--copper) 18%, transparent);
+  border-bottom: 1px solid var(--mortar);
   vertical-align: baseline;
 }
 
@@ -503,7 +456,7 @@ th {
 
 .ledger tbody tr:hover,
 .ledger tbody tr.on {
-  background: color-mix(in srgb, var(--ember-3) 8%, transparent);
+  background: var(--mortar);
 }
 
 .ledger tbody tr.absent {
@@ -573,25 +526,6 @@ th {
   border: 0;
 }
 
-@keyframes fire-in {
-  from {
-    filter: brightness(0.45);
-  }
-  to {
-    filter: brightness(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brick {
-    animation: none;
-  }
-
-  .brick:hover {
-    transform: none;
-  }
-}
-
 @media (max-width: 900px) {
   .hearth,
   .split,
@@ -602,7 +536,7 @@ th {
 
   .marks {
     border-left: 0;
-    border-top: 1px solid color-mix(in srgb, var(--copper) 35%, transparent);
+    border-top: 1px solid var(--copper);
     padding: 1rem 0 0;
     flex-direction: row;
     flex-wrap: wrap;
@@ -610,7 +544,7 @@ th {
 
   .read-cell {
     border-left: 0;
-    border-top: 1px solid color-mix(in srgb, var(--copper) 22%, transparent);
+    border-top: 1px solid var(--mortar);
   }
 
   .rail-meta {

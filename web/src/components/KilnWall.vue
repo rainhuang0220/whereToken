@@ -54,7 +54,6 @@ function leave() {
           :class="{ peak: c.date === peakDate && c.kind === 'lit' }"
           :data-kind="c.kind"
           :data-level="String(c.level)"
-          :style="{ '--w': String(c.weekIndex) }"
           :title="tip(c)"
           @pointerenter="enter(c)"
         />
