@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { githubAsset } = require('./platform')
+const { githubAsset, parseChecksum } = require('./platform')
 
 test('darwin arm64 matches goreleaser archive', () => {
   const a = githubAsset({ version: '0.1.0', platform: 'darwin', arch: 'arm64' })
@@ -33,4 +33,16 @@ test('strips leading v once', () => {
 test('rejects unsupported arch', () => {
   const a = githubAsset({ version: '0.1.0', platform: 'darwin', arch: 'ia32' })
   assert.ok(a.error)
+})
+
+test('parseChecksum reads goreleaser checksums.txt', () => {
+  const text = [
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  wheretoken_darwin_arm64.tar.gz',
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  wheretoken_windows_amd64.zip',
+  ].join('\n')
+  assert.equal(
+    parseChecksum(text, 'wheretoken_windows_amd64.zip'),
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  )
+  assert.equal(parseChecksum(text, 'missing.bin'), '')
 })

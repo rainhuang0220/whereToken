@@ -66,6 +66,20 @@ if ! curl -fsSL -o "$tmp/$asset" "$url"; then
   echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
   exit 1
 fi
+sums_url="https://github.com/${REPO}/releases/download/v${version}/checksums.txt"
+if ! curl -fsSL -o "$tmp/checksums.txt" "$sums_url"; then
+  echo "wheretoken: no checksums.txt for v${version}; refusing to install" >&2
+  echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
+  exit 1
+fi
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$tmp" && grep -F "$asset" checksums.txt | sha256sum -c -)
+elif command -v shasum >/dev/null 2>&1; then
+  (cd "$tmp" && grep -F "$asset" checksums.txt | shasum -a 256 -c -)
+else
+  echo "wheretoken: need sha256sum or shasum to verify the download" >&2
+  exit 1
+fi
 tar -xzf "$tmp/$asset" -C "$tmp"
 bin=""
 if [ -f "$tmp/wheretoken" ]; then

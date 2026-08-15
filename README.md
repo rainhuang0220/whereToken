@@ -27,7 +27,7 @@ From a clone with Homebrew:
 brew install --HEAD Formula/wheretoken.rb
 ```
 
-`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet).
+`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet). Release installers verify **SHA-256** against `checksums.txt`.
 
 ## What you see
 
@@ -79,6 +79,8 @@ wheretoken completion zsh > ~/.zfunc/_wheretoken   # then add ~/.zfunc to fpath
 ```
 
 **Tool ≠ vendor.** Claude Code running MiniMax still counts as tool Claude Code, vendor MiniMax.
+
+`--json` is **schema 1**: `period`, `total`, `total_m`, `hit_rate`, `requests`, `user_turns`, `tools`, `vendors`, `notes`. Each tool/vendor row includes raw `total` plus `total_m`. `--today` adds `models` and omits `last_7d` / streaks.
 
 Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failure, `2` usage (unknown command / tool / vendor / model).
 

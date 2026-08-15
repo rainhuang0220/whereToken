@@ -5,8 +5,8 @@ const fs = require('fs')
 const http = require('https')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
-const { githubAsset } = require('./lib/platform')
+const crypto = require('crypto')
+const { githubAsset, parseChecksum } = require('./lib/platform')
 
 const pkg = require('./package.json')
 const destDir = path.join(__dirname, 'bin')
@@ -95,8 +95,19 @@ async function main() {
     return
   }
   const tmp = path.join(os.tmpdir(), asset.name)
+  const sumsPath = path.join(os.tmpdir(), `wheretoken-${pkg.version}-checksums.txt`)
   try {
     await download(asset.url, tmp)
+    const sumsUrl = asset.url.replace(/\/[^/]+$/, '/checksums.txt')
+    await download(sumsUrl, sumsPath)
+    const want = parseChecksum(fs.readFileSync(sumsPath, 'utf8'), asset.name)
+    if (!want) {
+      throw new Error(`checksums.txt did not list ${asset.name}`)
+    }
+    const got = crypto.createHash('sha256').update(fs.readFileSync(tmp)).digest('hex')
+    if (got !== want) {
+      throw new Error(`SHA256 mismatch for ${asset.name}`)
+    }
     extract(tmp, asset.ext, asset.binary)
   } catch (err) {
     if (err.statusCode === 404) {
@@ -110,6 +121,11 @@ async function main() {
   } finally {
     try {
       fs.unlinkSync(tmp)
+    } catch {
+      // ignore
+    }
+    try {
+      fs.unlinkSync(sumsPath)
     } catch {
       // ignore
     }

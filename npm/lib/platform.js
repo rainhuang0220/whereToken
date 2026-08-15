@@ -19,4 +19,18 @@ function githubAsset({ version, platform, arch }) {
   }
 }
 
-module.exports = { githubAsset }
+function parseChecksum(text, name) {
+  const want = String(name || '')
+  if (!want) return ''
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const parts = line.trim().split(/\s+/)
+    if (parts.length < 2) continue
+    const file = parts[parts.length - 1].replace(/^\*/, '')
+    if (file === want || file.endsWith('/' + want)) {
+      return parts[0].toLowerCase()
+    }
+  }
+  return ''
+}
+
+module.exports = { githubAsset, parseChecksum }

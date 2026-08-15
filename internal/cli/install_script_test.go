@@ -24,6 +24,7 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		"github.com/rainhuang0220/whereToken",
 		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
 		"darwin", "linux", "amd64", "arm64",
+		"checksums.txt", "sha256",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.sh missing %q", want)
@@ -51,6 +52,8 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
 		"amd64", "arm64",
 		"npm install -g wheretoken",
+		"checksums.txt",
+		"SHA256",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.ps1 missing %q", want)

@@ -34,7 +34,7 @@ FLAGS
   -q, --quiet          no scan-progress lines on stderr
   --offline            local ledgers only; skip Cursor/Trae account APIs
   --home DIR           fake home directory (tests)
-  --width N            cap ranking table width (COLUMNS does the same)
+  --width N            cap ranking width; drop 回合/请求 before truncating names
 
 ENV
   NO_COLOR             disable ANSI (same as --no-color)

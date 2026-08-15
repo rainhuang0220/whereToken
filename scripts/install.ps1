@@ -41,6 +41,18 @@ try {
   $zip = Join-Path $tmp $asset
   Write-Host "wheretoken: downloading $url"
   Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+  $sumsUrl = "https://github.com/$repo/releases/download/v$version/checksums.txt"
+  $sums = Join-Path $tmp 'checksums.txt'
+  try {
+    Invoke-WebRequest -Uri $sumsUrl -OutFile $sums -UseBasicParsing
+  } catch {
+    throw "no checksums.txt for v$version; refusing to install"
+  }
+  $line = Get-Content $sums | Where-Object { $_ -like "*$asset*" } | Select-Object -First 1
+  if (-not $line) { throw "checksums.txt did not list $asset" }
+  $want = ($line -split '\s+')[0].ToLower()
+  $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+  if ($got -ne $want) { throw "SHA256 mismatch for $asset" }
   Expand-Archive -Path $zip -DestinationPath $tmp -Force
   $exe = Get-ChildItem -Path $tmp -Filter wheretoken.exe -Recurse | Select-Object -First 1
   if (-not $exe) { throw 'archive had no wheretoken.exe' }

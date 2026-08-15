@@ -19,3 +19,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Hide the model ranking when every model is 0.00 M (offline Cursor was a 40-row zero dump)
 - Redact `openai-api-key` / `anthropic-api-key` headers the same way as JWTs
 - CI copies pin GitHub Actions to commit SHAs (checkout v4.2.2, setup-go v5.5.0, setup-node v4.4.0)
+- `install.sh` / `install.ps1` / npm postinstall verify `checksums.txt` (SHA-256) before installing a GitHub Release binary
