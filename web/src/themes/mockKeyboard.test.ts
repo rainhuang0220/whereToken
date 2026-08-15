@@ -112,6 +112,95 @@ describe('gallery mock keyboard', () => {
     expect(() => applyRelease(el, { reduced: true })).not.toThrow()
   })
 
+  it('gives every layout key a rest zone and glaze token, never void or reserved ember-4', () => {
+    const forbidden = new Set(['void', 'clay', 'bone', 'ember-4', 'transparent'])
+    const zones = new Set(['alpha', 'num', 'fn', 'mod', 'arrow', 'space'])
+    const seen = new Set<string>()
+
+    for (const row of MAIN_ROWS) {
+      for (const slot of row) {
+        if (isGap(slot)) continue
+        const key = slot as { code: string; zone?: string; rest?: string; pressed?: string }
+        expect(zones.has(key.zone ?? ''), `${key.code} zone`).toBe(true)
+        expect(key.rest, `${key.code} rest`).toMatch(/^ember-[123]$/)
+        expect(forbidden.has(key.rest ?? ''), `${key.code} rest ${key.rest}`).toBe(false)
+        seen.add(key.code)
+      }
+    }
+
+    expect(seen.size).toBe(KEY_CODES.size)
+  })
+
+  it('paints letter, number, F, modifier, arrow, and space as shade bands of one glaze', () => {
+    const restOf = (code: string) => {
+      for (const row of MAIN_ROWS) {
+        for (const slot of row) {
+          if (!isGap(slot) && slot.code === code) {
+            return slot as { zone: string; rest: string; pressed: string }
+          }
+        }
+      }
+      throw new Error(`missing ${code}`)
+    }
+
+    expect(restOf('KeyA')).toMatchObject({ zone: 'alpha', rest: 'ember-1', pressed: 'ember-2' })
+    expect(restOf('KeyP')).toMatchObject({ zone: 'alpha', rest: 'ember-1', pressed: 'ember-2' })
+    expect(restOf('Comma')).toMatchObject({ zone: 'alpha', rest: 'ember-1', pressed: 'ember-2' })
+    expect(restOf('Quote')).toMatchObject({ zone: 'alpha', rest: 'ember-1', pressed: 'ember-2' })
+    expect(restOf('Backquote')).toMatchObject({ zone: 'num', rest: 'ember-2', pressed: 'ember-3' })
+    expect(restOf('Digit1')).toMatchObject({ zone: 'num', rest: 'ember-2', pressed: 'ember-3' })
+    expect(restOf('Equal')).toMatchObject({ zone: 'num', rest: 'ember-2', pressed: 'ember-3' })
+    expect(restOf('F1')).toMatchObject({ zone: 'fn', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('F12')).toMatchObject({ zone: 'fn', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('Escape')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('Tab')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('CapsLock')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('ShiftLeft')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('Backspace')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('Enter')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('Fn')).toMatchObject({ zone: 'mod', rest: 'ember-3', pressed: 'ember-4' })
+    expect(restOf('ArrowUp')).toMatchObject({ zone: 'arrow', rest: 'ember-2', pressed: 'ember-3' })
+    expect(restOf('ArrowLeft')).toMatchObject({ zone: 'arrow', rest: 'ember-2', pressed: 'ember-3' })
+    expect(restOf('Space')).toMatchObject({ zone: 'space', rest: 'ember-3', pressed: 'ember-4' })
+  })
+
+  it('steps press one shade darker in the ember ramp, never black or void', () => {
+    const next: Record<string, string> = {
+      'ember-1': 'ember-2',
+      'ember-2': 'ember-3',
+      'ember-3': 'ember-4',
+    }
+
+    for (const row of MAIN_ROWS) {
+      for (const slot of row) {
+        if (isGap(slot)) continue
+        const key = slot as { code: string; rest?: string; pressed?: string }
+        expect(key.rest, `${key.code} rest`).toMatch(/^ember-[123]$/)
+        expect(key.pressed, key.code).toBe(next[key.rest ?? ''])
+        expect(key.pressed).not.toBe('void')
+        expect(key.pressed).not.toBe('bone')
+        expect(String(key.pressed)).not.toMatch(/#000/)
+      }
+    }
+
+    const css = readFileSync(join(DIR, '..', 'styles.css'), 'utf8')
+    const down = css.match(/\.kb-key\.is-down\s*\{([^}]+)\}/)
+    expect(down, 'missing .kb-key.is-down').toBeTruthy()
+    expect(down![1]).toMatch(/background:\s*var\(--key-pressed\)/)
+    expect(down![1]).not.toMatch(/#000|#000000|var\(--void\)|var\(--bone\)/)
+    expect(css).not.toMatch(/\.kb-key\[data-fill='void'\]/)
+    expect(css).toMatch(/\[data-zone='alpha'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-1\)/)
+    expect(css).toMatch(/\[data-zone='num'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-2\)/)
+    expect(css).toMatch(/\[data-zone='fn'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-3\)/)
+    expect(css).toMatch(/\[data-zone='mod'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-3\)/)
+    expect(css).toMatch(/\[data-zone='arrow'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-2\)/)
+    expect(css).toMatch(/\[data-zone='space'\][^{]*\{[^}]*--key-rest:\s*var\(--ember-3\)/)
+
+    const vue = readFileSync(join(DIR, 'MockKeyboard.vue'), 'utf8')
+    expect(vue).toMatch(/:data-zone="slot\.zone"/)
+    expect(vue).not.toMatch(/data-fill/)
+  })
+
   it('rounds keycaps like inner bricks, slightly more, never stadium pills', () => {
     const css = readFileSync(join(DIR, '..', 'styles.css'), 'utf8')
     function rule(selector: string): string {

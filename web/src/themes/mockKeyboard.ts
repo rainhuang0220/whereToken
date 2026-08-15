@@ -1,82 +1,42 @@
 import gsap from 'gsap'
 
-export type KeyFill = 'clay' | 'void' | 'bone' | 'ember-1' | 'ember-2' | 'ember-3' | 'ember-4'
+export type KeyZone = 'alpha' | 'num' | 'fn' | 'mod' | 'arrow' | 'space'
+export type EmberToken = 'ember-1' | 'ember-2' | 'ember-3' | 'ember-4'
+export type RestToken = 'ember-1' | 'ember-2' | 'ember-3'
+
+export const RESERVED_PRESS: EmberToken = 'ember-4'
+
+export const ZONE_REST = {
+  alpha: 'ember-1',
+  num: 'ember-2',
+  fn: 'ember-3',
+  mod: 'ember-3',
+  arrow: 'ember-2',
+  space: 'ember-3',
+} as const satisfies Record<KeyZone, RestToken>
+
+export const PRESS_FROM_REST = {
+  'ember-1': 'ember-2',
+  'ember-2': 'ember-3',
+  'ember-3': 'ember-4',
+} as const satisfies Record<RestToken, EmberToken>
 
 export type KeySpec = {
   code: string
   label: string
   u: number
-  fill: KeyFill
+  zone: KeyZone
+  rest: RestToken
+  pressed: EmberToken
 }
 
 export type Gap = { gap: number }
 
 export type Slot = KeySpec | Gap
 
-const EMBERS: KeyFill[] = ['ember-1', 'ember-2', 'ember-3', 'ember-4']
-
-const ALPHA_FILL: Record<string, KeyFill> = {
-  Backquote: 'ember-1',
-  Digit1: 'ember-2',
-  Digit2: 'ember-1',
-  Digit3: 'ember-2',
-  Digit4: 'ember-3',
-  Digit5: 'ember-2',
-  Digit6: 'ember-1',
-  Digit7: 'ember-2',
-  Digit8: 'ember-3',
-  Digit9: 'ember-1',
-  Digit0: 'ember-2',
-  Minus: 'ember-1',
-  Equal: 'ember-2',
-  KeyQ: 'ember-2',
-  KeyW: 'ember-1',
-  KeyE: 'ember-3',
-  KeyR: 'ember-2',
-  KeyT: 'ember-1',
-  KeyY: 'ember-2',
-  KeyU: 'ember-3',
-  KeyI: 'ember-2',
-  KeyO: 'ember-3',
-  KeyP: 'ember-1',
-  BracketLeft: 'ember-2',
-  BracketRight: 'ember-1',
-  Backslash: 'ember-2',
-  KeyA: 'ember-3',
-  KeyS: 'ember-3',
-  KeyD: 'ember-4',
-  KeyF: 'ember-3',
-  KeyG: 'ember-2',
-  KeyH: 'ember-2',
-  KeyJ: 'ember-4',
-  KeyK: 'ember-3',
-  KeyL: 'ember-3',
-  Semicolon: 'ember-2',
-  Quote: 'ember-1',
-  KeyZ: 'ember-1',
-  KeyX: 'ember-2',
-  KeyC: 'ember-2',
-  KeyV: 'ember-3',
-  KeyB: 'ember-1',
-  KeyN: 'ember-2',
-  KeyM: 'ember-3',
-  Comma: 'ember-1',
-  Period: 'ember-2',
-  Slash: 'ember-1',
-}
-
-function ember(code: string, salt: number): KeyFill {
-  let n = salt
-  for (let i = 0; i < code.length; i++) n = (n * 33 + code.charCodeAt(i)) >>> 0
-  return EMBERS[n % 4]
-}
-
-function alpha(code: string, label: string, u = 1): KeySpec {
-  return { code, label, u, fill: ALPHA_FILL[code] ?? ember(code, 3) }
-}
-
-function mod(code: string, label: string, u: number): KeySpec {
-  return { code, label, u, fill: 'clay' }
+function key(code: string, label: string, u: number, zone: KeyZone): KeySpec {
+  const rest = ZONE_REST[zone]
+  return { code, label, u, zone, rest, pressed: PRESS_FROM_REST[rest] }
 }
 
 export function isGap(slot: Slot): slot is Gap {
@@ -85,98 +45,98 @@ export function isGap(slot: Slot): slot is Gap {
 
 export const MAIN_ROWS: Slot[][] = [
   [
-    mod('Escape', 'esc', 1),
-    mod('F1', 'f1', 1),
-    mod('F2', 'f2', 1),
-    mod('F3', 'f3', 1),
-    mod('F4', 'f4', 1),
-    mod('F5', 'f5', 1),
-    mod('F6', 'f6', 1),
-    mod('F7', 'f7', 1),
-    mod('F8', 'f8', 1),
-    mod('F9', 'f9', 1),
-    mod('F10', 'f10', 1),
-    mod('F11', 'f11', 1),
-    mod('F12', 'f12', 1),
-    mod('PrintScreen', 'scr', 1),
-    mod('Delete', 'del', 1),
-    mod('Power', 'pwr', 1),
+    key('Escape', 'esc', 1, 'mod'),
+    key('F1', 'f1', 1, 'fn'),
+    key('F2', 'f2', 1, 'fn'),
+    key('F3', 'f3', 1, 'fn'),
+    key('F4', 'f4', 1, 'fn'),
+    key('F5', 'f5', 1, 'fn'),
+    key('F6', 'f6', 1, 'fn'),
+    key('F7', 'f7', 1, 'fn'),
+    key('F8', 'f8', 1, 'fn'),
+    key('F9', 'f9', 1, 'fn'),
+    key('F10', 'f10', 1, 'fn'),
+    key('F11', 'f11', 1, 'fn'),
+    key('F12', 'f12', 1, 'fn'),
+    key('PrintScreen', 'scr', 1, 'mod'),
+    key('Delete', 'del', 1, 'mod'),
+    key('Power', 'pwr', 1, 'mod'),
   ],
   [
-    alpha('Backquote', '`'),
-    alpha('Digit1', '1'),
-    alpha('Digit2', '2'),
-    alpha('Digit3', '3'),
-    alpha('Digit4', '4'),
-    alpha('Digit5', '5'),
-    alpha('Digit6', '6'),
-    alpha('Digit7', '7'),
-    alpha('Digit8', '8'),
-    alpha('Digit9', '9'),
-    alpha('Digit0', '0'),
-    alpha('Minus', '-'),
-    alpha('Equal', '='),
-    mod('Backspace', 'delete', 3),
+    key('Backquote', '`', 1, 'num'),
+    key('Digit1', '1', 1, 'num'),
+    key('Digit2', '2', 1, 'num'),
+    key('Digit3', '3', 1, 'num'),
+    key('Digit4', '4', 1, 'num'),
+    key('Digit5', '5', 1, 'num'),
+    key('Digit6', '6', 1, 'num'),
+    key('Digit7', '7', 1, 'num'),
+    key('Digit8', '8', 1, 'num'),
+    key('Digit9', '9', 1, 'num'),
+    key('Digit0', '0', 1, 'num'),
+    key('Minus', '-', 1, 'num'),
+    key('Equal', '=', 1, 'num'),
+    key('Backspace', 'delete', 3, 'mod'),
   ],
   [
-    mod('Tab', 'tab', 1.5),
-    alpha('KeyQ', 'Q'),
-    alpha('KeyW', 'W'),
-    alpha('KeyE', 'E'),
-    alpha('KeyR', 'R'),
-    alpha('KeyT', 'T'),
-    alpha('KeyY', 'Y'),
-    alpha('KeyU', 'U'),
-    alpha('KeyI', 'I'),
-    alpha('KeyO', 'O'),
-    alpha('KeyP', 'P'),
-    alpha('BracketLeft', '['),
-    alpha('BracketRight', ']'),
-    alpha('Backslash', '\\'),
-    mod('Home', 'home', 1),
+    key('Tab', 'tab', 1.5, 'mod'),
+    key('KeyQ', 'Q', 1, 'alpha'),
+    key('KeyW', 'W', 1, 'alpha'),
+    key('KeyE', 'E', 1, 'alpha'),
+    key('KeyR', 'R', 1, 'alpha'),
+    key('KeyT', 'T', 1, 'alpha'),
+    key('KeyY', 'Y', 1, 'alpha'),
+    key('KeyU', 'U', 1, 'alpha'),
+    key('KeyI', 'I', 1, 'alpha'),
+    key('KeyO', 'O', 1, 'alpha'),
+    key('KeyP', 'P', 1, 'alpha'),
+    key('BracketLeft', '[', 1, 'alpha'),
+    key('BracketRight', ']', 1, 'alpha'),
+    key('Backslash', '\\', 1, 'alpha'),
+    key('Home', 'home', 1, 'mod'),
   ],
   [
-    mod('CapsLock', 'caps', 1.75),
-    alpha('KeyA', 'A'),
-    alpha('KeyS', 'S'),
-    alpha('KeyD', 'D'),
-    alpha('KeyF', 'F'),
-    alpha('KeyG', 'G'),
-    alpha('KeyH', 'H'),
-    alpha('KeyJ', 'J'),
-    alpha('KeyK', 'K'),
-    alpha('KeyL', 'L'),
-    alpha('Semicolon', ';'),
-    alpha('Quote', "'"),
-    mod('Enter', 'return', 3.25),
+    key('CapsLock', 'caps', 1.75, 'mod'),
+    key('KeyA', 'A', 1, 'alpha'),
+    key('KeyS', 'S', 1, 'alpha'),
+    key('KeyD', 'D', 1, 'alpha'),
+    key('KeyF', 'F', 1, 'alpha'),
+    key('KeyG', 'G', 1, 'alpha'),
+    key('KeyH', 'H', 1, 'alpha'),
+    key('KeyJ', 'J', 1, 'alpha'),
+    key('KeyK', 'K', 1, 'alpha'),
+    key('KeyL', 'L', 1, 'alpha'),
+    key('Semicolon', ';', 1, 'alpha'),
+    key('Quote', "'", 1, 'alpha'),
+    key('Enter', 'return', 3.25, 'mod'),
   ],
   [
-    mod('ShiftLeft', 'shift', 2.25),
-    alpha('KeyZ', 'Z'),
-    alpha('KeyX', 'X'),
-    alpha('KeyC', 'C'),
-    alpha('KeyV', 'V'),
-    alpha('KeyB', 'B'),
-    alpha('KeyN', 'N'),
-    alpha('KeyM', 'M'),
-    alpha('Comma', ','),
-    alpha('Period', '.'),
-    alpha('Slash', '/'),
-    mod('ShiftRight', 'shift', 1.75),
-    mod('ArrowUp', '↑', 1),
-    mod('End', 'end', 1),
+    key('ShiftLeft', 'shift', 2.25, 'mod'),
+    key('KeyZ', 'Z', 1, 'alpha'),
+    key('KeyX', 'X', 1, 'alpha'),
+    key('KeyC', 'C', 1, 'alpha'),
+    key('KeyV', 'V', 1, 'alpha'),
+    key('KeyB', 'B', 1, 'alpha'),
+    key('KeyN', 'N', 1, 'alpha'),
+    key('KeyM', 'M', 1, 'alpha'),
+    key('Comma', ',', 1, 'alpha'),
+    key('Period', '.', 1, 'alpha'),
+    key('Slash', '/', 1, 'alpha'),
+    key('ShiftRight', 'shift', 1.75, 'mod'),
+    key('ArrowUp', '↑', 1, 'arrow'),
+    key('End', 'end', 1, 'mod'),
   ],
   [
-    mod('Fn', 'fn', 1.25),
-    mod('ControlLeft', 'control', 1.25),
-    mod('AltLeft', 'option', 1.25),
-    mod('MetaLeft', 'command', 1.5),
-    mod('Space', ' ', 5.25),
-    mod('MetaRight', 'command', 1.25),
-    mod('AltRight', 'option', 1.25),
-    mod('ArrowLeft', '←', 1),
-    mod('ArrowDown', '↓', 1),
-    mod('ArrowRight', '→', 1),
+    key('Fn', 'fn', 1.25, 'mod'),
+    key('ControlLeft', 'control', 1.25, 'mod'),
+    key('AltLeft', 'option', 1.25, 'mod'),
+    key('MetaLeft', 'command', 1.5, 'mod'),
+    key('Space', ' ', 5.25, 'space'),
+    key('MetaRight', 'command', 1.25, 'mod'),
+    key('AltRight', 'option', 1.25, 'mod'),
+    key('ArrowLeft', '←', 1, 'arrow'),
+    key('ArrowDown', '↓', 1, 'arrow'),
+    key('ArrowRight', '→', 1, 'arrow'),
   ],
 ]
 
@@ -238,8 +198,8 @@ export function applyPress(el: HTMLElement, opts: { reduced: boolean }) {
   if (opts.reduced) return
   el.style.willChange = 'transform'
   gsap.to(el, {
-    y: 2.4,
-    scaleY: 0.9,
+    y: 1,
+    scaleY: 0.98,
     duration: 0.07,
     ease: 'power2.out',
     overwrite: true,

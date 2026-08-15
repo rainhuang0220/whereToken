@@ -66,7 +66,11 @@ function onPointerUp(e: PointerEvent, code: string) {
 }
 
 function keyStyle(key: KeySpec): Record<string, string> {
-  return { '--u': String(key.u) }
+  return {
+    '--u': String(key.u),
+    '--key-rest': `var(--${key.rest})`,
+    '--key-pressed': `var(--${key.pressed})`,
+  }
 }
 
 function gapStyle(n: number): Record<string, string> {
@@ -99,7 +103,7 @@ onUnmounted(() => {
             class="kb-key"
             :class="{ wide: slot.u >= 4 }"
             :data-code="slot.code"
-            :data-fill="slot.fill"
+            :data-zone="slot.zone"
             :style="keyStyle(slot)"
             @pointerdown="onPointerDown($event, slot.code)"
             @pointerup="onPointerUp($event, slot.code)"

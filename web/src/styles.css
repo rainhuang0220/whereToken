@@ -832,7 +832,7 @@ body:has(.glaze-hall.is-open) {
   padding: 0.18em 0.32em 0.22em;
   border: 1px solid var(--mortar);
   border-radius: var(--key-radius, 4px);
-  background: var(--clay);
+  background: var(--key-rest);
   color: var(--bone);
   font-family: var(--font-mono);
   font-size: clamp(0.52rem, 1.05vw, 0.84rem);
@@ -845,26 +845,39 @@ body:has(.glaze-hall.is-open) {
   cursor: pointer;
 }
 
-.kb-key[data-fill='void'] {
-  background: var(--void);
-  color: var(--bone);
-  border-color: var(--clay);
+.kb-key[data-zone='alpha'] {
+  --key-rest: var(--ember-1);
+  --key-pressed: var(--ember-2);
 }
 
-.kb-key[data-fill='bone'] {
-  background: var(--bone);
-  color: var(--void);
+.kb-key[data-zone='num'] {
+  --key-rest: var(--ember-2);
+  --key-pressed: var(--ember-3);
 }
 
-.kb-key[data-fill='ember-1'] { background: var(--ember-1); }
-.kb-key[data-fill='ember-2'] { background: var(--ember-2); }
-.kb-key[data-fill='ember-3'] { background: var(--ember-3); }
-.kb-key[data-fill='ember-4'] {
-  background: var(--ember-4);
-  color: var(--void);
+.kb-key[data-zone='fn'] {
+  --key-rest: var(--ember-3);
+  --key-pressed: var(--ember-4);
 }
 
-.kb-key[data-fill='clay'] {
+.kb-key[data-zone='mod'] {
+  --key-rest: var(--ember-3);
+  --key-pressed: var(--ember-4);
+}
+
+.kb-key[data-zone='arrow'] {
+  --key-rest: var(--ember-2);
+  --key-pressed: var(--ember-3);
+}
+
+.kb-key[data-zone='space'] {
+  --key-rest: var(--ember-3);
+  --key-pressed: var(--ember-4);
+}
+
+.kb-key[data-zone='mod'],
+.kb-key[data-zone='fn'],
+.kb-key[data-zone='arrow'] {
   font-size: clamp(0.4rem, 0.82vw, 0.64rem);
   letter-spacing: 0.02em;
 }
@@ -875,15 +888,12 @@ body:has(.glaze-hall.is-open) {
 }
 
 .kb-key.is-down {
-  background: var(--ember-4);
-  color: var(--void);
+  background: var(--key-pressed);
 }
 
-.kb-key[data-fill='clay'].is-down,
-.kb-key[data-fill='void'].is-down,
-.kb-key[data-fill='ember-1'].is-down,
-.kb-key[data-fill='ember-4'].is-down {
-  background: var(--bone);
+.kb-key[data-zone='fn'].is-down,
+.kb-key[data-zone='mod'].is-down,
+.kb-key[data-zone='space'].is-down {
   color: var(--void);
 }
 
