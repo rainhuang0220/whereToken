@@ -326,7 +326,7 @@ Series: {
 - store 只存 payload + 当前 `axis: { kind: 'all'|'source'|'vendor', id: string }`。切轴是查表。
 - tooltip：`8月15日` / `12.40 M` 两行。未来格第二行 `未到`。
 - 无障碍：墙 `role="img"` + 文字摘要「过去 53 周一共 N 天有用量，峰值 DATE M，当前连烧 D 天」；caption `role="status"`，不靠 native `title`。
-- 釉色：首页只有 **主题** lever；`/themes` 每块釉自带空→热砖阶和 void/bone/ash/ember。点预览只改 `data-theme`（不写 storage）；**应用** 才写入 `localStorage['wheretoken.theme']` 并回到 `/`。浏览器后退未应用则恢复进入页时的釉。
+- 釉色：首页只有 **主题** lever；`/themes` 是 4×2 釉厅。点卡片 Flip 展开成该釉的首页缩样（不写 storage）；**应用** 才写入 `localStorage['wheretoken.theme']` 并回到 `/`。`/themes/:id` 可深链。浏览器后退未应用则收回收卡并恢复进入页时的釉。`qingmo` / `frost` 已删，读到则回 `kiln`。
 
 ---
 

@@ -6,6 +6,6 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: Home },
-    { path: '/themes', component: Themes },
+    { path: '/themes/:id?', component: Themes },
   ],
 })

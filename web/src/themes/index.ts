@@ -1,4 +1,5 @@
 export {
+  CHROME_TOKENS,
   DEFAULT_THEME,
   REQUIRED_TOKENS,
   STORAGE_KEY,
@@ -7,6 +8,8 @@ export {
   resolveThemeId,
   themeStylesheet,
   themes,
+  type ChromeName,
+  type ThemeChrome,
   type ThemeId,
   type ThemePack,
   type ThemeTokens,

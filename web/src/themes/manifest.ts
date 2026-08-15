@@ -1,7 +1,7 @@
 export const STORAGE_KEY = 'wheretoken.theme'
 export const DEFAULT_THEME = 'kiln' as const
 
-export const THEME_IDS = ['kiln', 'moss', 'porcelain', 'jiang', 'qingmo', 'frost', 'day', 'ink'] as const
+export const THEME_IDS = ['kiln', 'moss', 'porcelain', 'jiang', 'day', 'ink', 'cartoon', 'ledger'] as const
 export type ThemeId = (typeof THEME_IDS)[number]
 
 export const REQUIRED_TOKENS = [
@@ -25,11 +25,38 @@ export const REQUIRED_TOKENS = [
 export type TokenName = (typeof REQUIRED_TOKENS)[number]
 export type ThemeTokens = Record<TokenName, string>
 
+export const CHROME_TOKENS = [
+  'brick-radius',
+  'lever-radius',
+  'wall-radius',
+  'cell',
+  'gap',
+  'font-display',
+  'font-ui',
+  'font-mono',
+] as const
+
+export type ChromeName = (typeof CHROME_TOKENS)[number]
+export type ThemeChrome = Record<ChromeName, string>
+
 export type ThemePack = {
   id: ThemeId
   mark: string
   name: string
+  blurb: readonly string[]
   tokens: ThemeTokens
+  chrome: ThemeChrome
+}
+
+const FORGE_CHROME: ThemeChrome = {
+  'brick-radius': '2px',
+  'lever-radius': '0px',
+  'wall-radius': '0px',
+  cell: '13px',
+  gap: '4px',
+  'font-display': "'Big Shoulders Display', 'Chiron Hei HK', sans-serif",
+  'font-ui': "'Chiron Hei HK', 'Source Han Sans SC', 'Noto Sans SC', sans-serif",
+  'font-mono': "'Martian Mono', ui-monospace, monospace",
 }
 
 export const themes: ThemePack[] = [
@@ -37,6 +64,8 @@ export const themes: ThemePack[] = [
     id: 'kiln',
     mark: '窑',
     name: '窑',
+    blurb: ['token 烧得快，像窑。', '焦黄到炭黑：速度、热、动。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#070504',
       clay: '#3a2c22',
@@ -59,6 +88,8 @@ export const themes: ThemePack[] = [
     id: 'moss',
     mark: '苔',
     name: '苔',
+    blurb: ['清新，又复古一点的现代。', '青苔贴在石头上，绿不必吵。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#eef3e4',
       clay: '#b7c6a4',
@@ -81,6 +112,8 @@ export const themes: ThemePack[] = [
     id: 'porcelain',
     mark: '瓷',
     name: '瓷',
+    blurb: ['青花瓷。', '白地、钴料，砖从素坯走到近墨。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#f6f2eb',
       clay: '#d0c4b4',
@@ -103,6 +136,8 @@ export const themes: ThemePack[] = [
     id: 'jiang',
     mark: '绛',
     name: '绛',
+    blurb: ['粉和黑。', '夜里的现代，口红那种亮，不是糖果。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#140910',
       clay: '#3e2430',
@@ -122,53 +157,11 @@ export const themes: ThemePack[] = [
     },
   },
   {
-    id: 'qingmo',
-    mark: '青',
-    name: '青墨',
-    tokens: {
-      void: '#0d1412',
-      clay: '#263832',
-      mortar: '#08100e',
-      'ember-1': '#1a4a42',
-      'ember-2': '#227060',
-      'ember-3': '#2f9a82',
-      'ember-4': '#9ee0c8',
-      bone: '#dceae4',
-      ash: '#8aa098',
-      copper: '#5a8a7c',
-      warn: '#e09068',
-      glow: '#2f9a82',
-      hi: '#c8f0e4',
-      lo: '#020806',
-      scheme: 'dark',
-    },
-  },
-  {
-    id: 'frost',
-    mark: '霜',
-    name: '霜碳',
-    tokens: {
-      void: '#121418',
-      clay: '#2e333a',
-      mortar: '#0c0e12',
-      'ember-1': '#3e4752',
-      'ember-2': '#5c6e82',
-      'ember-3': '#7a96b0',
-      'ember-4': '#d4e6f6',
-      bone: '#e6e8ec',
-      ash: '#9098a2',
-      copper: '#6e7884',
-      warn: '#d08058',
-      glow: '#7a96b0',
-      hi: '#f0f4f8',
-      lo: '#000000',
-      scheme: 'dark',
-    },
-  },
-  {
     id: 'day',
     mark: '昼',
     name: '昼',
+    blurb: ['蓝白黑。产品界面的现代。', '不是霓虹。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#ffffff',
       clay: '#d4dce8',
@@ -191,6 +184,8 @@ export const themes: ThemePack[] = [
     id: 'ink',
     mark: '墨',
     name: '墨',
+    blurb: ['黑白。印成报纸也长这样。', '作者最喜欢的配色。', '没别的好说。'],
+    chrome: FORGE_CHROME,
     tokens: {
       void: '#ffffff',
       clay: '#d4d4d4',
@@ -209,6 +204,72 @@ export const themes: ThemePack[] = [
       scheme: 'light',
     },
   },
+  {
+    id: 'cartoon',
+    mark: '漫',
+    name: '漫',
+    blurb: ['圆砖、粗字。', '观察台也可以玩一下。', '合计还是要能读。'],
+    chrome: {
+      'brick-radius': '7px',
+      'lever-radius': '999px',
+      'wall-radius': '14px',
+      cell: '14px',
+      gap: '5px',
+      'font-display': "'Bagel Fat One', 'M PLUS Rounded 1c', 'Chiron Hei HK', sans-serif",
+      'font-ui': "'M PLUS Rounded 1c', 'Chiron Hei HK', sans-serif",
+      'font-mono': "'Martian Mono', ui-monospace, monospace",
+    },
+    tokens: {
+      void: '#fff1d6',
+      clay: '#e0c08a',
+      mortar: '#f3ddb4',
+      'ember-1': '#f0b24a',
+      'ember-2': '#e06a1c',
+      'ember-3': '#c43a10',
+      'ember-4': '#7a1408',
+      bone: '#1a100c',
+      ash: '#5a4034',
+      copper: '#c44c18',
+      warn: '#b41810',
+      glow: '#e06a1c',
+      hi: '#fffaf0',
+      lo: '#120806',
+      scheme: 'light',
+    },
+  },
+  {
+    id: 'ledger',
+    mark: '端',
+    name: '端',
+    blurb: ['终端账本。', '等宽、直角、磷光。', '墙仍是平的。'],
+    chrome: {
+      'brick-radius': '0px',
+      'lever-radius': '0px',
+      'wall-radius': '0px',
+      cell: '11px',
+      gap: '3px',
+      'font-display': "'Share Tech Mono', 'IBM Plex Mono', ui-monospace, monospace",
+      'font-ui': "'IBM Plex Mono', 'Martian Mono', ui-monospace, monospace",
+      'font-mono': "'IBM Plex Mono', ui-monospace, monospace",
+    },
+    tokens: {
+      void: '#0b0d09',
+      clay: '#1c2414',
+      mortar: '#070806',
+      'ember-1': '#2e3a16',
+      'ember-2': '#5c6a1c',
+      'ember-3': '#a8b028',
+      'ember-4': '#e8ec70',
+      bone: '#dce8c0',
+      ash: '#8c9870',
+      copper: '#a8b048',
+      warn: '#e89838',
+      glow: '#c8d050',
+      hi: '#f4f8c8',
+      lo: '#000000',
+      scheme: 'dark',
+    },
+  },
 ]
 
 export function isThemeId(value: unknown): value is ThemeId {
@@ -224,11 +285,12 @@ export function themeStylesheet(): string {
     .map((theme) => {
       const sel =
         theme.id === DEFAULT_THEME ? `:root,[data-theme="${theme.id}"]` : `[data-theme="${theme.id}"]`
-      const body = REQUIRED_TOKENS.map((key) => {
+      const colors = REQUIRED_TOKENS.map((key) => {
         if (key === 'scheme') return `color-scheme:${theme.tokens.scheme}`
         return `--${key}:${theme.tokens[key]}`
-      }).join(';')
-      return `${sel}{${body}}`
+      })
+      const chrome = CHROME_TOKENS.map((key) => `--${key}:${theme.chrome[key]}`)
+      return `${sel}{${[...colors, ...chrome].join(';')}}`
     })
     .join('')
 }

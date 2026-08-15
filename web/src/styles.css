@@ -1,6 +1,9 @@
 :root {
   --cell: 13px;
   --gap: 4px;
+  --brick-radius: 2px;
+  --lever-radius: 0px;
+  --wall-radius: 0px;
   --font-display: 'Big Shoulders Display', 'Chiron Hei HK', sans-serif;
   --font-ui: 'Chiron Hei HK', 'Source Han Sans SC', 'Noto Sans SC', sans-serif;
   --font-mono: 'Martian Mono', ui-monospace, monospace;
@@ -80,6 +83,7 @@ h1 {
   line-height: 0.85;
   letter-spacing: -0.04em;
   color: var(--ember-4);
+  text-wrap: balance;
 }
 
 .rail-meta {
@@ -115,6 +119,7 @@ h1 {
   background: transparent;
   color: var(--ember-4);
   padding: 0.35rem 0.9rem;
+  border-radius: var(--lever-radius, 0px);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.14em;
@@ -160,7 +165,8 @@ h1 {
   margin: 1.15rem 0 1rem;
 }
 
-.damper button {
+.damper button,
+.damper span {
   border: 0;
   background: transparent;
   color: var(--ash);
@@ -175,7 +181,8 @@ h1 {
   color: var(--bone);
 }
 
-.damper button.on {
+.damper button.on,
+.damper span.on {
   color: var(--ember-4);
   border-bottom-color: var(--ember-3);
 }
@@ -212,6 +219,7 @@ h1 {
   background: var(--mortar);
   padding: 5px;
   border: 1px solid var(--copper);
+  border-radius: var(--wall-radius, 0px);
 }
 
 .brick {
@@ -226,7 +234,7 @@ h1 {
   padding: 0;
   margin: 0;
   border: 1px solid var(--mortar);
-  border-radius: 2px;
+  border-radius: var(--brick-radius, 2px);
   background: var(--clay);
   cursor: default;
 }
@@ -289,7 +297,7 @@ h1 {
   display: block;
   width: var(--cell);
   height: var(--cell);
-  border-radius: 2px;
+  border-radius: var(--brick-radius, 2px);
   background: var(--clay);
   border: 1px solid var(--mortar);
 }
@@ -550,10 +558,22 @@ th {
   padding: 1.6rem 1.4rem 4.5rem;
 }
 
+body:has(.glaze-hall.is-open) {
+  overflow: hidden;
+}
+
+.glaze-hall.is-open {
+  min-height: 100dvh;
+}
+
+.glaze-hall.is-open .glaze-head {
+  visibility: hidden;
+}
+
 .glaze-shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
-  gap: 0.7rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.05rem;
   margin-top: 1.5rem;
 }
 
@@ -563,31 +583,61 @@ th {
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  min-height: 11rem;
+  min-width: 0;
+  min-height: 18.5rem;
   margin: 0;
-  padding: 0.95rem 0.95rem 0.85rem;
+  padding: 1.15rem 1.15rem 1rem;
   text-align: left;
   background: var(--void);
   color: var(--bone);
   border: 1px solid var(--copper);
+  border-radius: var(--wall-radius, 0px);
   cursor: pointer;
   touch-action: manipulation;
-  transition: border-color 160ms ease, outline-color 160ms ease;
+  overflow: hidden;
+  transition: border-color 160ms ease, transform 160ms ease;
 }
 
-.glaze-slab:hover {
+.glaze-slab:hover:not(.hero):not(.gone) {
   border-color: var(--ember-4);
+  transform: scale(1.016);
+  transform-origin: center center;
 }
 
-.glaze-slab.on {
-  outline: 2px solid var(--ember-4);
-  border-color: var(--ember-4);
+.glaze-slab.gone {
+  pointer-events: none;
+}
+
+.glaze-slab.hero {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: auto;
+  height: auto;
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  border-width: 0;
+  overflow: auto;
+  cursor: default;
+  overscroll-behavior: contain;
+  padding: max(1.15rem, env(safe-area-inset-top)) max(1.4rem, env(safe-area-inset-right))
+    max(1.4rem, env(safe-area-inset-bottom)) max(1.4rem, env(safe-area-inset-left));
+}
+
+.glaze-slab.hero .glaze-blurb {
+  flex: none;
+}
+
+.glaze-slab.hero .glaze-ramp {
+  display: none;
 }
 
 .glaze-mark {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 3.1rem;
+  font-size: 3.4rem;
   line-height: 0.85;
   letter-spacing: -0.04em;
   color: var(--ember-4);
@@ -602,20 +652,35 @@ th {
   color: var(--ash);
 }
 
+.glaze-blurb {
+  flex: 1;
+  margin: 0.75rem 0 0;
+  min-width: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--bone);
+  text-wrap: pretty;
+}
+
+.glaze-blurb p {
+  margin: 0 0 0.32em;
+}
+
 .glaze-ramp {
   display: flex;
   gap: var(--gap);
-  margin-top: 0.95rem;
+  margin-top: 0.85rem;
   padding: 6px;
   background: var(--mortar);
   border: 1px solid var(--copper);
+  border-radius: var(--wall-radius, 0px);
 }
 
 .glaze-ramp i {
   display: block;
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--brick-radius, 2px);
   background: var(--clay);
   border: 1px solid var(--mortar);
 }
@@ -625,16 +690,87 @@ th {
 .glaze-ramp i[data-kind='lit'][data-level='3'] { background: var(--ember-3); }
 .glaze-ramp i[data-kind='lit'][data-level='4'] { background: var(--ember-4); }
 
-.glaze-chip {
-  margin-top: 0.65rem;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  color: var(--ash);
+.glaze-expand {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.glaze-mock {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--copper);
+  border-radius: var(--wall-radius, 0px);
+  background: var(--void);
+  overflow-x: auto;
+}
+
+.glaze-mock .rail {
+  align-items: flex-end;
+}
+
+.glaze-mock h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+}
+
+.glaze-mock .damper span {
+  cursor: default;
+}
+
+.glaze-mock-total {
+  margin: 1rem 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.8rem, 8vw, 5.2rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: var(--ember-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.glaze-mock-total em {
+  font-style: normal;
+  font-size: 0.35em;
+  margin-left: 0.12em;
+  color: var(--copper);
+}
+
+.glaze-mock .wall {
+  margin-top: 0.4rem;
+  width: max-content;
+  max-width: 100%;
+}
+
+.glaze-expand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.glaze-expand-actions .lever {
+  min-height: 2.75rem;
+  min-width: 5.5rem;
+}
+
+@media (max-width: 900px) {
+  .glaze-shelf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .glaze-slab {
     transition: none;
+  }
+
+  .glaze-slab:hover:not(.hero):not(.gone) {
+    transform: none;
   }
 }
