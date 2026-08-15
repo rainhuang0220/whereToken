@@ -35,6 +35,7 @@ type Flags struct {
 	Tool, Vendor    string
 	Model, Home     string
 	Port            int
+	Width           int
 	CompletionShell string
 }
 
@@ -94,6 +95,7 @@ func Parse(args []string) (Flags, error) {
 	fs.BoolVar(&f.Quiet, "q", false, "")
 	fs.StringVar(&f.Home, "home", "", "")
 	fs.IntVar(&f.Port, "port", f.Port, "")
+	fs.IntVar(&f.Width, "width", 0, "")
 	toolFlag := fs.String("tool", "", "")
 	vendorFlag := fs.String("vendor", "", "")
 	modelFlag := fs.String("model", "", "")

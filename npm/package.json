@@ -8,7 +8,7 @@
   },
   "scripts": {
     "postinstall": "node install.js",
-    "test": "node --test lib/platform.test.js"
+    "test": "node --test lib/platform.test.js bin.test.js"
   },
   "files": [
     "LICENSE",

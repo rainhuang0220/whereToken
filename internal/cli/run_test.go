@@ -215,7 +215,7 @@ func TestRunNO_COLORNoEscape(t *testing.T) {
 
 func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	h := HelpText()
-	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh"} {
+	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "--width"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}
@@ -280,6 +280,23 @@ func TestRunSilentProgressWhenNotTTY(t *testing.T) {
 	}
 	if strings.Contains(errb.String(), "正在读") {
 		t.Fatalf("progress on pipe: %s", errb.String())
+	}
+}
+
+func TestResolveWidthFlagAndCOLUMNS(t *testing.T) {
+	if got := resolveWidth(80, func(string) string { return "40" }); got != 80 {
+		t.Fatalf("flag should win: %d", got)
+	}
+	if got := resolveWidth(0, func(k string) string {
+		if k == "COLUMNS" {
+			return "72"
+		}
+		return ""
+	}); got != 72 {
+		t.Fatalf("COLUMNS: %d", got)
+	}
+	if got := resolveWidth(0, func(string) string { return "" }); got != 0 {
+		t.Fatalf("empty: %d", got)
 	}
 }
 

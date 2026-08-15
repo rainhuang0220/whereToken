@@ -195,3 +195,13 @@ func TestParseBrandFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestParseWidth(t *testing.T) {
+	f, err := Parse([]string{"--width", "80"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Width != 80 {
+		t.Fatalf("width=%d", f.Width)
+	}
+}

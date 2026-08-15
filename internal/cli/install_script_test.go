@@ -32,3 +32,20 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		t.Fatal("install.sh must not contain JWT material")
 	}
 }
+
+func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "Formula", "wheretoken.rb"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{`class Wheretoken`, `head "https://github.com/rainhuang0220/whereToken.git"`, "./cmd/wheretoken", "docs/wheretoken.1"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("formula missing %q", want)
+		}
+	}
+}

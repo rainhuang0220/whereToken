@@ -1,0 +1,17 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const { spawnSync } = require('child_process')
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+
+test('shim exits 1 when the native binary is missing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wt-shim-'))
+  const shim = path.join(dir, 'shim.js')
+  fs.copyFileSync(path.join(__dirname, 'bin', 'wheretoken'), shim)
+  fs.chmodSync(shim, 0o755)
+  const r = spawnSync(process.execPath, [shim, '--help'], { encoding: 'utf8' })
+  assert.equal(r.status, 1)
+  assert.match(r.stderr, /native binary not installed/)
+  assert.match(r.stderr, /go install/)
+})

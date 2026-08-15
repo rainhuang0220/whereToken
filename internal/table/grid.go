@@ -75,6 +75,10 @@ func KPIBox(cells [2][3]KPI, style BoxStyle) string {
 }
 
 func RankedTable(headers []string, rows [][]string, align []Align, style BoxStyle) string {
+	return FitRankedTable(headers, rows, align, style, 0)
+}
+
+func FitRankedTable(headers []string, rows [][]string, align []Align, style BoxStyle, maxWidth int) string {
 	cols := len(headers)
 	widths := make([]int, cols)
 	for i, h := range headers {
@@ -84,6 +88,31 @@ func RankedTable(headers []string, rows [][]string, align []Align, style BoxStyl
 		for i := 0; i < cols && i < len(row); i++ {
 			widths[i] = maxInt(widths[i], DisplayWidth(row[i]))
 		}
+	}
+	const sep = 3
+	if maxWidth > 0 && cols > 0 {
+		total := sep * (cols - 1)
+		for _, w := range widths {
+			total += w
+		}
+		if total > maxWidth {
+			shrink := total - maxWidth
+			min0 := DisplayWidth(headers[0])
+			if min0 < 4 {
+				min0 = 4
+			}
+			if widths[0]-shrink < min0 {
+				widths[0] = min0
+			} else {
+				widths[0] -= shrink
+			}
+		}
+	}
+	clip := func(s string, i int) string {
+		if i == 0 && DisplayWidth(s) > widths[0] {
+			return Truncate(s, widths[0])
+		}
+		return s
 	}
 	pad := func(s string, i int) string {
 		if i < len(align) && align[i] == AlignRight {
@@ -98,7 +127,7 @@ func RankedTable(headers []string, rows [][]string, align []Align, style BoxStyl
 	}
 	head := make([]string, cols)
 	for i, h := range headers {
-		head[i] = pad(h, i)
+		head[i] = pad(clip(h, i), i)
 	}
 	var b strings.Builder
 	top := join(head)
@@ -111,7 +140,7 @@ func RankedTable(headers []string, rows [][]string, align []Align, style BoxStyl
 		for i := 0; i < cols; i++ {
 			s := ""
 			if i < len(row) {
-				s = row[i]
+				s = clip(row[i], i)
 			}
 			cells[i] = pad(s, i)
 		}

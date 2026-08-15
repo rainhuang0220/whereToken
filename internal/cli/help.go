@@ -32,6 +32,7 @@ FLAGS
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
   --home DIR           fake home directory (tests)
+  --width N            cap ranking table width (COLUMNS does the same)
 
 ENV
   NO_COLOR             disable ANSI (same as --no-color)
@@ -40,6 +41,7 @@ ENV
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
   NO_UTF8              ASCII box drawing
   TERM=dumb            disable color
+  COLUMNS              cap ranking table width (same as --width)
 
 EXIT CODES
   0  ok (including zero data, or a degraded Trae/Cursor login)

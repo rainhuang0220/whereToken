@@ -75,6 +75,26 @@ func TestRankedTableAlignsCJK(t *testing.T) {
 	}
 }
 
+func TestRankedTableFitsWidth(t *testing.T) {
+	got := FitRankedTable(
+		[]string{"工具", "合计", "命中率"},
+		[][]string{
+			{"this-is-a-very-long-tool-name-that-should-shrink", "8.10 M", "52.1%"},
+		},
+		[]Align{AlignLeft, AlignRight, AlignRight},
+		BoxUnicode,
+		40,
+	)
+	for i, line := range strings.Split(strings.TrimRight(got, "\n"), "\n") {
+		if DisplayWidth(line) > 40 {
+			t.Fatalf("line %d width %d > 40\n%q\n%s", i, DisplayWidth(line), line, got)
+		}
+	}
+	if !strings.Contains(got, "…") {
+		t.Fatalf("expected truncate\n%s", got)
+	}
+}
+
 func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
 	cells := [2][3]KPI{
 		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},

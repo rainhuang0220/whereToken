@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -157,7 +158,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	}
 	ascii := table.UseASCII(flags.ASCII, a.GOOS, a.LookupEnv)
 	color := table.UseColor(flags.NoColor, a.StdoutTTY, a.LookupEnv)
-	out := report.Render(snap, report.Options{ASCII: ascii, Color: color})
+	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv)})
 	fmt.Fprint(a.Stdout, out)
 	return ExitOK
 }
@@ -212,4 +213,22 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 	}
 	fmt.Fprintln(a.Stderr, lastErr.Error())
 	return ExitFail
+}
+
+func resolveWidth(flag int, getenv func(string) string) int {
+	if flag > 0 {
+		return flag
+	}
+	if getenv == nil {
+		return 0
+	}
+	c := strings.TrimSpace(getenv("COLUMNS"))
+	if c == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(c)
+	if err != nil || n <= 0 {
+		return 0
+	}
+	return n
 }

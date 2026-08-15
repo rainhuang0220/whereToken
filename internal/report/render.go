@@ -11,6 +11,7 @@ import (
 type Options struct {
 	ASCII bool
 	Color bool
+	Width int
 }
 
 func Render(snap Snapshot, opt Options) string {
@@ -30,19 +31,19 @@ func Render(snap Snapshot, opt Options) string {
 	b.WriteString(legend())
 	if len(snap.Tools) > 0 && snap.Scope == "" {
 		b.WriteByte('\n')
-		b.WriteString(ranked("工具", snap.Tools, true, style))
+		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
 	}
 	if len(snap.Vendors) > 0 {
 		b.WriteByte('\n')
-		b.WriteString(ranked("厂家", snap.Vendors, false, style))
+		b.WriteString(ranked("厂家", snap.Vendors, false, style, opt.Width))
 	}
 	if (snap.Scope != "" || !snap.ShowStreaks) && len(snap.Models) > 0 {
 		b.WriteByte('\n')
-		b.WriteString(ranked("模型", snap.Models, false, style))
+		b.WriteString(ranked("模型", snap.Models, false, style, opt.Width))
 	}
 	if snap.Scope != "" && len(snap.Tools) > 0 && !allSameTool(snap) {
 		b.WriteByte('\n')
-		b.WriteString(ranked("工具", snap.Tools, true, style))
+		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
 	}
 	if len(snap.Notes) > 0 {
 		b.WriteByte('\n')
@@ -128,7 +129,7 @@ func legend() string {
 	return "  合计 = 未命中 + 缓存读 + 缓存写 + 输出。命中率不含输出。\n"
 }
 
-func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle) string {
+func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWidth int) string {
 	headers := []string{kind, "合计", "占比", "命中率", "请求"}
 	align := []table.Align{table.AlignLeft, table.AlignRight, table.AlignRight, table.AlignRight, table.AlignRight}
 	if withTurns {
@@ -157,7 +158,7 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle) strin
 		}
 		body = append(body, line)
 	}
-	out := table.RankedTable(headers, body, align, style)
+	out := table.FitRankedTable(headers, body, align, style, maxWidth)
 	if len(rows) > capN {
 		out += fmt.Sprintf("+ %d 行\n", len(rows)-capN)
 	}

@@ -13,3 +13,4 @@ complete -c wheretoken -l model -r
 complete -c wheretoken -l claude -l kimi -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r
 complete -c wheretoken -l port -r
+complete -c wheretoken -l width -r

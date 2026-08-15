@@ -25,7 +25,7 @@ func Completion(shell string) (string, error) {
 const bashCompletion = `# bash completion for wheretoken
 _wheretoken() {
   local cur="${COMP_WORDS[COMP_CWORD]}"
-  local opts="serve scan sources completion help version --help --version --json --today --ascii --no-color --quiet -q --tool --vendor --model --claude --kimi --codex --opencode --cursor --trae --home --port"
+  local opts="serve scan sources completion help version --help --version --json --today --ascii --no-color --quiet -q --tool --vendor --model --claude --kimi --codex --opencode --cursor --trae --home --port --width"
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
 complete -F _wheretoken wheretoken
@@ -51,6 +51,7 @@ _arguments -s \
   '--trae[slice Trae]' \
   '--home[fake home]:dir:_files -/' \
   '--port[serve port]:port:' \
+  '--width[table width]:cols:' \
   '1:command:(serve scan sources completion help version)'
 `
 
@@ -69,11 +70,12 @@ complete -c wheretoken -l model -r
 complete -c wheretoken -l claude -l kimi -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r
 complete -c wheretoken -l port -r
+complete -c wheretoken -l width -r
 `
 
 const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
   param($wordToComplete)
-  $cmds = @('serve','scan','sources','completion','help','version','--help','--version','--json','--today','--ascii','--no-color','--quiet','--claude','--kimi','--codex','--opencode','--cursor','--trae')
+  $cmds = @('serve','scan','sources','completion','help','version','--help','--version','--json','--today','--ascii','--no-color','--quiet','--claude','--kimi','--codex','--opencode','--cursor','--trae','--width')
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
   }

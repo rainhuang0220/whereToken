@@ -15,6 +15,12 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 # or: npx wheretoken
 ```
 
+From a clone with Homebrew:
+
+```bash
+brew install --HEAD Formula/wheretoken.rb
+```
+
 `go install` needs **Go 1.25+**. The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet).
 
 ## What you see
