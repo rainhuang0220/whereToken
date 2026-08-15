@@ -108,6 +108,20 @@ func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {
 	}
 }
 
+func TestCIRunsGofmt(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "ci", "github-workflows", "ci.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "gofmt -l") {
+		t.Fatal("ci.yml should fail the build when gofmt -l is non-empty")
+	}
+}
+
 func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

@@ -5,11 +5,11 @@ import (
 )
 
 var (
-	jwtRE        = regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`)
-	bearerRE     = regexp.MustCompile(`(?i)bearer\s+\S+`)
-	skRE         = regexp.MustCompile(`\bsk-[A-Za-z0-9]{10,}`)
-	hexRE        = regexp.MustCompile(`\b[A-Fa-f0-9]{40,}\b`)
-	authRE       = regexp.MustCompile(`(?i)authorization:\s*\S+`)
+	jwtRE             = regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`)
+	bearerRE          = regexp.MustCompile(`(?i)bearer\s+\S+`)
+	skRE              = regexp.MustCompile(`\bsk-[A-Za-z0-9]{10,}`)
+	hexRE             = regexp.MustCompile(`\b[A-Fa-f0-9]{40,}\b`)
+	authRE            = regexp.MustCompile(`(?i)authorization:\s*\S+`)
 	xAPIKeyRE         = regexp.MustCompile(`(?i)x-api-key:\s*\S+`)
 	openaiAPIKeyRE    = regexp.MustCompile(`(?i)openai-api-key:\s*\S+`)
 	anthropicAPIKeyRE = regexp.MustCompile(`(?i)anthropic-api-key:\s*\S+`)

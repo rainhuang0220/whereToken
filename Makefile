@@ -21,4 +21,7 @@ install-script:
 govulncheck:
 	bash scripts/govulncheck.sh
 
-.PHONY: test vet race cli-fixture build-all install-script govulncheck
+fmt-check:
+	test -z "$$(gofmt -l .)"
+
+.PHONY: test vet race cli-fixture build-all install-script govulncheck fmt-check

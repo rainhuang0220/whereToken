@@ -59,6 +59,13 @@ empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
 
+envhome="$(WHERETOKEN_HOME="$empty" "$dir/wheretoken" --ascii --quiet)"
+echo "$envhome" | grep -q '0.00 M'
+if echo "$envhome" | grep -q Kimi; then
+  echo "WHERETOKEN_HOME ignored" >&2
+  exit 1
+fi
+
 set +e
 err="$("$dir/wheretoken" --home "$dir" --tool=windsurf --quiet 2>&1)"
 code=$?
