@@ -43,6 +43,7 @@ ENV
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
   NO_UTF8              ASCII box drawing
   TERM=dumb            disable color
+  FORCE_COLOR          ANSI even when stdout is not a TTY (NO_COLOR still wins)
   COLUMNS              cap ranking table width (same as --width)
 
 EXIT CODES

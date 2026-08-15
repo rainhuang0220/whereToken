@@ -65,7 +65,7 @@ wheretoken --offline            # local ledgers only; skip Cursor/Trae APIs
 wheretoken completion zsh          # also bash, fish, powershell
 ```
 
-Checked-in scripts: [`completions/`](completions/).
+Checked-in scripts: [`completions/`](completions/). Manual page: [`docs/wheretoken.1`](docs/wheretoken.1).
 
 **Tool ≠ vendor.** Claude Code running MiniMax still counts as tool Claude Code, vendor MiniMax.
 

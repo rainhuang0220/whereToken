@@ -45,6 +45,27 @@ func TestUseColorNO_COLOR(t *testing.T) {
 	}
 }
 
+func TestUseColorFORCE_COLOR(t *testing.T) {
+	force := func(k string) string {
+		if k == "FORCE_COLOR" {
+			return "1"
+		}
+		return ""
+	}
+	if !UseColor(false, false, force) {
+		t.Fatal("FORCE_COLOR should color a pipe")
+	}
+	both := func(k string) string {
+		if k == "FORCE_COLOR" || k == "NO_COLOR" {
+			return "1"
+		}
+		return ""
+	}
+	if UseColor(false, true, both) {
+		t.Fatal("NO_COLOR must beat FORCE_COLOR")
+	}
+}
+
 func TestDimEmptyWhenNoColor(t *testing.T) {
 	if Dim("x", false) != "x" {
 		t.Fatal(Dim("x", false))

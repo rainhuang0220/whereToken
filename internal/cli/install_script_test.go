@@ -33,6 +33,23 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 	}
 }
 
+func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", ".goreleaser.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "completions/*"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("goreleaser missing %q", want)
+		}
+	}
+}
+
 func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

@@ -44,6 +44,9 @@ func UseColor(flagNoColor bool, tty bool, getenv func(string) string) bool {
 	if getenv("TERM") == "dumb" {
 		return false
 	}
+	if fc := getenv("FORCE_COLOR"); fc != "" && fc != "0" {
+		return true
+	}
 	return tty
 }
 

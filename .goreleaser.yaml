@@ -23,6 +23,12 @@ archives:
   - id: default
     formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - docs/wheretoken.1
+      - completions/*
     format_overrides:
       - goos: windows
         formats: [zip]
