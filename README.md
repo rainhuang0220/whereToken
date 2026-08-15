@@ -13,7 +13,7 @@
 | [Flow](https://github.com/rainhuang0220/Flow) | 🔨 进行中 | 会议 |
 | [Untitled](https://github.com/rainhuang0220/Untitled) | 🔨 进行中 | 网盘 |
 | [docxEditor](https://github.com/rainhuang0220/docxeditor) | 🔨 进行中 | 文档编辑器 |
-| <u>***whereToken***</u> | 📝 规划中 | Token 用量追踪 |
+| <u>***whereToken***</u> | 🔨 进行中 | Token 用量追踪 |
 
 ---
 
@@ -38,7 +38,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 ## 当前状态
 
-**v0 — 规格。** 本仓库这一版只有设计文档与决策日志，没有可运行代码。这是有意的：先把指标、数据源、质量陷阱和架构钉死，再写扫描器。
+可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家；`wheretoken serve` 在 `127.0.0.1` 提供同一份 JSON 和 Vue 页。
 
 必读：
 
@@ -46,7 +46,24 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 - [`docs/data-sources.md`](docs/data-sources.md) — 本机实测的数据源清单与字段映射
 - [`opt.md`](opt.md) — 过程决策，供复盘
 
-实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md)。每过一轮核验提交一版。
+实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md)。
+
+## 开发命令
+
+```bash
+go test ./...
+go run ./cmd/wheretoken scan --json
+go run ./cmd/wheretoken sources
+go run ./cmd/wheretoken serve          # http://127.0.0.1:8787 ，被占用则 8788–8797
+
+cd web && npm install && npm test && npm run build && npm run dev
+# 另开终端：go run ./cmd/wheretoken serve
+# Vite 把 /api 代理到 127.0.0.1:8787
+
+bash scripts/verify-local.sh           # Kimi / OpenCode 与本机磁盘对照，误差须为 0
+```
+
+提交请用 `scripts/commit-no-ai.sh`，不要直接 `git commit`（避免 Cursor 注入 Co-authored-by）。
 
 ## 原则（从第一天就锁）
 

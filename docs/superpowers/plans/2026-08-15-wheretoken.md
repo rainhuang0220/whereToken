@@ -407,7 +407,7 @@ type Adapter interface {
 
 `testhome.New(root string) adapter.Home` maps those three methods under `root`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```go
 package testhome
@@ -431,19 +431,19 @@ func TestDotDir(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/adapter/testhome -count=1`
 Expected: FAIL, `New` undefined.
 
-- [ ] **Step 3: Write minimal `New` and `adapter.go`**
+- [x] **Step 3: Write minimal `New` and `adapter.go`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `go test ./internal/adapter/... -count=1`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/adapter
@@ -476,7 +476,7 @@ Fixture `wire.jsonl` (no prompt text):
 {"type":"turn.prompt","origin":{"kind":"tool"},"time":1786722976000}
 ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```go
 package kimi
@@ -516,21 +516,21 @@ func TestParseUsageRecord(t *testing.T) {
 
 Fix the `turn` parameter name so it does not shadow `testing.T`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/adapter/kimi -count=1`
 Expected: FAIL, `Adapter` undefined.
 
-- [ ] **Step 3: Write parser**
+- [x] **Step 3: Write parser**
 
 Stream the file line by line. On `usage.record`, map `inputOther→Miss`, `inputCacheRead→CacheRead`, `inputCacheCreation→CacheCreate`, `output→Output`, `vendor.Lookup(model, "")`, `QualityAuthoritative`, `RequestID` = `fmt.Sprintf("%s:%d", path, time)`. On `turn.prompt` with `origin.kind==user`, emit a TurnEvent. Ignore telemetry and `state.json`. Do not read `config.toml`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `go test ./internal/adapter/kimi -count=1`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add testdata/adapters/kimi internal/adapter/kimi
@@ -553,7 +553,7 @@ EOF
 - Consumes: `adapter.Adapter`, `vendor.Lookup`
 - Produces: `ID()=="opencode"`; Discover `XDGData("opencode")` looking for `opencode.db` then `opencode-stable.db`; Parse uses `file:path?mode=ro`
 
-- [ ] **Step 1: Write the failing test** that creates a temp sqlite with:
+- [x] **Step 1: Write the failing test** that creates a temp sqlite with:
 
 ```sql
 CREATE TABLE message (id TEXT, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
@@ -569,21 +569,21 @@ Assert one event: Miss=100, Output=12 (10+2 reasoning, Reasoning=2 but not added
 
 Also assert a second test: if `part` table exists with a `step-finish` tokens object, those must **not** be counted when message.data already has tokens.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/adapter/opencode -count=1`
 Expected: FAIL, package missing.
 
-- [ ] **Step 3: Write parser using `database/sql` + `modernc.org/sqlite`**
+- [x] **Step 3: Write parser using `database/sql` + `modernc.org/sqlite`**
 
 Open DSN `file:%s?mode=ro&immutable=1`. If open fails, retry without `immutable`. Never `SELECT` from `account`, `control_account`, or `credential`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `go test ./internal/adapter/opencode -count=1`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/adapter/opencode go.mod go.sum
@@ -621,21 +621,21 @@ Rules: only emit when `total_token_usage` advances; delta miss = `(input - cache
 
 After both advancing events, totals: first event miss=80 cache_read=20 output=35; second miss=30 cache_read=20 output=13. Requests=2. Turns=1.
 
-- [ ] **Step 1: Write the failing test** loading that fixture, summing emitted events, asserting Requests via `metric.Aggregate`.
+- [x] **Step 1: Write the failing test** loading that fixture, summing emitted events, asserting Requests via `metric.Aggregate`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/adapter/codex -count=1`
 Expected: FAIL
 
-- [ ] **Step 3: Write streaming parser** using `bufio.Scanner` with a raised buffer (at least 10 MiB) so a long JSON line does not fail.
+- [x] **Step 3: Write streaming parser** using `bufio.Scanner` with a raised buffer (at least 10 MiB) so a long JSON line does not fail.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `go test ./internal/adapter/codex -count=1`
 Expected: PASS. A second test with only `last_token_usage` (no total) should count that last usage once.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add testdata/adapters/codex internal/adapter/codex
@@ -671,21 +671,21 @@ Fixture:
 
 Assert: two usage events after parse (or raw three lines but Aggregate of parse output must have Requests=2, Miss=max(1,8)+20=28, Output=max(1,2)+4=6, one turn only). Event for r2 has Vendor=minimax, Source=claude. Quality=degraded. Parser must never `os.ReadFile` a path whose base is `settings.json`.
 
-- [ ] **Step 1: Write the failing test** covering requestId max, MiniMax vendor, tool_result ignored.
+- [x] **Step 1: Write the failing test** covering requestId max, MiniMax vendor, tool_result ignored.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/adapter/claude -count=1`
 Expected: FAIL
 
-- [ ] **Step 3: Write parser.** Skip `settings.json`. Treat `content` string as a real user turn. `content` list with any `tool_result` is not a user turn.
+- [x] **Step 3: Write parser.** Skip `settings.json`. Treat `content` string as a real user turn. `content` list with any `tool_result` is not a user turn.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `go test ./internal/adapter/claude -count=1`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add testdata/adapters/claude internal/adapter/claude
@@ -727,24 +727,24 @@ EOF
 
 `func EncodeSummary(w io.Writer, r Result) error` lives in `internal/scan` so HTTP can reuse it. CLI must not recompute totals.
 
-- [ ] **Step 1: Write the failing test** using `testhome` populated with the Kimi fixture under `.kimi-code/sessions/x/s/agents/main/wire.jsonl`. `Run` must put Kimi totals on `BySource` id `kimi` and vendor `moonshot`, and `All.Total` equal to that.
+- [x] **Step 1: Write the failing test** using `testhome` populated with the Kimi fixture under `.kimi-code/sessions/x/s/agents/main/wire.jsonl`. `Run` must put Kimi totals on `BySource` id `kimi` and vendor `moonshot`, and `All.Total` equal to that.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/scan -count=1`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `Run` and `cmd/wheretoken`**
+- [x] **Step 3: Implement `Run` and `cmd/wheretoken`**
 
 `main.go` commands: `scan` (default `--json` to stdout), `sources` (print discovered roots as text), `serve` stub that prints `not implemented` and exits 2 until Task 10. `--home` flag overrides the fake/real home for tests via env `WHERETOKEN_HOME` mapped in `RealHome` as: if set, `testhome.New(that)`.
 
-- [ ] **Step 4: Run tests and a smoke command**
+- [x] **Step 4: Run tests and a smoke command**
 
 Run: `go test ./... -count=1`
 Run: `go run ./cmd/wheretoken scan --json` against the developer machine.
 Expected: JSON has `all`, `by_source`, `by_vendor`. Kimi row present if `~/.kimi-code` exists. Manually confirm `by_source` totals sum to `all.total`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/scan cmd/wheretoken
@@ -768,21 +768,21 @@ EOF
 - Consumes: `scan.Run`, `scan.EncodeSummary`
 - Produces: `func Listen(addr string, home adapter.Home) error`; `GET /api/summary` returns the same JSON as `scan --json`; `GET /` serves `web/dist` if present else a one-line `text/plain` `whereToken`. Bind `127.0.0.1`. If port 8787 is taken, try 8788–8797 and print the chosen URL.
 
-- [ ] **Step 1: Write the failing test** using `httptest` and testhome+Kimi fixture. `GET /api/summary` must decode `all.total` matching `scan.Run`.
+- [x] **Step 1: Write the failing test** using `httptest` and testhome+Kimi fixture. `GET /api/summary` must decode `all.total` matching `scan.Run`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `go test ./internal/httpapi -count=1`
 Expected: FAIL
 
-- [ ] **Step 3: Implement mux.** No public `0.0.0.0`. `serve` flag `--port` default 8787.
+- [x] **Step 3: Implement mux.** No public `0.0.0.0`. `serve` flag `--port` default 8787.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `go test ./internal/httpapi -count=1`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/httpapi cmd/wheretoken/main.go
@@ -815,16 +815,16 @@ Do not recompute totals in the frontend. Display `total_m`, `hit_rate_text`, `mi
 
 Read and follow `frontend-design` when writing `App.vue` styles. Keep the page quiet and numeric; no aurora backgrounds.
 
-- [ ] **Step 1: Write the failing vitest** that a pure `columnsFrom(view)` returns the six display strings from `SliceView` without calling `/ 1e6`.
+- [x] **Step 1: Write the failing vitest** that a pure `columnsFrom(view)` returns the six display strings from `SliceView` without calling `/ 1e6`.
 
-- [ ] **Step 2: Run `npx vitest run`** in `web/`
+- [x] **Step 2: Run `npx vitest run`** in `web/`
 Expected: FAIL, module missing.
 
-- [ ] **Step 3: Scaffold Vue app and components.** `vite.config.ts` `server.proxy['/api'] = 'http://127.0.0.1:8787'`.
+- [x] **Step 3: Scaffold Vue app and components.** `vite.config.ts` `server.proxy['/api'] = 'http://127.0.0.1:8787'`.
 
-- [ ] **Step 4: Run vitest and `npm run build`.** Point `httpapi` at `web/dist`. Manual: `go run ./cmd/wheretoken serve` and `npm run dev` — confirm Claude Code and Kimi are different rows, MiniMax appears under 厂家 if present, and the two tables plus KPI share one payload.
+- [x] **Step 4: Run vitest and `npm run build`.** Point `httpapi` at `web/dist`. Manual: `go run ./cmd/wheretoken serve` and `npm run dev` — confirm Claude Code and Kimi are different rows, MiniMax appears under 厂家 if present, and the two tables plus KPI share one payload.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web internal/httpapi
@@ -853,17 +853,17 @@ EOF
 
 `sum_opencode.py` opens `~/.local/share/opencode/opencode.db` read-only, sums `message.data` tokens the same way as Task 6.
 
-- [ ] **Step 1: Write `scripts/sum_kimi.py` and a test that it agrees with the Task 5 fixture** by pointing it at `testdata/adapters/kimi` via argv.
+- [x] **Step 1: Write `scripts/sum_kimi.py` and a test that it agrees with the Task 5 fixture** by pointing it at `testdata/adapters/kimi` via argv.
 
-- [ ] **Step 2: Run it on the fixture**
+- [x] **Step 2: Run it on the fixture**
 Expected: miss=150 cache_read=1000 cache_create=20 output=15. If the script is missing, it fails.
 
-- [ ] **Step 3: Write `verify-local.sh`** that builds `wheretoken`, runs `scan --json`, compares Kimi/OpenCode with python. Skip a source if its directory is absent.
+- [x] **Step 3: Write `verify-local.sh`** that builds `wheretoken`, runs `scan --json`, compares Kimi/OpenCode with python. Skip a source if its directory is absent.
 
-- [ ] **Step 4: Run `bash scripts/verify-local.sh`**
+- [x] **Step 4: Run `bash scripts/verify-local.sh`**
 Expected: PASS on this developer machine for Kimi and OpenCode.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts README.md

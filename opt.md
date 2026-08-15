@@ -155,3 +155,28 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 
 - HTTP 用 Go 标准库，不引入 chi，直到路由变复杂。
 - v1 先每次全量扫描，不写 `~/.wheretoken/cache.db`。本机四源体量下足够；扫盘超过 10s 再加缓存。
+
+---
+
+# 第 2 轮：实现 Task 4–12（2026-08-15）
+
+触发：规格与度量核已落地，按计划从适配器接口做到 `scan --json` + localhost Vue。
+
+## 2.1 Codex 超长 JSONL
+
+- **选项：** 维持计划「Scanner 至少 10 MiB」 / 按本机最长行加大缓冲区 / `ReadBytes` 无上限逐行。
+- **选择：** Codex 用 `bufio.Reader.ReadBytes('\n')`。
+- **理由：** 本机 `rollout-*.jsonl` 最长一行约 24.6 MB，10 MiB Scanner 会把该文件记进 `errors` 并少计用量。
+- **后果：** 单行仍会进内存；禁止 `ReadFile` 整文件。Claude / Kimi 本机最长行低于 10 MiB，仍用 Scanner。
+
+## 2.2 仪表盘气质
+
+- **选择：** 新闻纸账本（ZCOOL XiaoWei + Courier Prime），浅色默认、跟随系统深色；KPI + 按工具表 + 按厂家表吃同一 `/api/summary`。
+- **不选：** 极光渐变、在前端 `/ 1e6` 重算合计。
+- **后果：** `web/src/format.ts` 的 `columnsFrom` 只转发后端已格式化的 `*_m` / `hit_rate_text`。
+
+## 2.3 SQLite 驱动
+
+- **选择：** `modernc.org/sqlite`（计划锁定）。`go get` 把 `go 1.25` 写成 `go 1.25.0`。
+- **不选：** CGO `mattn/go-sqlite3`。
+- **后果：** OpenCode 只 `SELECT data FROM message`；生产 SQL 不含 account / credential 字样。
