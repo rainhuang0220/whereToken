@@ -208,3 +208,13 @@ func TestOfflineDoesNotCallBillingAPI(t *testing.T) {
 		t.Fatalf("offline still hit API %d times", hits)
 	}
 }
+
+func TestDefaultHTTPClientTimeout(t *testing.T) {
+	c := Adapter{}.client()
+	if c.Timeout != 20*time.Second {
+		t.Fatalf("timeout=%s", c.Timeout)
+	}
+	if c.CheckRedirect == nil {
+		t.Fatal("missing redirect lock")
+	}
+}
