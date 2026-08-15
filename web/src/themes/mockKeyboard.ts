@@ -13,13 +13,6 @@ export type Gap = { gap: number }
 
 export type Slot = KeySpec | Gap
 
-export type GridKey = KeySpec & {
-  c: number
-  r: number
-  cs?: number
-  rs?: number
-}
-
 const EMBERS: KeyFill[] = ['ember-1', 'ember-2', 'ember-3', 'ember-4']
 
 const ALPHA_FILL: Record<string, KeyFill> = {
@@ -86,36 +79,28 @@ function mod(code: string, label: string, u: number): KeySpec {
   return { code, label, u, fill: 'clay' }
 }
 
-function padDigit(code: string, label: string, c: number, r: number, extra: Partial<GridKey> = {}): GridKey {
-  return { code, label, u: 1, fill: ember(code, 17), c, r, ...extra }
-}
-
-function padMod(code: string, label: string, c: number, r: number, extra: Partial<GridKey> = {}): GridKey {
-  return { code, label, u: 1, fill: 'clay', c, r, ...extra }
-}
-
 export function isGap(slot: Slot): slot is Gap {
   return 'gap' in slot
 }
 
 export const MAIN_ROWS: Slot[][] = [
   [
-    mod('Escape', 'esc', 1.55),
-    { gap: 0.55 },
+    mod('Escape', 'esc', 1),
     mod('F1', 'f1', 1),
     mod('F2', 'f2', 1),
     mod('F3', 'f3', 1),
     mod('F4', 'f4', 1),
-    { gap: 0.45 },
     mod('F5', 'f5', 1),
     mod('F6', 'f6', 1),
     mod('F7', 'f7', 1),
     mod('F8', 'f8', 1),
-    { gap: 0.45 },
     mod('F9', 'f9', 1),
     mod('F10', 'f10', 1),
     mod('F11', 'f11', 1),
     mod('F12', 'f12', 1),
+    mod('PrintScreen', 'scr', 1),
+    mod('Delete', 'del', 1),
+    mod('Power', 'pwr', 1),
   ],
   [
     alpha('Backquote', '`'),
@@ -131,10 +116,10 @@ export const MAIN_ROWS: Slot[][] = [
     alpha('Digit0', '0'),
     alpha('Minus', '-'),
     alpha('Equal', '='),
-    mod('Backspace', 'delete', 1.85),
+    mod('Backspace', 'delete', 3),
   ],
   [
-    mod('Tab', 'tab', 1.55),
+    mod('Tab', 'tab', 1.5),
     alpha('KeyQ', 'Q'),
     alpha('KeyW', 'W'),
     alpha('KeyE', 'E'),
@@ -147,10 +132,11 @@ export const MAIN_ROWS: Slot[][] = [
     alpha('KeyP', 'P'),
     alpha('BracketLeft', '['),
     alpha('BracketRight', ']'),
-    alpha('Backslash', '\\', 1.45),
+    alpha('Backslash', '\\'),
+    mod('Home', 'home', 1),
   ],
   [
-    mod('CapsLock', 'caps', 1.8),
+    mod('CapsLock', 'caps', 1.75),
     alpha('KeyA', 'A'),
     alpha('KeyS', 'S'),
     alpha('KeyD', 'D'),
@@ -162,10 +148,10 @@ export const MAIN_ROWS: Slot[][] = [
     alpha('KeyL', 'L'),
     alpha('Semicolon', ';'),
     alpha('Quote', "'"),
-    mod('Enter', 'return', 2.15),
+    mod('Enter', 'return', 3.25),
   ],
   [
-    mod('ShiftLeft', 'shift', 2.35),
+    mod('ShiftLeft', 'shift', 2.25),
     alpha('KeyZ', 'Z'),
     alpha('KeyX', 'X'),
     alpha('KeyC', 'C'),
@@ -176,45 +162,22 @@ export const MAIN_ROWS: Slot[][] = [
     alpha('Comma', ','),
     alpha('Period', '.'),
     alpha('Slash', '/'),
-    mod('ShiftRight', 'shift', 2.65),
+    mod('ShiftRight', 'shift', 1.75),
+    mod('ArrowUp', '↑', 1),
+    mod('End', 'end', 1),
   ],
   [
-    mod('Fn', 'fn', 1),
-    mod('ControlLeft', 'control', 1.15),
-    mod('AltLeft', 'option', 1.2),
-    mod('MetaLeft', 'command', 1.45),
-    mod('Space', ' ', 5.85),
-    mod('MetaRight', 'command', 1.45),
-    mod('AltRight', 'option', 1.2),
+    mod('Fn', 'fn', 1.25),
+    mod('ControlLeft', 'control', 1.25),
+    mod('AltLeft', 'option', 1.25),
+    mod('MetaLeft', 'command', 1.5),
+    mod('Space', ' ', 5.25),
+    mod('MetaRight', 'command', 1.25),
+    mod('AltRight', 'option', 1.25),
+    mod('ArrowLeft', '←', 1),
+    mod('ArrowDown', '↓', 1),
+    mod('ArrowRight', '→', 1),
   ],
-]
-
-export const NAV_KEYS: GridKey[] = [
-  { ...mod('ArrowUp', '↑', 1), c: 2, r: 1 },
-  { ...mod('ArrowLeft', '←', 1), c: 1, r: 2 },
-  { ...mod('ArrowDown', '↓', 1), c: 2, r: 2 },
-  { ...mod('ArrowRight', '→', 1), c: 3, r: 2 },
-]
-
-export const PAD_KEYS: GridKey[] = [
-  padMod('NumLock', 'clear', 1, 1),
-  padMod('NumpadEqual', '=', 2, 1),
-  padMod('NumpadDivide', '/', 3, 1),
-  padMod('NumpadMultiply', '*', 4, 1),
-  padDigit('Numpad7', '7', 1, 2),
-  padDigit('Numpad8', '8', 2, 2),
-  padDigit('Numpad9', '9', 3, 2),
-  padMod('NumpadSubtract', '−', 4, 2),
-  padDigit('Numpad4', '4', 1, 3),
-  padDigit('Numpad5', '5', 2, 3),
-  padDigit('Numpad6', '6', 3, 3),
-  padMod('NumpadAdd', '+', 4, 3, { rs: 2 }),
-  padDigit('Numpad1', '1', 1, 4),
-  padDigit('Numpad2', '2', 2, 4),
-  padDigit('Numpad3', '3', 3, 4),
-  padDigit('Numpad0', '0', 1, 5, { cs: 2, fill: 'ember-1' }),
-  padDigit('NumpadDecimal', '.', 3, 5),
-  padMod('NumpadEnter', 'enter', 4, 5),
 ]
 
 export const KEY_CODES: Set<string> = new Set()
@@ -224,8 +187,6 @@ for (const row of MAIN_ROWS) {
     if (!isGap(slot)) KEY_CODES.add(slot.code)
   }
 }
-for (const key of NAV_KEYS) KEY_CODES.add(key.code)
-for (const key of PAD_KEYS) KEY_CODES.add(key.code)
 
 export type KeyStroke = {
   code: string

@@ -4,14 +4,11 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { prefersReducedMotion } from './galleryMotion'
 import {
   MAIN_ROWS,
-  NAV_KEYS,
-  PAD_KEYS,
   applyPress,
   applyRelease,
   createKeyboardSession,
   isGap,
   shouldPreventDefault,
-  type GridKey,
   type KeySpec,
 } from './mockKeyboard'
 
@@ -76,13 +73,6 @@ function gapStyle(n: number): Record<string, string> {
   return { '--u': String(n) }
 }
 
-function gridStyle(key: GridKey): Record<string, string> {
-  return {
-    gridColumn: key.cs ? `${key.c} / span ${key.cs}` : String(key.c),
-    gridRow: key.rs ? `${key.r} / span ${key.rs}` : String(key.r),
-  }
-}
-
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
@@ -117,32 +107,6 @@ onUnmounted(() => {
           >{{ slot.label }}</span>
         </template>
       </div>
-    </div>
-    <div class="kb-nav">
-      <span
-        v-for="k in NAV_KEYS"
-        :key="k.code"
-        class="kb-key"
-        :data-code="k.code"
-        :data-fill="k.fill"
-        :style="gridStyle(k)"
-        @pointerdown="onPointerDown($event, k.code)"
-        @pointerup="onPointerUp($event, k.code)"
-        @pointercancel="onPointerUp($event, k.code)"
-      >{{ k.label }}</span>
-    </div>
-    <div class="kb-pad">
-      <span
-        v-for="k in PAD_KEYS"
-        :key="k.code"
-        class="kb-key"
-        :data-code="k.code"
-        :data-fill="k.fill"
-        :style="gridStyle(k)"
-        @pointerdown="onPointerDown($event, k.code)"
-        @pointerup="onPointerUp($event, k.code)"
-        @pointercancel="onPointerUp($event, k.code)"
-      >{{ k.label }}</span>
     </div>
   </div>
 </template>

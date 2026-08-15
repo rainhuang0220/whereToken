@@ -783,13 +783,11 @@ body:has(.glaze-hall.is-open) {
 
 .kb {
   --kb-gap: clamp(3px, 0.42vw, 6px);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(7.8rem, 0.34fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: clamp(0.35rem, 1vw, 0.8rem);
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   width: 100%;
-  min-height: 11rem;
+  min-height: 12.5rem;
   margin-top: 0.45rem;
   padding: clamp(6px, 0.7vw, 10px);
   background: var(--mortar);
@@ -799,7 +797,9 @@ body:has(.glaze-hall.is-open) {
 .kb-main {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: var(--kb-gap);
+  width: 100%;
   min-width: 0;
   min-height: 0;
 }
@@ -821,25 +821,6 @@ body:has(.glaze-hall.is-open) {
   pointer-events: none;
 }
 
-.kb-nav {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(1.35rem, 2.15rem));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: var(--kb-gap);
-  align-self: end;
-  height: 32%;
-  min-height: 3.2rem;
-}
-
-.kb-pad {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-  gap: var(--kb-gap);
-  min-width: 0;
-  min-height: 0;
-}
-
 .kb-key {
   display: flex;
   align-items: flex-end;
@@ -853,7 +834,7 @@ body:has(.glaze-hall.is-open) {
   background: var(--clay);
   color: var(--bone);
   font-family: var(--font-mono);
-  font-size: clamp(0.48rem, 0.92vw, 0.74rem);
+  font-size: clamp(0.52rem, 1.05vw, 0.84rem);
   font-style: normal;
   font-weight: 500;
   line-height: 1;
@@ -883,19 +864,13 @@ body:has(.glaze-hall.is-open) {
 }
 
 .kb-key[data-fill='clay'] {
-  font-size: clamp(0.38rem, 0.72vw, 0.58rem);
+  font-size: clamp(0.4rem, 0.82vw, 0.64rem);
   letter-spacing: 0.02em;
 }
 
 .kb-key.wide {
   justify-content: center;
   align-items: center;
-}
-
-.kb-nav .kb-key,
-.kb-pad .kb-key {
-  flex: none;
-  width: auto;
 }
 
 .kb-key.is-down {
@@ -909,18 +884,6 @@ body:has(.glaze-hall.is-open) {
 .kb-key[data-fill='ember-4'].is-down {
   background: var(--bone);
   color: var(--void);
-}
-
-@media (max-width: 720px) {
-  .kb {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1.15fr) auto minmax(7.5rem, 0.7fr);
-  }
-
-  .kb-nav {
-    height: 4.2rem;
-    justify-self: end;
-  }
 }
 
 .glaze-expand-actions {
