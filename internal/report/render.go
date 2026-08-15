@@ -22,6 +22,10 @@ func Render(snap Snapshot, opt Options) string {
 	var b strings.Builder
 	b.WriteString(title(snap))
 	b.WriteByte('\n')
+	if banner := offlineBanner(snap); banner != "" {
+		b.WriteString(banner)
+		b.WriteByte('\n')
+	}
 	if spark := sparkLine(snap, opt.ASCII); spark != "" {
 		b.WriteString(spark)
 		b.WriteByte('\n')
@@ -45,11 +49,12 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteByte('\n')
 		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
 	}
-	if len(snap.Notes) > 0 {
+	footnoteNotes := footnotes(snap)
+	if len(footnoteNotes) > 0 {
 		b.WriteByte('\n')
 		var nb strings.Builder
 		nb.WriteString("注\n")
-		for _, n := range snap.Notes {
+		for _, n := range footnoteNotes {
 			nb.WriteString("  · ")
 			nb.WriteString(n)
 			nb.WriteByte('\n')
@@ -170,4 +175,24 @@ func allSameTool(snap Snapshot) bool {
 		return true
 	}
 	return len(snap.Tools) == 1
+}
+
+func offlineBanner(snap Snapshot) string {
+	for _, n := range snap.Notes {
+		if strings.HasPrefix(n, "offline ·") {
+			return n
+		}
+	}
+	return ""
+}
+
+func footnotes(snap Snapshot) []string {
+	out := make([]string, 0, len(snap.Notes))
+	for _, n := range snap.Notes {
+		if strings.HasPrefix(n, "offline ·") {
+			continue
+		}
+		out = append(out, n)
+	}
+	return out
 }

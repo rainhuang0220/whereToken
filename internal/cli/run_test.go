@@ -69,8 +69,13 @@ func TestRunOfflineAddsNote(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "offline") || !strings.Contains(out.String(), "本机账本") {
-		t.Fatalf("%s", out.String())
+	s := out.String()
+	if !strings.Contains(s, "offline") || !strings.Contains(s, "本机账本") {
+		t.Fatalf("%s", s)
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) < 2 || !strings.HasPrefix(lines[1], "offline ·") {
+		t.Fatalf("offline banner should sit under the title:\n%s", s)
 	}
 }
 

@@ -161,3 +161,27 @@ func TestRenderRedactsNotes(t *testing.T) {
 		t.Fatalf("%s", out)
 	}
 }
+
+func TestRenderOfflineBannerAfterTitle(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, []string{"offline · 只用本机账本，没有请求 Cursor/Trae 云端"}, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{})
+	lines := strings.Split(out, "\n")
+	if len(lines) < 2 {
+		t.Fatalf("too short:\n%s", out)
+	}
+	if !strings.HasPrefix(lines[0], "whereToken") {
+		t.Fatalf("title: %q", lines[0])
+	}
+	if !strings.HasPrefix(lines[1], "offline ·") {
+		t.Fatalf("banner should sit under the title, got %q\n%s", lines[1], out)
+	}
+	if strings.Contains(out, "注\n  · offline") {
+		t.Fatalf("offline duplicated in footnotes:\n%s", out)
+	}
+}

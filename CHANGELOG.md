@@ -10,3 +10,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Exit `0` ok (including zero data / degraded login), `1` runtime, `2` usage
 - Never prints JWTs or access tokens
 - `wheretoken serve` sets `ReadHeaderTimeout`; go.mod pins `toolchain go1.25.13` for stdlib TLS/HTTP fixes
+- `--offline` prints a banner under the title so a long ranking does not hide that the scan skipped Cursor/Trae APIs
