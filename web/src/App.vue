@@ -12,14 +12,21 @@ import type { AxisSel, CalendarSeries, DrillTables } from './types'
 
 const store = useSummaryStore()
 const payload = computed(() => store.payload)
-const degraded = computed(() => payload.value?.all.quality === 'degraded')
+const claudeDegraded = computed(() =>
+  payload.value?.by_source?.some((s) => s.id === 'claude' && s.quality === 'degraded'),
+)
+const cursorAbsent = computed(() =>
+  payload.value?.by_source?.some((s) => s.id === 'cursor' && s.quality === 'absent'),
+)
+const cursorDegraded = computed(() =>
+  payload.value?.by_source?.some((s) => s.id === 'cursor' && s.quality === 'degraded'),
+)
 const axis = ref<AxisSel>({ kind: 'all', id: 'all' })
 
 const series = computed<CalendarSeries>(() => selectSeries(payload.value, axis.value))
 
 const cells = computed(() => wallCells(payload.value, axis.value, todayISO()))
 const drill = computed<DrillTables>(() => selectDrill(payload.value, axis.value))
-const cursorAbsent = computed(() => payload.value?.by_source?.some((s) => s.id === 'cursor' && s.quality === 'absent'))
 
 const litDays = computed(() => series.value.days.length)
 const summaryText = computed(() => {
@@ -47,8 +54,11 @@ onMounted(() => {
     </header>
 
     <p v-if="store.error" class="err">{{ store.error }}</p>
-    <p v-else-if="degraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
-    <p v-if="cursorAbsent" class="note">检测到 Cursor：本地账本没有 token 列，用量不计（不上云拉 CSV）。</p>
+    <p v-if="claudeDegraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
+    <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
+    <p v-else-if="cursorDegraded" class="note">
+      Cursor 已计入请求与回合（本机 state.vscdb）。bubble.tokenCount 多为 0，未把上下文窗口快照加成用量，也不上云拉 CSV。
+    </p>
 
     <template v-if="payload">
       <AxisDamper

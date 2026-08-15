@@ -5,6 +5,25 @@
 
 ---
 
+# 第 5 轮：Cursor 必须是真源（2026-08-15）
+
+触发：用户在 Cursor 里用了 whereToken，却看到 Cursor「已发现，无用量」，觉得账本把一年的 Cursor 使用抹掉了。
+
+## 5.1 为什么会空
+
+- **当时的选择：** P1 记下 `ai-code-tracking.db` 无 token 列、`state.vscdb` 2.3GB 不敢扫；后来用 `quality=absent` 表示「检测到 ~/.cursor」。
+- **为什么产品错：** 人正在 Cursor 里聊天，本地账本是 `Application Support/Cursor/.../state.vscdb`，不是 `~/.cursor/ai-tracking`。缺席行等于说「你没在用 Cursor」。
+- **不选：** 用登录 Cookie 拉 cursor.com CSV（tokentop/tokscale 的路）；用 `text.length/4` 或把 `promptTokenBreakdown.totalUsedTokens` 加总（那是窗口快照，会虚增数百万）。
+
+## 5.2 本机字段（2026-08-15）
+
+- `cursorDiskKV` 前缀 `composerData:%`（328）+ `bubbleId:%`（~5.5 万）。`usageData` 全是空对象。`tokenCount.inputTokens/outputTokens` **存在且全为 0**。`usageUuid` 全无。
+- 真信号：用户泡 `type=1`、助手/工具泡 `type=2`、`capabilityType`（30=thinking）、用户泡 `modelInfo.modelName`、`composerHeaders.isSubagent` + 工作区路径。
+- **选择：** 请求 = type 2 且非 thinking；回合 = type 1 且非 subagent；token 列照字段填（本机 0）+ `quality=degraded`。厂家走已有 `vendor.Lookup`。
+- **后果：** 六列都在；窑墙按 token 点亮，所以 Cursor 单独切轴时墙仍是冷的（0 token，不是没扫到）。合计守恒不变。
+
+---
+
 # 第 0 轮：规格（2026-08-15）
 
 触发：用户要求先写详细规划文档，再实现；同系列对照 PlainList / Flow / Untitled / docxeditor；过程决定写入本文件；重要处询问用户；其余按最优解执行；GitHub 建仓；每轮核验后提交一版；提交不含 AI coauthor。
@@ -72,7 +91,7 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 | P0 | Kimi Code `~/.kimi-code/sessions/**/wire.jsonl` 的 `usage.record` | 有。约 330.04 M，命中率 98.81% | 字段干净，作为第一个黄金夹具 |
 | P0 | OpenCode `~/.local/share/opencode/opencode.db` | 有。session 合计与 message.tokens 一致，约 1.74 M | 只读；禁止读 `credential` / `account` |
 | P0 | Codex `~/.codex/sessions/**/rollout-*.jsonl` 的 `token_count` | 有 29 个 rollout | 用累计 `total_token_usage` 的增量，禁止对重复 snapshot 求和 |
-| P1 | Cursor | `state.vscdb` 2.3 GB；`ai-tracking` 无 token 列 | 本地 token 不完整；**禁止**用 Cursor 登录态去拉云端 CSV |
+| P0 | Cursor `state.vscdb` 键前缀 | 有请求/回合；tokenCount 本机全 0 | 第 5 轮改为真源。禁止 CSV；禁止把上下文快照当用量 |
 | P1 | 发现器：家目录 `.*` + macOS Application Support 里能识别的其它 agent | 目录存在但用量字段未核完 | MiniMax / Copilot / Trae / OpenClaw 等 |
 | P2 | Gemini / Qwen / Amp / Factory / Goose / Hermes / pi | 本机无对应家目录 | 适配器接口先留好，有目录再点亮 |
 
@@ -172,7 +191,7 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 
 - **选择：** 后端预聚合 `drill.all` / `drill.by_source[id]` / `drill.by_vendor[id]`（模型、工作区、会话），前端切轴只换表，不把 token 再加一遍。
 - **会话：** 有 `session_id` 用它，否则退回 `request_id`。不展示 prompt。
-- **Cursor：** 发现 `~/.cursor` 但 Parse 为空，按工具表一行 `quality=absent`，「已发现，无用量」。不扫 2.3GB `state.vscdb`。
+- **Cursor：** `state.vscdb` 键前缀解析为真源。无 vscdb 时才 `quality=absent`。
 
 ## 4.3 相对规格
 

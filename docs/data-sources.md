@@ -22,8 +22,8 @@
 | `~/.local/share/opencode/` | OpenCode | **是**（`opencode.db` session/message tokens） | P0 |
 | `~/.opencode/` | OpenCode 安装目录 | 否（只有 npm 包装） | 忽略 |
 | `~/.config/opencode/` | OpenCode 配置 | 否（无用量） | 忽略 |
-| `~/.cursor/` | Cursor | 部分（ai-tracking **无 token 列**） | P1 |
-| `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | Cursor | 可能有 composer usage；文件 **2.3 GB** | P1，必须键前缀查询 |
+| `~/.cursor/` | Cursor | 目录在；ai-tracking **无 token 列**（请求次数也不能当模型调用） | 发现回退 |
+| `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | Cursor | **是**（bubble 请求/回合；tokenCount 本机全 0） | P0 账本，键前缀查询 |
 | `~/.minimax/` | MiniMax agent | sqlite 仅 `agents` 表，未见 token | P1 探测 |
 | `~/.copilot/` | Copilot CLI | 未见 otel jsonl | P1 探测 |
 | `~/.openclaw/` | OpenClaw | 目录存在，本轮未深挖字段 | P1 |
@@ -216,14 +216,60 @@
 
 ---
 
-## P1 Cursor
+## P0-5 Cursor（2026-08-15 复测，本机 macOS）
 
-**路径：**
+**根：** `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`（2.3 GB + 4.5 MB WAL）。`~/.cursor` 只作发现回退。禁止 Cookie / Keychain / `cursor.com` CSV。
 
-- `~/.cursor/ai-tracking/ai-code-tracking.db` — 表 `ai_code_hashes` 有 model/conversationId，**没有 token 列**。可做请求次数下限，不能做用量。
-- `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` — 2.3 GB。社区文档称 `cursorDiskKV` 里 `composerData:*` 可能带 `usageData`。全表扫描不可接受。
+**表：** `cursorDiskKV`（KV）、`composerHeaders`（会话索引，含 `isSubagent` 与工作区路径）、`ItemTable`（UI 状态，不用作用量）。
 
-**产品决定：** v1 可以显示「检测到 Cursor，token 账本不完整」；完整六列放到 P1。禁止用 Cursor 登录 cookie 拉 `cursor.com` CSV（那是 tokscale 的路，违反本项目「不上云」）。
+**只允许键前缀查询**（生产代码禁止 `SELECT *` / `SELECT value FROM cursorDiskKV`）：
+
+| 前缀 | 本机行数 | 用途 |
+|------|--------:|------|
+| `composerData:%` | 328 | 会话默认 `modelConfig.modelName`；`usageData` **全部空对象** |
+| `bubbleId:%` | ~55,458 | 消息：`type` 1=用户 / 2=助手或工具；`tokenCount.inputTokens` / `outputTokens`；`capabilityType`；`modelInfo.modelName`（只出现在用户泡） |
+| `agentKv:%` | ~107k | 不读（blob，无用量列） |
+| `composer.content.%` / `checkpointId:%` / `inlineDiff:%` | 大 | 不读 |
+
+**bubble 字段（json_extract，不取 `text` / `thinking` / `toolFormerData` 正文）：**
+
+| whereToken | Cursor 字段 |
+|------------|-------------|
+| miss | `tokenCount.inputTokens`（本机 **全部为 0**） |
+| output | `tokenCount.outputTokens`（本机 **全部为 0**） |
+| cache_read / cache_create | 无本地列；恒 0 |
+| requests | `type=2` 且 `capabilityType != 30`（30=thinking，与随后的工具/正文同一代，不另计请求） |
+| user_turns | `type=1` 且 composer **不是** `composerHeaders.isSubagent` |
+| 时间 | bubble `createdAt` RFC3339 |
+| 模型 | 用户泡 `modelInfo.modelName`，沿用到随后的助手泡；否则会话 `modelConfig.modelName` |
+| 厂家 | `vendor.Lookup(model)`（claude→Anthropic，gpt→OpenAI，MiniMax→MiniMax，kimi→Moonshot，gemini→Google，grok/composer/default→Unknown） |
+| 质量 | token 字段非 0 → authoritative；全 0 → **degraded**（账本在，用量列是占位） |
+
+**本机合计（2026-08-15，前缀查询，不把上下文快照当账单）：**
+
+| 项 | 值 |
+|----|---:|
+| type=1 用户泡 | 1,970 |
+| 其中 subagent | 143 |
+| **真用户回合** | **1,827** |
+| type=2 | ~53.5k（会话还在涨） |
+| 其中 thinking (`capabilityType=30`) | ~10k |
+| **请求** | **43,550**（2026-08-15 22:57 `scan --json` 与 `scripts/sum_cursor.py` 一致） |
+| tokenCount 非 0 行 | **0** |
+| miss / cache / output | **0** |
+| 厂家拆分（请求，token 均为 0） | Unknown 29,840 · MiniMax 6,527 · Anthropic 5,783 · Moonshot 770 · OpenAI 342 · Google 288 |
+
+**明确不算用量（会虚增数百万）：**
+
+- `composerData.promptTokenBreakdown.totalUsedTokens`（126 个会话有；是**当前上下文窗口快照**，类别还标着 `estimatedTokens`）
+- `composerData.contextTokensUsed`（149 个会话）
+- `bubble.contextWindowStatusAtCreation.tokensUsed`（357 个泡，sum≈34.5M，同样是窗口占用不是请求增量）
+- `ItemTable` `aiCodeTracking.dailyStats.*`（行数，不是 token）
+- `~/.cursor/ai-tracking/ai-code-tracking.db`：`ai_code_hashes` 有 `requestId`/`model`/`conversationId`，**没有 token 列**；13,234 行里 distinct `requestId` 只有 69，不能当请求次数
+
+**workspaceStorage/\*/state.vscdb：** 本机 34 个。全局 `composerHeaders.workspaceIdentifier.uri.fsPath` 已覆盖 259/267 会话，不必再扫工作区库。
+
+**产品决定：** Cursor 是真实工具源（六列都在）。token 列诚实为 0 + `quality=degraded`。不上云。
 
 ---
 
@@ -246,6 +292,8 @@
 # Claude：requestId 去重后的 max(usage)，并输出质量旗标比例
 # OpenCode：SELECT 四列 SUM，应等于 message.tokens 聚合
 # Codex：每个 rollout 最后一个前进的 total_token_usage，应等于 delta 之和
+# Cursor：bubble tokenCount 求和（本机应为 0）+ 请求/回合
+# python3 scripts/sum_cursor.py
 ```
 
 夹具放 `testdata/adapters/<source>/`：从真实文件**脱敏**后的 20–50 行样本（去掉 prompt 正文，保留 usage 与 type）。

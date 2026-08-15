@@ -42,7 +42,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
 
-Cursor 若只有 `~/.cursor` 而没有 token 列，表里会有一行「已发现，无用量」，不编造数字、不拉云端 CSV。
+Cursor 来自本机 `state.vscdb`（键前缀查询）：请求与用户回合是实的；`bubble.tokenCount` 在本机几乎全是 0，标 `degraded`，不把上下文窗口快照加成用量，不拉云端 CSV。只有 `~/.cursor`、没有 vscdb 时才显示「已发现，无用量」。
 
 必读：
 

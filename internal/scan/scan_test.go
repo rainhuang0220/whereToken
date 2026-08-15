@@ -1,10 +1,13 @@
 package scan
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	_ "modernc.org/sqlite"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -75,5 +78,71 @@ func TestRunMarksCursorAbsent(t *testing.T) {
 	}
 	if r.Summary.All.Total() != 0 {
 		t.Fatalf("all=%d", r.Summary.All.Total())
+	}
+}
+
+func TestRunCursorVscdbConservation(t *testing.T) {
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "Library", "Application Support", "Cursor", "User", "globalStorage")
+	if err := os.MkdirAll(gs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(gs, "state.vscdb")
+	writeScanCursorDB(t, dbPath)
+
+	r := Run(testhome.New(dir), AllAdapters())
+	var cursor, anthropic *metric.Slice
+	for i := range r.Summary.BySource {
+		if r.Summary.BySource[i].ID == "cursor" {
+			cursor = &r.Summary.BySource[i]
+		}
+	}
+	for i := range r.Summary.ByVendor {
+		if r.Summary.ByVendor[i].ID == "anthropic" {
+			anthropic = &r.Summary.ByVendor[i]
+		}
+	}
+	if cursor == nil || cursor.Quality == event.QualityAbsent {
+		t.Fatalf("cursor %+v", cursor)
+	}
+	if cursor.Requests != 1 || cursor.UserTurns != 1 || cursor.Total() != 55 {
+		t.Fatalf("cursor %+v", cursor)
+	}
+	if anthropic == nil || anthropic.Total() != 55 {
+		t.Fatalf("vendor %+v", anthropic)
+	}
+	if r.Summary.All.Total() != 55 || r.Summary.All.Total() != cursor.Total() {
+		t.Fatalf("conservation all=%d cursor=%d", r.Summary.All.Total(), cursor.Total())
+	}
+	var vendSum int64
+	for _, s := range r.Summary.ByVendor {
+		vendSum += s.Total()
+	}
+	if vendSum != r.Summary.All.Total() {
+		t.Fatalf("vendor sum=%d all=%d", vendSum, r.Summary.All.Total())
+	}
+}
+
+func writeScanCursorDB(t *testing.T, path string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`CREATE TABLE cursorDiskKV (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)`,
+		"composerData:s1", `{"composerId":"s1","createdAt":1700000000000,"modelConfig":{"modelName":"claude-opus-4-6"},"usageData":{}}`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)`,
+		"bubbleId:s1:u1", `{"type":1,"createdAt":"2026-02-09T14:44:05.860Z","tokenCount":{"inputTokens":0,"outputTokens":0}}`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)`,
+		"bubbleId:s1:a1", `{"type":2,"createdAt":"2026-02-09T14:44:08.000Z","tokenCount":{"inputTokens":40,"outputTokens":15}}`); err != nil {
+		t.Fatal(err)
 	}
 }

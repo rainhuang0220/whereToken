@@ -64,6 +64,21 @@ if db.is_file():
 else:
     print("skip opencode: db absent")
 
+vscdb = home / "Library" / "Application Support" / "Cursor" / "User" / "globalStorage" / "state.vscdb"
+if vscdb.is_file():
+    py = json.loads(subprocess.check_output(["python3", "scripts/sum_cursor.py", str(vscdb)], text=True))
+    sl = by_id("by_source", "cursor")
+    if sl is None:
+        raise SystemExit("cursor: vscdb present but missing in scan JSON")
+    if sl.get("quality") == "absent":
+        raise SystemExit("cursor: quality=absent despite state.vscdb")
+    for field in ("miss", "cache_read", "cache_create", "output", "requests", "user_turns"):
+        if int(py[field]) != int(sl[field]):
+            raise SystemExit(f"cursor {field}: python={py[field]} scan={sl[field]}")
+    print(f"ok cursor requests={py['requests']} turns={py['user_turns']} total={py['total']}")
+else:
+    print("skip cursor: state.vscdb absent")
+
 print("--- claude ---")
 print(json.dumps(by_id("by_source", "claude"), ensure_ascii=False, indent=2))
 print("--- codex ---")
