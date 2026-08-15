@@ -27,6 +27,7 @@ export type ThemeTokens = Record<TokenName, string>
 
 export const CHROME_TOKENS = [
   'brick-radius',
+  'key-radius',
   'lever-radius',
   'wall-radius',
   'cell',
@@ -50,6 +51,7 @@ export type ThemePack = {
 
 const FORGE_CHROME: ThemeChrome = {
   'brick-radius': '2px',
+  'key-radius': '4px',
   'lever-radius': '0px',
   'wall-radius': '0px',
   cell: '13px',
@@ -211,6 +213,7 @@ export const themes: ThemePack[] = [
     blurb: ['圆砖、粗字。', '观察台也可以玩一下。', '合计还是要能读。'],
     chrome: {
       'brick-radius': '7px',
+      'key-radius': '10px',
       'lever-radius': '999px',
       'wall-radius': '14px',
       cell: '14px',
@@ -244,6 +247,7 @@ export const themes: ThemePack[] = [
     blurb: ['终端账本。', '等宽、直角、磷光。', '墙仍是平的。'],
     chrome: {
       'brick-radius': '0px',
+      'key-radius': '2px',
       'lever-radius': '0px',
       'wall-radius': '0px',
       cell: '11px',

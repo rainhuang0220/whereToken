@@ -2,6 +2,7 @@
   --cell: 13px;
   --gap: 4px;
   --brick-radius: 2px;
+  --key-radius: 4px;
   --lever-radius: 0px;
   --wall-radius: 0px;
   --font-display: 'Big Shoulders Display', 'Chiron Hei HK', sans-serif;
@@ -830,7 +831,7 @@ body:has(.glaze-hall.is-open) {
   min-height: 0;
   padding: 0.18em 0.32em 0.22em;
   border: 1px solid var(--mortar);
-  border-radius: var(--brick-radius, 2px);
+  border-radius: var(--key-radius, 4px);
   background: var(--clay);
   color: var(--bone);
   font-family: var(--font-mono);

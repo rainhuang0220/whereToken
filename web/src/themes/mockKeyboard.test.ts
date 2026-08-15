@@ -111,4 +111,20 @@ describe('gallery mock keyboard', () => {
     expect(() => applyPress(el, { reduced: true })).not.toThrow()
     expect(() => applyRelease(el, { reduced: true })).not.toThrow()
   })
+
+  it('rounds keycaps like inner bricks, slightly more, never stadium pills', () => {
+    const css = readFileSync(join(DIR, '..', 'styles.css'), 'utf8')
+    function rule(selector: string): string {
+      const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]+)\\}`))
+      expect(match, `missing ${selector} rule`).toBeTruthy()
+      return match![1]
+    }
+    const key = rule('.kb-key')
+    expect(key).toMatch(/border-radius:\s*var\(--key-radius/)
+    expect(key).not.toMatch(/999px/)
+    expect(key).not.toMatch(/border-radius:\s*0\b/)
+    const deck = rule('.kb')
+    expect(deck).toMatch(/border-radius:\s*var\(--wall-radius/)
+  })
 })
