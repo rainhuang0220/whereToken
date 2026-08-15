@@ -55,19 +55,19 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`SELECT data FROM message`)
+	rows, err := db.Query(`SELECT session_id, data FROM message`)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	i := 0
 	for rows.Next() {
-		var raw string
-		if err := rows.Scan(&raw); err != nil {
+		var sessionID, raw string
+		if err := rows.Scan(&sessionID, &raw); err != nil {
 			return err
 		}
 		i++
-		handleRow(raw, path, i, root, emit, emitTurn)
+		handleRow(raw, sessionID, path, i, root, emit, emitTurn)
 	}
 	return rows.Err()
 }
@@ -109,14 +109,14 @@ type msgData struct {
 	} `json:"tokens"`
 }
 
-func handleRow(raw, path string, seq int, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
+func handleRow(raw, sessionID, path string, seq int, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
 	var m msgData
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return
 	}
 	ts := time.UnixMilli(m.Time.Created).UTC()
 	if m.Role == "user" {
-		emitTurn(event.TurnEvent{Source: "opencode", Timestamp: ts})
+		emitTurn(event.TurnEvent{Source: "opencode", SessionID: sessionID, Timestamp: ts})
 	}
 	if m.Tokens == nil {
 		return
@@ -127,6 +127,7 @@ func handleRow(raw, path string, seq int, root adapter.SourceRoot, emit func(eve
 		Vendor:      vendor.Lookup(m.ModelID, m.ProviderID),
 		SourceRoot:  root.Path,
 		RequestID:   fmt.Sprintf("%s:%d", path, seq),
+		SessionID:   sessionID,
 		Model:       m.ModelID,
 		Provider:    m.ProviderID,
 		Timestamp:   ts,

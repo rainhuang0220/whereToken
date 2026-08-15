@@ -32,10 +32,13 @@ const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命�
         <tr
           v-for="row in rows"
           :key="row.id"
-          :class="{ on: props.activeId === row.id }"
-          @click="emit('select', row.id)"
+          :class="{ on: props.activeId === row.id, absent: row.quality === 'absent' }"
+          @click="row.quality === 'absent' ? undefined : emit('select', row.id)"
         >
-          <td class="name">{{ row.label }}</td>
+          <td class="name">
+            {{ row.label }}
+            <span v-if="row.quality === 'absent'" class="qual">已发现，无用量</span>
+          </td>
           <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
           <td class="num">{{ row.requests }}</td>
           <td v-if="props.showTurns" class="num">{{ row.user_turns }}</td>

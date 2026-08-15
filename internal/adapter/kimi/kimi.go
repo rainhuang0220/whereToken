@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -84,27 +85,52 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 		}
 		switch rec.Type {
 		case "usage.record":
+			ws, sess := kimiContext(root.Path, path)
 			emit(event.UsageEvent{
-				Source:       "kimi",
-				Vendor:       vendor.Lookup(rec.Model, ""),
-				SourceRoot:   root.Path,
-				RequestID:    fmt.Sprintf("%s:%d", path, rec.Time),
-				Model:        rec.Model,
-				Timestamp:    time.UnixMilli(rec.Time).UTC(),
-				Miss:         rec.Usage.InputOther,
-				CacheRead:    rec.Usage.InputCacheRead,
-				CacheCreate:  rec.Usage.InputCacheCreation,
-				Output:       rec.Usage.Output,
-				Quality:      event.QualityAuthoritative,
+				Source:      "kimi",
+				Vendor:      vendor.Lookup(rec.Model, ""),
+				SourceRoot:  root.Path,
+				RequestID:   fmt.Sprintf("%s:%d", path, rec.Time),
+				SessionID:   sess,
+				Workspace:   ws,
+				Model:       rec.Model,
+				Timestamp:   time.UnixMilli(rec.Time).UTC(),
+				Miss:        rec.Usage.InputOther,
+				CacheRead:   rec.Usage.InputCacheRead,
+				CacheCreate: rec.Usage.InputCacheCreation,
+				Output:      rec.Usage.Output,
+				Quality:     event.QualityAuthoritative,
 			})
 		case "turn.prompt":
 			if rec.Origin.Kind == "user" {
+				ws, sess := kimiContext(root.Path, path)
 				emitTurn(event.TurnEvent{
 					Source:    "kimi",
+					SessionID: sess,
+					Workspace: ws,
 					Timestamp: time.UnixMilli(rec.Time).UTC(),
 				})
 			}
 		}
 	}
 	return sc.Err()
+}
+
+func kimiContext(rootPath, file string) (workspace, session string) {
+	rel, err := filepath.Rel(rootPath, file)
+	if err != nil {
+		rel = file
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	for i, p := range parts {
+		if p != "agents" || i < 1 {
+			continue
+		}
+		session = parts[i-1]
+		if i >= 2 {
+			workspace = parts[i-2]
+		}
+		return workspace, session
+	}
+	return "", ""
 }

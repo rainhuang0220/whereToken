@@ -1,4 +1,4 @@
-import type { CalendarSeries, Day } from './types'
+import type { AxisSel, CalendarSeries, Day, DrillTables, SummaryPayload } from './types'
 
 export type CellKind = 'empty' | 'lit' | 'future'
 
@@ -44,7 +44,7 @@ export function layoutCells(opts: {
   weekEnd.setDate(weekEnd.getDate() + (6 - mondayIndex(today)))
   const requestedTo = parseISODate(opts.windowTo)
   const to = requestedTo.getTime() > weekEnd.getTime() ? requestedTo : weekEnd
-  const byDate = new Map(opts.days.map((d) => [d.date, d]))
+  const byDate = new Map((opts.days ?? []).map((d) => [d.date, d]))
   const cells: Cell[] = []
   for (let cursor = new Date(from), i = 0; cursor.getTime() <= to.getTime(); cursor.setDate(cursor.getDate() + 1), i++) {
     const date = formatISODate(cursor)
@@ -89,4 +89,44 @@ export const emptySeries: CalendarSeries = {
     current_streak: 0,
     longest_streak: 0,
   },
+}
+
+export function selectSeries(payload: SummaryPayload | null | undefined, axis: AxisSel): CalendarSeries {
+  const cal = payload?.calendar
+  if (!cal) return emptySeries
+  if (axis.kind === 'source') return cal.by_source?.[axis.id] ?? emptySeries
+  if (axis.kind === 'vendor') return cal.by_vendor?.[axis.id] ?? emptySeries
+  return cal.all ?? emptySeries
+}
+
+export function defaultWindow(today: string): { from: string; to: string } {
+  const d = parseISODate(today)
+  const weekStart = new Date(d)
+  weekStart.setDate(weekStart.getDate() - mondayIndex(d))
+  const from = new Date(weekStart)
+  from.setDate(from.getDate() - 52 * 7)
+  return { from: formatISODate(from), to: today }
+}
+
+export function wallCells(payload: SummaryPayload | null | undefined, axis: AxisSel, today: string): Cell[] {
+  const cal = payload?.calendar
+  const series = selectSeries(payload, axis)
+  const fallback = defaultWindow(today)
+  return layoutCells({
+    windowFrom: cal?.window_from || fallback.from,
+    windowTo: cal?.window_to || fallback.to,
+    today,
+    weekStart: 'monday',
+    days: series.days ?? [],
+  })
+}
+
+const emptyDrill: DrillTables = { models: [], workspaces: [], sessions: [] }
+
+export function selectDrill(payload: SummaryPayload | null | undefined, axis: AxisSel): DrillTables {
+  const drill = payload?.drill
+  if (!drill) return emptyDrill
+  if (axis.kind === 'source') return drill.by_source?.[axis.id] ?? emptyDrill
+  if (axis.kind === 'vendor') return drill.by_vendor?.[axis.id] ?? emptyDrill
+  return drill.all ?? emptyDrill
 }

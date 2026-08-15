@@ -1,38 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import AxisDamper from './components/AxisDamper.vue'
+import DrillPanel from './components/DrillPanel.vue'
 import FoundryMarks from './components/FoundryMarks.vue'
 import KilnWall from './components/KilnWall.vue'
 import KpiRow from './components/KpiRow.vue'
 import SliceTable from './components/SliceTable.vue'
-import { emptySeries, layoutCells, todayISO } from './grid'
+import { selectDrill, selectSeries, todayISO, wallCells } from './grid'
 import { useSummaryStore } from './stores/summary'
-import type { AxisSel, CalendarSeries } from './types'
+import type { AxisSel, CalendarSeries, DrillTables } from './types'
 
 const store = useSummaryStore()
 const payload = computed(() => store.payload)
 const degraded = computed(() => payload.value?.all.quality === 'degraded')
 const axis = ref<AxisSel>({ kind: 'all', id: 'all' })
 
-const series = computed<CalendarSeries>(() => {
-  const cal = payload.value?.calendar
-  if (!cal) return emptySeries
-  if (axis.value.kind === 'source') return cal.by_source[axis.value.id] ?? emptySeries
-  if (axis.value.kind === 'vendor') return cal.by_vendor[axis.value.id] ?? emptySeries
-  return cal.all
-})
+const series = computed<CalendarSeries>(() => selectSeries(payload.value, axis.value))
 
-const cells = computed(() => {
-  const cal = payload.value?.calendar
-  if (!cal) return []
-  return layoutCells({
-    windowFrom: cal.window_from,
-    windowTo: cal.window_to,
-    today: todayISO(),
-    weekStart: 'monday',
-    days: series.value.days,
-  })
-})
+const cells = computed(() => wallCells(payload.value, axis.value, todayISO()))
+const drill = computed<DrillTables>(() => selectDrill(payload.value, axis.value))
+const cursorAbsent = computed(() => payload.value?.by_source?.some((s) => s.id === 'cursor' && s.quality === 'absent'))
 
 const litDays = computed(() => series.value.days.length)
 const summaryText = computed(() => {
@@ -61,6 +48,7 @@ onMounted(() => {
 
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-else-if="degraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
+    <p v-if="cursorAbsent" class="note">检测到 Cursor：本地账本没有 token 列，用量不计（不上云拉 CSV）。</p>
 
     <template v-if="payload">
       <AxisDamper
@@ -92,6 +80,8 @@ onMounted(() => {
           @select="axis = { kind: 'vendor', id: $event }"
         />
       </div>
+
+      <DrillPanel :pack="drill" />
 
       <details class="cross">
         <summary>工具 × 厂家</summary>

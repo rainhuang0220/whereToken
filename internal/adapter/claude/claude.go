@@ -63,6 +63,7 @@ type claudeLine struct {
 }
 
 func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+	ws, sess := claudeContext(root.Path, path)
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -97,6 +98,8 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 				SourceRoot:  root.Path,
 				RequestID:   req,
 				Model:       rec.Message.Model,
+				Workspace:   ws,
+				SessionID:   sess,
 				Timestamp:   ts,
 				Miss:        rec.Message.Usage.InputTokens,
 				CacheRead:   rec.Message.Usage.CacheReadInputTokens,
@@ -106,7 +109,7 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 			})
 		case "user":
 			if isUserTurn(rec.Message.Content) {
-				emitTurn(event.TurnEvent{Source: "claude", Timestamp: ts})
+				emitTurn(event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
 			}
 		}
 	}
@@ -133,4 +136,20 @@ func isUserTurn(content json.RawMessage) bool {
 		}
 	}
 	return len(parts) > 0
+}
+
+func claudeContext(rootPath, file string) (workspace, session string) {
+	session = strings.TrimSuffix(filepath.Base(file), ".jsonl")
+	rel, err := filepath.Rel(rootPath, file)
+	if err != nil {
+		rel = file
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) > 0 && parts[0] == "projects" {
+		parts = parts[1:]
+	}
+	if len(parts) > 0 && parts[0] != session+".jsonl" {
+		workspace = parts[0]
+	}
+	return workspace, session
 }

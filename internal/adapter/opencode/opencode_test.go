@@ -56,6 +56,9 @@ func TestParseMessageTokens(t *testing.T) {
 	if got.Vendor != "moonshot" || got.Source != "opencode" {
 		t.Fatalf("axes %+v", got)
 	}
+	if got.SessionID != "s1" {
+		t.Fatalf("session=%q", got.SessionID)
+	}
 }
 
 func TestPartTokensNotDoubleCounted(t *testing.T) {

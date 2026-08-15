@@ -25,7 +25,9 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 **有什么算什么。** 适配器按目录探测；扫到的才进表，扫不到的不假装有数。
 
-同一套六列会出现三次：**合计**、**按工具**、**按厂家**（Claude Code 里跑 MiniMax 时，工具记 Claude Code、厂家记 MiniMax）。token 一律 **M = 百万**：
+打开仪表盘，第一眼是一堵 **窑墙**：53 周 × 7 天，一天一块砖。没花过的是冷黏土（仍要看得见），烧过的从焦褐到白热。墙右边是峰值和连烧。切「合计 / 工具 / 厂家」，墙和数字一起换序列——日桶、峰值、连烧都在 Go 里算完，浏览器只渲染。
+
+同一套六列会出现三次：**合计**、**按工具**、**按厂家**（Claude Code 里跑 MiniMax 时，工具记 Claude Code、厂家记 MiniMax）。下面还有模型 / 工作区 / 会话下钻。token 一律 **M = 百万**：
 
 | 指标 | 含义 |
 |------|------|
@@ -38,7 +40,9 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 ## 当前状态
 
-可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / **窑墙日历**（日桶、峰值、连烧）；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
+可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
+
+Cursor 若只有 `~/.cursor` 而没有 token 列，表里会有一行「已发现，无用量」，不编造数字、不拉云端 CSV。
 
 必读：
 
@@ -55,14 +59,18 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 go test ./...
 go run ./cmd/wheretoken scan --json
 go run ./cmd/wheretoken sources
+cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve          # http://127.0.0.1:8787 ，被占用则 8788–8797
+# serve 读的是 web/dist。改过 Vue 必须先 npm run build，并重启 serve。
+# 不要拿一个旧的 serve 配新页面：旧 /api/summary 没有 calendar 时墙会是空的。
 
-cd web && npm install && npm test && npm run build && npm run dev
+cd web && npm run dev                  # Vite :5173，把 /api 代理到 127.0.0.1:8787
 # 另开终端：go run ./cmd/wheretoken serve
-# Vite 把 /api 代理到 127.0.0.1:8787
 
 bash scripts/verify-local.sh           # Kimi / OpenCode 与本机磁盘对照，误差须为 0
 ```
+
+`scan --json` 和 `GET /api/summary` 是同一份 `EncodeSummary`。窑墙格子来自 `calendar.window_*` + 稀疏 `days`；峰值 / 连烧来自 `calendar.*.stats`，前端不重算。
 
 提交请用 `scripts/commit-no-ai.sh`，不要直接 `git commit`（避免 Cursor 注入 Co-authored-by）。
 

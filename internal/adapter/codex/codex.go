@@ -56,10 +56,10 @@ func isRollout(path string) bool {
 }
 
 type tokenUsage struct {
-	InputTokens            int64 `json:"input_tokens"`
-	CachedInputTokens      int64 `json:"cached_input_tokens"`
-	OutputTokens           int64 `json:"output_tokens"`
-	ReasoningOutputTokens  int64 `json:"reasoning_output_tokens"`
+	InputTokens           int64 `json:"input_tokens"`
+	CachedInputTokens     int64 `json:"cached_input_tokens"`
+	OutputTokens          int64 `json:"output_tokens"`
+	ReasoningOutputTokens int64 `json:"reasoning_output_tokens"`
 }
 
 func (u tokenUsage) advances(prev tokenUsage) bool {
@@ -178,7 +178,11 @@ func handleRolloutLine(b []byte, path string, root adapter.SourceRoot, st *rollo
 			return
 		}
 		if p.Type == "message" && p.Role == "user" {
-			emitTurn(event.TurnEvent{Source: "codex", Timestamp: ts})
+			emitTurn(event.TurnEvent{
+				Source:    "codex",
+				SessionID: strings.TrimSuffix(filepath.Base(path), ".jsonl"),
+				Timestamp: ts,
+			})
 		}
 	}
 }
@@ -206,16 +210,17 @@ func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time,
 	}
 	*seq++
 	emit(event.UsageEvent{
-		Source:      "codex",
-		Vendor:      vendor.Lookup(model, ""),
-		SourceRoot:  root.Path,
-		RequestID:   fmt.Sprintf("%s:%d", path, *seq),
-		Model:       model,
-		Timestamp:   ts,
-		Miss:        miss,
-		CacheRead:   cachedDelta,
-		Output:      outDelta + reasonDelta,
-		Reasoning:   reasonDelta,
-		Quality:     event.QualityAuthoritative,
+		Source:     "codex",
+		Vendor:     vendor.Lookup(model, ""),
+		SourceRoot: root.Path,
+		RequestID:  fmt.Sprintf("%s:%d", path, *seq),
+		SessionID:  strings.TrimSuffix(filepath.Base(path), ".jsonl"),
+		Model:      model,
+		Timestamp:  ts,
+		Miss:       miss,
+		CacheRead:  cachedDelta,
+		Output:     outDelta + reasonDelta,
+		Reasoning:  reasonDelta,
+		Quality:    event.QualityAuthoritative,
 	})
 }

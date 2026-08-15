@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
 func TestRunKimiFixture(t *testing.T) {
@@ -42,5 +44,36 @@ func TestRunKimiFixture(t *testing.T) {
 	}
 	if kimi != r.Summary.All.Total() || moon != r.Summary.All.Total() {
 		t.Fatalf("kimi=%d moon=%d all=%d", kimi, moon, r.Summary.All.Total())
+	}
+	var modelSum int64
+	for _, m := range r.Summary.DrillAll.Models {
+		modelSum += m.Total()
+	}
+	if modelSum != r.Summary.All.Total() {
+		t.Fatalf("drill models=%d all=%d", modelSum, r.Summary.All.Total())
+	}
+}
+
+func TestRunMarksCursorAbsent(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".cursor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	r := Run(testhome.New(dir), AllAdapters())
+	var cursor *metric.Slice
+	for i := range r.Summary.BySource {
+		if r.Summary.BySource[i].ID == "cursor" {
+			cursor = &r.Summary.BySource[i]
+			break
+		}
+	}
+	if cursor == nil {
+		t.Fatal("expected cursor row")
+	}
+	if cursor.Quality != event.QualityAbsent || cursor.Total() != 0 {
+		t.Fatalf("cursor %+v", cursor)
+	}
+	if r.Summary.All.Total() != 0 {
+		t.Fatalf("all=%d", r.Summary.All.Total())
 	}
 }

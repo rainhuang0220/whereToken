@@ -50,6 +50,11 @@ func TestParseClaudeJSONL(t *testing.T) {
 	if !found {
 		t.Fatal("missing MiniMax event")
 	}
+	for _, e := range evs {
+		if e.Workspace != "-tmp-demo" || e.SessionID != "s" {
+			t.Fatalf("context %+v", e)
+		}
+	}
 }
 
 func TestNeverReadsSettingsJSON(t *testing.T) {

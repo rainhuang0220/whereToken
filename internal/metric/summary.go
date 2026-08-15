@@ -10,10 +10,10 @@ import (
 )
 
 type Slice struct {
-	ID, Label                              string
-	Miss, CacheRead, CacheCreate, Output   int64
-	Requests, UserTurns                    int64
-	Quality                                event.Quality
+	ID, Label                            string
+	Miss, CacheRead, CacheCreate, Output int64
+	Requests, UserTurns                  int64
+	Quality                              event.Quality
 }
 
 func (s Slice) Total() int64 {
@@ -36,26 +36,29 @@ type Summary struct {
 	ByVendor       []Slice
 	BySourceVendor []SourceVendor
 	Calendar       Calendar
+	DrillAll       DrillPack
+	DrillBySource  map[string]DrillPack
+	DrillByVendor  map[string]DrillPack
 }
 
 type SliceView struct {
-	ID            string   `json:"id"`
-	Label         string   `json:"label"`
-	Miss          int64    `json:"miss"`
-	CacheRead     int64    `json:"cache_read"`
-	CacheCreate   int64    `json:"cache_create"`
-	Output        int64    `json:"output"`
-	Total         int64    `json:"total"`
-	MissM         string   `json:"miss_m"`
-	CacheReadM    string   `json:"cache_read_m"`
-	CacheCreateM  string   `json:"cache_create_m"`
-	OutputM       string   `json:"output_m"`
-	TotalM        string   `json:"total_m"`
-	HitRate       *float64 `json:"hit_rate"`
-	HitRateText   string   `json:"hit_rate_text"`
-	Requests      int64    `json:"requests"`
-	UserTurns     int64    `json:"user_turns"`
-	Quality       string   `json:"quality"`
+	ID           string   `json:"id"`
+	Label        string   `json:"label"`
+	Miss         int64    `json:"miss"`
+	CacheRead    int64    `json:"cache_read"`
+	CacheCreate  int64    `json:"cache_create"`
+	Output       int64    `json:"output"`
+	Total        int64    `json:"total"`
+	MissM        string   `json:"miss_m"`
+	CacheReadM   string   `json:"cache_read_m"`
+	CacheCreateM string   `json:"cache_create_m"`
+	OutputM      string   `json:"output_m"`
+	TotalM       string   `json:"total_m"`
+	HitRate      *float64 `json:"hit_rate"`
+	HitRateText  string   `json:"hit_rate_text"`
+	Requests     int64    `json:"requests"`
+	UserTurns    int64    `json:"user_turns"`
+	Quality      string   `json:"quality"`
 }
 
 func View(s Slice) SliceView {
@@ -136,6 +139,7 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	sort.Slice(sum.ByVendor, func(i, j int) bool { return sum.ByVendor[i].Total() > sum.ByVendor[j].Total() })
 	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
 	sum.Calendar = BuildCalendar(merged, time.Local, time.Now())
+	sum.DrillAll, sum.DrillBySource, sum.DrillByVendor = buildDrill(merged, turns)
 	return sum
 }
 
@@ -223,7 +227,11 @@ func sourceLabel(id string) string {
 		return "OpenCode"
 	case "codex":
 		return "Codex"
+	case "cursor":
+		return "Cursor"
 	default:
 		return id
 	}
 }
+
+func SourceLabel(id string) string { return sourceLabel(id) }

@@ -41,8 +41,32 @@ export type SummaryPayload = {
   by_source: SliceView[]
   by_vendor: SliceView[]
   by_source_vendor: SourceVendorView[]
-  calendar: Calendar
+  calendar?: Calendar
   errors: string[]
+  drill?: Drill
+  by_model?: SliceView[]
+  by_workspace?: SliceView[]
+  by_session?: SessionView[]
+}
+
+export type SessionView = SliceView & {
+  source: string
+  vendor: string
+  model: string
+  workspace: string
+  last_date: string
+}
+
+export type DrillTables = {
+  models: SliceView[]
+  workspaces: SliceView[]
+  sessions: SessionView[]
+}
+
+export type Drill = {
+  all: DrillTables
+  by_source: Record<string, DrillTables>
+  by_vendor: Record<string, DrillTables>
 }
 
 export type Calendar = {

@@ -30,4 +30,7 @@ func TestParseUsageRecord(t *testing.T) {
 	if len(turns) != 1 {
 		t.Fatalf("turns=%d", len(turns))
 	}
+	if evs[0].SessionID != "session" {
+		t.Fatalf("session=%q", evs[0].SessionID)
+	}
 }

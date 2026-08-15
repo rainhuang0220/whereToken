@@ -158,6 +158,29 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 
 ---
 
+# 第 4 轮：空白窑墙 + 下钻可上线（2026-08-15）
+
+触发：用户截图窑墙是黑洞（只有星期标签和图例），峰值 0.00 M、连烧 0 天；同时 KPI 738.89 M 和工具/厂家表正常。独立 `scan --json` 当天有 12 个点亮日、峰值 244.95 M。
+
+## 4.1 根因
+
+- **选择：** 不是 CSS 把 371 块砖画成与炉膛同色那么简单。运行中的 `wheretoken serve`（:8787）是**旧进程**：`GET /api/summary` 的 JSON **没有 `calendar` 键**。当前源码的 `scan --json` 有 calendar。Vue 在 `!payload.calendar` 时走 `emptySeries` 且 `cells=[]`，于是墙高度为 0、铸造数字全是零；KPI 走的是一直都在的 `all` / `by_source`。
+- **不选：** 只怪黏土色太暗。12 个白热砖如果 DOM 里有，不可能完全看不见。截图「一块砖都没有」+ 峰值 `0.00 M` 对得上 `emptySeries` + `cells=[]`。
+- **后果：** 前端即使 API 缺 calendar 也必须铺 53×7 冷黏土，避免再出现空洞。空砖加深黏土色、内描边、砂浆底，不再从 opacity 0 开场。`serve` 必须重启才能拿到带 calendar 的 JSON；`web/dist` 仍 gitignore，改 UI 要 `npm run build`。
+
+## 4.2 下钻
+
+- **选择：** 后端预聚合 `drill.all` / `drill.by_source[id]` / `drill.by_vendor[id]`（模型、工作区、会话），前端切轴只换表，不把 token 再加一遍。
+- **会话：** 有 `session_id` 用它，否则退回 `request_id`。不展示 prompt。
+- **Cursor：** 发现 `~/.cursor` 但 Parse 为空，按工具表一行 `quality=absent`，「已发现，无用量」。不扫 2.3GB `state.vscdb`。
+
+## 4.3 相对规格
+
+- 父规格 §7 把下钻标成「仍非本轮」；本轮提前做完，作为 v0.9 一并上线。
+- 窑墙空砖对比度高于日历规格里的 `--clay: #14100c`（现 `--clay: #3a2c22`），否则 53 周稀疏点亮时墙仍像黑洞。
+
+---
+
 # 第 2 轮：实现 Task 4–12（2026-08-15）
 
 触发：规格与度量核已落地，按计划从适配器接口做到 `scan --json` + localhost Vue。
@@ -237,4 +260,4 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 
 - **选择：** `modernc.org/sqlite`（计划锁定）。`go get` 把 `go 1.25` 写成 `go 1.25.0`。
 - **不选：** CGO `mattn/go-sqlite3`。
-- **后果：** OpenCode 只 `SELECT data FROM message`；生产 SQL 不含 account / credential 字样。
+- **后果：** OpenCode 只 `SELECT session_id, data FROM message`；生产 SQL 不含 account / credential 字样。
