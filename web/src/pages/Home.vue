@@ -21,6 +21,12 @@ const cursorAbsent = computed(() =>
 const cursorDegraded = computed(() =>
   payload.value?.by_source?.some((s) => s.id === 'cursor' && s.quality === 'degraded'),
 )
+const traeAbsent = computed(() =>
+  payload.value?.by_source?.some((s) => s.id === 'trae' && s.quality === 'absent'),
+)
+const traeDegraded = computed(() =>
+  payload.value?.by_source?.some((s) => s.id === 'trae' && s.quality === 'degraded'),
+)
 const axis = ref<AxisSel>({ kind: 'all', id: 'all' })
 
 const series = computed<CalendarSeries>(() => selectSeries(payload.value, axis.value))
@@ -59,6 +65,10 @@ onMounted(() => {
     <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
     <p v-else-if="cursorDegraded" class="note">
       Cursor 已计入本机请求与回合。token 列若为 0，是因为没有拉到 Cursor 账号用量（见下方 errors），不是没扫到。
+    </p>
+    <p v-if="traeAbsent" class="note">检测到 Trae 目录，但没有可读的用量账本。</p>
+    <p v-else-if="traeDegraded" class="note">
+      Trae 已发现本机会话。token 列若为 0，是因为没有拉到 Trae 账号用量（见下方 errors），不是没扫到。
     </p>
 
     <template v-if="payload">

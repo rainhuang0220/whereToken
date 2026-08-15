@@ -27,6 +27,36 @@ func TestDiscoverCursorDotDir(t *testing.T) {
 	}
 }
 
+func TestDiscoverLinuxXDGConfigAndWindowsAppData(t *testing.T) {
+	dir := t.TempDir()
+	linux := filepath.Join(dir, ".config", "Cursor", "User", "globalStorage")
+	if err := os.MkdirAll(linux, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	linuxDB := filepath.Join(linux, "state.vscdb")
+	if err := os.WriteFile(linuxDB, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	roots := Adapter{}.Discover(testhome.New(dir))
+	if len(roots) != 1 || roots[0].Path != linuxDB {
+		t.Fatalf("linux roots=%v", roots)
+	}
+
+	dir2 := t.TempDir()
+	win := filepath.Join(dir2, "AppData", "Roaming", "Cursor", "User", "globalStorage")
+	if err := os.MkdirAll(win, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	winDB := filepath.Join(win, "state.vscdb")
+	if err := os.WriteFile(winDB, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	roots = Adapter{}.Discover(testhome.New(dir2))
+	if len(roots) != 1 || roots[0].Path != winDB {
+		t.Fatalf("windows roots=%v", roots)
+	}
+}
+
 func TestDiscoverPrefersStateVscdb(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".cursor"), 0o755); err != nil {
@@ -129,8 +159,8 @@ func TestParseBubbleTokensAndTurns(t *testing.T) {
 			"tokenCount":{"inputTokens":0,"outputTokens":0}
 		}`},
 	}, []header{
-		{id: "sess-a", sub: 0, workspace: "/Users/rainhuang/Desktop/whereToken"},
-		{id: "sub-1", sub: 1, workspace: "/Users/rainhuang/Desktop/whereToken"},
+		{id: "sess-a", sub: 0, workspace: "/tmp/whereToken"},
+		{id: "sub-1", sub: 1, workspace: "/tmp/whereToken"},
 	})
 
 	var evs []event.UsageEvent
@@ -181,7 +211,7 @@ func TestParseBubbleTokensAndTurns(t *testing.T) {
 	if asst.Vendor != "minimax" || asst.Model != "MiniMax-M2.7" {
 		t.Fatalf("asst vendor/model %+v", asst)
 	}
-	if asst.Workspace != "/Users/rainhuang/Desktop/whereToken" {
+	if asst.Workspace != "/tmp/whereToken" {
 		t.Fatalf("workspace=%q", asst.Workspace)
 	}
 	if asst.Timestamp.UTC().Format(time.RFC3339) != "2026-02-09T14:44:08Z" {

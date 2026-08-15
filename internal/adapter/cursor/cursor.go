@@ -29,13 +29,8 @@ type Adapter struct {
 func (Adapter) ID() string { return "cursor" }
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
-	for _, p := range []string{
-		filepath.Join(home.AppSupport("Cursor"), "User", "globalStorage", "state.vscdb"),
-		filepath.Join(home.DotDir("config"), "Cursor", "User", "globalStorage", "state.vscdb"),
-	} {
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return []adapter.SourceRoot{{ID: "cursor", Path: p}}
-		}
+	if p := adapter.VSCodeGlobalDB(home, "Cursor"); p != "" {
+		return []adapter.SourceRoot{{ID: "cursor", Path: p}}
 	}
 	p := home.DotDir("cursor")
 	if st, err := os.Stat(p); err == nil && st.IsDir() {

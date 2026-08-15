@@ -3,6 +3,8 @@ package scan
 import (
 	"encoding/json"
 	"io"
+	"os"
+	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/claude"
@@ -10,6 +12,8 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/kimi"
 	"github.com/rainhuang0220/whereToken/internal/adapter/opencode"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
@@ -27,7 +31,27 @@ func AllAdapters() []adapter.Adapter {
 		opencode.Adapter{},
 		codex.Adapter{},
 		cursor.Adapter{},
+		trae.Adapter{},
 	}
+}
+
+func extraHomes() []adapter.Home {
+	raw := strings.TrimSpace(os.Getenv("WHERETOKEN_EXTRA_ROOTS"))
+	if raw == "" {
+		return nil
+	}
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == rune(os.PathListSeparator) || r == ','
+	})
+	var out []adapter.Home
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, testhome.New(p))
+	}
+	return out
 }
 
 func Run(home adapter.Home, adapters []adapter.Adapter) Result {
@@ -35,17 +59,25 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
 	var errs []string
-	for _, a := range adapters {
-		found := a.Discover(home)
-		roots = append(roots, found...)
-		for _, root := range found {
-			err := a.Parse(root, func(e event.UsageEvent) {
-				events = append(events, e)
-			}, func(te event.TurnEvent) {
-				turns = append(turns, te)
-			})
-			if err != nil {
-				errs = append(errs, a.ID()+": "+err.Error())
+	seenPath := map[string]struct{}{}
+	homes := append([]adapter.Home{home}, extraHomes()...)
+	for _, h := range homes {
+		for _, a := range adapters {
+			found := a.Discover(h)
+			for _, root := range found {
+				if _, ok := seenPath[root.Path]; ok {
+					continue
+				}
+				seenPath[root.Path] = struct{}{}
+				roots = append(roots, root)
+				err := a.Parse(root, func(e event.UsageEvent) {
+					events = append(events, e)
+				}, func(te event.TurnEvent) {
+					turns = append(turns, te)
+				})
+				if err != nil {
+					errs = append(errs, a.ID()+": "+err.Error())
+				}
 			}
 		}
 	}
@@ -71,10 +103,17 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 		if already {
 			continue
 		}
+		q := event.QualityAbsent
+		for _, msg := range errs {
+			if strings.HasPrefix(msg, root.ID+": ") {
+				q = event.QualityDegraded
+				break
+			}
+		}
 		sum.BySource = append(sum.BySource, metric.Slice{
 			ID:      root.ID,
 			Label:   metric.SourceLabel(root.ID),
-			Quality: event.QualityAbsent,
+			Quality: q,
 		})
 	}
 	return Result{

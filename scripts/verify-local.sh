@@ -91,6 +91,18 @@ if vscdb.is_file():
 else:
     print("skip cursor: state.vscdb absent")
 
+trae = by_id("by_source", "trae")
+if trae:
+    print(
+        "ok trae "
+        f"quality={trae.get('quality')} "
+        f"miss_m={trae.get('miss_m')} cache_read_m={trae.get('cache_read_m')} "
+        f"cache_create_m={trae.get('cache_create_m')} output_m={trae.get('output_m')} "
+        f"total_m={trae.get('total_m')} requests={trae.get('requests')} turns={trae.get('user_turns')}"
+    )
+else:
+    print("skip trae: not in summary")
+
 print("--- claude ---")
 print(json.dumps(by_id("by_source", "claude"), ensure_ascii=False, indent=2))
 print("--- codex ---")

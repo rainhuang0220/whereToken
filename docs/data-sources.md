@@ -2,7 +2,7 @@
 
 规格里的适配器合同以本文件为准。数字是**这一天这一台机器**的快照，用来做夹具和核验基线，不是产品承诺的「你也有这么多」。
 
-扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。Cursor 用量接口是用户授权的例外：只使用 Cursor 本机已写入的登录态，只打 Cursor 自己的主机，永不打印或提交 token。
+扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。Cursor / Trae 用量接口是用户授权的例外：只使用它们本机已写入的登录态，只打它们自己的主机，永不打印或提交 token。发现路径一律经 `Home`（`os.UserHomeDir()`、XDG、Application Support、`%APPDATA%`），缺目录静默跳过。额外家目录：`WHERETOKEN_EXTRA_ROOTS`。
 
 工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。
 
@@ -24,10 +24,11 @@
 | `~/.config/opencode/` | OpenCode 配置 | 否（无用量） | 忽略 |
 | `~/.cursor/` | Cursor | 目录在；ai-tracking **无 token 列**（请求次数也不能当模型调用） | 发现回退 |
 | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | Cursor | **是**（bubble 请求/回合 + 本机登录态调 Cursor DashboardService） | P0；token 来自账号 API |
+| `~/Library/Application Support/{Trae,Trae CN,Trae-CN,TRAE SOLO CN}/User/globalStorage/state.vscdb` | Trae | **是**（本机会话 id + 本机 JWT 调 Trae `get_session_usage`） | P0；token 来自账号 API |
 | `~/.minimax/` | MiniMax agent | sqlite 仅 `agents` 表，未见 token | P1 探测 |
 | `~/.copilot/` | Copilot CLI | 未见 otel jsonl | P1 探测 |
 | `~/.openclaw/` | OpenClaw | 目录存在，本轮未深挖字段 | P1 |
-| `~/.trae` / `~/.trae-cn` | Trae | 技能与工作区，未见 token 账本 | P1 |
+| `~/.trae` / `~/.trae-cn` | Trae | 技能、MCP、**jwt 文件**（`trae-jwt-token`）；不是 JSONL 账本 | jwt 仅作登录态；技能目录忽略 |
 | `~/Library/Application Support/{Claude,Codex,Kimi,kimi-desktop,ai.opencode.desktop}` | 各桌面壳 | Electron 缓存为主 | 不作为 P0 账本 |
 | `~/.gpt` / `~/.kimi`（无 `-code`） | 用户点名 | **本机不存在** | 发现器仍要查；Kimi CLI 文档路径是 `~/.kimi/sessions` |
 
@@ -268,6 +269,43 @@
 
 ---
 
+## P0-6 Trae（ByteDance VS Code fork；国内版 Trae CN / TRAE SOLO CN）
+
+**根（有哪个扫哪个，缺则静默）：**
+
+- macOS：`~/Library/Application Support/{Trae,Trae CN,Trae-CN,TRAE SOLO,TRAE SOLO CN}/User/globalStorage/state.vscdb`
+- Linux：`~/.config/Trae*` 同样的 `User/globalStorage/state.vscdb`
+- Windows：`%APPDATA%\Trae*`（路径已写，未在真实 Windows 上测）
+- 登录态文件：`~/.trae-cn/trae-jwt-token` 或 `~/.trae/trae-jwt-token`（明文 JWT）。`storage.json` 键 `iCubeAuthInfo://icube.cloudide` 若是 JSON 明文也读 `token`；CN 本机该值是加密串，**不解密**。
+
+**不要读：** Cookies、Keychain、`ModularData/ai-agent/database.db`（SQLCipher）、技能目录、prompt 正文。永不打印 JWT。
+
+**本机会话 id（只取 id，不取消息）：** `memento/icube-ai-agent-storage` 的 `sessionId`、`icube_session_agent_map` 的键、`all_session_badges_*`。workspaceStorage 下的 `state.vscdb` 同样只抽这些键。
+
+**用量接口（Trae 桌面端已在调用的 commercial API）：**
+
+`POST {host}/api/v1/commercial/get_session_usage`  
+body：`{"session_id":"<id>"}`  
+`Authorization: Cloud-IDE-JWT <token>`  
+CN 主机 `trae-api-cn.mchost.guru`；国际版路径不含 `CN` 时用 `coresg-normal.trae.ai`。测试用 `httptest`，夹具 JWT 为 `test-token`。
+
+**字段映射（`user_usage_group_by_session.extra_info`）：**
+
+| whereToken | Trae 字段 |
+|------------|-----------|
+| miss | `input_token - cache_read_token`（负则 0；`input_token` 含缓存读） |
+| cache_read | `cache_read_token` |
+| cache_create | `cache_write_token` |
+| output | `output_token` |
+| 模型 / 厂家 | `model_name` → `vendor.Lookup`（DeepSeek / Doubao / GLM / Qwen…，**不是** trae） |
+| 质量 | API 有 token → **authoritative** |
+| user_turns | 每个 billing `session_id` 一次（Trae 把该字段当 user message id） |
+| 请求 | 对应 API 事件数（无本地 bubble 可双计） |
+
+**缺登录态 / 登录态失效：** `errors[]` 含 `trae: 未找到本机登录态` 或 `trae: 本机登录态已失效`；token 列为 **degraded** 且 0，不编造。重新在 Trae 里登录后即可（whereToken 不接收粘贴的 JWT）。
+
+---
+
 ## 发现器启发式（P1）
 
 对 `$HOME/.*` 以及 macOS `~/Library/Application Support/*`：
@@ -288,6 +326,7 @@
 # OpenCode：SELECT 四列 SUM，应等于 message.tokens 聚合
 # Codex：每个 rollout 最后一个前进的 total_token_usage，应等于 delta 之和
 # Cursor：sum_cursor.py 对照 requests/user_turns；token 四列以账号 API 为准
+# Trae：夹具见 internal/adapter/trae；本机 JWT 永不打印
 # python3 scripts/sum_cursor.py
 ```
 

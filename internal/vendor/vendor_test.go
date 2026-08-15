@@ -12,6 +12,11 @@ func TestLookup(t *testing.T) {
 		{"o3-mini", "", "openai"},
 		{"gemini-2.5-pro", "", "google"},
 		{"totally-unknown-model", "", "unknown"},
+		{"DeepSeek-V4-Flash", "", "deepseek"},
+		{"Doubao-Seed-2.0-Code", "", "doubao"},
+		{"Seed-Code", "", "doubao"},
+		{"glm-5.2", "", "zhipu"},
+		{"qwen-3.7-plus", "", "alibaba"},
 	}
 	for _, c := range cases {
 		if got := Lookup(c.model, c.provider); got != c.want {
@@ -26,5 +31,11 @@ func TestLabel(t *testing.T) {
 	}
 	if Label("unknown") != "Unknown" {
 		t.Fatal(Label("unknown"))
+	}
+	if Label("deepseek") != "DeepSeek" {
+		t.Fatal(Label("deepseek"))
+	}
+	if Label("doubao") != "Doubao" {
+		t.Fatal(Label("doubao"))
 	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type osHome struct {
-	home, xdg string
+	home, xdg, xdgConfig, appData string
 }
 
 func RealHome() adapter.Home {
@@ -20,7 +20,12 @@ func RealHome() adapter.Home {
 	if err != nil {
 		home = ""
 	}
-	return osHome{home: home, xdg: os.Getenv("XDG_DATA_HOME")}
+	return osHome{
+		home:      home,
+		xdg:       os.Getenv("XDG_DATA_HOME"),
+		xdgConfig: os.Getenv("XDG_CONFIG_HOME"),
+		appData:   os.Getenv("APPDATA"),
+	}
 }
 
 func (h osHome) DotDir(name string) string {
@@ -36,4 +41,18 @@ func (h osHome) XDGData(name string) string {
 
 func (h osHome) AppSupport(name string) string {
 	return filepath.Join(h.home, "Library", "Application Support", name)
+}
+
+func (h osHome) XDGConfig(name string) string {
+	if h.xdgConfig != "" {
+		return filepath.Join(h.xdgConfig, name)
+	}
+	return filepath.Join(h.home, ".config", name)
+}
+
+func (h osHome) AppData(name string) string {
+	if h.appData != "" {
+		return filepath.Join(h.appData, name)
+	}
+	return filepath.Join(h.home, "AppData", "Roaming", name)
 }

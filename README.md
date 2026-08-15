@@ -26,7 +26,7 @@ cd web && npm install && npm run build && cd ..
 go run ./cmd/wheretoken serve
 ```
 
-浏览器打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。第一次扫描可能要几秒到十几秒：要读本机各家账本，Cursor 在已登录时还会拉账号用量。页面像没更新时硬刷新（Cmd+Shift+R / Ctrl+Shift+R）。
+浏览器打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。第一次扫描可能要几秒到十几秒：要读本机各家账本；Cursor / Trae 在本机已登录时还会拉各自的账号用量。页面像没更新时硬刷新（Cmd+Shift+R / Ctrl+Shift+R）。
 
 ## 再开一次
 
@@ -57,11 +57,36 @@ bash scripts/verify-local.sh           # 有本机账本时，与独立脚本对
 
 扫哪些目录、字段怎么映射：[`docs/data-sources.md`](docs/data-sources.md)。
 
+路径一律按当前用户的家目录解析（`os.UserHomeDir()`、XDG、`~/Library/Application Support`、`%APPDATA%`），不写死某台机器的绝对路径。缺的目录会静默跳过。非默认安装可以把那个用户的家目录加进 `WHERETOKEN_EXTRA_ROOTS`（Unix 用 `:`，Windows 用 `;`，也可用逗号）。Codex 还认 `CODEX_HOME`。
+
+## 数据源
+
+默认只扫**已经装过、磁盘上有账本**的工具。macOS 与 Linux 是一等支持；Windows 按 `%APPDATA%` 写了同样的探测，但没有在真实 Windows 机器上跑过。
+
+不要把 token 贴进 whereToken 的界面、issue 或配置。需要登录态的源会去读**该 App 自己已经写下的本机会话**，再只打它自己的主机。
+
+| 源 | 本机路径（约定） | 需要已登录？ | 读什么 |
+|----|------------------|--------------|--------|
+| Claude Code | `~/.claude/projects/**/*.jsonl`，Linux 另探 `~/.config/claude/projects` | 否 | JSONL 的 `message.usage`；真用户回合（排除 `tool_result`） |
+| Kimi Code | `~/.kimi-code/`，并探 `~/.kimi/` | 否 | `wire.jsonl` 的 `usage.record` / `turn.prompt` |
+| Codex | `${CODEX_HOME:-~/.codex}/sessions/**/rollout-*.jsonl` | 否 | 累计 `token_count` 的 delta |
+| OpenCode | `$XDG_DATA_HOME/opencode` 或 `~/.local/share/opencode` 的 `opencode.db` | 否 | message 级 tokens |
+| Cursor | macOS `~/Library/Application Support/Cursor/.../state.vscdb`；Linux `~/.config/Cursor/...`；Windows `%APPDATA%\Cursor\...`；回退 `~/.cursor/` | **token 列需要**本机已登录；请求/回合仍走本地 bubble | 本地 bubble 计请求与回合；token 用 Cursor DashboardService（本机 `cursorAuth/accessToken`，永不打印） |
+| Trae / Trae CN / TRAE SOLO | macOS `~/Library/Application Support/{Trae,Trae CN,Trae-CN,TRAE SOLO,TRAE SOLO CN}/User/globalStorage/state.vscdb`；Linux `~/.config/Trae*`；Windows `%APPDATA%\Trae*` | **token 列需要**本机已登录 | 本地 `state.vscdb` 收会话 id；JWT 只从本机 `~/.trae-cn/trae-jwt-token` 或明文 `storage.json` 读（CN 版 `storage.json` 里的登录态常是加密的，不解密）；token 打 Trae 自己的 `get_session_usage`。厂家按模型（DeepSeek / Doubao / GLM…），不是「Trae」。`~/.trae` 技能目录不算账本 |
+
+对话库 `ModularData/ai-agent/database.db` 在 Trae CN 上是 SQLCipher，本轮不解密、不读正文。
+
+### 还没适配
+
+本机或常见安装里能见到、但**这一轮没有做成适配器**（没有清楚、可测的本地 token 账本，或不想做半成品）：Windsurf、GitHub Copilot、Cline、通义灵码 / Lingma、CodeBuddy、Comate、Kiro、Qoder、扣子 Coze。
+
+「科泽」无法唯一对应一个 coding agent：公开资料里常被用来翻译 ByteDance 的 **Coze（扣子）**（无代码 Agent 搭建，不是 IDE 账本）；语音也可能是 **Kiro** 或 **Qoder**。这台机器上没有 Coze / Kiro / Qoder 的 Application Support 或家目录账本，所以没有猜一个适配器。
+
 ## 隐私
 
-只读本机目录，HTTP 绑在 `127.0.0.1`。不上传会话，不打其它厂商的云，不做遥测。页面和日志都不打印密钥。
+只读本机目录，HTTP 绑在 `127.0.0.1`。不上传会话，不做遥测。页面和日志都不打印密钥。
 
-Cursor 的 token 四列在你本机已登录时，用 Cursor 自己的账号用量接口；JWT 不进 git、不进日志。没有登录态时 token 列会标明质量，不会把空数假装成「没用过」。
+Cursor 与 Trae 的 token 四列在你本机已登录时，用**它们自己的**账号用量接口；JWT 不进 git、不进日志、不要粘贴到 whereToken。没有登录态时 token 列会标明质量，不会把空数假装成「没用过」。
 
 不要把 API key、access token 或会话内容贴进 issue。
 

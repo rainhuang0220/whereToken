@@ -19,8 +19,11 @@ type Adapter struct{}
 func (Adapter) ID() string { return "claude" }
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
-	p := filepath.Join(home.DotDir("claude"), "projects")
-	if st, err := os.Stat(p); err == nil && st.IsDir() {
+	p := adapter.FirstDir(
+		filepath.Join(home.DotDir("claude"), "projects"),
+		filepath.Join(home.XDGConfig("claude"), "projects"),
+	)
+	if p != "" {
 		return []adapter.SourceRoot{{ID: "claude", Path: p}}
 	}
 	return nil

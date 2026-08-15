@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
@@ -97,5 +98,30 @@ func TestLongJSONLLine(t *testing.T) {
 	}
 	if evs[0].Miss != 10 || evs[0].Output != 1 {
 		t.Fatalf("%+v", evs[0])
+	}
+}
+
+func TestDiscoverUsesCodexHomeEnv(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CODEX_HOME", dir)
+	if err := os.MkdirAll(filepath.Join(dir, "sessions"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	roots := Adapter{}.Discover(testhome.New(t.TempDir()))
+	if len(roots) != 1 || roots[0].Path != dir {
+		t.Fatalf("CODEX_HOME roots=%v want %q", roots, dir)
+	}
+}
+
+func TestDiscoverDefaultDotDir(t *testing.T) {
+	t.Setenv("CODEX_HOME", "")
+	dir := t.TempDir()
+	codex := filepath.Join(dir, ".codex")
+	if err := os.MkdirAll(codex, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	roots := Adapter{}.Discover(testhome.New(dir))
+	if len(roots) != 1 || roots[0].Path != codex {
+		t.Fatalf("roots=%v", roots)
 	}
 }

@@ -15,6 +15,7 @@ import (
 )
 
 func TestSummaryMatchesScan(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
 	dstDir := filepath.Join(dir, ".kimi-code", "sessions", "x", "s", "agents", "main")
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {
@@ -61,6 +62,7 @@ func TestSummaryMatchesScan(t *testing.T) {
 }
 
 func TestSummaryIncludesCalendar(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
 	dstDir := filepath.Join(dir, ".kimi-code", "sessions", "x", "s", "agents", "main")
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {

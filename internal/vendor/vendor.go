@@ -14,6 +14,15 @@ func Lookup(model, provider string) string {
 		return "anthropic"
 	case strings.Contains(blob, "kimi") || strings.Contains(blob, "moonshot") || m == "k3":
 		return "moonshot"
+	case strings.Contains(blob, "deepseek"):
+		return "deepseek"
+	case strings.Contains(blob, "doubao") || strings.Contains(blob, "seed-code") || strings.Contains(blob, "seed_code") ||
+		strings.HasPrefix(m, "seed-"):
+		return "doubao"
+	case strings.Contains(blob, "glm") || strings.Contains(blob, "zhipu") || strings.Contains(blob, "chatglm"):
+		return "zhipu"
+	case strings.Contains(blob, "qwen") || strings.Contains(blob, "dashscope"):
+		return "alibaba"
 	case strings.Contains(blob, "gpt") || strings.Contains(blob, "chatgpt") || strings.Contains(m, "codex") ||
 		hasOpenAIReasoningPrefix(m):
 		return "openai"
@@ -45,6 +54,14 @@ func Label(id string) string {
 		return "MiniMax"
 	case "google":
 		return "Google"
+	case "deepseek":
+		return "DeepSeek"
+	case "doubao":
+		return "Doubao"
+	case "zhipu":
+		return "Zhipu"
+	case "alibaba":
+		return "Alibaba"
 	default:
 		return "Unknown"
 	}

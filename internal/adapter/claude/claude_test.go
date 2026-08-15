@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
@@ -83,5 +84,17 @@ func TestNeverReadsSettingsJSON(t *testing.T) {
 	}
 	if len(evs) != 1 {
 		t.Fatalf("events=%d", len(evs))
+	}
+}
+
+func TestDiscoverXDGConfigClaude(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, ".config", "claude", "projects")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	roots := Adapter{}.Discover(testhome.New(dir))
+	if len(roots) != 1 || roots[0].Path != proj {
+		t.Fatalf("roots=%v", roots)
 	}
 }

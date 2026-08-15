@@ -233,6 +233,8 @@ func sourceLabel(id string) string {
 		return "Codex"
 	case "cursor":
 		return "Cursor"
+	case "trae":
+		return "Trae"
 	default:
 		return id
 	}

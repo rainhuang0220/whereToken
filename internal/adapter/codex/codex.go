@@ -21,6 +21,11 @@ type Adapter struct{}
 func (Adapter) ID() string { return "codex" }
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
+	if v := strings.TrimSpace(os.Getenv("CODEX_HOME")); v != "" {
+		if st, err := os.Stat(v); err == nil && st.IsDir() {
+			return []adapter.SourceRoot{{ID: "codex", Path: v}}
+		}
+	}
 	p := home.DotDir("codex")
 	if st, err := os.Stat(p); err == nil && st.IsDir() {
 		return []adapter.SourceRoot{{ID: "codex", Path: p}}

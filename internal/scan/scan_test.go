@@ -16,6 +16,7 @@ import (
 )
 
 func TestRunKimiFixture(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
 	dstDir := filepath.Join(dir, ".kimi-code", "sessions", "x", "s", "agents", "main")
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {
@@ -59,6 +60,7 @@ func TestRunKimiFixture(t *testing.T) {
 }
 
 func TestRunMarksCursorAbsent(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".cursor"), 0o755); err != nil {
 		t.Fatal(err)
@@ -83,6 +85,7 @@ func TestRunMarksCursorAbsent(t *testing.T) {
 }
 
 func TestRunCursorVscdbConservation(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
 	gs := filepath.Join(dir, "Library", "Application Support", "Cursor", "User", "globalStorage")
 	if err := os.MkdirAll(gs, 0o755); err != nil {
@@ -132,6 +135,60 @@ func TestRunCursorVscdbConservation(t *testing.T) {
 		}
 	}
 	if !foundAuthErr {
+		t.Fatalf("errors=%v", r.Errors)
+	}
+}
+
+func TestRunTraeMissingAuthIsDegradedNotInvented(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "Library", "Application Support", "Trae CN", "User", "globalStorage")
+	if err := os.MkdirAll(gs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(gs, "state.vscdb")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+		"memento/icube-ai-agent-storage", `{"list":[{"sessionId":"sess-1"}]}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	r := Run(testhome.New(dir), AllAdapters())
+	var trae *metric.Slice
+	for i := range r.Summary.BySource {
+		if r.Summary.BySource[i].ID == "trae" {
+			trae = &r.Summary.BySource[i]
+			break
+		}
+	}
+	if trae == nil {
+		t.Fatal("expected trae row when Trae CN ledger exists")
+	}
+	if trae.Total() != 0 || trae.Requests != 0 {
+		t.Fatalf("must not invent tokens: %+v", trae)
+	}
+	if trae.Quality != event.QualityDegraded {
+		t.Fatalf("quality=%s want degraded when sessions exist but login is missing", trae.Quality)
+	}
+	found := false
+	for _, e := range r.Errors {
+		if strings.Contains(e, "未找到本机登录态") {
+			found = true
+		}
+		if strings.Contains(e, "eyJ") || strings.Contains(strings.ToLower(e), "bearer") {
+			t.Fatalf("error leaked auth: %s", e)
+		}
+	}
+	if !found {
 		t.Fatalf("errors=%v", r.Errors)
 	}
 }
