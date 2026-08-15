@@ -1,6 +1,9 @@
 package table
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDisplayWidthCJKVsASCII(t *testing.T) {
 	cases := []struct {
@@ -49,5 +52,32 @@ func TestPadLeftUsesDisplayWidth(t *testing.T) {
 	}
 	if got[len(got)-5:] != "70.2%" {
 		t.Fatalf("suffix %q", got)
+	}
+}
+
+func TestWrapKeepsShortLine(t *testing.T) {
+	got := Wrap("offline · hi", 40)
+	if len(got) != 1 || got[0] != "offline · hi" {
+		t.Fatalf("%q", got)
+	}
+}
+
+func TestWrapCJKPunctuation(t *testing.T) {
+	s := "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
+	got := Wrap(s, 40)
+	if len(got) < 2 {
+		t.Fatalf("expected wrap: %q", got)
+	}
+	joined := ""
+	for i, line := range got {
+		if DisplayWidth(line) > 40 {
+			t.Fatalf("line %d width %d: %q", i, DisplayWidth(line), line)
+		}
+		joined += line
+	}
+	compact := strings.ReplaceAll(strings.ReplaceAll(s, " ", ""), "，", "")
+	gotc := strings.ReplaceAll(strings.ReplaceAll(joined, " ", ""), "，", "")
+	if !strings.Contains(gotc, "只用本机账本") || !strings.Contains(gotc, "云端") {
+		t.Fatalf("lost text: %q vs %q", got, compact)
 	}
 }

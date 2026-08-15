@@ -35,5 +35,6 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Flags may precede a subcommand (`wheretoken --home DIR sources`)
 - Redact `x-goog-api-key` the same way as other vendor API-key headers
 - Ranking tables treat rocket/extended emoji and Hangul as double-width
+- Narrow terminals wrap the legend, offline banner, and footnotes instead of letting them spill
 - `make ci` runs fmt-check, vet, tests, race, and the fixture CLI
 - `--json` publishes `docs/cli-json.schema.json`; goreleaser builds .deb/.rpm with man + completions

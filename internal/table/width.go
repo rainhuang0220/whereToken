@@ -1,6 +1,9 @@
 package table
 
-import "unicode"
+import (
+	"strings"
+	"unicode"
+)
 
 func DisplayWidth(s string) int {
 	n := 0
@@ -80,6 +83,52 @@ func PadLeft(s string, width int) string {
 	}
 	b = append(b, s...)
 	return string(b)
+}
+
+func Wrap(s string, width int) []string {
+	s = strings.TrimRight(s, "\n")
+	if width <= 0 || DisplayWidth(s) <= width {
+		return []string{s}
+	}
+	var lines []string
+	for s != "" {
+		if DisplayWidth(s) <= width {
+			lines = append(lines, s)
+			break
+		}
+		chunk, rest := splitDisplay(s, width)
+		if chunk == "" {
+			lines = append(lines, rest)
+			break
+		}
+		lines = append(lines, chunk)
+		s = rest
+	}
+	return lines
+}
+
+func splitDisplay(s string, width int) (string, string) {
+	n := 0
+	lastBreak := 0
+	for i, r := range s {
+		w := runeWidth(r)
+		if n+w > width {
+			if lastBreak > 0 {
+				return strings.TrimRight(s[:lastBreak], " "), strings.TrimLeft(s[lastBreak:], " ")
+			}
+			if i == 0 {
+				i = len(string(r))
+			}
+			return s[:i], s[i:]
+		}
+		n += w
+		if r == ' ' {
+			lastBreak = i
+		} else if r == '，' || r == '·' || r == '、' || r == '。' {
+			lastBreak = i + len(string(r))
+		}
+	}
+	return s, ""
 }
 
 func runeWidth(r rune) int {

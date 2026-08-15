@@ -428,6 +428,16 @@ func TestResolveWidthFlagAndCOLUMNS(t *testing.T) {
 	}
 }
 
+func TestCompletionRequiresShell(t *testing.T) {
+	app, _, errb := testApp([]string{"completion"})
+	if code := app.Run(); code != ExitUsage {
+		t.Fatalf("code=%d", code)
+	}
+	if !strings.Contains(errb.String(), "bash") {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+}
+
 func TestCompletionShells(t *testing.T) {
 	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
 		s, err := Completion(sh)

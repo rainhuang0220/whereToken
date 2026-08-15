@@ -20,11 +20,15 @@ func Render(snap Snapshot, opt Options) string {
 		style = table.BoxASCII
 	}
 	var b strings.Builder
-	b.WriteString(title(snap))
-	b.WriteByte('\n')
-	if banner := offlineBanner(snap); banner != "" {
-		b.WriteString(banner)
+	for _, line := range table.Wrap(title(snap), opt.Width) {
+		b.WriteString(line)
 		b.WriteByte('\n')
+	}
+	if banner := offlineBanner(snap); banner != "" {
+		for _, line := range table.Wrap(banner, opt.Width) {
+			b.WriteString(line)
+			b.WriteByte('\n')
+		}
 	}
 	if spark := sparkLine(snap, opt.ASCII); spark != "" {
 		b.WriteString(spark)
@@ -32,7 +36,7 @@ func Render(snap Snapshot, opt Options) string {
 	}
 	b.WriteByte('\n')
 	b.WriteString(table.KPIBox(kpiCells(snap), style))
-	b.WriteString(legend())
+	b.WriteString(legend(opt.Width))
 	if len(snap.Tools) > 0 && snap.Scope == "" {
 		b.WriteByte('\n')
 		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
@@ -55,9 +59,10 @@ func Render(snap Snapshot, opt Options) string {
 		var nb strings.Builder
 		nb.WriteString("注\n")
 		for _, n := range footnoteNotes {
-			nb.WriteString("  · ")
-			nb.WriteString(n)
-			nb.WriteByte('\n')
+			for _, line := range table.Wrap("  · "+n, opt.Width) {
+				nb.WriteString(line)
+				nb.WriteByte('\n')
+			}
 		}
 		block := nb.String()
 		if opt.Color {
@@ -137,8 +142,12 @@ func sparkLine(snap Snapshot, ascii bool) string {
 	return "近7日  " + bar
 }
 
-func legend() string {
-	return "  合计 = 未命中 + 缓存读 + 缓存写 + 输出。命中率不含输出。\n"
+func legend(width int) string {
+	wide := "  合计 = 未命中 + 缓存读 + 缓存写 + 输出。命中率不含输出。"
+	if width <= 0 || table.DisplayWidth(wide) <= width {
+		return wide + "\n"
+	}
+	return "  合计=未命中+缓存读+缓存写+输出。\n  命中率不含输出。\n"
 }
 
 func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWidth int) string {

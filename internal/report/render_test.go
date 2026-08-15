@@ -113,6 +113,30 @@ func TestRenderBoxLinesSameWidth(t *testing.T) {
 	}
 }
 
+func TestRenderFitsNarrowWidth(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{
+		"offline · 只用本机账本，没有请求 Cursor/Trae 云端",
+		"trae: 登录态在加密存储中，没有可读的 JWT 文件",
+	}, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{Width: 40, ASCII: true})
+	for i, line := range strings.Split(out, "\n") {
+		if line == "" {
+			continue
+		}
+		if w := table.DisplayWidth(line); w > 40 {
+			t.Fatalf("line %d width %d > 40: %q", i, w, line)
+		}
+	}
+	if !strings.Contains(out, "命中率不含输出") || !strings.Contains(out, "offline") {
+		t.Fatalf("lost copy:\n%s", out)
+	}
+}
+
 func TestRenderZeroData(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
