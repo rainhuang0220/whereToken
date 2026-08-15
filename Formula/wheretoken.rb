@@ -10,6 +10,9 @@ class Wheretoken < Formula
     ldflags = "-s -w -X main.version=head"
     system "go", "build", *std_go_args(ldflags: ldflags), "./cmd/wheretoken"
     man1.install "docs/wheretoken.1"
+    bash_completion.install "completions/wheretoken.bash" => "wheretoken"
+    zsh_completion.install "completions/_wheretoken"
+    fish_completion.install "completions/wheretoken.fish"
   end
 
   test do

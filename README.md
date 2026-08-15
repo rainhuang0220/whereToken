@@ -15,6 +15,12 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 # or: npx wheretoken
 ```
 
+Windows (PowerShell), same release:
+
+```powershell
+irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+```
+
 From a clone with Homebrew:
 
 ```bash

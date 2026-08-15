@@ -12,6 +12,7 @@ USAGE
 INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+  irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
   npm install -g wheretoken          # GitHub Release binary; no Go required
   npx wheretoken
 

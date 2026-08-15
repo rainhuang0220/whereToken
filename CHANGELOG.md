@@ -4,7 +4,7 @@
 
 CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, requests, turns), then tool/vendor rankings with share and a 7-day spark.
 
-- Install: `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`, `scripts/install.sh`, npm wrapper, `brew install --HEAD Formula/wheretoken.rb`
+- Install: `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`, `scripts/install.sh`, `scripts/install.ps1`, npm wrapper, `brew install --HEAD Formula/wheretoken.rb`
 - `wheretoken serve` still serves the kiln dashboard on `127.0.0.1`
 - `--today`, `--tool`/`--vendor`/`--model`, brand flags, `--json`, `--ascii`, `--no-color`, `--quiet`, `--offline`, `--width`
 - Exit `0` ok (including zero data / degraded login), `1` runtime, `2` usage
@@ -13,3 +13,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - `--json` includes raw `total` on each tool/vendor row (not only `total_m`)
 - ASCII rankings use `...`, not a Unicode ellipsis
 - `--today` keeps the offline note; a slice with requests but 0 tokens says so in plain language
+- Windows: `scripts/install.ps1`; Homebrew formula installs bash/zsh/fish completions
