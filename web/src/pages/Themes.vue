@@ -19,9 +19,8 @@ import {
   restoreGallery,
   type MotionHandle,
 } from '../themes/galleryMotion'
-import { mockBricks } from '../themes/mockWall'
+import MockKeyboard from '../themes/MockKeyboard.vue'
 
-const MOCK = mockBricks(24)
 const route = useRoute()
 const router = useRouter()
 const hall = ref<HTMLElement | null>(null)
@@ -188,31 +187,21 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
 
         <div v-if="openId === t.id" class="glaze-expand">
           <div class="glaze-mock" aria-hidden="true">
-            <header class="rail">
+            <div class="glaze-mock-chrome">
               <h1>whereToken</h1>
-              <div class="rail-meta">
-                <p class="when">2026-08-16 00:00</p>
-                <div class="rail-actions">
-                  <span class="lever">主题</span>
-                  <span class="lever">刷新</span>
-                </div>
+              <p class="glaze-mock-total">248.60<em>M</em></p>
+              <div class="damper">
+                <span class="on">合计</span>
+                <span>工具</span>
+                <span>厂家</span>
               </div>
-            </header>
-            <p class="glaze-mock-total">248.60<em>M</em></p>
-            <div class="damper">
-              <span class="on">合计</span>
-              <span>工具</span>
-              <span>厂家</span>
+              <div class="glaze-mock-tools">
+                <span class="when">2026-08-16 00:00</span>
+                <span class="lever">主题</span>
+                <span class="lever">刷新</span>
+              </div>
             </div>
-            <div class="wall">
-              <span
-                v-for="(b, i) in MOCK"
-                :key="i"
-                class="brick"
-                :data-kind="b.kind"
-                :data-level="String(b.level)"
-              />
-            </div>
+            <MockKeyboard />
           </div>
           <div class="glaze-expand-actions">
             <button type="button" class="lever glaze-back" @click.stop="backToGrid">返回釉厅</button>

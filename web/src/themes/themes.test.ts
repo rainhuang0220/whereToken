@@ -333,6 +333,18 @@ describe('theme is a page, not a home strip', () => {
       expect(themes.some((t) => t.mark === mark), mark).toBe(true)
     }
   })
+
+  it('fills the expanded mock with a keyboard, not a kiln wall', () => {
+    const page = readFileSync(join(SRC_ROOT, 'pages/Themes.vue'), 'utf8')
+    expect(page).toMatch(/MockKeyboard/)
+    expect(page).not.toMatch(/mockWall|mockBricks/)
+    expect(existsSync(join(SRC_ROOT, 'themes/mockWall.ts'))).toBe(false)
+    const mockAt = page.indexOf('glaze-mock')
+    expect(mockAt).toBeGreaterThan(0)
+    const mock = page.slice(mockAt)
+    expect(mock).not.toMatch(/class="wall"/)
+    expect(mock).not.toMatch(/class="brick"/)
+  })
 })
 
 describe('flat GitHub-like kiln wall', () => {
