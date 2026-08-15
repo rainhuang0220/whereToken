@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -98,72 +99,88 @@ func parseRollout(path string, root adapter.SourceRoot, emit func(event.UsageEve
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
-	buf := make([]byte, 0, 64*1024)
-	sc.Buffer(buf, 10*1024*1024)
-
-	var prevTotal tokenUsage
-	var haveTotal bool
-	var lastSeen tokenUsage
-	var haveLast bool
-	model := ""
-	seq := 0
-
-	for sc.Scan() {
-		b := sc.Bytes()
-		if len(b) == 0 {
-			continue
+	r := bufio.NewReaderSize(f, 1<<20)
+	st := &rolloutState{}
+	for {
+		b, err := r.ReadBytes('\n')
+		if len(b) > 0 {
+			if b[len(b)-1] == '\n' {
+				b = b[:len(b)-1]
+			}
+			if len(b) > 0 && b[len(b)-1] == '\r' {
+				b = b[:len(b)-1]
+			}
+			if len(b) > 0 {
+				handleRolloutLine(b, path, root, st, emit, emitTurn)
+			}
 		}
-		var rec rolloutLine
-		if err := json.Unmarshal(b, &rec); err != nil {
-			continue
+		if err == io.EOF {
+			return nil
 		}
-		ts, _ := time.Parse(time.RFC3339, rec.Timestamp)
-		switch rec.Type {
-		case "turn_context":
-			var p turnPayload
-			if err := json.Unmarshal(rec.Payload, &p); err == nil && p.Model != "" {
-				model = p.Model
-			}
-		case "event_msg":
-			var p eventPayload
-			if err := json.Unmarshal(rec.Payload, &p); err != nil || p.Type != "token_count" {
-				continue
-			}
-			if p.Info.Total != nil {
-				cur := *p.Info.Total
-				if haveTotal && !cur.advances(prevTotal) {
-					continue
-				}
-				deltaFrom := tokenUsage{}
-				if haveTotal {
-					deltaFrom = prevTotal
-				}
-				emitUsage(path, root, model, ts, &seq, deltaFrom, cur, emit)
-				prevTotal = cur
-				haveTotal = true
-				continue
-			}
-			if p.Info.Last != nil {
-				cur := *p.Info.Last
-				if haveLast && cur == lastSeen {
-					continue
-				}
-				emitUsage(path, root, model, ts, &seq, tokenUsage{}, cur, emit)
-				lastSeen = cur
-				haveLast = true
-			}
-		case "response_item":
-			var p itemPayload
-			if err := json.Unmarshal(rec.Payload, &p); err != nil {
-				continue
-			}
-			if p.Type == "message" && p.Role == "user" {
-				emitTurn(event.TurnEvent{Source: "codex", Timestamp: ts})
-			}
+		if err != nil {
+			return err
 		}
 	}
-	return sc.Err()
+}
+
+type rolloutState struct {
+	prevTotal tokenUsage
+	haveTotal bool
+	lastSeen  tokenUsage
+	haveLast  bool
+	model     string
+	seq       int
+}
+
+func handleRolloutLine(b []byte, path string, root adapter.SourceRoot, st *rolloutState, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
+	var rec rolloutLine
+	if err := json.Unmarshal(b, &rec); err != nil {
+		return
+	}
+	ts, _ := time.Parse(time.RFC3339, rec.Timestamp)
+	switch rec.Type {
+	case "turn_context":
+		var p turnPayload
+		if err := json.Unmarshal(rec.Payload, &p); err == nil && p.Model != "" {
+			st.model = p.Model
+		}
+	case "event_msg":
+		var p eventPayload
+		if err := json.Unmarshal(rec.Payload, &p); err != nil || p.Type != "token_count" {
+			return
+		}
+		if p.Info.Total != nil {
+			cur := *p.Info.Total
+			if st.haveTotal && !cur.advances(st.prevTotal) {
+				return
+			}
+			deltaFrom := tokenUsage{}
+			if st.haveTotal {
+				deltaFrom = st.prevTotal
+			}
+			emitUsage(path, root, st.model, ts, &st.seq, deltaFrom, cur, emit)
+			st.prevTotal = cur
+			st.haveTotal = true
+			return
+		}
+		if p.Info.Last != nil {
+			cur := *p.Info.Last
+			if st.haveLast && cur == st.lastSeen {
+				return
+			}
+			emitUsage(path, root, st.model, ts, &st.seq, tokenUsage{}, cur, emit)
+			st.lastSeen = cur
+			st.haveLast = true
+		}
+	case "response_item":
+		var p itemPayload
+		if err := json.Unmarshal(rec.Payload, &p); err != nil {
+			return
+		}
+		if p.Type == "message" && p.Role == "user" {
+			emitTurn(event.TurnEvent{Source: "codex", Timestamp: ts})
+		}
+	}
 }
 
 func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time, seq *int, prev, cur tokenUsage, emit func(event.UsageEvent)) {

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -69,6 +70,32 @@ func TestLastTokenUsageFallback(t *testing.T) {
 		t.Fatalf("events=%d", len(evs))
 	}
 	if evs[0].Miss != 80 || evs[0].CacheRead != 20 || evs[0].Output != 35 {
+		t.Fatalf("%+v", evs[0])
+	}
+}
+
+func TestLongJSONLLine(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sessions", "2026", "01", "01", "rollout-long.jsonl")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pad := strings.Repeat("x", 11<<20)
+	line := `{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{"type":"token_count","pad":"` + pad + `","info":{"total_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":1,"reasoning_output_tokens":0}}}}` + "\n"
+	if err := os.WriteFile(path, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	a := Adapter{}
+	if err := a.Parse(adapter.SourceRoot{ID: "codex", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if evs[0].Miss != 10 || evs[0].Output != 1 {
 		t.Fatalf("%+v", evs[0])
 	}
 }
