@@ -221,7 +221,7 @@ func TestFilterModelK3(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.TotalM != "1.03 M" || snap.Requests != 1 {
+	if snap.TotalM != "1.03 M" || snap.Requests != 1 || snap.UserTurns != 0 {
 		t.Fatalf("%+v", snap)
 	}
 }

@@ -324,7 +324,10 @@ func keepTurn(t event.TurnEvent, f Filter, now time.Time, loc *time.Location, sr
 			return false
 		}
 	}
-	if f.Vendor != "" || f.Model != "" {
+	if f.Model != "" {
+		return false
+	}
+	if f.Vendor != "" {
 		if _, ok := srcSeen[t.Source]; !ok {
 			return false
 		}

@@ -243,3 +243,13 @@ func TestParseTodayOfflineCursor(t *testing.T) {
 		t.Fatalf("%+v", f)
 	}
 }
+
+func TestUsageAlias(t *testing.T) {
+	err := usageError{msg: "nope"}
+	if !IsUsage(err) || !Usage(err) {
+		t.Fatal(err)
+	}
+	if IsUsage(nil) || Usage(nil) {
+		t.Fatal("nil")
+	}
+}
