@@ -6,6 +6,11 @@ const props = defineProps<{
   title: string
   rows: SliceView[]
   showTurns?: boolean
+  activeId?: string
+}>()
+
+const emit = defineEmits<{
+  select: [id: string]
 }>()
 
 const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命中率']
@@ -24,7 +29,12 @@ const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命�
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.id">
+        <tr
+          v-for="row in rows"
+          :key="row.id"
+          :class="{ on: props.activeId === row.id }"
+          @click="emit('select', row.id)"
+        >
           <td class="name">{{ row.label }}</td>
           <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
           <td class="num">{{ row.requests }}</td>

@@ -77,6 +77,15 @@ all_t = int(scan["all"]["total"])
 if src != all_t or vend != all_t:
     raise SystemExit(f"conservation fail src={src} vend={vend} all={all_t}")
 print(f"ok conservation all={all_t}")
+
+days = ((scan.get("calendar") or {}).get("all") or {}).get("days") or []
+day_sum = sum(int(d["total"]) for d in days)
+if day_sum != all_t:
+    raise SystemExit(f"calendar conservation fail days={day_sum} all={all_t}")
+print(f"ok calendar days={day_sum}")
+if (scan.get("calendar") or {}).get("week_start") != "monday":
+    raise SystemExit(f"week_start={(scan.get('calendar') or {}).get('week_start')}")
+print("ok calendar week_start=monday")
 errs = scan.get("errors") or []
 if errs:
     print("scan errors:", errs)

@@ -1,13 +1,44 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import AxisDamper from './components/AxisDamper.vue'
+import FoundryMarks from './components/FoundryMarks.vue'
+import KilnWall from './components/KilnWall.vue'
 import KpiRow from './components/KpiRow.vue'
-import ShareBars from './components/ShareBars.vue'
 import SliceTable from './components/SliceTable.vue'
+import { emptySeries, layoutCells, todayISO } from './grid'
 import { useSummaryStore } from './stores/summary'
+import type { AxisSel, CalendarSeries } from './types'
 
 const store = useSummaryStore()
 const payload = computed(() => store.payload)
 const degraded = computed(() => payload.value?.all.quality === 'degraded')
+const axis = ref<AxisSel>({ kind: 'all', id: 'all' })
+
+const series = computed<CalendarSeries>(() => {
+  const cal = payload.value?.calendar
+  if (!cal) return emptySeries
+  if (axis.value.kind === 'source') return cal.by_source[axis.value.id] ?? emptySeries
+  if (axis.value.kind === 'vendor') return cal.by_vendor[axis.value.id] ?? emptySeries
+  return cal.all
+})
+
+const cells = computed(() => {
+  const cal = payload.value?.calendar
+  if (!cal) return []
+  return layoutCells({
+    windowFrom: cal.window_from,
+    windowTo: cal.window_to,
+    today: todayISO(),
+    weekStart: 'monday',
+    days: series.value.days,
+  })
+})
+
+const litDays = computed(() => series.value.days.length)
+const summaryText = computed(() => {
+  const s = series.value.stats
+  return `过去 53 周有 ${litDays.value} 天烧过 token，峰值 ${s.peak_date || '—'} ${s.peak_total_m}，当前连烧 ${s.current_streak} 天，最长 ${s.longest_streak} 天。`
+})
 
 onMounted(() => {
   void store.refresh()
@@ -15,17 +46,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sheet">
-    <header class="mast">
-      <div>
-        <p class="kicker">本机观测</p>
-        <h1>whereToken</h1>
-        <p class="sub">token 花在哪：合计 · 按工具 · 按厂家</p>
-      </div>
-      <div class="mast-meta">
-        <p>{{ store.scannedAt || '尚未扫描' }}</p>
-        <button type="button" :disabled="store.loading" @click="store.refresh()">
-          {{ store.loading ? '扫描中…' : '刷新' }}
+  <div class="forge">
+    <div class="watermark" aria-hidden="true">消耗</div>
+
+    <header class="rail">
+      <h1>whereToken</h1>
+      <div class="rail-meta">
+        <p class="when">{{ store.scannedAt || '尚未扫描' }}</p>
+        <button type="button" class="lever" :disabled="store.loading" @click="store.refresh()">
+          {{ store.loading ? '煅烧中…' : '再扫' }}
         </button>
       </div>
     </header>
@@ -34,12 +63,34 @@ onMounted(() => {
     <p v-else-if="degraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
 
     <template v-if="payload">
+      <AxisDamper
+        v-model="axis"
+        :sources="payload.by_source"
+        :vendors="payload.by_vendor"
+      />
+
+      <section class="hearth">
+        <KilnWall :cells="cells" :peak-date="series.stats.peak_date" />
+        <FoundryMarks :stats="series.stats" />
+      </section>
+      <p class="sr-only">{{ summaryText }}</p>
+
       <KpiRow :all="payload.all" />
-      <ShareBars v-if="payload.by_source.length" :rows="payload.by_source" />
 
       <div class="split">
-        <SliceTable title="按工具" :rows="payload.by_source" :show-turns="true" />
-        <SliceTable title="按厂家" :rows="payload.by_vendor" />
+        <SliceTable
+          title="按工具"
+          :rows="payload.by_source"
+          :show-turns="true"
+          :active-id="axis.kind === 'source' ? axis.id : ''"
+          @select="axis = { kind: 'source', id: $event }"
+        />
+        <SliceTable
+          title="按厂家"
+          :rows="payload.by_vendor"
+          :active-id="axis.kind === 'vendor' ? axis.id : ''"
+          @select="axis = { kind: 'vendor', id: $event }"
+        />
       </div>
 
       <details class="cross">

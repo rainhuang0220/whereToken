@@ -41,5 +41,51 @@ export type SummaryPayload = {
   by_source: SliceView[]
   by_vendor: SliceView[]
   by_source_vendor: SourceVendorView[]
+  calendar: Calendar
   errors: string[]
+}
+
+export type Calendar = {
+  week_start: 'monday'
+  timezone: string
+  window_from: string
+  window_to: string
+  all: CalendarSeries
+  by_source: Record<string, CalendarSeries>
+  by_vendor: Record<string, CalendarSeries>
+}
+
+export type CalendarSeries = {
+  days: Day[]
+  stats: CalendarStats
+}
+
+export type Day = {
+  date: string
+  miss: number
+  cache_read: number
+  cache_create: number
+  output: number
+  total: number
+  miss_m: string
+  cache_read_m: string
+  cache_create_m: string
+  output_m: string
+  total_m: string
+  level: number
+}
+
+export type CalendarStats = {
+  peak_date: string
+  peak_total: number
+  peak_total_m: string
+  current_streak: number
+  longest_streak: number
+}
+
+export type AxisKind = 'all' | 'source' | 'vendor'
+
+export type AxisSel = {
+  kind: AxisKind
+  id: string
 }

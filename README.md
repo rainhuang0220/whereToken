@@ -38,7 +38,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 ## 当前状态
 
-可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家；`wheretoken serve` 在 `127.0.0.1` 提供同一份 JSON 和 Vue 页。
+可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / **窑墙日历**（日桶、峰值、连烧）；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
 
 必读：
 
@@ -47,7 +47,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 - [`docs/data-sources.md`](docs/data-sources.md) — 本机实测的数据源清单与字段映射
 - [`opt.md`](opt.md) — 过程决策，供复盘
 
-实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md)。
+实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md) · [`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](docs/superpowers/plans/2026-08-15-wheretoken-calendar.md)。
 
 ## 开发命令
 
