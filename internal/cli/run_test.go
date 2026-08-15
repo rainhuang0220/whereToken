@@ -1,0 +1,235 @@
+package cli
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/scan"
+)
+
+func shanghai() *time.Location {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+	return loc
+}
+
+func fixtureResult() scan.Result {
+	loc := shanghai()
+	ts := func(d, hh int) time.Time {
+		return time.Date(2026, 8, d, hh, 0, 0, 0, loc)
+	}
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Timestamp: ts(15, 10), Miss: 1_000_000, CacheRead: 9_000_000, Output: 100_000, Quality: event.QualityAuthoritative},
+		{Source: "claude", Vendor: "minimax", Model: "MiniMax-M3", RequestID: "b", Timestamp: ts(16, 11), Miss: 500_000, Output: 50_000, Quality: event.QualityAuthoritative},
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "c", Timestamp: ts(16, 12), Miss: 200_000, CacheRead: 800_000, Output: 30_000, Quality: event.QualityAuthoritative},
+	}
+	turns := []event.TurnEvent{
+		{Source: "claude", Timestamp: ts(15, 10)},
+		{Source: "claude", Timestamp: ts(16, 11)},
+		{Source: "kimi", Timestamp: ts(16, 12)},
+	}
+	return scan.Result{
+		Summary: metric.Aggregate(events, turns),
+		Events:  events,
+		Turns:   turns,
+		Errors:  []string{},
+	}
+}
+
+func testApp(args []string) (*App, *bytes.Buffer, *bytes.Buffer) {
+	out, errb := &bytes.Buffer{}, &bytes.Buffer{}
+	loc := shanghai()
+	now := time.Date(2026, 8, 16, 15, 0, 0, 0, loc)
+	app := &App{
+		Args:      args,
+		Stdout:    out,
+		Stderr:    errb,
+		Version:   "test",
+		Now:       func() time.Time { return now },
+		Loc:       loc,
+		GOOS:      "darwin",
+		LookupEnv: func(string) string { return "" },
+		Scan: func(adapter.Home) scan.Result {
+			return fixtureResult()
+		},
+	}
+	return app, out, errb
+}
+
+func TestRunDefaultPrintsP0Table(t *testing.T) {
+	app, out, errb := testApp(nil)
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d err=%s", code, errb.String())
+	}
+	s := out.String()
+	for _, want := range []string{"总用量", "命中率", "最长连烧", "11.68 M", "85.2%"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %q in\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "消耗") {
+		t.Fatal("消耗 watermark")
+	}
+	if errb.Len() != 0 {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+}
+
+func TestRunHelpAndVersion(t *testing.T) {
+	app, out, _ := testApp([]string{"--help"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d", code)
+	}
+	if !strings.Contains(out.String(), "USAGE") || !strings.Contains(out.String(), "EXIT CODES") {
+		t.Fatalf("help:\n%s", out.String())
+	}
+	app, out, _ = testApp([]string{"--version"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d", code)
+	}
+	if strings.TrimSpace(out.String()) != "wheretoken test" {
+		t.Fatalf("version=%q", out.String())
+	}
+}
+
+func TestRunUnknownCommandExitUsage(t *testing.T) {
+	app, _, errb := testApp([]string{"explode"})
+	if code := app.Run(); code != ExitUsage {
+		t.Fatalf("code=%d", code)
+	}
+	if !strings.Contains(errb.String(), "explode") {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+}
+
+func TestRunUnknownModelExitUsage(t *testing.T) {
+	app, _, errb := testApp([]string{"--model=nope-model"})
+	if code := app.Run(); code != ExitUsage {
+		t.Fatalf("code=%d stderr=%s", code, errb.String())
+	}
+	if !strings.Contains(errb.String(), "nope-model") {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+}
+
+func TestRunJSON(t *testing.T) {
+	app, out, errb := testApp([]string{"--json"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), `"total_m": "11.68 M"`) {
+		t.Fatalf("%s", out.String())
+	}
+	if strings.Contains(out.String(), "┌") {
+		t.Fatal("json must not be a table")
+	}
+}
+
+func TestRunTodayCursorCombo(t *testing.T) {
+	app, out, errb := testApp([]string{"--today", "--cursor"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "Cursor") || !strings.Contains(s, "今天") {
+		t.Fatalf("%s", s)
+	}
+	if !strings.Contains(s, "0.00 M") {
+		t.Fatalf("cursor today should be zero in fixture:\n%s", s)
+	}
+}
+
+func TestRunScanJSONStillFullSummary(t *testing.T) {
+	app, out, errb := testApp([]string{"scan", "--json"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), `"by_source"`) || !strings.Contains(out.String(), `"calendar"`) {
+		t.Fatalf("expected observatory JSON:\n%s", out.String())
+	}
+}
+
+func TestRunServeDoesNotScanTable(t *testing.T) {
+	app, out, errb := testApp([]string{"serve", "--port", "8787"})
+	called := false
+	app.Serve = func(addr string, home adapter.Home) error {
+		called = true
+		if !strings.HasPrefix(addr, "127.0.0.1:") {
+			t.Fatalf("addr=%s", addr)
+		}
+		return nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !called {
+		t.Fatal("serve not called")
+	}
+	if strings.Contains(out.String(), "总用量") {
+		t.Fatal("serve should not print the table")
+	}
+}
+
+func TestRunDegradedTraeDoesNotCrash(t *testing.T) {
+	app, out, errb := testApp(nil)
+	app.Scan = func(adapter.Home) scan.Result {
+		r := fixtureResult()
+		r.Errors = []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}
+		return r
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "Trae") {
+		t.Fatalf("%s", out.String())
+	}
+	if strings.Contains(out.String(), "eyJ") {
+		t.Fatal("jwt")
+	}
+}
+
+func TestRunNO_COLORNoEscape(t *testing.T) {
+	app, out, _ := testApp(nil)
+	app.StdoutTTY = true
+	app.LookupEnv = func(k string) string {
+		if k == "NO_COLOR" {
+			return "1"
+		}
+		return ""
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d", code)
+	}
+	if strings.Contains(out.String(), "\x1b") {
+		t.Fatal("ANSI despite NO_COLOR")
+	}
+}
+
+func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
+	h := HelpText()
+	for _, want := range []string{"go install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today"} {
+		if !strings.Contains(h, want) {
+			t.Errorf("help missing %q", want)
+		}
+	}
+}
+
+func TestCompletionShells(t *testing.T) {
+	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
+		s, err := Completion(sh)
+		if err != nil || !strings.Contains(s, "wheretoken") {
+			t.Fatalf("%s: %v %q", sh, err, s)
+		}
+	}
+	_, err := Completion("cmd")
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}

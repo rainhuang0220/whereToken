@@ -21,6 +21,26 @@ func TestFormatM(t *testing.T) {
 	}
 }
 
+func TestFormatCount(t *testing.T) {
+	cases := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0"},
+		{12, "12"},
+		{999, "999"},
+		{1000, "1,000"},
+		{12048, "12,048"},
+		{1_000_000, "1,000,000"},
+		{9_223_372_036_854_775_807, "9,223,372,036,854,775,807"},
+	}
+	for _, c := range cases {
+		if got := FormatCount(c.in); got != c.want {
+			t.Fatalf("FormatCount(%d)=%q want %q", c.in, got, c.want)
+		}
+	}
+}
+
 func TestHitRate(t *testing.T) {
 	pct, ok := HitRate(97_763_998, 252_128_914, 8_952_459)
 	if !ok {

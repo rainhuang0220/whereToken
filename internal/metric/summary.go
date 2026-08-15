@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -242,3 +243,31 @@ func sourceLabel(id string) string {
 }
 
 func SourceLabel(id string) string { return sourceLabel(id) }
+
+func KnownSourceIDs() []string {
+	return []string{"claude", "kimi", "opencode", "codex", "cursor", "trae"}
+}
+
+func LookupSource(name string) (string, bool) {
+	n := compactName(name)
+	if n == "" {
+		return "", false
+	}
+	for _, id := range KnownSourceIDs() {
+		if n == compactName(id) || n == compactName(sourceLabel(id)) {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+func compactName(s string) string {
+	var b []rune
+	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
+		if r == ' ' || r == '-' || r == '_' {
+			continue
+		}
+		b = append(b, r)
+	}
+	return string(b)
+}

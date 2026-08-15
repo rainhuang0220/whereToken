@@ -23,6 +23,8 @@ type Result struct {
 	Summary   metric.Summary
 	Roots     []adapter.SourceRoot
 	Errors    []string
+	Events    []event.UsageEvent
+	Turns     []event.TurnEvent
 	ScannedAt time.Time
 }
 
@@ -169,6 +171,8 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		Summary:   sum,
 		Roots:     roots,
 		Errors:    errs,
+		Events:    events,
+		Turns:     turns,
 		ScannedAt: time.Now(),
 	}
 }

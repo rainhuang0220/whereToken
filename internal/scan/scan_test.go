@@ -37,6 +37,9 @@ func TestRunKimiFixture(t *testing.T) {
 	if r.Summary.All.Total() != 1185 {
 		t.Fatalf("all=%d", r.Summary.All.Total())
 	}
+	if len(r.Events) == 0 {
+		t.Fatal("expected events on Result for CLI filters")
+	}
 	var kimi, moon int64
 	for _, s := range r.Summary.BySource {
 		if s.ID == "kimi" {

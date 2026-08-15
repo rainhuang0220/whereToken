@@ -25,6 +25,40 @@ func TestLookup(t *testing.T) {
 	}
 }
 
+func TestLookupName(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"anthropic", "anthropic"},
+		{"Anthropic", "anthropic"},
+		{"minimax", "minimax"},
+		{"MiniMax", "minimax"},
+		{"moonshot", "moonshot"},
+		{"Moonshot", "moonshot"},
+		{"openai", "openai"},
+		{"OpenAI", "openai"},
+		{"google", "google"},
+		{"deepseek", "deepseek"},
+		{"DeepSeek", "deepseek"},
+		{"doubao", "doubao"},
+		{"zhipu", "zhipu"},
+		{"Zhipu", "zhipu"},
+		{"alibaba", "alibaba"},
+		{"unknown", "unknown"},
+		{"Unknown", "unknown"},
+	}
+	for _, c := range cases {
+		got, ok := LookupName(c.in)
+		if !ok || got != c.want {
+			t.Fatalf("LookupName(%q)=%q %v want %q true", c.in, got, ok, c.want)
+		}
+	}
+	if _, ok := LookupName("windsurf"); ok {
+		t.Fatal("windsurf is not a vendor")
+	}
+	if _, ok := LookupName(""); ok {
+		t.Fatal("empty")
+	}
+}
+
 func TestLabel(t *testing.T) {
 	if Label("moonshot") != "Moonshot" {
 		t.Fatal(Label("moonshot"))

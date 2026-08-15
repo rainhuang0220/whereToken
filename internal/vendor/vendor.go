@@ -66,3 +66,31 @@ func Label(id string) string {
 		return "Unknown"
 	}
 }
+
+func KnownIDs() []string {
+	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "unknown"}
+}
+
+func LookupName(name string) (string, bool) {
+	n := compact(name)
+	if n == "" {
+		return "", false
+	}
+	for _, id := range KnownIDs() {
+		if n == compact(id) || n == compact(Label(id)) {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+func compact(s string) string {
+	var b []rune
+	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
+		if r == ' ' || r == '-' || r == '_' {
+			continue
+		}
+		b = append(b, r)
+	}
+	return string(b)
+}
