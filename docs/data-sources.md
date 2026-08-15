@@ -4,6 +4,8 @@
 
 扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。
 
+工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。
+
 ---
 
 ## 发现器要看的根

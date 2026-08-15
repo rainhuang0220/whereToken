@@ -1,8 +1,8 @@
 # whereToken Design Spec
 
 Date: 2026-08-15
-Status: 待用户审阅（实现计划在批准后另文）
-Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../../opt.md)
+Status: 方案 B 已批准；按工具 × 按厂家拆分为一等需求
+Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../../opt.md) · [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md)
 
 ---
 
@@ -16,12 +16,14 @@ Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../.
 
 成功标准（v1 可上线）：
 
-1. 冷启动后 10 秒内（本机当前数据量级）给出全源汇总，单位 M。
-2. 六列指标在每个已适配源上都有定义，缺字段则显式为 `—` 或 `0`，不编造。
-3. Kimi / OpenCode 总量与本机再算脚本误差为 0。
-4. Codex 不因重复 `token_count` 而翻倍。
-5. Claude 标明数据质量，用户回合不含 tool_result。
-6. 不上传任何会话；不读取密钥文件。
+1. 冷启动后 10 秒内（本机当前数据量级）给出**全量合计**，单位 M。
+2. 同一套六列同时能按 **工具**（Claude Code / Kimi / Codex / OpenCode）和按 **厂家**（Anthropic / Moonshot / OpenAI / MiniMax / …）拆开；`sum(按工具) == 合计 == sum(按厂家)`。
+3. 工具 ≠ 厂家。Claude Code 里跑 MiniMax 时，记在工具「Claude Code」和厂家「MiniMax」，不得记成 Anthropic。
+4. 六列指标在每个已适配源上都有定义，缺字段则显式为 `—` 或 `0`，不编造。
+5. Kimi / OpenCode 总量与本机再算脚本误差为 0。
+6. Codex 不因重复 `token_count` 而翻倍。
+7. Claude 标明数据质量，用户回合不含 tool_result。
+8. 不上传任何会话；不读取密钥文件。
 
 非目标（v1）：
 
@@ -49,7 +51,7 @@ Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../.
 | 核验速度 | 快出表，慢做可视化 | 先数字后页面 | 打包干扰核验 |
 | 分发 | npm | 单二进制 `wheretoken` | DMG |
 
-**选择 B。** CLI 是同一个二进制：`wheretoken scan --json` 给脚本，`wheretoken serve` 给仪表盘。Tauri 列为 v2。
+**选择 B（用户 2026-08-15 确认）。** CLI 是同一个二进制：`wheretoken scan --json` 给脚本，`wheretoken serve` 给仪表盘。Tauri 列为 v2。
 
 ---
 
@@ -61,11 +63,13 @@ Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../.
 
 ```
 UsageEvent
-  source          string    // claude | kimi | opencode | codex | …
+  source          string    // 工具：claude | kimi | opencode | codex | …
+  vendor          string    // 厂家：anthropic | moonshot | openai | minimax | google | unknown
   source_root     string    // 绝对路径，用于去重同一物理目录
   session_id      string
   request_id      string    // 去重键；没有则生成稳定哈希
   model           string
+  provider        string    // 适配器可选，如 OpenCode providerID；供厂家推断
   workspace       string    // 尽量还原真实路径
   timestamp       time      // UTC 存，本地时区展示
   miss            int64     // 未命中输入
@@ -73,9 +77,10 @@ UsageEvent
   cache_create    int64
   output          int64     // 含 reasoning
   reasoning       int64     // 子集，默认 0；不得再加进 output
-  is_user_turn    bool      // 这条事件是否同时计一次用户回合；通常 false，回合可另表
   quality         enum      // authoritative | degraded | estimated | absent
 ```
+
+`vendor` 由归一化层根据 `model` + `provider` 填写，适配器不准手写死成和 `source` 一样。本机反例：Claude Code JSONL 里有 `MiniMax-M3`。
 
 用户回合不一定来自同一条 usage 事件（Claude/Kimi 都是旁路计数），因此另有：
 
@@ -84,6 +89,30 @@ TurnEvent { source, session_id, timestamp, workspace }
 ```
 
 请求次数 = 去重后的 `UsageEvent` 数（一个 request_id 一次）。
+
+厂家推断（大小写不敏感，先匹配先赢）：
+
+| vendor | 命中 |
+|--------|------|
+| `minimax` | 含 `minimax`，或 `abab` |
+| `anthropic` | 含 `claude` |
+| `moonshot` | 含 `kimi` / `moonshot`，或模型为 `k3` / `kimi-code/k3` |
+| `openai` | 含 `gpt` / `codex` / `chatgpt`，或以 `o1` `o3` `o4` 开头 |
+| `google` | 含 `gemini` |
+| `unknown` | 其余；UI 仍单列，标签用原始 model 前缀，不计入「丢掉」 |
+
+### 4.1b 两轴拆分（用户锁死）
+
+「额度」在本产品里 = **已经花掉的 token 归属**，不是套餐剩余配额（v1 不做订阅余额）。
+
+任何一屏、任何一份 `scan --json` 必须同时给出：
+
+1. **合计** `all` — 所有工具加总
+2. **按工具** `by_source` — Claude Code 花了多少、Kimi 花了多少、…
+3. **按厂家** `by_vendor` — Anthropic / Moonshot / OpenAI / MiniMax / …
+4. **交叉** `by_source_vendor` — 例如 Claude Code × MiniMax，用来解释「工具和厂家为什么对不上」
+
+不变量：`sum(by_source.total) == all.total == sum(by_vendor.total)`。回合按工具计（厂家轴上的回合可空或按该厂家事件所在会话近似，v1 厂家轴只保证 token 六列里的前四列 + 请求次数；用户回合以工具轴为准）。
 
 ### 4.2 聚合
 
@@ -101,7 +130,7 @@ cache_hit_rate   = cache_read / (cache_read + miss + cache_create)   // 分母 0
 - 命中率百分比，保留 1 位小数
 - 请求、回合用整数，不加 M
 
-切片：全局、按源、按模型、按日、按工作区、按会话。过滤器可组合。
+切片：全局合计、按工具、按厂家、工具×厂家、按模型、按日、按工作区、按会话。过滤器可组合。默认着陆页必须能同时看见合计、按工具、按厂家，不能只给一个总数。
 
 ### 4.3 质量枚举
 
@@ -132,7 +161,8 @@ cache_hit_rate   = cache_read / (cache_read + miss + cache_create)   // 分母 0
                     ┌───────────────┴───────────────┐
                     ▼                               ▼
            wheretoken scan --json            chi HTTP 127.0.0.1
-           (脚本/核验)                       /api/summary /by-source
+           (脚本/核验)                       /api/summary
+                                             all + by_source + by_vendor
                                                     │
                                                     ▼
                                            Vue 3 仪表盘
@@ -193,11 +223,13 @@ P0 解析规则见 [`docs/data-sources.md`](../../data-sources.md)，这里只�
 一页为主，避免工具箱里再做一个「要学习的后台」。
 
 1. **顶栏：** 最后扫描时间、刷新、本机根路径数。
-2. **六块 KPI：** 总 token、命中率、未命中、输出、请求、用户回合。数字用大号 M。
-3. **按源条形/表格：** 同一六列。无数据的已发现源单独一截。
-4. **时间：** 日序列（ECharts）。默认近 30 天，可切全部。
-5. **下钻：** 模型、工作区、会话。会话表不展示 prompt。
-6. **质量条：** 若 Claude 占比高且 degraded，顶栏常驻一句人话。
+2. **六块 KPI（合计）：** 总 token、命中率、未命中、输出、请求、用户回合。数字用大号 M。
+3. **按工具表：** 同一六列。一行 Claude Code、一行 Kimi、一行 Codex、一行 OpenCode。无数据的已发现源单独一截。
+4. **按厂家表：** 同一 token 四列 + 请求。一行 Anthropic、一行 Moonshot、一行 OpenAI、一行 MiniMax……
+5. **交叉（可折叠）：** 工具 × 厂家，解释混用（Claude Code 调 MiniMax）。
+6. **时间：** 日序列（ECharts）。默认近 30 天，可切全部。
+7. **下钻：** 模型、工作区、会话。会话表不展示 prompt。
+8. **质量条：** 若 Claude 占比高且 degraded，顶栏常驻一句人话。
 
 视觉：中文、深浅两套、数字对齐、不要科幻仪表盘皮肤。具体视觉在 frontend-design 技能下于实现阶段定；本规格只锁信息优先级：**数字正确 > 下钻 > 好看**。
 
@@ -218,9 +250,11 @@ whereToken/
   cmd/wheretoken/main.go
   internal/
     adapter/{claude,kimi,opencode,codex,discover}/
+    event/                       # UsageEvent / TurnEvent
+    vendor/                      # model+provider → 厂家
     normalize/
     store/                       # sqlite cache
-    metric/                      # total / hit rate / format M
+    metric/                      # total / hit rate / format M / 两轴聚合
     httpapi/
   testdata/adapters/…
   web/                           # Vue 3 + Vite
@@ -266,7 +300,7 @@ Go module 名：`github.com/rainhuang0220/whereToken`。
 **v0（本提交）** 规格。
 
 **v0.1 度量核**  
-`metric` 包：公式、M 格式化、聚合器。纯函数测试。无 IO。
+`metric` + `vendor`：公式、M 格式化、合计 / 按工具 / 按厂家聚合与守恒测试。纯函数。无 IO。
 
 **v0.2 Kimi 适配器**  
 夹具来自脱敏 `usage.record`。`scan --source kimi --json` 与夹具一致。本机实盘对照 330.04 M ± 0（允许用户在实现日用量增长，脚本改为「当场再算」而不是钉死 330）。
@@ -284,7 +318,7 @@ requestId max、tool_result、degraded 旗标。
 `wheretoken sources` / `scan`。
 
 **v0.7 HTTP API + Vue KPI 页**  
-六块数字与 `scan --json` 字节级同一 payload。
+合计六块 + 按工具表 + 按厂家表与 `scan --json` 同一 payload。
 
 **v0.8 下钻（日 / 源 / 模型）+ 质量条**  
 认为可日常自用，打 `v0.8.0`。
@@ -308,14 +342,15 @@ requestId max、tool_result、degraded 旗标。
 
 ## 13. 规格自检
 
-- 无 TBD/TODO 占位。待用户拍板的只留在 `opt.md`「待用户决策」三问。
+- 无 TBD/TODO 占位。第 0 轮三问已在 `opt.md` 关闭。
 - 公式在 §4 与 opt.md 0.5、README 一致。
 - P0 四源均有本机证据（data-sources.md）。
 - 范围是一个产品、一条扫描管道，不需要拆成多个仓库。
 - 「用户回合」不会有两种解释：Claude 排除 tool_result，Kimi 用 `origin.kind==user`。
+- 「额度」= 已消耗归属，不是套餐剩余。工具轴与厂家轴必须同时存在，且合计守恒。
 
 ---
 
 ## 14. 下一步
 
-用户审阅本文件。批准方案 B 与 P0 范围后，再写实现计划并开始 v0.1。未批准前不写业务代码。
+方案 B 已批准。实现按 [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md) 执行。

@@ -1,7 +1,7 @@
 # whereToken
 
 > 你的 token 都花在哪。
-> 扫描本机 coding agent 目录，把用量摊开：总量、缓存命中、未命中、输出、请求、回合。单位是 M。
+> 扫描本机 coding agent 目录，把用量摊开：先看合计，再按工具（Claude Code / Kimi / …）和厂家（Anthropic / Moonshot / …）拆开。单位是 M。
 
 来自简单、实用、高效的协作工具箱。
 
@@ -25,7 +25,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 **有什么算什么。** 适配器按目录探测；扫到的才进表，扫不到的不假装有数。
 
-每个来源至少给出这六列（token 一律 **M = 百万**）：
+同一套六列会出现三次：**合计**、**按工具**、**按厂家**（Claude Code 里跑 MiniMax 时，工具记 Claude Code、厂家记 MiniMax）。token 一律 **M = 百万**：
 
 | 指标 | 含义 |
 |------|------|
@@ -46,7 +46,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 - [`docs/data-sources.md`](docs/data-sources.md) — 本机实测的数据源清单与字段映射
 - [`opt.md`](opt.md) — 过程决策，供复盘
 
-规格通过后才会写实现计划（`docs/superpowers/plans/`），然后按核验门提交版本。
+实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md)。每过一轮核验提交一版。
 
 ## 原则（从第一天就锁）
 
