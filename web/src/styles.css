@@ -1,0 +1,219 @@
+:root {
+  --paper: #efe6d4;
+  --ink: #1c1814;
+  --muted: #6b6256;
+  --rule: #cbb79a;
+  --note: #8f2d14;
+  --fill: #f7f1e4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161310;
+    --ink: #eadcc6;
+    --muted: #a39480;
+    --rule: #4a4034;
+    --note: #e07a5f;
+    --fill: #1e1a16;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.18), transparent 28%),
+    var(--paper);
+  color: var(--ink);
+  font-family: 'Noto Sans SC', 'Songti SC', serif;
+}
+
+#app {
+  min-height: 100%;
+}
+
+.sheet {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2.4rem 1.6rem 4rem;
+}
+
+.mast {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-end;
+  border-bottom: 3px double var(--ink);
+  padding-bottom: 1rem;
+}
+
+.kicker {
+  margin: 0;
+  letter-spacing: 0.28em;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1 {
+  margin: 0.15rem 0 0;
+  font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  font-size: 2.6rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.sub,
+.mast-meta {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.mast-meta {
+  text-align: right;
+}
+
+button {
+  margin-top: 0.45rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 0.28rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.note {
+  color: var(--note);
+  font-size: 0.88rem;
+}
+
+.err {
+  color: var(--note);
+}
+
+.kpi {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(5, 1fr);
+  gap: 0;
+  margin: 1.4rem 0 1rem;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.kpi-cell {
+  padding: 0.85rem 0.7rem;
+  border-left: 1px solid var(--rule);
+}
+
+.kpi-cell:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.kpi-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+.kpi-cell strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: 'Courier Prime', ui-monospace, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-lead .kpi-figure {
+  font-size: 1.85rem;
+  letter-spacing: -0.03em;
+}
+
+.share {
+  height: calc(28px * 4 + 16px);
+  margin: 0.4rem 0 1.4rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.6rem;
+}
+
+.ledger h2,
+.cross summary {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  margin: 0 0 0.55rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+th,
+td {
+  padding: 0.42rem 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.num {
+  text-align: right;
+  font-family: 'Courier Prime', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.name {
+  text-align: left;
+}
+
+.cross {
+  margin-top: 1.8rem;
+}
+
+.cross summary {
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .kpi,
+  .split,
+  .mast {
+    display: block;
+  }
+
+  .kpi-cell {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .mast-meta {
+    text-align: left;
+    margin-top: 1rem;
+  }
+}
