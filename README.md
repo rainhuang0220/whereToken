@@ -80,7 +80,7 @@ wheretoken completion zsh > ~/.zfunc/_wheretoken   # then add ~/.zfunc to fpath
 
 **Tool ≠ vendor.** Claude Code running MiniMax still counts as tool Claude Code, vendor MiniMax.
 
-`--json` is **schema 1**: `period`, `total`, `total_m`, `hit_rate`, `requests`, `user_turns`, `tools`, `vendors`, `notes`. Each tool/vendor row includes raw `total` plus `total_m`. `--today` adds `models` and omits `last_7d` / streaks.
+`--json` is **schema 1**: `period`, `total`, `total_m`, `hit_rate`, `requests`, `user_turns`, `tools`, `vendors`, `notes`. Each tool/vendor row includes raw `total` plus `total_m`. `--today` adds `models` and omits `last_7d` / streaks. `--model` sets `hide_turns: true` because turns are per-tool.
 
 Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failure, `2` usage (unknown command / tool / vendor / model).
 

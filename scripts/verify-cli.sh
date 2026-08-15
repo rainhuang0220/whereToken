@@ -73,4 +73,8 @@ set -e
 test "$code" -eq 2
 echo "$err" | grep -q claude
 
+mod="$("$dir/wheretoken" --home "$dir" --model=k3 --ascii --quiet)"
+echo "$mod" | grep -q '0.0012 M'
+echo "$mod" | grep -q '用户回合'
+
 echo "ok fixture CLI"

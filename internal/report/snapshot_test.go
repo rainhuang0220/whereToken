@@ -233,6 +233,23 @@ func TestFilterModelK3(t *testing.T) {
 	}
 }
 
+func TestFilterModelMatchesSuffixAfterSlash(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "kimi", Vendor: "moonshot", Model: "kimi-code/k3", RequestID: "c",
+		Timestamp: ts(loc, 2026, 8, 16, 12), Miss: 200_000, CacheRead: 800_000, Output: 30_000,
+		Quality: event.QualityAuthoritative,
+	}}
+	snap, err := Build(events, nil, nil, Filter{Model: "k3"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "1.03 M" {
+		t.Fatalf("%+v", snap)
+	}
+}
+
 func TestDegradedNoteFromErrors(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

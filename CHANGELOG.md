@@ -23,3 +23,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - `wheretoken scan --json` and `/api/scan` redact JWTs in error strings; serve sends `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`
 - Reject `--width < 0` and out-of-range `--port` as usage (exit 2)
 - `--model` slices do not inherit the tool's user-turn count (turns have no model id); the table shows — not 0
+- `--model=k3` matches `kimi-code/k3`; `--json` sets `hide_turns` when that KPI is not meaningful

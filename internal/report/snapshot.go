@@ -338,7 +338,20 @@ func keepTurn(t event.TurnEvent, f Filter, now time.Time, loc *time.Location, sr
 }
 
 func modelMatch(have, want string) bool {
-	return strings.EqualFold(strings.TrimSpace(have), strings.TrimSpace(want))
+	have = strings.TrimSpace(have)
+	want = strings.TrimSpace(want)
+	if have == "" || want == "" {
+		return false
+	}
+	if strings.EqualFold(have, want) {
+		return true
+	}
+	if i := strings.LastIndex(have, "/"); i >= 0 {
+		if strings.EqualFold(have[i+1:], want) {
+			return true
+		}
+	}
+	return false
 }
 
 func notes(errs []string, discovered []metric.Slice) []string {

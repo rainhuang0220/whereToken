@@ -25,7 +25,7 @@ FLAGS
   --today              only today (local timezone; weeks start Monday)
   --tool NAME          slice by tool (claude, kimi, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, …)
-  --model NAME         slice by model id
+  --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
   --claude --kimi --codex --opencode --cursor --trae
                        same as --tool=that-id
   --json               JSON on stdout (schema 1; tables stay the default)

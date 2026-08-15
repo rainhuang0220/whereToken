@@ -162,6 +162,30 @@ func TestWriteJSONTodayOmitsLast7AndStreaks(t *testing.T) {
 	}
 }
 
+func TestWriteJSONModelSetsHideTurns(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Model: "k3"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["hide_turns"] != true {
+		t.Fatalf("hide_turns=%v json=%s", m["hide_turns"], buf.String())
+	}
+	if m["user_turns"].(float64) != 0 {
+		t.Fatalf("user_turns=%v", m["user_turns"])
+	}
+}
+
 func TestWriteJSONRowIncludesRawTotal(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

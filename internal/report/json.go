@@ -28,6 +28,7 @@ type jsonSnap struct {
 	CurrentStreakDays int       `json:"current_streak_days,omitempty"`
 	Requests          int64     `json:"requests"`
 	UserTurns         int64     `json:"user_turns"`
+	HideTurns         bool      `json:"hide_turns,omitempty"`
 	Last7             []int64   `json:"last_7d,omitempty"`
 	Tools             []jsonRow `json:"tools"`
 	Vendors           []jsonRow `json:"vendors"`
@@ -46,6 +47,7 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		HitRateText: snap.HitRateText,
 		Requests:    snap.Requests,
 		UserTurns:   snap.UserTurns,
+		HideTurns:   snap.HideTurns,
 		Tools:       jsonRows(snap.Tools, true),
 		Vendors:     jsonRows(snap.Vendors, false),
 		Notes:       snap.Notes,

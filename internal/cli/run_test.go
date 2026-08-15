@@ -273,7 +273,7 @@ func TestRunNO_COLORNoEscape(t *testing.T) {
 
 func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	h := HelpText()
-	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "install.ps1", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "schema 1"} {
+	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "install.ps1", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "schema 1", "per-tool"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}
