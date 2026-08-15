@@ -5,6 +5,16 @@ import (
 	"testing"
 )
 
+func TestParseHomeOverride(t *testing.T) {
+	f, err := Parse([]string{"--home", "/tmp/fake-home"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Home != "/tmp/fake-home" {
+		t.Fatalf("home=%q", f.Home)
+	}
+}
+
 func TestParseDefaultIsReport(t *testing.T) {
 	f, err := Parse(nil)
 	if err != nil {

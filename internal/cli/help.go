@@ -41,6 +41,13 @@ PRIVACY
   Read-only local files. No telemetry. Never prints JWTs or access tokens.
   serve binds 127.0.0.1 only. Do not paste secrets into issues.
 
+EXAMPLES
+  wheretoken
+  wheretoken --today
+  wheretoken --cursor
+  wheretoken --tool=claude --json
+  wheretoken serve
+
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
 `
 

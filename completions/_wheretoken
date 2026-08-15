@@ -1,0 +1,20 @@
+#compdef wheretoken
+_arguments -s \
+  '(-h --help)'{-h,--help}'[help]' \
+  '(-V --version)'{-V,--version}'[version]' \
+  '--json[JSON on stdout]' \
+  '--today[only today]' \
+  '--ascii[ASCII box drawing]' \
+  '--no-color[disable ANSI]' \
+  '--tool[tool id]:tool:(claude kimi codex opencode cursor trae)' \
+  '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba unknown)' \
+  '--model[model id]:model:' \
+  '--claude[slice Claude Code]' \
+  '--kimi[slice Kimi Code]' \
+  '--codex[slice Codex]' \
+  '--opencode[slice OpenCode]' \
+  '--cursor[slice Cursor]' \
+  '--trae[slice Trae]' \
+  '--home[fake home]:dir:_files -/' \
+  '--port[serve port]:port:' \
+  '1:command:(serve scan sources completion help version)'

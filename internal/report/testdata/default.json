@@ -1,0 +1,53 @@
+{
+  "period": "有账本以来",
+  "total": 11680000,
+  "total_m": "11.68 M",
+  "hit_rate": 85.21739130434783,
+  "hit_rate_text": "85.2%",
+  "max_streak_days": 2,
+  "current_streak_days": 2,
+  "requests": 3,
+  "user_turns": 3,
+  "tools": [
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "total_m": "10.65 M",
+      "hit_rate_text": "85.7%",
+      "requests": 2,
+      "user_turns": 2
+    },
+    {
+      "id": "kimi",
+      "label": "Kimi Code",
+      "total_m": "1.03 M",
+      "hit_rate_text": "80.0%",
+      "requests": 1,
+      "user_turns": 1
+    }
+  ],
+  "vendors": [
+    {
+      "id": "anthropic",
+      "label": "Anthropic",
+      "total_m": "10.10 M",
+      "hit_rate_text": "90.0%",
+      "requests": 1
+    },
+    {
+      "id": "moonshot",
+      "label": "Moonshot",
+      "total_m": "1.03 M",
+      "hit_rate_text": "80.0%",
+      "requests": 1
+    },
+    {
+      "id": "minimax",
+      "label": "MiniMax",
+      "total_m": "0.55 M",
+      "hit_rate_text": "0.0%",
+      "requests": 1
+    }
+  ],
+  "notes": []
+}

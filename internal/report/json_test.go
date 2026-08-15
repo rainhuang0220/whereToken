@@ -42,6 +42,33 @@ func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	}
 }
 
+func TestWriteJSONGolden(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join("testdata", "default.json")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v\n%s", path, err, buf.String())
+	}
+	if string(want) != buf.String() {
+		t.Fatalf("json golden mismatch\n--- got ---\n%s\n--- want ---\n%s", buf.String(), want)
+	}
+}
+
 func TestGoldenTables(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

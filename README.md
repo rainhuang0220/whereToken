@@ -52,8 +52,10 @@ wheretoken --model=k3
 wheretoken --today --cursor
 wheretoken --json               # scripts; tables stay the default
 wheretoken --ascii              # old Windows consoles
-wheretoken completion zsh
+wheretoken completion zsh          # also bash, fish, powershell
 ```
+
+Checked-in scripts: [`completions/`](completions/).
 
 **Tool ≠ vendor.** Claude Code running MiniMax still counts as tool Claude Code, vendor MiniMax.
 
