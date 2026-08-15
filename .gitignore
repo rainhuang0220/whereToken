@@ -24,7 +24,8 @@ dist-ssr/
 coverage/
 bin/
 tmp/
-vendor/
+# Go module vendor dir (root only — do not ignore internal/vendor)
+/vendor/
 
 # OS / packaging
 *.dmg
