@@ -619,6 +619,14 @@ body:has(.glaze-hall.is-open) {
   transition: none;
 }
 
+.glaze-hall.is-leaving .glaze-slab {
+  transition: none;
+}
+
+.glaze-hall.is-leaving .glaze-slab:hover {
+  transform: none;
+}
+
 .glaze-slab.gone {
   pointer-events: none;
 }

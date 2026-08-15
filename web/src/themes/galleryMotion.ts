@@ -74,6 +74,7 @@ export type FlipState = ReturnType<typeof Flip.getState>
 
 export type MotionHandle = {
   revert: () => void
+  kill: () => void
   reverse: () => Promise<void>
   play: () => void
   isActive: () => boolean
@@ -82,6 +83,7 @@ export type MotionHandle = {
 
 const idleHandle = (): MotionHandle => ({
   revert() {},
+  kill() {},
   async reverse() {},
   play() {},
   isActive: () => false,
@@ -97,6 +99,33 @@ export function prefersReducedMotion(
   } catch {
     return false
   }
+}
+
+export function fadeInnerPreview(
+  el: HTMLElement | null | undefined,
+  opts: { reduced: boolean },
+): Promise<void> {
+  if (!el) return Promise.resolve()
+  if (opts.reduced) {
+    el.style.opacity = '0'
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      resolve()
+    }
+    gsap.to(el, {
+      opacity: 0,
+      duration: 0.1,
+      ease: 'none',
+      overwrite: true,
+      onComplete: done,
+      onInterrupt: done,
+    })
+  })
 }
 
 export function afterPaint(): Promise<void> {
@@ -171,6 +200,12 @@ function bindTimeline(
       ctx.revert()
       clearMotionStyles(involved)
     },
+    kill() {
+      tl.eventCallback('onComplete', null)
+      tl.eventCallback('onReverseComplete', null)
+      tl.eventCallback('onInterrupt', null)
+      tl.kill()
+    },
     play() {
       tl.eventCallback('onReverseComplete', null)
       tl.play()
@@ -239,12 +274,14 @@ export function restoreGallery(opts: {
   others: HTMLElement[]
   reduced: boolean
   state: FlipState | null
+  onSettled?: () => void
 }): MotionHandle {
   ensureFlip()
-  const { hero, others, reduced, state } = opts
+  const { hero, others, reduced, state, onSettled } = opts
   if (reduced || !state) {
     for (const el of others) showNow(el)
     showNow(hero)
+    onSettled?.()
     return idleHandle()
   }
   const involved = [hero, ...others]
@@ -260,8 +297,12 @@ export function restoreGallery(opts: {
         gsap.set(hero, { clearProps: 'transform' })
         gsap.set(others, { clearProps: 'opacity,visibility,transform' })
         clearMotionStyles(involved)
+        onSettled?.()
       },
     })
+    if (others.length) {
+      for (const el of others) hideNow(el)
+    }
     tl.add(
       Flip.from(state, {
         ...flipVars(hero),
@@ -270,7 +311,7 @@ export function restoreGallery(opts: {
       0,
     )
     if (others.length) {
-      tl.to(others, { autoAlpha: 1, duration: 0.22, ease: 'power2.out', overwrite: true }, 0)
+      tl.to(others, { autoAlpha: 1, duration: 0.18, ease: 'power2.out', overwrite: true })
     }
   }, contextScope(hero))
   return bindTimeline(tl, ctx, involved)

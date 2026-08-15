@@ -5,6 +5,7 @@ import {
   afterPaint,
   captureFlip,
   expandGallery,
+  fadeInnerPreview,
   prefersReducedMotion,
   restoreGallery,
   settleGrid,
@@ -137,6 +138,86 @@ describe('gallery motion', () => {
     expect(hero.classList.contains('is-flipping')).toBe(false)
   })
 
+  it('restore flies the hero first, then fades siblings — not at Flip time 0', () => {
+    vi.spyOn(Flip, 'from').mockReturnValue(gsap.timeline({ paused: true }))
+    const to = vi.spyOn(gsap.core.Timeline.prototype, 'to')
+    const others = [fakeEl()]
+    restoreGallery({
+      hero: fakeEl(),
+      others,
+      reduced: false,
+      state: { id: 'leave' } as unknown as ReturnType<typeof Flip.getState>,
+    }).revert()
+    const sibling = to.mock.calls.find((c) => c[0] === others)
+    expect(sibling).toBeTruthy()
+    expect(sibling![1]).toMatchObject({ autoAlpha: 1 })
+    expect(sibling![2]).not.toBe(0)
+  })
+
+  it('restoreGallery builds a new Flip.from and never reverses the enter timeline', () => {
+    const from = vi.spyOn(Flip, 'from').mockReturnValue(gsap.timeline({ paused: true }))
+    const reverse = vi.spyOn(gsap.core.Timeline.prototype, 'reverse')
+    const onSettled = vi.fn()
+    const tlSpy = vi.spyOn(gsap, 'timeline')
+    restoreGallery({
+      hero: fakeEl(),
+      others: [fakeEl()],
+      reduced: false,
+      state: { id: 'leave' } as unknown as ReturnType<typeof Flip.getState>,
+      onSettled,
+    }).revert()
+    expect(from).toHaveBeenCalledTimes(1)
+    expect(reverse).not.toHaveBeenCalled()
+    const vars = tlSpy.mock.calls[0][0] as { onComplete?: () => void }
+    expect(typeof vars.onComplete).toBe('function')
+    expect(onSettled).not.toHaveBeenCalled()
+    vars.onComplete?.()
+    expect(onSettled).toHaveBeenCalledTimes(1)
+  })
+
+  it('enter onSettled is timeline onComplete, not a callback tween that reverse() would rewind', () => {
+    vi.spyOn(Flip, 'from').mockReturnValue(gsap.timeline({ paused: true }))
+    const add = vi.spyOn(gsap.core.Timeline.prototype, 'add')
+    const call = vi.spyOn(gsap.core.Timeline.prototype, 'call')
+    const onSettled = vi.fn()
+    expandGallery({
+      hero: fakeEl(),
+      others: [fakeEl()],
+      reduced: false,
+      state: { id: 'enter' } as unknown as ReturnType<typeof Flip.getState>,
+      onSettled,
+    }).revert()
+    expect(call).not.toHaveBeenCalled()
+    for (const args of add.mock.calls) {
+      expect(typeof args[0]).not.toBe('function')
+    }
+    expect(onSettled).not.toHaveBeenCalled()
+  })
+
+  it('fadeInnerPreview tweens opacity only for 80–150ms; reduced is instant', async () => {
+    const to = vi.spyOn(gsap, 'to').mockImplementation((_t, vars) => {
+      const v = vars as { onComplete?: () => void }
+      v.onComplete?.()
+      return gsap.timeline({ paused: true }) as unknown as gsap.core.Tween
+    })
+    const el = fakeEl()
+    await fadeInnerPreview(el, { reduced: false })
+    expect(to).toHaveBeenCalledTimes(1)
+    const vars = to.mock.calls[0][1] as Record<string, unknown>
+    expect(vars.opacity).toBe(0)
+    expect(vars.duration).toBeGreaterThanOrEqual(0.08)
+    expect(vars.duration).toBeLessThanOrEqual(0.15)
+    expect(vars).not.toHaveProperty('width')
+    expect(vars).not.toHaveProperty('height')
+    expect(vars).not.toHaveProperty('autoAlpha')
+    to.mockClear()
+    const instant = fakeEl()
+    instant.style.opacity = '1'
+    await fadeInnerPreview(instant, { reduced: true })
+    expect(to).not.toHaveBeenCalled()
+    expect(instant.style.opacity).toBe('0')
+  })
+
   it('stopGalleryMotion kills Flip without completing and clears will-change', () => {
     const kill = vi.spyOn(Flip, 'killFlipsOf').mockImplementation(() => {})
     const hero = fakeEl()
@@ -178,19 +259,19 @@ describe('gallery motion', () => {
     expect(state).toEqual({ id: 'state' })
   })
 
-  it('reverse plays the same timeline backward from current progress', async () => {
+  it('kill stops motion without reversing content-show callbacks', () => {
     vi.spyOn(Flip, 'from').mockReturnValue(gsap.timeline({ paused: true }))
-    const hero = fakeEl()
+    const onSettled = vi.fn()
     const handle = expandGallery({
-      hero,
+      hero: fakeEl(),
       others: [fakeEl()],
       reduced: false,
       state: { id: 'x' } as unknown as ReturnType<typeof Flip.getState>,
+      onSettled,
     })
-    expect(typeof handle.isActive).toBe('function')
-    await handle.reverse()
-    expect(hero.style.willChange === '' || hero.style.willChange === 'auto').toBe(true)
-    expect(hero.classList.contains('is-flipping')).toBe(false)
+    expect(typeof handle.kill).toBe('function')
+    handle.kill()
+    expect(onSettled).not.toHaveBeenCalled()
     handle.revert()
   })
 

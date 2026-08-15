@@ -16,9 +16,11 @@ import {
   afterPaint,
   captureFlip,
   expandGallery,
+  fadeInnerPreview,
   prefersReducedMotion,
   restoreGallery,
   settleGrid,
+  stopGalleryMotion,
   type MotionHandle,
 } from '../themes/galleryMotion'
 import MockKeyboard from '../themes/MockKeyboard.vue'
@@ -29,11 +31,11 @@ const hall = ref<HTMLElement | null>(null)
 const committed = ref<ThemeId>('kiln')
 const openId = ref<ThemeId | null>(null)
 const revealMock = ref(false)
+const leaving = ref(false)
 let applied = false
 let boot = true
 let motion: MotionHandle | null = null
 let motionGen = 0
-let closing = false
 
 onMounted(() => {
   let stored: string | null = null
@@ -60,10 +62,18 @@ watch(
     }
     const id = typeof raw === 'string' && isThemeId(raw) ? raw : null
     if (id === openId.value) {
-      if (id && closing) {
-        closing = false
+      if (id && leaving.value) {
+        leaving.value = false
         motionGen += 1
-        motion?.play()
+        motion?.kill()
+        const preview = hall.value?.querySelector<HTMLElement>('.glaze-expand')
+        if (preview) {
+          stopGalleryMotion(preview)
+          preview.style.opacity = ''
+          preview.style.visibility = ''
+        }
+        revealMock.value = true
+        applyTheme(id, { persist: false })
       }
       return
     }
@@ -79,7 +89,7 @@ function slabs(): HTMLElement[] {
 
 async function openCard(id: ThemeId, opts: { instant?: boolean } = {}) {
   const gen = ++motionGen
-  closing = false
+  leaving.value = false
   revealMock.value = false
   motion?.revert()
   const reduced = Boolean(opts.instant) || prefersReducedMotion()
@@ -107,6 +117,14 @@ async function openCard(id: ThemeId, opts: { instant?: boolean } = {}) {
   })
 }
 
+function conceal(els: HTMLElement[]) {
+  for (const el of els) {
+    el.style.opacity = '0'
+    el.style.visibility = 'hidden'
+    el.style.pointerEvents = 'none'
+  }
+}
+
 async function closeCard(opts: { instant?: boolean } = {}) {
   const gen = ++motionGen
   const id = openId.value
@@ -114,35 +132,54 @@ async function closeCard(opts: { instant?: boolean } = {}) {
   const hero = hall.value?.querySelector<HTMLElement>(`.glaze-slab[data-id="${id}"]`)
   const others = slabs().filter((el) => el !== hero)
   const reduced = Boolean(opts.instant) || prefersReducedMotion()
-  revealMock.value = false
-  closing = true
+  leaving.value = true
 
-  if (!reduced && motion?.canReverse()) {
-    await nextTick()
-    await afterPaint()
-    if (gen !== motionGen) return
+  if (reduced || !hero) {
+    revealMock.value = false
+    motion?.revert()
+    motion = null
     applyTheme(committed.value, { persist: false })
-    await afterPaint()
-    if (gen !== motionGen) return
-    await motion.reverse()
-    if (gen !== motionGen) return
     settleGrid(hero, others)
     openId.value = null
-    motion.revert()
-    motion = null
-    closing = false
+    leaving.value = false
     return
   }
 
-  motion?.revert()
-  applyTheme(committed.value, { persist: false })
-  const state = reduced || !hero ? null : captureFlip(hero)
+  const preview = hero.querySelector<HTMLElement>('.glaze-expand')
+  if (preview) {
+    await fadeInnerPreview(preview, { reduced: false })
+    if (gen !== motionGen) return
+  }
+
+  motion?.kill()
+  motion = null
+  stopGalleryMotion([hero, ...others])
+  const state = captureFlip(hero)
+  revealMock.value = false
   openId.value = null
+  conceal(others)
+
   await nextTick()
   await afterPaint()
   if (gen !== motionGen) return
-  if (hero) motion = restoreGallery({ hero, others, reduced, state })
-  closing = false
+
+  const liveHero =
+    hall.value?.querySelector<HTMLElement>(`.glaze-slab[data-id="${id}"]`) ?? hero
+  const liveOthers = slabs().filter((el) => el !== liveHero)
+  conceal(liveOthers)
+  motion = restoreGallery({
+    hero: liveHero,
+    others: liveOthers,
+    reduced: false,
+    state,
+    onSettled() {
+      if (gen !== motionGen) return
+      applyTheme(committed.value, { persist: false })
+      settleGrid(liveHero, liveOthers)
+      leaving.value = false
+      motion = null
+    },
+  })
 }
 
 function onSlabClick(id: ThemeId) {
@@ -189,7 +226,7 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
 </script>
 
 <template>
-  <div ref="hall" class="glaze-hall" :class="{ 'is-open': openId }">
+  <div ref="hall" class="glaze-hall" :class="{ 'is-open': openId, 'is-leaving': leaving }">
     <header class="rail glaze-head" :inert="Boolean(openId)">
       <h1>釉</h1>
       <div class="rail-meta">
