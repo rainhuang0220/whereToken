@@ -148,6 +148,19 @@ func TestFilterTodayAndTool(t *testing.T) {
 	}
 }
 
+func TestFilterVendorMiniMax(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Vendor: "minimax"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "0.55 M" || snap.Scope != "MiniMax" {
+		t.Fatalf("%+v", snap)
+	}
+}
+
 func TestUnknownModelIsUsage(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
@@ -188,6 +201,82 @@ func TestDegradedNoteFromErrors(t *testing.T) {
 		if strings.Contains(n, "JWT") && strings.Contains(strings.ToLower(n), "eyj") {
 			t.Fatalf("leaked jwt in %q", n)
 		}
+	}
+}
+
+func TestNotesDoNotTellClaudeToLogIn(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{
+		Discovered: []metric.Slice{{ID: "claude", Label: "Claude Code", Quality: event.QualityDegraded, Miss: 1}},
+	}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "已登录") || strings.Contains(n, "Claude") {
+			t.Fatalf("misleading note %q", n)
+		}
+	}
+}
+
+func TestDiscoveredEmptyTraeAppearsInTools(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}, Filter{
+		Discovered: []metric.Slice{{ID: "trae", Label: "Trae", Quality: event.QualityDegraded}},
+	}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, r := range snap.Tools {
+		if r.ID == "trae" {
+			found = true
+			if r.TotalM != "0.00 M" {
+				t.Fatalf("trae %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("tools=%v", snap.Tools)
+	}
+}
+
+func TestTodayDoesNotImportAllTimeDiscoveredTotals(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{
+		Today: true,
+		Discovered: []metric.Slice{
+			{ID: "codex", Label: "Codex", Miss: 999_000_000, Quality: event.QualityAuthoritative},
+			{ID: "trae", Label: "Trae", Quality: event.QualityDegraded},
+		},
+	}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range snap.Tools {
+		if r.ID == "codex" {
+			t.Fatalf("today must not list unused all-time tools: %+v", r)
+		}
+		if strings.Contains(r.TotalM, "999") {
+			t.Fatalf("all-time total leaked: %+v", r)
+		}
+	}
+}
+
+func TestUnknownVendorSortedLast(t *testing.T) {
+	rows := []Row{
+		{ID: "unknown", Label: "Unknown", TotalM: "9.00 M"},
+		{ID: "anthropic", Label: "Anthropic", TotalM: "1.00 M"},
+	}
+	got := rankVendors(rows)
+	if got[0].ID != "anthropic" || got[len(got)-1].ID != "unknown" {
+		t.Fatalf("%+v", got)
 	}
 }
 

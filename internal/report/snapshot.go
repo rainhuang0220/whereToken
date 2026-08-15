@@ -132,6 +132,21 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	}
 
 	snap.Notes = notes(errs, f.Discovered)
+	snap.Tools = mergeDiscovered(snap.Tools, f.Discovered, f.Tool, f.Today)
+	snap.Vendors = rankVendors(snap.Vendors)
+	if unknownVendorTotal(snap.Vendors) > 0 {
+		msg := "Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
+		dup := false
+		for _, n := range snap.Notes {
+			if n == msg {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			snap.Notes = append(snap.Notes, msg)
+		}
+	}
 	return snap, nil
 }
 
@@ -244,11 +259,13 @@ func notes(errs []string, discovered []metric.Slice) []string {
 			label = metric.SourceLabel(s.ID)
 		}
 		var msg string
-		switch s.Quality {
-		case event.QualityAbsent:
+		switch {
+		case s.Quality == event.QualityAbsent && (s.ID == "cursor" || s.ID == "trae"):
 			msg = label + " · 本机没有可用的 token 账本"
-		default:
+		case s.Quality == event.QualityDegraded && (s.ID == "cursor" || s.ID == "trae"):
 			msg = label + " · token 列不完整（该工具需要已登录）"
+		default:
+			continue
 		}
 		if _, dup := seen[label]; dup {
 			continue
@@ -267,4 +284,52 @@ func notes(errs []string, discovered []metric.Slice) []string {
 		out = append(out, msg)
 	}
 	return out
+}
+
+func mergeDiscovered(tools []Row, discovered []metric.Slice, toolFilter string, today bool) []Row {
+	if today {
+		return tools
+	}
+	have := map[string]struct{}{}
+	for _, r := range tools {
+		have[r.ID] = struct{}{}
+	}
+	for _, s := range discovered {
+		if toolFilter != "" && s.ID != toolFilter {
+			continue
+		}
+		if _, ok := have[s.ID]; ok {
+			continue
+		}
+		if s.Total() != 0 || s.Requests != 0 || s.UserTurns != 0 {
+			continue
+		}
+		tools = append(tools, rowFrom(s))
+		have[s.ID] = struct{}{}
+	}
+	return tools
+}
+
+func rankVendors(rows []Row) []Row {
+	var known, unknown []Row
+	for _, r := range rows {
+		if r.ID == "unknown" {
+			unknown = append(unknown, r)
+			continue
+		}
+		known = append(known, r)
+	}
+	return append(known, unknown...)
+}
+
+func unknownVendorTotal(rows []Row) int64 {
+	for _, r := range rows {
+		if r.ID == "unknown" && r.Requests+r.UserTurns > 0 {
+			return 1
+		}
+		if r.ID == "unknown" && r.TotalM != "" && r.TotalM != "0.00 M" {
+			return 1
+		}
+	}
+	return 0
 }
