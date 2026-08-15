@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/scan"
@@ -218,6 +219,50 @@ func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}
+	}
+}
+
+func TestRunSourcesListsRoots(t *testing.T) {
+	app, out, errb := testApp([]string{"sources"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Roots: []adapter.SourceRoot{{ID: "kimi", Path: "/tmp/fake/.kimi-code"}}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "kimi") || !strings.Contains(out.String(), "/tmp/fake") {
+		t.Fatalf("%s", out.String())
+	}
+}
+
+func TestRunProgressOnStderrWhenTTY(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, out, errb := testApp(nil)
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	app.StderrTTY = true
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(errb.String(), "正在读") {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+	if strings.Contains(out.String(), "正在读") {
+		t.Fatal("progress leaked to stdout")
+	}
+}
+
+func TestRunSilentProgressWhenNotTTY(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, _, errb := testApp(nil)
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	app.StderrTTY = false
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d", code)
+	}
+	if strings.Contains(errb.String(), "正在读") {
+		t.Fatalf("progress on pipe: %s", errb.String())
 	}
 }
 

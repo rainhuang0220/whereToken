@@ -17,6 +17,7 @@ func main() {
 		Stderr:    os.Stderr,
 		Version:   cli.ResolveVersion(version),
 		StdoutTTY: isatty.IsTerminal(os.Stdout.Fd()),
+		StderrTTY: isatty.IsTerminal(os.Stderr.Fd()),
 	}
 	os.Exit(app.Run())
 }

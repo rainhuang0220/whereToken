@@ -30,6 +30,7 @@ type App struct {
 	Serve     func(addr string, home adapter.Home) error
 	GOOS      string
 	StdoutTTY bool
+	StderrTTY bool
 }
 
 func (a *App) Run() int {
@@ -105,7 +106,15 @@ func (a *App) doScan(home adapter.Home) scan.Result {
 	if a.Scan != nil {
 		return a.Scan(home)
 	}
-	return scan.Run(home, scan.AllAdapters())
+	if !a.StderrTTY {
+		return scan.Run(home, scan.AllAdapters())
+	}
+	return scan.RunWithProgress(home, scan.AllAdapters(), func(p scan.Progress) {
+		if p.Status != scan.ProgressReading {
+			return
+		}
+		fmt.Fprintln(a.Stderr, p.Label)
+	})
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {

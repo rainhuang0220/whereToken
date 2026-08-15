@@ -119,7 +119,11 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle) strin
 	body := make([][]string, 0, n)
 	for i := 0; i < n; i++ {
 		r := rows[i]
-		line := []string{r.Label, r.TotalM, r.HitRateText, r.RequestsText}
+		label := r.Label
+		if kind == "模型" {
+			label = table.Truncate(label, 36)
+		}
+		line := []string{label, r.TotalM, r.HitRateText, r.RequestsText}
 		if withTurns {
 			line = append(line, r.TurnsText)
 		}

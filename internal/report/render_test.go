@@ -68,6 +68,24 @@ func TestRenderASCIIHasNoBoxDrawing(t *testing.T) {
 	}
 }
 
+func TestRenderTruncatesLongModelNames(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	events[2].Model = "this-is-an-extremely-long-model-identifier-that-should-not-blow-the-table"
+	snap, err := Build(events, turns, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{})
+	if strings.Contains(out, "this-is-an-extremely-long-model-identifier-that-should-not-blow-the-table") {
+		t.Fatalf("untruncated:\n%s", out)
+	}
+	if !strings.Contains(out, "…") {
+		t.Fatalf("expected ellipsis\n%s", out)
+	}
+}
+
 func TestRenderBoxLinesSameWidth(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

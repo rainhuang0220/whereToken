@@ -23,6 +23,32 @@ func PadRight(s string, width int) string {
 	return string(b)
 }
 
+func Truncate(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if DisplayWidth(s) <= width {
+		return s
+	}
+	const ell = "…"
+	ew := DisplayWidth(ell)
+	if width <= ew {
+		return ell
+	}
+	limit := width - ew
+	n := 0
+	var b []rune
+	for _, r := range s {
+		w := runeWidth(r)
+		if n+w > limit {
+			break
+		}
+		b = append(b, r)
+		n += w
+	}
+	return string(b) + ell
+}
+
 func PadLeft(s string, width int) string {
 	pad := width - DisplayWidth(s)
 	if pad <= 0 {
