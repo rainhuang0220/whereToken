@@ -86,4 +86,11 @@ echo "$mod" | grep -q '用户回合'
 modjson="$("$dir/wheretoken" --home "$dir" --model=k3 --json --quiet)"
 echo "$modjson" | grep -q '"hide_turns": true'
 
+narrow="$(COLUMNS=40 "$dir/wheretoken" --home "$dir" --ascii --quiet)"
+echo "$narrow" | grep -q 'Kimi'
+if echo "$narrow" | grep -q 'K\.\.\.'; then
+  echo "COLUMNS=40 destroyed the tool name" >&2
+  exit 1
+fi
+
 echo "ok fixture CLI"

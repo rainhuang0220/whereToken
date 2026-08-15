@@ -27,3 +27,5 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Fish completion lists vendor ids the same way zsh already did
 - Honor `WHERETOKEN_HOME` through the CLI's env lookup (tests and `--home` stay fake-home only)
 - CI runs `gofmt -l`; `make fmt-check` does the same locally
+- `--help` examples include `--model=k3`
+- Man page EXAMPLES; fixture script asserts COLUMNS=40 still spells Kimi
