@@ -355,6 +355,27 @@ describe('theme is a page, not a home strip', () => {
     expect(mock).not.toMatch(/class="wall"/)
     expect(mock).not.toMatch(/class="brick"/)
   })
+
+  it('keeps a grid slot, flies the shell, then reveals the keyboard after Flip', () => {
+    const page = readFileSync(join(SRC_ROOT, 'pages/Themes.vue'), 'utf8')
+    const css = readFileSync(join(SRC_ROOT, 'styles.css'), 'utf8')
+    const motion = readFileSync(join(SRC_ROOT, 'themes/galleryMotion.ts'), 'utf8')
+    expect(page).toMatch(/glaze-slot/)
+    expect(css).toMatch(/\.glaze-slot/)
+    expect(page).toMatch(/revealMock/)
+    expect(page).toMatch(/v-if="openId === t.id && revealMock"/)
+    expect(page).toMatch(/afterPaint/)
+    expect(page).toMatch(/onSettled/)
+    expect(page).toMatch(/applyTheme\(id,\s*\{\s*persist:\s*false/)
+    expect(page).toMatch(/\.reverse\(/)
+    expect(motion).toMatch(/killFlipsOf/)
+    expect(motion).toMatch(/simple:\s*true/)
+    expect(motion).toMatch(/targets:\s*hero/)
+    expect(motion).not.toMatch(/autoAlpha:\s*0,\s*scale:/)
+    expect(css).toMatch(/\.glaze-slab\.is-flipping[^{]*\{[^}]*will-change:\s*transform,\s*opacity/)
+    expect(css).toMatch(/\.glaze-slab\.is-flipping[^{]*\{[^}]*transition:\s*none/)
+    expect(css).toMatch(/\.glaze-slab\.hero[^{]*\{[^}]*transition:\s*none/)
+  })
 })
 
 describe('flat GitHub-like kiln wall', () => {

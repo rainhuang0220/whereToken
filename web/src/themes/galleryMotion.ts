@@ -14,17 +14,34 @@ function markWillChange(els: HTMLElement[], value: string) {
   for (const el of els) el.style.willChange = value
 }
 
-export type FlipState = ReturnType<typeof Flip.getState>
+function clearMotionStyles(els: HTMLElement[]) {
+  markWillChange(els, 'auto')
+  for (const el of els) el.classList?.remove?.('is-flipping')
+}
 
-export type MotionHandle = {
-  revert: () => void
+function toEls(targets: gsap.TweenTarget | undefined | null): HTMLElement[] {
+  if (!targets) return []
+  if (typeof targets === 'string') {
+    if (typeof document === 'undefined') return []
+    return [...document.querySelectorAll<HTMLElement>(targets)]
+  }
+  if (Array.isArray(targets)) {
+    return targets.filter((el): el is HTMLElement => Boolean(el) && typeof el === 'object')
+  }
+  if (typeof NodeList !== 'undefined' && targets instanceof NodeList) {
+    return [...targets] as HTMLElement[]
+  }
+  return [targets as HTMLElement]
+}
+
+function contextScope(el: HTMLElement): Element | undefined {
+  return typeof Element !== 'undefined' && el instanceof Element ? el : undefined
 }
 
 function hideNow(el: HTMLElement) {
   el.style.opacity = '0'
   el.style.visibility = 'hidden'
   el.style.pointerEvents = 'none'
-  el.style.transform = 'scale(0.92)'
 }
 
 function showNow(el: HTMLElement) {
@@ -32,7 +49,44 @@ function showNow(el: HTMLElement) {
   el.style.visibility = ''
   el.style.pointerEvents = ''
   el.style.transform = ''
+  el.style.willChange = 'auto'
+  el.classList?.remove?.('is-flipping')
 }
+
+export function settleGrid(hero: HTMLElement | null | undefined, others: HTMLElement[]) {
+  const live = typeof document !== 'undefined'
+  if (hero) {
+    hero.classList?.remove?.('hero')
+    hero.classList?.remove?.('is-flipping')
+    if (live) gsap.set(hero, { clearProps: 'transform' })
+    else hero.style.transform = ''
+    hero.style.willChange = 'auto'
+  }
+  for (const el of others) {
+    el.classList?.remove?.('gone')
+    el.classList?.remove?.('is-flipping')
+    if (live) gsap.set(el, { clearProps: 'opacity,visibility,transform' })
+    showNow(el)
+  }
+}
+
+export type FlipState = ReturnType<typeof Flip.getState>
+
+export type MotionHandle = {
+  revert: () => void
+  reverse: () => Promise<void>
+  play: () => void
+  isActive: () => boolean
+  canReverse: () => boolean
+}
+
+const idleHandle = (): MotionHandle => ({
+  revert() {},
+  async reverse() {},
+  play() {},
+  isActive: () => false,
+  canReverse: () => false,
+})
 
 export function prefersReducedMotion(
   matchMedia: (query: string) => { matches: boolean } = (query) =>
@@ -45,13 +99,103 @@ export function prefersReducedMotion(
   }
 }
 
-export function captureFlip(targets: gsap.TweenTarget): FlipState | null {
+export function afterPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame !== 'function') {
+      resolve()
+      return
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+}
+
+export function stopGalleryMotion(targets: gsap.TweenTarget): void {
   ensureFlip()
+  const els = toEls(targets)
+  try {
+    Flip.killFlipsOf(els, false)
+  } catch {
+    /* Flip not registered in node tests without a window plugin path */
+  }
+  try {
+    gsap.killTweensOf(els)
+  } catch {
+    /* fake elements in node unit tests have no document */
+  }
+  clearMotionStyles(els)
+}
+
+export function captureFlip(
+  targets: gsap.TweenTarget,
+  mode: 'rest' | 'current' = 'current',
+): FlipState | null {
+  ensureFlip()
+  const els = toEls(targets)
+  stopGalleryMotion(els)
+  if (mode === 'rest' && els.length) {
+    try {
+      gsap.set(els, { x: 0, y: 0, scale: 1, rotation: 0 })
+    } catch {
+      /* fake elements in node unit tests */
+    }
+  }
   if (typeof Flip?.getState !== 'function') return null
   try {
     return Flip.getState(targets)
   } catch {
     return null
+  }
+}
+
+const flipVars = (hero: HTMLElement) => ({
+  duration: 0.34,
+  ease: 'power2.inOut',
+  absolute: true,
+  scale: true,
+  simple: true,
+  overwrite: true,
+  toggleClass: 'is-flipping',
+  targets: hero,
+})
+
+function bindTimeline(
+  tl: gsap.core.Timeline,
+  ctx: gsap.Context,
+  involved: HTMLElement[],
+): MotionHandle {
+  return {
+    revert() {
+      tl.kill()
+      ctx.revert()
+      clearMotionStyles(involved)
+    },
+    play() {
+      tl.eventCallback('onReverseComplete', null)
+      tl.play()
+    },
+    isActive() {
+      return tl.isActive()
+    },
+    canReverse() {
+      return tl.progress() > 0
+    },
+    reverse() {
+      return new Promise<void>((resolve) => {
+        const done = () => {
+          clearMotionStyles(involved)
+          resolve()
+        }
+        if (tl.progress() === 0) {
+          done()
+          return
+        }
+        tl.eventCallback('onReverseComplete', done)
+        tl.eventCallback('onInterrupt', done)
+        tl.reverse()
+      })
+    },
   }
 }
 
@@ -64,47 +208,30 @@ export function expandGallery(opts: {
 }): MotionHandle {
   ensureFlip()
   const { hero, others, reduced, state, onSettled } = opts
-  const intro = typeof hero.querySelector === 'function' ? hero.querySelector('.glaze-expand') : null
   if (reduced || !state) {
     for (const el of others) hideNow(el)
-    if (intro && 'style' in intro) {
-      const node = intro as HTMLElement
-      node.style.opacity = '1'
-      node.style.visibility = ''
-    }
     onSettled?.()
-    return { revert() {} }
+    return idleHandle()
   }
   const involved = [hero, ...others]
-  const tl = gsap.timeline({
-    defaults: { ease: 'power2.inOut' },
-    onStart() {
-      markWillChange(involved, 'transform, opacity')
-    },
-    onComplete() {
-      markWillChange(involved, 'auto')
-      onSettled?.()
-    },
-  })
-  tl.add(
-    Flip.from(state, {
-      duration: 0.34,
-      ease: 'power2.inOut',
-      absolute: true,
-      scale: true,
-    }),
-    0,
-  )
-  tl.to(others, { autoAlpha: 0, scale: 0.92, duration: 0.22, stagger: 0.025, ease: 'power2.in' }, 0)
-  if (intro) {
-    tl.fromTo(intro, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18, ease: 'power1.out' }, 0.16)
-  }
-  return {
-    revert() {
-      tl.kill()
-      markWillChange(involved, 'auto')
-    },
-  }
+  let tl!: gsap.core.Timeline
+  const ctx = gsap.context(() => {
+    tl = gsap.timeline({
+      defaults: { ease: 'power2.inOut' },
+      onStart() {
+        markWillChange([hero], 'transform, opacity')
+      },
+      onComplete() {
+        markWillChange([hero], 'auto')
+        onSettled?.()
+      },
+    })
+    tl.add(Flip.from(state, flipVars(hero)), 0)
+    if (others.length) {
+      tl.to(others, { autoAlpha: 0, duration: 0.22, ease: 'power2.out', overwrite: true }, 0)
+    }
+  }, contextScope(hero))
+  return bindTimeline(tl, ctx, involved)
 }
 
 export function restoreGallery(opts: {
@@ -118,34 +245,33 @@ export function restoreGallery(opts: {
   if (reduced || !state) {
     for (const el of others) showNow(el)
     showNow(hero)
-    return { revert() {} }
+    return idleHandle()
   }
   const involved = [hero, ...others]
-  const tl = gsap.timeline({
-    defaults: { ease: 'power2.inOut' },
-    onStart() {
-      markWillChange(involved, 'transform, opacity')
-    },
-    onComplete() {
-      markWillChange(involved, 'auto')
-      gsap.set(hero, { clearProps: 'transform' })
-      gsap.set(others, { clearProps: 'opacity,visibility,transform' })
-    },
-  })
-  tl.add(
-    Flip.from(state, {
-      duration: 0.32,
-      ease: 'power2.inOut',
-      absolute: true,
-      scale: true,
-    }),
-    0,
-  )
-  tl.to(others, { autoAlpha: 1, scale: 1, duration: 0.24, stagger: 0.03, ease: 'power2.out' }, 0.04)
-  return {
-    revert() {
-      tl.kill()
-      markWillChange(involved, 'auto')
-    },
-  }
+  let tl!: gsap.core.Timeline
+  const ctx = gsap.context(() => {
+    tl = gsap.timeline({
+      defaults: { ease: 'power2.inOut' },
+      onStart() {
+        markWillChange([hero], 'transform, opacity')
+      },
+      onComplete() {
+        markWillChange([hero], 'auto')
+        gsap.set(hero, { clearProps: 'transform' })
+        gsap.set(others, { clearProps: 'opacity,visibility,transform' })
+        clearMotionStyles(involved)
+      },
+    })
+    tl.add(
+      Flip.from(state, {
+        ...flipVars(hero),
+        duration: 0.32,
+      }),
+      0,
+    )
+    if (others.length) {
+      tl.to(others, { autoAlpha: 1, duration: 0.22, ease: 'power2.out', overwrite: true }, 0)
+    }
+  }, contextScope(hero))
+  return bindTimeline(tl, ctx, involved)
 }

@@ -578,6 +578,11 @@ body:has(.glaze-hall.is-open) {
   margin-top: 1.5rem;
 }
 
+.glaze-slot {
+  min-width: 0;
+  min-height: 18.5rem;
+}
+
 .glaze-slab {
   appearance: none;
   display: flex;
@@ -605,6 +610,15 @@ body:has(.glaze-hall.is-open) {
   transform-origin: center center;
 }
 
+.glaze-hall.is-open .glaze-slab:hover:not(.hero) {
+  transform: none;
+}
+
+.glaze-slab.is-flipping {
+  will-change: transform, opacity;
+  transition: none;
+}
+
 .glaze-slab.gone {
   pointer-events: none;
 }
@@ -626,6 +640,7 @@ body:has(.glaze-hall.is-open) {
   overflow: hidden;
   cursor: default;
   overscroll-behavior: contain;
+  transition: none;
   padding: max(0.85rem, env(safe-area-inset-top)) max(1.15rem, env(safe-area-inset-right))
     max(1rem, env(safe-area-inset-bottom)) max(1.15rem, env(safe-area-inset-left));
 }
