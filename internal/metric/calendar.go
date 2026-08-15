@@ -53,10 +53,76 @@ func BuildCalendar(events []event.UsageEvent, loc *time.Location, now time.Time)
 		Timezone:   loc.String(),
 		WindowFrom: from.Format("2006-01-02"),
 		WindowTo:   today.Format("2006-01-02"),
-		All:        CalendarSeries{Days: bucketDays(events, loc)},
+		All:        finishSeries(bucketDays(events, loc), today),
 		BySource:   map[string]CalendarSeries{},
 		ByVendor:   map[string]CalendarSeries{},
 	}
+}
+
+func finishSeries(days []Day, today time.Time) CalendarSeries {
+	return CalendarSeries{Days: days, Stats: computeStats(days, today)}
+}
+
+func computeStats(days []Day, today time.Time) CalendarStats {
+	stats := CalendarStats{}
+	used := map[string]int64{}
+	for _, d := range days {
+		used[d.Date] = d.Total
+		if d.Total > stats.PeakTotal || (d.Total == stats.PeakTotal && d.Date > stats.PeakDate) {
+			stats.PeakTotal = d.Total
+			stats.PeakDate = d.Date
+		}
+	}
+	if stats.PeakTotal == 0 {
+		stats.PeakDate = ""
+	}
+	stats.CurrentStreak = currentStreak(used, today)
+	stats.LongestStreak = longestStreak(used, today)
+	return stats
+}
+
+func currentStreak(used map[string]int64, today time.Time) int {
+	anchor := today
+	if used[today.Format("2006-01-02")] == 0 {
+		anchor = today.AddDate(0, 0, -1)
+	}
+	n := 0
+	for {
+		if used[anchor.Format("2006-01-02")] == 0 {
+			break
+		}
+		n++
+		anchor = anchor.AddDate(0, 0, -1)
+	}
+	return n
+}
+
+func longestStreak(used map[string]int64, today time.Time) int {
+	if len(used) == 0 {
+		return 0
+	}
+	first := ""
+	for d := range used {
+		if first == "" || d < first {
+			first = d
+		}
+	}
+	start, err := time.ParseInLocation("2006-01-02", first, today.Location())
+	if err != nil {
+		return 0
+	}
+	best, run := 0, 0
+	for d := start; !d.After(today); d = d.AddDate(0, 0, 1) {
+		if used[d.Format("2006-01-02")] > 0 {
+			run++
+			if run > best {
+				best = run
+			}
+			continue
+		}
+		run = 0
+	}
+	return best
 }
 
 func truncateDay(t time.Time) time.Time {

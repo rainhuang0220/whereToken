@@ -60,3 +60,47 @@ func TestBuildCalendarConservationMatchesAggregate(t *testing.T) {
 		t.Fatalf("days=%d all=%d", daySum, sum.All.Total())
 	}
 }
+
+func TestBuildCalendarEmptyDayBreaksStreak(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", RequestID: "1", Timestamp: ts(loc, 2026, 8, 11, 10, 0), Miss: 1},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "2", Timestamp: ts(loc, 2026, 8, 12, 10, 0), Miss: 1},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "4", Timestamp: ts(loc, 2026, 8, 14, 10, 0), Miss: 1},
+	}
+	cal := BuildCalendar(events, loc, now)
+	if cal.All.Stats.LongestStreak != 2 {
+		t.Fatalf("longest=%d", cal.All.Stats.LongestStreak)
+	}
+	if cal.All.Stats.CurrentStreak != 1 {
+		t.Fatalf("current=%d want 1 (yesterday only; today empty)", cal.All.Stats.CurrentStreak)
+	}
+}
+
+func TestBuildCalendarPeakPicksMaxTotalDay(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", RequestID: "a", Timestamp: ts(loc, 2026, 8, 10, 10, 0), Miss: 10},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "b", Timestamp: ts(loc, 2026, 8, 11, 10, 0), Miss: 50},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "c", Timestamp: ts(loc, 2026, 8, 12, 10, 0), Miss: 20},
+	}
+	cal := BuildCalendar(events, loc, now)
+	if cal.All.Stats.PeakDate != "2026-08-11" || cal.All.Stats.PeakTotal != 50 {
+		t.Fatalf("peak=%s %d", cal.All.Stats.PeakDate, cal.All.Stats.PeakTotal)
+	}
+}
+
+func TestBuildCalendarCurrentStreakIncludesTodayWhenUsed(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", RequestID: "a", Timestamp: ts(loc, 2026, 8, 14, 10, 0), Miss: 1},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "b", Timestamp: ts(loc, 2026, 8, 15, 10, 0), Miss: 1},
+	}
+	cal := BuildCalendar(events, loc, now)
+	if cal.All.Stats.CurrentStreak != 2 {
+		t.Fatalf("current=%d", cal.All.Stats.CurrentStreak)
+	}
+}
