@@ -43,6 +43,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 必读：
 
 - [`docs/superpowers/specs/2026-08-15-wheretoken-design.md`](docs/superpowers/specs/2026-08-15-wheretoken-design.md) — 产品与架构规格
+- [`docs/superpowers/specs/2026-08-15-wheretoken-calendar-design.md`](docs/superpowers/specs/2026-08-15-wheretoken-calendar-design.md) — 窑墙视觉与日历
 - [`docs/data-sources.md`](docs/data-sources.md) — 本机实测的数据源清单与字段映射
 - [`opt.md`](opt.md) — 过程决策，供复盘
 

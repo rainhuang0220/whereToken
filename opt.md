@@ -174,6 +174,64 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 - **选择：** 新闻纸账本（ZCOOL XiaoWei + Courier Prime），浅色默认、跟随系统深色；KPI + 按工具表 + 按厂家表吃同一 `/api/summary`。
 - **不选：** 极光渐变、在前端 `/ 1e6` 重算合计。
 - **后果：** `web/src/format.ts` 的 `columnsFrom` 只转发后端已格式化的 `*_m` / `hit_rate_text`。
+- **第 3 轮推翻：** 用户认为新闻纸账本与工具箱同族、太泛。视觉按日历规格整页替换，本条只作为「做过什么」留档，不再约束实现。
+
+---
+
+# 第 3 轮：窑墙日历（2026-08-15）
+
+触发：用户嫌前端和每个项目长一样；要求上网/GitHub 偷手艺做独特 UI；并加 GitHub 贡献图力学的日格墙，强度 = 日 token，跟合计/工具/厂家三轴走；先写更完整规格再改产品。
+
+## 3.1 视觉研究方向
+
+看过（借力学，不借皮肤）：
+
+- GitHub contribution graph：周列、星期行、5 档、空 vs 有、tooltip、`grid-auto-flow: column`。周首周日、UTC、primer 绿 — 不采用。
+- GitLab：可周一为周首；蓝绝对阈值 — 只借周一，不借蓝。
+- WakaTime / wakafetch：热力表示花掉的时间。
+- tokscale TUI Stats + 其 2D/3D web：墙是一等视图、可按源过滤。不借 Primer、3D、排行榜。
+- Linear cycle / Stripe Sigma：密度与数字优先，不是 admin 卡片。
+- CSS Grid 重绘贡献图的若干 gist/文章：确认列流向，不贴它们的绿 CSS。
+- 本仓库上一版 Vue：奶油纸 + ZCOOL XiaoWei + Courier Prime + KPI 栅格 + ledger 表 — **整页替换**。
+
+未装 Syncfusion/Mapbox 热力图 skill：那是 React/地图组件，跟 Vue 窑墙无关。frontend-design + data-visualization 已读。
+
+## 3.2 隐喻
+
+- **选择：** 窑墙（token = 烧掉的热，一天一块砖）。
+- **不选：** GitHub 绿贡献秀、新闻纸账本、SaaS analytics、tokscale 3D 砖。
+- **理由：** 产品问的是「花在哪」，不是「我贡献了多少」。暗色炉膛和工具箱浅色实用页立刻分开。
+
+## 3.3 周首、时区、今天为 0 的连烧
+
+- **周首：星期一。** 中国默认。不做设置。
+- **日界：扫描进程本地时区**（测试钉 `Asia/Shanghai`）。不用 GitHub 的 UTC。
+- **当前连烧：** 今天有用量才含今天；否则从昨天往回数连续 `total>0`。今天昨天都是 0 → 0。
+- **最长连烧：** 该序列最早非零日到今天，空日打断，不限 53 周窗。
+
+## 3.4 分桶
+
+- **选择：** 每个过滤序列自己的非零日 raw total 四分位（nearest-rank），4 档热度 + 空档。
+- **不选：** 全局 max/4（会洗掉 OpenCode）；log(max)/4（四分位已按日分配对比）。
+- **相等特例：** 所有非零日 total 相同 → 一律 level 2，避免墙看起来没烧过。
+
+## 3.5 API 形状
+
+- **选择：** `calendar: { week_start, timezone, window_from, window_to, all, by_source, by_vendor }`，每条 Series 含稀疏 `days[]`（只 total>0）和预计算 `stats`（peak + 两段 streak）以及每日本地 `level`。
+- **不选：** 只给一张宽表让前端 groupby；不选 ECharts 在浏览器里桶。
+- **后果：** 切 tab 是查表。守恒：`sum(calendar.all.days.total) == all.total`。
+
+## 3.6 前端技术
+
+- **选择：** 手写 CSS Grid 墙。卸掉分享条 ECharts。字体 Big Shoulders Display / Chiron Hei HK / Martian Mono。只暗色。
+- **不选：** `vue3-activity-calendar`、ECharts calendar、跟随系统浅色。
+
+## 3.7 规格与计划
+
+- 日历完整规格：`docs/superpowers/specs/2026-08-15-wheretoken-calendar-design.md`
+- 父规格 §7 / §11 改为墙是 P0
+- 实现计划：`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`
+
 
 ## 2.3 SQLite 驱动
 

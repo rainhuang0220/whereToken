@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Status: 方案 B 已批准；按工具 × 按厂家拆分为一等需求
-Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../../opt.md) · [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md)
+Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../../opt.md) · [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md) · [`2026-08-15-wheretoken-calendar-design.md`](./2026-08-15-wheretoken-calendar-design.md)（窑墙视觉 + 日历，第 3 轮）
 
 ---
 
@@ -132,6 +132,8 @@ cache_hit_rate   = cache_read / (cache_read + miss + cache_create)   // 分母 0
 
 切片：全局合计、按工具、按厂家、工具×厂家、按模型、按日、按工作区、按会话。过滤器可组合。默认着陆页必须能同时看见合计、按工具、按厂家，不能只给一个总数。
 
+**按日（第 3 轮升为 P0）：** 日桶、峰值、连烧全部在 Go 里算完，经 `calendar` 字段下发。规则锁在 [`2026-08-15-wheretoken-calendar-design.md`](./2026-08-15-wheretoken-calendar-design.md)。前端不得用事件重算这些数。
+
 ### 4.3 质量枚举
 
 | quality | 何时 | UI |
@@ -165,7 +167,8 @@ cache_hit_rate   = cache_read / (cache_read + miss + cache_create)   // 分母 0
                                              all + by_source + by_vendor
                                                     │
                                                     ▼
-                                           Vue 3 仪表盘
+                                           Vue 3 窑墙仪表盘
+                                           calendar + 两轴表
 ```
 
 ### 5.1 进程
@@ -222,18 +225,22 @@ P0 解析规则见 [`docs/data-sources.md`](../../data-sources.md)，这里只�
 
 一页为主，避免工具箱里再做一个「要学习的后台」。
 
-1. **顶栏：** 最后扫描时间、刷新、本机根路径数。
-2. **六块 KPI（合计）：** 总 token、命中率、未命中、输出、请求、用户回合。数字用大号 M。
-3. **按工具表：** 同一六列。一行 Claude Code、一行 Kimi、一行 Codex、一行 OpenCode。无数据的已发现源单独一截。
-4. **按厂家表：** 同一 token 四列 + 请求。一行 Anthropic、一行 Moonshot、一行 OpenAI、一行 MiniMax……
-5. **交叉（可折叠）：** 工具 × 厂家，解释混用（Claude Code 调 MiniMax）。
-6. **时间：** 日序列（ECharts）。默认近 30 天，可切全部。
-7. **下钻：** 模型、工作区、会话。会话表不展示 prompt。
-8. **质量条：** 若 Claude 占比高且 degraded，顶栏常驻一句人话。
+第 3 轮把「时间」从 ECharts 日折线提升为 **窑墙（贡献日历力学）**，并且它是英雄区，不是表下面的附件。完整视觉与格子规则见日历规格。本文件只锁信息优先级：
 
-视觉：中文、深浅两套、数字对齐、不要科幻仪表盘皮肤。具体视觉在 frontend-design 技能下于实现阶段定；本规格只锁信息优先级：**数字正确 > 下钻 > 好看**。
+**墙（按日消耗）= 峰值 / 连烧 = 两轴切换 > 合计六列复核 > 工具/厂家表 > 交叉 > 模型下钻。**
 
-CLI 汇总必须与页面 KPI **同一函数**算出，禁止两套公式。
+1. **顶栏（瘦）：** 产品名、最后扫描时间、刷新。
+2. **窑墙 + 铸造数字：** 53 周 × 7 日方格；峰值（日期 + M）、当前连烧、最长连烧。轴切换：合计 / 单工具 / 单厂家，墙和三块数字一起换序列。
+3. **合计六列：** 总 token、命中率、未命中、输出、请求、用户回合。仍用后端 `*_m`。墙已经是主角，这里不再做成六张卡片。
+4. **按工具表：** 同一六列。一行 Claude Code、一行 Kimi、一行 Codex、一行 OpenCode。行可切到该工具的墙。
+5. **按厂家表：** 同一 token 四列 + 请求。行可切到该厂家的墙。
+6. **交叉（可折叠）：** 工具 × 厂家，解释混用（Claude Code 调 MiniMax）。
+7. **下钻（仍非本轮）：** 模型、工作区、会话。会话表不展示 prompt。
+8. **质量条：** 若 Claude 占比高且 degraded，常驻一句人话。扫描错误进 `errors[]`，**不**把失败日画成用量零。
+
+视觉（第 3 轮锁死，不再「实现时再定」）：暗色窑墙，焦褐→白热，Chiron Hei HK + Big Shoulders Display + Martian Mono。禁止新闻纸账本、GitHub 绿、浅色 admin 卡片。细节在日历规格 §3。
+
+CLI 汇总必须与页面 KPI **同一函数**算出，禁止两套公式。日桶 / 峰值 / 连烧同样只在 `internal/metric` 算一次。
 
 ---
 
@@ -320,8 +327,11 @@ requestId max、tool_result、degraded 旗标。
 **v0.7 HTTP API + Vue KPI 页**  
 合计六块 + 按工具表 + 按厂家表与 `scan --json` 同一 payload。
 
-**v0.8 下钻（日 / 源 / 模型）+ 质量条**  
-认为可日常自用，打 `v0.8.0`。
+**v0.8 窑墙（原「日折线」改 P0）**  
+`calendar` 进 JSON；Vue 以 53×7 墙为英雄区；峰值 + 当前/最长连烧；轴切换重绘。计划：[`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](../plans/2026-08-15-wheretoken-calendar.md)。
+
+**v0.9 下钻（模型 / 工作区 / 会话）+ 质量条**  
+认为可日常自用后再打版本标签。
 
 **v1.0** P1 发现器点亮本机其它根；Cursor 诚实空态；README 安装说明；再考虑是否反写其它仓库的 toolkit 表。
 
@@ -342,7 +352,7 @@ requestId max、tool_result、degraded 旗标。
 
 ## 13. 规格自检
 
-- 无 TBD/TODO 占位。第 0 轮三问已在 `opt.md` 关闭。
+- 无 TBD/TODO 占位。第 0 轮三问已在 `opt.md` 关闭。第 3 轮周首/时区/分桶/连烧收口已在日历规格锁死。
 - 公式在 §4 与 opt.md 0.5、README 一致。
 - P0 四源均有本机证据（data-sources.md）。
 - 范围是一个产品、一条扫描管道，不需要拆成多个仓库。
@@ -353,4 +363,4 @@ requestId max、tool_result、degraded 旗标。
 
 ## 14. 下一步
 
-方案 B 已批准。实现按 [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md) 执行。
+方案 B 已批准。v0.7 内核已落地。第 3 轮（窑墙）按 [`2026-08-15-wheretoken-calendar-design.md`](./2026-08-15-wheretoken-calendar-design.md) 与 [`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](../plans/2026-08-15-wheretoken-calendar.md) 执行。
