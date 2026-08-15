@@ -185,3 +185,26 @@ func TestVendorLookupNotTrae(t *testing.T) {
 		t.Fatal("minimax must not become trae")
 	}
 }
+
+func TestOfflineDoesNotCallBillingAPI(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		hits++
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: `{"list":[{"sessionId":"sess-1"}]}`},
+	})
+	jwt := filepath.Join(dir, "jwt")
+	if err := os.WriteFile(jwt, []byte(fakeJWT), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL, Offline: true}
+	if err := a.Parse(adapter.SourceRoot{ID: "trae", Path: db, AuthPath: jwt}, func(event.UsageEvent) {}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if hits != 0 {
+		t.Fatalf("offline still hit API %d times", hits)
+	}
+}

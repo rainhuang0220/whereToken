@@ -47,13 +47,17 @@ func readingLabel(id string) string {
 }
 
 func AllAdapters() []adapter.Adapter {
+	return Adapters(false)
+}
+
+func Adapters(offline bool) []adapter.Adapter {
 	return []adapter.Adapter{
 		claude.Adapter{},
 		kimi.Adapter{},
 		opencode.Adapter{},
 		codex.Adapter{},
-		cursor.Adapter{},
-		trae.Adapter{},
+		cursor.Adapter{Offline: offline},
+		trae.Adapter{Offline: offline},
 	}
 }
 

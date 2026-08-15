@@ -21,6 +21,7 @@ type Adapter struct {
 	HTTP    *http.Client
 	APIBase string
 	Now     func() time.Time
+	Offline bool
 }
 
 func (Adapter) ID() string { return "trae" }
@@ -118,6 +119,9 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 			return errEncryptedLocalAuth
 		}
 		return errNoLocalAuth
+	}
+	if a.Offline {
+		return nil
 	}
 	events, apiErr := a.fetchAccountUsage(path, token, sessions)
 	if apiErr != nil {

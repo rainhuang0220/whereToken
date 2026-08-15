@@ -246,3 +246,24 @@ func putItem(t *testing.T, dbPath, key, value string) {
 		t.Fatal(err)
 	}
 }
+
+func TestOfflineDoesNotCallAccountAPI(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		hits++
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeVscdb(t, dir, []kv{
+		{key: "composerData:sess-a", value: `{"composerId":"sess-a","createdAt":1700000000000}`},
+		{key: "bubbleId:sess-a:u1", value: `{"type":1,"createdAt":"2026-02-09T14:44:05.860Z"}`},
+	}, []header{{id: "sess-a", workspace: "/tmp/whereToken"}})
+	putItem(t, db, authAccessTokenKey, fakeJWT)
+	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL, Offline: true}
+	if err := a.Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if hits != 0 {
+		t.Fatalf("offline still hit API %d times", hits)
+	}
+}

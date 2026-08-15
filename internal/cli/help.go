@@ -31,6 +31,7 @@ FLAGS
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
+  --offline            local ledgers only; skip Cursor/Trae account APIs
   --home DIR           fake home directory (tests)
   --width N            cap ranking table width (COLUMNS does the same)
 
@@ -38,6 +39,7 @@ ENV
   NO_COLOR             disable ANSI (same as --no-color)
   WHERETOKEN_ASCII=1   ASCII box drawing
   WHERETOKEN_HOME      override home (same idea as --home)
+  WHERETOKEN_OFFLINE=1 same as --offline
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
   NO_UTF8              ASCII box drawing
   TERM=dumb            disable color

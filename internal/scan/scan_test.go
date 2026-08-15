@@ -11,10 +11,34 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
+
+func TestAdaptersOfflineFlagsCloudSources(t *testing.T) {
+	off := Adapters(true)
+	var cursorOff, traeOff bool
+	for _, a := range off {
+		if c, ok := a.(cursor.Adapter); ok {
+			cursorOff = c.Offline
+		}
+		if tr, ok := a.(trae.Adapter); ok {
+			traeOff = tr.Offline
+		}
+	}
+	if !cursorOff || !traeOff {
+		t.Fatalf("cursor=%v trae=%v", cursorOff, traeOff)
+	}
+	on := Adapters(false)
+	for _, a := range on {
+		if c, ok := a.(cursor.Adapter); ok && c.Offline {
+			t.Fatal("online cursor marked offline")
+		}
+	}
+}
 
 func TestMarshalSummaryOmitsRawEvents(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")

@@ -78,9 +78,9 @@ func (a *App) Run() int {
 	case CommandServe:
 		return a.runServe(flags, home)
 	case CommandScan:
-		return a.runScanJSON(home, flags.Quiet)
+		return a.runScanJSON(home, flags.Quiet, flags.Offline)
 	case CommandSources:
-		return a.runSources(home, flags.Quiet)
+		return a.runSources(home, flags.Quiet, flags.Offline)
 	case CommandCompletion:
 		script, err := Completion(flags.CompletionShell)
 		if err != nil {
@@ -104,15 +104,19 @@ func (a *App) resolveHome(override string) adapter.Home {
 	return scan.RealHome()
 }
 
-func (a *App) doScan(home adapter.Home, quiet bool) scan.Result {
+func (a *App) doScan(home adapter.Home, quiet, offline bool) scan.Result {
 	if a.Scan != nil {
 		return a.Scan(home)
 	}
+	if a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true") {
+		offline = true
+	}
+	ads := scan.Adapters(offline)
 	if quiet || !a.StderrTTY {
-		return scan.Run(home, scan.AllAdapters())
+		return scan.Run(home, ads)
 	}
 	width := 0
-	return scan.RunWithProgress(home, scan.AllAdapters(), func(p scan.Progress) {
+	return scan.RunWithProgress(home, ads, func(p scan.Progress) {
 		if p.Status != scan.ProgressReading {
 			if p.Index >= p.Total && width > 0 {
 				fmt.Fprintf(a.Stderr, "\r%s\r", strings.Repeat(" ", width))
@@ -133,7 +137,7 @@ func (a *App) doScan(home adapter.Home, quiet bool) scan.Result {
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
-	res := a.doScan(home, flags.Quiet)
+	res := a.doScan(home, flags.Quiet, flags.Offline)
 	fil := report.Filter{
 		Today:      flags.Today,
 		Tool:       flags.Tool,
@@ -149,6 +153,19 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		}
 		return ExitFail
 	}
+	if flags.Offline || (a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true")) {
+		const msg = "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
+		dup := false
+		for _, n := range snap.Notes {
+			if n == msg {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			snap.Notes = append([]string{msg}, snap.Notes...)
+		}
+	}
 	if flags.JSON {
 		if err := report.WriteJSON(a.Stdout, snap); err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())
@@ -163,8 +180,8 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	return ExitOK
 }
 
-func (a *App) runScanJSON(home adapter.Home, quiet bool) int {
-	res := a.doScan(home, quiet)
+func (a *App) runScanJSON(home adapter.Home, quiet, offline bool) int {
+	res := a.doScan(home, quiet, offline)
 	if err := scan.EncodeSummary(a.Stdout, res); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail
@@ -172,8 +189,8 @@ func (a *App) runScanJSON(home adapter.Home, quiet bool) int {
 	return ExitOK
 }
 
-func (a *App) runSources(home adapter.Home, quiet bool) int {
-	res := a.doScan(home, quiet)
+func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
+	res := a.doScan(home, quiet, offline)
 	for _, root := range res.Roots {
 		fmt.Fprintf(a.Stdout, "%s\t%s\n", root.ID, root.Path)
 	}

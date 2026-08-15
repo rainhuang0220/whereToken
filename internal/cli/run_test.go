@@ -64,6 +64,16 @@ func testApp(args []string) (*App, *bytes.Buffer, *bytes.Buffer) {
 	return app, out, errb
 }
 
+func TestRunOfflineAddsNote(t *testing.T) {
+	app, out, errb := testApp([]string{"--offline"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "offline") || !strings.Contains(out.String(), "本机账本") {
+		t.Fatalf("%s", out.String())
+	}
+}
+
 func TestRunDefaultPrintsP0Table(t *testing.T) {
 	app, out, errb := testApp(nil)
 	if code := app.Run(); code != ExitOK {
@@ -215,7 +225,7 @@ func TestRunNO_COLORNoEscape(t *testing.T) {
 
 func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	h := HelpText()
-	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "--width"} {
+	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "--width", "--offline"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}

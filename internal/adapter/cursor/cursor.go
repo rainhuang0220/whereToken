@@ -24,6 +24,7 @@ type Adapter struct {
 	HTTP    *http.Client
 	APIBase string
 	Now     func() time.Time
+	Offline bool
 }
 
 func (Adapter) ID() string { return "cursor" }
@@ -95,7 +96,7 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 
 	var apiEvents []event.UsageEvent
 	var apiErr error
-	if token != "" {
+	if token != "" && !a.Offline {
 		refresh, rerr := readItem(db, authRefreshTokenKey)
 		if rerr != nil {
 			return rerr
@@ -112,6 +113,9 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 	}
 	if token == "" {
 		return errNoLocalAuth
+	}
+	if a.Offline {
+		return nil
 	}
 	return apiErr
 }

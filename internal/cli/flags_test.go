@@ -196,6 +196,13 @@ func TestParseBrandFlags(t *testing.T) {
 	}
 }
 
+func TestParseOffline(t *testing.T) {
+	f, err := Parse([]string{"--offline"})
+	if err != nil || !f.Offline {
+		t.Fatalf("%+v %v", f, err)
+	}
+}
+
 func TestParseWidth(t *testing.T) {
 	f, err := Parse([]string{"--width", "80"})
 	if err != nil {

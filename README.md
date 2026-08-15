@@ -61,6 +61,7 @@ wheretoken --today --cursor
 wheretoken --json               # scripts; tables stay the default
 wheretoken --ascii              # old Windows consoles
 wheretoken --quiet              # no “正在读 …” on stderr
+wheretoken --offline            # local ledgers only; skip Cursor/Trae APIs
 wheretoken completion zsh          # also bash, fish, powershell
 ```
 

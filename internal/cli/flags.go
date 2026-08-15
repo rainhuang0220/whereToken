@@ -32,6 +32,7 @@ type Flags struct {
 	ASCII           bool
 	NoColor         bool
 	Quiet           bool
+	Offline         bool
 	Tool, Vendor    string
 	Model, Home     string
 	Port            int
@@ -93,6 +94,7 @@ func Parse(args []string) (Flags, error) {
 	fs.BoolVar(&f.NoColor, "no-color", false, "")
 	fs.BoolVar(&f.Quiet, "quiet", false, "")
 	fs.BoolVar(&f.Quiet, "q", false, "")
+	fs.BoolVar(&f.Offline, "offline", false, "")
 	fs.StringVar(&f.Home, "home", "", "")
 	fs.IntVar(&f.Port, "port", f.Port, "")
 	fs.IntVar(&f.Width, "width", 0, "")
