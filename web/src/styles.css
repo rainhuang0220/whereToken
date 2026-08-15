@@ -119,20 +119,21 @@ h1 {
 .packs {
   display: flex;
   justify-content: flex-end;
-  gap: 0.18rem;
+  flex-wrap: wrap;
+  gap: 0.1rem;
   margin-top: 0.5rem;
 }
 
 .packs button {
   appearance: none;
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 1.38rem;
+  height: 1.38rem;
   padding: 0;
   border: 1px solid var(--copper);
   background: var(--clay);
   color: var(--bone);
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;

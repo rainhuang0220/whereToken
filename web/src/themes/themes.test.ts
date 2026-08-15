@@ -6,6 +6,7 @@ import {
   DEFAULT_THEME,
   REQUIRED_TOKENS,
   STORAGE_KEY,
+  THEME_IDS,
   applyTheme,
   resolveThemeId,
   themeStylesheet,
@@ -62,16 +63,19 @@ function contrast(a: string, b: string): number {
 }
 
 describe('theme pack manifest', () => {
-  it('ships kiln, moss, porcelain, jiang, qingmo, frost', () => {
-    expect(themes.map((t) => t.id)).toEqual([
+  it('ships kiln, moss, porcelain, jiang, qingmo, frost, day, ink', () => {
+    expect([...THEME_IDS]).toEqual([
       'kiln',
       'moss',
       'porcelain',
       'jiang',
       'qingmo',
       'frost',
+      'day',
+      'ink',
     ])
-    expect(themes.map((t) => t.mark)).toEqual(['窑', '苔', '瓷', '绛', '青', '霜'])
+    expect(themes.map((t) => t.id)).toEqual([...THEME_IDS])
+    expect(themes.map((t) => t.mark)).toEqual(['窑', '苔', '瓷', '绛', '青', '霜', '昼', '墨'])
   })
 
   it('defines every required token key on every theme', () => {
@@ -112,6 +116,8 @@ describe('theme pack manifest', () => {
     expect(resolveThemeId('')).toBe('kiln')
     expect(resolveThemeId('nope')).toBe('kiln')
     expect(resolveThemeId('frost')).toBe('frost')
+    expect(resolveThemeId('day')).toBe('day')
+    expect(resolveThemeId('ink')).toBe('ink')
   })
 
   it('persists selection under wheretoken.theme and sets data-theme', () => {
@@ -149,8 +155,30 @@ describe('theme pack manifest', () => {
       const { void: bg, clay, mortar } = theme.tokens
       expect(clay, `${theme.id} clay==void`).not.toBe(bg)
       expect(clay, `${theme.id} clay==mortar`).not.toBe(mortar)
+      expect(contrast(clay, bg), `${theme.id} clay/void`).toBeGreaterThanOrEqual(1.15)
       expect(contrast(clay, mortar), `${theme.id} clay/mortar`).toBeGreaterThanOrEqual(1.15)
     }
+  })
+
+  it('keeps 墨 ink grayscale', () => {
+    const ink = themes.find((t) => t.id === 'ink')
+    expect(ink, 'missing ink').toBeTruthy()
+    expect(ink!.tokens.scheme).toBe('light')
+    for (const key of REQUIRED_TOKENS) {
+      if (key === 'scheme') continue
+      const value = ink!.tokens[key]
+      expect(value, key).toMatch(/^#[0-9a-fA-F]{6}$/)
+      expect(value.slice(1, 3), `${key} chroma`).toBe(value.slice(3, 5))
+      expect(value.slice(3, 5), `${key} chroma`).toBe(value.slice(5, 7))
+    }
+  })
+
+  it('lets the html boot script paint every pack before modules load', () => {
+    const html = readFileSync(join(SRC_ROOT, '..', 'index.html'), 'utf8')
+    const match = html.match(/var allowed = \[([^\]]+)\]/)
+    expect(match, 'missing allowed list').toBeTruthy()
+    const allowed = [...match![1].matchAll(/'([^']+)'/g)].map((m) => m[1])
+    expect(allowed).toEqual([...THEME_IDS])
   })
 
   it('emits [data-theme] CSS so bricks recolor from variables', () => {
@@ -196,6 +224,19 @@ function ruleBody(css: string, selector: string): string {
   expect(match, `missing ${selector} rule`).toBeTruthy()
   return match![1]
 }
+
+describe('glaze switcher density', () => {
+  it('fits eight marks in a compact rail row', () => {
+    const css = readFileSync(join(SRC_ROOT, 'styles.css'), 'utf8')
+    const packs = ruleBody(css, '.packs')
+    const btn = ruleBody(css, '.packs button')
+    const gap = Number(packs.match(/gap:\s*([0-9.]+)rem/)?.[1])
+    const width = Number(btn.match(/width:\s*([0-9.]+)rem/)?.[1])
+    expect(gap).toBeGreaterThan(0)
+    expect(width).toBeGreaterThan(0)
+    expect(8 * width + 7 * gap).toBeLessThanOrEqual(12)
+  })
+})
 
 describe('flat GitHub-like kiln wall', () => {
   const css = readFileSync(join(SRC_ROOT, 'styles.css'), 'utf8')

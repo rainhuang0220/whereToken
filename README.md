@@ -40,7 +40,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。默认读你已�
 
 ## 当前状态
 
-可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开窑墙。右上角六个字切釉色（窑 / 苔 / 瓷 / 绛 / 青 / 霜），记在本机 `localStorage`。
+可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开窑墙。右上角八个字切釉色（窑 / 苔 / 瓷 / 绛 / 青 / 霜 / 昼 / 墨），记在本机 `localStorage`。
 
 Cursor：本机 `state.vscdb` 提供请求与用户回合；token 四列在用户授权后走 Cursor 账号 DashboardService（`GetFilteredUsageEvents` / `GetAggregatedUsageEvents`）。本机 `bubble.tokenCount` 仍几乎全是 0，不把上下文窗口快照加成用量。没有登录态时 `errors[]` 会写 `cursor: 未找到本机登录态`，token 列保持 degraded。只有 `~/.cursor`、没有 vscdb 时才显示「已发现，无用量」。
 

@@ -1,7 +1,7 @@
 export const STORAGE_KEY = 'wheretoken.theme'
 export const DEFAULT_THEME = 'kiln' as const
 
-export const THEME_IDS = ['kiln', 'moss', 'porcelain', 'jiang', 'qingmo', 'frost'] as const
+export const THEME_IDS = ['kiln', 'moss', 'porcelain', 'jiang', 'qingmo', 'frost', 'day', 'ink'] as const
 export type ThemeId = (typeof THEME_IDS)[number]
 
 export const REQUIRED_TOKENS = [
@@ -163,6 +163,50 @@ export const themes: ThemePack[] = [
       hi: '#f0f4f8',
       lo: '#000000',
       scheme: 'dark',
+    },
+  },
+  {
+    id: 'day',
+    mark: '昼',
+    name: '昼',
+    tokens: {
+      void: '#ffffff',
+      clay: '#d4dce8',
+      mortar: '#e8edf4',
+      'ember-1': '#c5daf8',
+      'ember-2': '#6ea8f0',
+      'ember-3': '#2f6fed',
+      'ember-4': '#1d4ed8',
+      bone: '#0c0d10',
+      ash: '#4a5160',
+      copper: '#3d5f96',
+      warn: '#b42318',
+      glow: '#2f6fed',
+      hi: '#ffffff',
+      lo: '#07080c',
+      scheme: 'light',
+    },
+  },
+  {
+    id: 'ink',
+    mark: '墨',
+    name: '墨',
+    tokens: {
+      void: '#ffffff',
+      clay: '#d4d4d4',
+      mortar: '#ececec',
+      'ember-1': '#b5b5b5',
+      'ember-2': '#8a8a8a',
+      'ember-3': '#4a4a4a',
+      'ember-4': '#111111',
+      bone: '#111111',
+      ash: '#595959',
+      copper: '#5c5c5c',
+      warn: '#1a1a1a',
+      glow: '#888888',
+      hi: '#ffffff',
+      lo: '#000000',
+      scheme: 'light',
     },
   },
 ]
