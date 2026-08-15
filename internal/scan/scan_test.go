@@ -16,6 +16,19 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
+func TestMarshalSummaryOmitsRawEvents(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	r := Run(testhome.New(t.TempDir()), AllAdapters())
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(raw)
+	if strings.Contains(s, `"events"`) || strings.Contains(s, `"turns"`) {
+		t.Fatalf("raw events leaked into observatory JSON")
+	}
+}
+
 func TestRunKimiFixture(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()

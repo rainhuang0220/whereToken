@@ -98,9 +98,11 @@ Field mapping: [`docs/data-sources.md`](docs/data-sources.md). Not in this relea
 
 ```bash
 go test ./...
+make test                          # go + web + npm wrapper
+bash scripts/verify-cli.sh         # table against testdata, not $HOME
+bash scripts/verify-local.sh       # optional: this machine's ledgers
 cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve
-bash scripts/verify-local.sh
 ```
 
 CI runs `go test` on Ubuntu, macOS, and Windows. Workflow files: [`ci/github-workflows/`](ci/github-workflows/) (`scripts/install-github-workflows.sh` copies them to `.github/workflows` when the remote token allows it).

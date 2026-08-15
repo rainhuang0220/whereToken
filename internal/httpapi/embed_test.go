@@ -34,4 +34,20 @@ func TestServeFallsBackToEmbedWhenNoWebDist(t *testing.T) {
 	if !strings.Contains(string(body), "<!doctype html>") && !strings.Contains(string(body), "<!DOCTYPE html>") {
 		t.Fatalf("expected embedded HTML, got %q", body)
 	}
+
+	themes, err := http.Get(srv.URL + "/themes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer themes.Body.Close()
+	tb, err := io.ReadAll(themes.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if themes.StatusCode != http.StatusOK {
+		t.Fatalf("themes status=%d", themes.StatusCode)
+	}
+	if !strings.Contains(string(tb), "<!doctype html>") && !strings.Contains(string(tb), "<!DOCTYPE html>") {
+		t.Fatalf("SPA fallback missing: %q", tb)
+	}
 }
