@@ -135,3 +135,26 @@ func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
 		t.Fatalf("%s", got)
 	}
 }
+
+func TestFitRankedTableSixColumnsAt40(t *testing.T) {
+	got := FitRankedTable(
+		[]string{"工具", "合计", "占比", "命中率", "请求", "回合"},
+		[][]string{
+			{"Claude Code", "1,584.54 M", "68.2%", "92.6%", "46,497", "1,861"},
+		},
+		[]Align{AlignLeft, AlignRight, AlignRight, AlignRight, AlignRight, AlignRight},
+		BoxUnicode,
+		40,
+	)
+	for i, line := range strings.Split(strings.TrimRight(got, "\n"), "\n") {
+		if DisplayWidth(line) > 40 {
+			t.Fatalf("line %d width %d > 40\n%q\n%s", i, DisplayWidth(line), line, got)
+		}
+	}
+	if !strings.Contains(got, "1,584.54 M") {
+		t.Fatalf("must keep totals:\n%s", got)
+	}
+	if !strings.Contains(got, "Claude") {
+		t.Fatalf("narrow table destroyed the name:\n%s", got)
+	}
+}

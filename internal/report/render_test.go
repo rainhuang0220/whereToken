@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
@@ -183,5 +184,24 @@ func TestRenderOfflineBannerAfterTitle(t *testing.T) {
 	}
 	if strings.Contains(out, "注\n  · offline") {
 		t.Fatalf("offline duplicated in footnotes:\n%s", out)
+	}
+}
+
+func TestRenderHidesZeroTokenModelTable(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", Model: "composer-2.5", RequestID: "a",
+		Timestamp: now, Quality: event.QualityDegraded,
+	}}
+	snap, err := Build(events, nil, nil, Filter{Tool: "cursor"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{})
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "模型") {
+			t.Fatalf("all-zero model table is noise:\n%s", out)
+		}
 	}
 }

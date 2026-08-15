@@ -81,24 +81,64 @@ func RankedTable(headers []string, rows [][]string, align []Align, style BoxStyl
 }
 
 func FitRankedTable(headers []string, rows [][]string, align []Align, style BoxStyle, maxWidth int) string {
-	cols := len(headers)
-	widths := make([]int, cols)
-	for i, h := range headers {
-		widths[i] = DisplayWidth(h)
+	headers = append([]string(nil), headers...)
+	align = append([]Align(nil), align...)
+	cloned := make([][]string, len(rows))
+	for i, row := range rows {
+		cloned[i] = append([]string(nil), row...)
 	}
-	for _, row := range rows {
-		for i := 0; i < cols && i < len(row); i++ {
-			widths[i] = maxInt(widths[i], DisplayWidth(row[i]))
+	rows = cloned
+
+	widthsFor := func(hs []string, rs [][]string) []int {
+		n := len(hs)
+		widths := make([]int, n)
+		for i, h := range hs {
+			widths[i] = DisplayWidth(h)
 		}
+		for _, row := range rs {
+			for i := 0; i < n && i < len(row); i++ {
+				widths[i] = maxInt(widths[i], DisplayWidth(row[i]))
+			}
+		}
+		return widths
 	}
-	const sep = 3
-	if maxWidth > 0 && cols > 0 {
-		total := sep * (cols - 1)
+	tableWidth := func(widths []int) int {
+		if len(widths) == 0 {
+			return 0
+		}
+		const sep = 3
+		total := sep * (len(widths) - 1)
 		for _, w := range widths {
 			total += w
 		}
-		if total > maxWidth {
-			shrink := total - maxWidth
+		return total
+	}
+	trimTo := func(n int) {
+		if n < 0 {
+			n = 0
+		}
+		if n >= len(headers) {
+			return
+		}
+		headers = headers[:n]
+		if len(align) > n {
+			align = align[:n]
+		}
+		for i := range rows {
+			if len(rows[i]) > n {
+				rows[i] = rows[i][:n]
+			}
+		}
+	}
+
+	widths := widthsFor(headers, rows)
+	if maxWidth > 0 {
+		for len(headers) > 2 && tableWidth(widths) > maxWidth {
+			trimTo(len(headers) - 1)
+			widths = widthsFor(headers, rows)
+		}
+		if len(headers) > 0 && tableWidth(widths) > maxWidth {
+			shrink := tableWidth(widths) - maxWidth
 			min0 := DisplayWidth(headers[0])
 			if min0 < 4 {
 				min0 = 4
@@ -110,13 +150,14 @@ func FitRankedTable(headers []string, rows [][]string, align []Align, style BoxS
 			}
 		}
 	}
+	cols := len(headers)
+	ell := style.Ellipsis
+	if ell == "" {
+		ell = "…"
+	}
 	clip := func(s string, i int) string {
-		if i == 0 && DisplayWidth(s) > widths[0] {
-			ell := style.Ellipsis
-			if ell == "" {
-				ell = "…"
-			}
-			return TruncateEllipsis(s, widths[0], ell)
+		if i < len(widths) && DisplayWidth(s) > widths[i] {
+			return TruncateEllipsis(s, widths[i], ell)
 		}
 		return s
 	}
@@ -127,9 +168,7 @@ func FitRankedTable(headers []string, rows [][]string, align []Align, style BoxS
 		return PadRight(s, widths[i])
 	}
 	join := func(cells []string) string {
-		parts := make([]string, len(cells))
-		copy(parts, cells)
-		return strings.Join(parts, "   ")
+		return strings.Join(cells, "   ")
 	}
 	head := make([]string, cols)
 	for i, h := range headers {

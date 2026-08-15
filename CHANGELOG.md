@@ -14,3 +14,6 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - ASCII rankings use `...`, not a Unicode ellipsis
 - `--today` keeps the offline note; a slice with requests but 0 tokens says so in plain language
 - Windows: `scripts/install.ps1`; Homebrew formula installs bash/zsh/fish completions
+- Narrow terminals drop ranking columns (回合, then 请求) instead of turning every name into `C...`
+- `--cursor` / `--tool` slices no longer foot-note an unused Trae login
+- Hide the model ranking when every model is 0.00 M (offline Cursor was a 40-row zero dump)

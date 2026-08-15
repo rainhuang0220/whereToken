@@ -41,7 +41,7 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteByte('\n')
 		b.WriteString(ranked("厂家", snap.Vendors, false, style, opt.Width))
 	}
-	if (snap.Scope != "" || !snap.ShowStreaks) && len(snap.Models) > 0 {
+	if (snap.Scope != "" || !snap.ShowStreaks) && anyPositiveTotal(snap.Models) {
 		b.WriteByte('\n')
 		b.WriteString(ranked("模型", snap.Models, false, style, opt.Width))
 	}
@@ -168,6 +168,15 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		out += fmt.Sprintf("+ %d 行\n", len(rows)-capN)
 	}
 	return out
+}
+
+func anyPositiveTotal(rows []Row) bool {
+	for _, r := range rows {
+		if r.Total != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func allSameTool(snap Snapshot) bool {

@@ -192,7 +192,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 }
 
 func pruneNotes(notes []string, f Filter, tools []Row) []string {
-	if !f.Today {
+	if !f.Today && f.Tool == "" && f.Vendor == "" && f.Model == "" {
 		return notes
 	}
 	keep := map[string]struct{}{}

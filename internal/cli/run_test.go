@@ -79,6 +79,20 @@ func TestRunOfflineAddsNote(t *testing.T) {
 	}
 }
 
+func TestRunCursorOmitsTraeNote(t *testing.T) {
+	app, out, errb := testApp([]string{"--cursor", "--quiet"})
+	res := fixtureResult()
+	res.Errors = []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}
+	app.Scan = func(adapter.Home) scan.Result { return res }
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "加密存储") {
+		t.Fatalf("cursor slice should not foot-note Trae login:\n%s", s)
+	}
+}
+
 func TestRunDefaultPrintsP0Table(t *testing.T) {
 	app, out, errb := testApp(nil)
 	if code := app.Run(); code != ExitOK {
