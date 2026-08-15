@@ -5,15 +5,23 @@ wheretoken \- local coding-agent token usage as a character table
 .B wheretoken
 [\fIflags\fR]
 .br
-.B wheretoken serve
+.B wheretoken
+[\fIflags\fR]
+.B serve
 [\fB--port\fR \fI8787\fR]
 .br
-.B wheretoken scan
+.B wheretoken
+[\fIflags\fR]
+.B scan
 [\fB--json\fR]
 .br
-.B wheretoken sources
+.B wheretoken
+[\fIflags\fR]
+.B sources
 .br
-.B wheretoken completion
+.B wheretoken
+[\fIflags\fR]
+.B completion
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Codex,
@@ -50,7 +58,9 @@ Slice by model id. User turns are per-tool, so that figure is
 in the table.
 .TP
 .B --json
-JSON on stdout. Tables stay the default.
+JSON on stdout (schema 1). Tables stay the default. See
+.B docs/cli-json.schema.json
+.
 .TP
 .B --ascii
 ASCII box drawing (also automatic on old Windows consoles).

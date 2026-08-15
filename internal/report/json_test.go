@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -215,5 +216,63 @@ func TestWriteJSONRowIncludesRawTotal(t *testing.T) {
 	v0 := vendors[0].(map[string]any)
 	if v0["total"].(float64) != 10_100_000 {
 		t.Fatalf("vendors[0].total=%v", v0["total"])
+	}
+}
+
+func TestWriteJSONSatisfiesPublishedSchema(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "cli-json.schema.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema struct {
+		Required   []string       `json:"required"`
+		Properties map[string]any `json:"properties"`
+		Defs       struct {
+			Row struct {
+				Required []string `json:"required"`
+			} `json:"row"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if len(schema.Required) < 8 {
+		t.Fatalf("schema required too small: %v", schema.Required)
+	}
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range schema.Required {
+		if _, ok := m[k]; !ok {
+			t.Errorf("missing required %q", k)
+		}
+	}
+	for k := range m {
+		if _, ok := schema.Properties[k]; !ok {
+			t.Errorf("undeclared key %q", k)
+		}
+	}
+	tools := m["tools"].([]any)
+	row := tools[0].(map[string]any)
+	for _, k := range schema.Defs.Row.Required {
+		if _, ok := row[k]; !ok {
+			t.Errorf("tools row missing %q", k)
+		}
 	}
 }

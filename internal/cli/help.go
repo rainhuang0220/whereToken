@@ -4,10 +4,10 @@ const helpText = `wheretoken — local coding-agent token usage, as a character 
 
 USAGE
   wheretoken [flags]
-  wheretoken serve [--port 8787]
-  wheretoken scan [--json]
-  wheretoken sources
-  wheretoken completion bash|zsh|fish|powershell
+  wheretoken [flags] serve [--port 8787]
+  wheretoken [flags] scan [--json]
+  wheretoken [flags] sources
+  wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
@@ -28,7 +28,7 @@ FLAGS
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
   --claude --kimi --codex --opencode --cursor --trae
                        same as --tool=that-id
-  --json               JSON on stdout (schema 1; tables stay the default)
+  --json               JSON on stdout (schema 1; docs/cli-json.schema.json)
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
@@ -63,6 +63,7 @@ EXAMPLES
   wheretoken --today --cursor
   wheretoken --tool=claude --json
   wheretoken --model=k3
+  wheretoken sources
   wheretoken --offline --quiet
   wheretoken serve
   wheretoken completion zsh

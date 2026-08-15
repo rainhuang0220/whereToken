@@ -36,6 +36,24 @@ archives:
 checksum:
   name_template: checksums.txt
 
+nfpms:
+  - id: default
+    maintainer: rainhuang0220 <iamrainhuang@163.com>
+    description: Local coding-agent token usage as a character table
+    homepage: https://github.com/rainhuang0220/whereToken
+    license: MIT
+    formats: [deb, rpm]
+    bindir: /usr/bin
+    contents:
+      - src: docs/wheretoken.1
+        dst: /usr/share/man/man1/wheretoken.1
+      - src: completions/wheretoken.bash
+        dst: /usr/share/bash-completion/completions/wheretoken
+      - src: completions/_wheretoken
+        dst: /usr/share/zsh/site-functions/_wheretoken
+      - src: completions/wheretoken.fish
+        dst: /usr/share/fish/vendor_completions.d/wheretoken.fish
+
 changelog:
   sort: asc
   filters:

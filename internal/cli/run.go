@@ -196,6 +196,10 @@ func (a *App) runScanJSON(home adapter.Home, quiet, offline bool) int {
 
 func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
 	res := a.doScan(home, quiet, offline)
+	if len(res.Roots) == 0 {
+		fmt.Fprintln(a.Stderr, "没有找到本机账本")
+		return ExitOK
+	}
 	for _, root := range res.Roots {
 		fmt.Fprintf(a.Stdout, "%s\t%s\n", root.ID, root.Path)
 	}

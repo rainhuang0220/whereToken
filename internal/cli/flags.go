@@ -135,7 +135,12 @@ func Parse(args []string) (Flags, error) {
 		return f, nil
 	}
 	if extra := fs.Args(); len(extra) > 0 {
-		return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[0])}
+		if err := applyTrailingCommand(&f, extra); err != nil {
+			return Flags{}, err
+		}
+		if f.Command == CommandCompletion || f.Help || f.Version {
+			return f, nil
+		}
 	}
 
 	var tools []string
@@ -184,6 +189,47 @@ func Parse(args []string) (Flags, error) {
 	}
 	f.Model = strings.TrimSpace(*modelFlag)
 	return f, nil
+}
+
+func applyTrailingCommand(f *Flags, extra []string) error {
+	switch extra[0] {
+	case "help":
+		if len(extra) > 1 {
+			return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
+		}
+		f.Help = true
+		return nil
+	case "version":
+		if len(extra) > 1 {
+			return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
+		}
+		f.Version = true
+		return nil
+	case "serve":
+		f.Command = CommandServe
+	case "scan":
+		f.Command = CommandScan
+		f.JSON = true
+	case "sources":
+		f.Command = CommandSources
+	case "completion":
+		f.Command = CommandCompletion
+		rest := extra[1:]
+		if len(rest) > 0 {
+			f.CompletionShell = rest[0]
+			rest = rest[1:]
+		}
+		if len(rest) > 0 {
+			return usageError{msg: fmt.Sprintf("unexpected extra argument %q", rest[0])}
+		}
+		return nil
+	default:
+		return usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", extra[0])}
+	}
+	if len(extra) > 1 {
+		return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
+	}
+	return nil
 }
 
 func unique(in []string) []string {

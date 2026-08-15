@@ -277,3 +277,44 @@ func TestDefaultHTTPClientTimeout(t *testing.T) {
 		t.Fatal("missing redirect lock")
 	}
 }
+
+func TestRestrictRedirectRejectsOtherHost(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "https://evil.example/steal", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (Adapter{}).restrictRedirect(req, nil); err == nil {
+		t.Fatal("expected reject")
+	}
+}
+
+func TestRestrictRedirectAllowsCursorAPI(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "https://api2.cursor.sh/v1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (Adapter{}).restrictRedirect(req, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRestrictRedirectHonorsAPIBase(t *testing.T) {
+	a := Adapter{APIBase: "https://cursor.test.example"}
+	req, err := http.NewRequest(http.MethodGet, "https://cursor.test.example/v1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.restrictRedirect(req, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAllowedURLRejectsLoopback(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/steal", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if (Adapter{}).allowedURL(req.URL) {
+		t.Fatal("loopback should be rejected unless it is APIBase")
+	}
+}

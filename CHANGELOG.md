@@ -29,3 +29,8 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - CI runs `gofmt -l`; `make fmt-check` does the same locally
 - `--help` examples include `--model=k3`
 - Man page EXAMPLES; fixture script asserts COLUMNS=40 still spells Kimi
+- Cursor and Trae HTTP clients have a 20s timeout contract test
+- Redirects off Cursor/Trae API hosts are rejected (loopback too, unless it is APIBase)
+- `wheretoken sources` with no ledgers keeps stdout empty and hints on stderr
+- Flags may precede a subcommand (`wheretoken --home DIR sources`)
+- `--json` publishes `docs/cli-json.schema.json`; goreleaser builds .deb/.rpm with man + completions

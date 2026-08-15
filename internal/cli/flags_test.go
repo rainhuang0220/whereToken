@@ -253,3 +253,46 @@ func TestUsageAlias(t *testing.T) {
 		t.Fatal("nil")
 	}
 }
+
+func TestParseFlagsBeforeServe(t *testing.T) {
+	f, err := Parse([]string{"--port", "8791", "serve"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandServe || f.Port != 8791 {
+		t.Fatalf("%+v", f)
+	}
+}
+
+func TestParseFlagsBeforeSources(t *testing.T) {
+	f, err := Parse([]string{"--home", "/tmp/fake-home", "--quiet", "sources"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandSources {
+		t.Fatalf("cmd=%q", f.Command)
+	}
+	if f.Home != "/tmp/fake-home" || !f.Quiet {
+		t.Fatalf("%+v", f)
+	}
+}
+
+func TestParseFlagsBeforeCompletion(t *testing.T) {
+	f, err := Parse([]string{"--quiet", "completion", "zsh"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandCompletion || f.CompletionShell != "zsh" || !f.Quiet {
+		t.Fatalf("%+v", f)
+	}
+}
+
+func TestParseFlagsBeforeUnknownCommandIsUsage(t *testing.T) {
+	_, err := Parse([]string{"--quiet", "plan"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("err=%v", err)
+	}
+}

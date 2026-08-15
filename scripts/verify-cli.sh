@@ -93,4 +93,9 @@ if echo "$narrow" | grep -q 'K\.\.\.'; then
   exit 1
 fi
 
+src_err="$("$dir/wheretoken" sources --home "$empty" --quiet 2>&1 >/dev/null)"
+echo "$src_err" | grep -q '没有找到本机账本'
+src_err2="$("$dir/wheretoken" --home "$empty" --quiet sources 2>&1 >/dev/null)"
+echo "$src_err2" | grep -q '没有找到本机账本'
+
 echo "ok fixture CLI"

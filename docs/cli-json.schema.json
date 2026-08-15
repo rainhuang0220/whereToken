@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rainhuang0220/whereToken/main/docs/cli-json.schema.json",
+  "title": "wheretoken --json",
+  "description": "Schema 1 stdout for `wheretoken --json`. Tables stay the default. No events, turns payloads, timestamps, or secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "period",
+    "total",
+    "total_m",
+    "hit_rate",
+    "hit_rate_text",
+    "requests",
+    "user_turns",
+    "tools",
+    "vendors",
+    "notes"
+  ],
+  "properties": {
+    "schema": { "type": "integer", "const": 1 },
+    "period": { "type": "string" },
+    "scope": { "type": "string" },
+    "total": { "type": "integer" },
+    "total_m": { "type": "string" },
+    "hit_rate": { "type": ["number", "null"] },
+    "hit_rate_text": { "type": "string" },
+    "max_streak_days": { "type": "integer", "minimum": 0 },
+    "current_streak_days": { "type": "integer", "minimum": 0 },
+    "requests": { "type": "integer", "minimum": 0 },
+    "user_turns": { "type": "integer", "minimum": 0 },
+    "hide_turns": { "type": "boolean" },
+    "last_7d": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "tools": { "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "vendors": { "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "models": { "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "total", "total_m", "hit_rate_text", "requests"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "total": { "type": "integer" },
+        "total_m": { "type": "string" },
+        "share": { "type": "string" },
+        "hit_rate_text": { "type": "string" },
+        "requests": { "type": "integer", "minimum": 0 },
+        "user_turns": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
