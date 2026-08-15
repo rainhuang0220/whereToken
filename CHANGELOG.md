@@ -20,3 +20,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Redact `openai-api-key` / `anthropic-api-key` headers the same way as JWTs
 - CI copies pin GitHub Actions to commit SHAs (checkout v4.2.2, setup-go v5.5.0, setup-node v4.4.0)
 - `install.sh` / `install.ps1` / npm postinstall verify `checksums.txt` (SHA-256) before installing a GitHub Release binary
+- `wheretoken scan --json` and `/api/scan` redact JWTs in error strings; serve sends `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`

@@ -17,6 +17,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/report"
 )
 
 type Result struct {
@@ -220,12 +221,24 @@ func viewWithError(s metric.Slice, errs []string) metric.SliceView {
 	v := metric.View(s)
 	prefix := s.ID + ": "
 	for _, msg := range errs {
+		msg = report.Redact(msg)
 		if strings.HasPrefix(msg, prefix) {
 			v.Error = strings.TrimPrefix(msg, prefix)
 			break
 		}
 	}
 	return v
+}
+
+func redactErrors(errs []string) []string {
+	if errs == nil {
+		return []string{}
+	}
+	out := make([]string, len(errs))
+	for i, e := range errs {
+		out[i] = report.Redact(e)
+	}
+	return out
 }
 
 func buildSummaryJSON(r Result) summaryJSON {
@@ -237,7 +250,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 			BySource: map[string]metric.DrillTablesView{},
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
-		Errors: r.Errors,
+		Errors: redactErrors(r.Errors),
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

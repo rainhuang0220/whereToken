@@ -352,6 +352,26 @@ func TestMarshalSummaryPutsEncryptedTraeErrorOnSourceRow(t *testing.T) {
 	}
 }
 
+func TestMarshalSummaryRedactsJWTInErrors(t *testing.T) {
+	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abc"
+	raw, err := MarshalSummary(Result{
+		Errors: []string{"trae: bearer " + jwt},
+		Summary: metric.Summary{
+			BySource: []metric.Slice{{ID: "trae", Label: "Trae"}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(raw)
+	if strings.Contains(s, "eyJ") || strings.Contains(s, jwt) {
+		t.Fatalf("scan JSON leaked JWT:\n%s", s)
+	}
+	if !strings.Contains(s, "[redacted]") {
+		t.Fatalf("expected redaction:\n%s", s)
+	}
+}
+
 func writeScanCursorDB(t *testing.T, path string) {
 	t.Helper()
 	db, err := sql.Open("sqlite", path)

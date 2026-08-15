@@ -122,6 +122,22 @@ func TestSummaryIncludesCalendar(t *testing.T) {
 	}
 }
 
+func TestMuxSetsNoSniffAndDenyFrame(t *testing.T) {
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.Header.Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("nosniff=%q", resp.Header.Get("X-Content-Type-Options"))
+	}
+	if resp.Header.Get("X-Frame-Options") != "DENY" {
+		t.Fatalf("frame=%q", resp.Header.Get("X-Frame-Options"))
+	}
+}
+
 func TestListenRefusesNonLocalhost(t *testing.T) {
 	err := Listen("0.0.0.0:8787", testhome.New(t.TempDir()))
 	if err == nil {

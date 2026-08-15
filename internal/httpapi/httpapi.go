@@ -56,7 +56,16 @@ func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		io.WriteString(w, "whereToken")
 	})
-	return mux
+	return withSafeHeaders(mux)
+}
+
+func withSafeHeaders(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		h.ServeHTTP(w, r)
+	})
 }
 
 func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
