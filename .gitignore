@@ -1,0 +1,33 @@
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# runtime / local caches
+data/
+.wheretoken/
+*.db
+*.db-shm
+*.db-wal
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+auth.json
+credentials.json
+
+# language artifacts (future)
+node_modules/
+dist/
+dist-ssr/
+coverage/
+bin/
+tmp/
+vendor/
+
+# OS / packaging
+*.dmg
+*.AppImage
+*.exe
+Thumbs.db
