@@ -41,27 +41,33 @@ func KPIBox(cells [2][3]KPI, style BoxStyle) string {
 			colW[c] = 12
 		}
 	}
-	cell := func(text string, w int) string {
+	cellLeft := func(text string, w int) string {
 		return " " + PadRight(text, w-2) + " "
+	}
+	cellRight := func(text string, w int) string {
+		return " " + PadLeft(text, w-2) + " "
 	}
 	hline := func(left, mid, right string) string {
 		return left + strings.Repeat(style.H, colW[0]) + mid + strings.Repeat(style.H, colW[1]) + mid + strings.Repeat(style.H, colW[2]) + right
 	}
-	row := func(a, b, c string) string {
-		return style.V + cell(a, colW[0]) + style.V + cell(b, colW[1]) + style.V + cell(c, colW[2]) + style.V
+	rowLeft := func(a, b, c string) string {
+		return style.V + cellLeft(a, colW[0]) + style.V + cellLeft(b, colW[1]) + style.V + cellLeft(c, colW[2]) + style.V
+	}
+	rowRight := func(a, b, c string) string {
+		return style.V + cellRight(a, colW[0]) + style.V + cellRight(b, colW[1]) + style.V + cellRight(c, colW[2]) + style.V
 	}
 	var b strings.Builder
 	b.WriteString(hline(style.TL, style.TJ, style.TR))
 	b.WriteByte('\n')
-	b.WriteString(row(cells[0][0].Label, cells[0][1].Label, cells[0][2].Label))
+	b.WriteString(rowLeft(cells[0][0].Label, cells[0][1].Label, cells[0][2].Label))
 	b.WriteByte('\n')
-	b.WriteString(row(cells[0][0].Value, cells[0][1].Value, cells[0][2].Value))
+	b.WriteString(rowRight(cells[0][0].Value, cells[0][1].Value, cells[0][2].Value))
 	b.WriteByte('\n')
 	b.WriteString(hline(style.LJ, style.X, style.RJ))
 	b.WriteByte('\n')
-	b.WriteString(row(cells[1][0].Label, cells[1][1].Label, cells[1][2].Label))
+	b.WriteString(rowLeft(cells[1][0].Label, cells[1][1].Label, cells[1][2].Label))
 	b.WriteByte('\n')
-	b.WriteString(row(cells[1][0].Value, cells[1][1].Value, cells[1][2].Value))
+	b.WriteString(rowRight(cells[1][0].Value, cells[1][1].Value, cells[1][2].Value))
 	b.WriteByte('\n')
 	b.WriteString(hline(style.BL, style.BJ, style.BR))
 	b.WriteByte('\n')

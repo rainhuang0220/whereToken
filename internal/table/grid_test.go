@@ -24,6 +24,10 @@ func TestKPIBoxUnicodeThreeByTwo(t *testing.T) {
 	if !strings.Contains(lines[2], "360.11 M") || !strings.Contains(lines[2], "70.2%") {
 		t.Fatalf("values %q", lines[2])
 	}
+	idx := strings.Index(lines[2], "360.11 M")
+	if idx < 1 || lines[2][idx-1] != ' ' {
+		t.Fatalf("value not right-aligned: %q", lines[2])
+	}
 	w := DisplayWidth(lines[0])
 	for i, line := range lines {
 		if DisplayWidth(line) != w {

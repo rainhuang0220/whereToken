@@ -11,6 +11,7 @@
     "test": "node --test lib/platform.test.js"
   },
   "files": [
+    "LICENSE",
     "bin/wheretoken",
     "install.js",
     "lib/platform.js"
@@ -24,10 +25,23 @@
     "url": "https://github.com/rainhuang0220/whereToken/issues"
   },
   "homepage": "https://github.com/rainhuang0220/whereToken#readme",
-  "os": ["darwin", "linux", "win32"],
-  "cpu": ["x64", "arm64"],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "engines": {
     "node": ">=18"
   },
-  "keywords": ["tokens", "cli", "claude", "cursor", "codex"]
+  "keywords": [
+    "tokens",
+    "cli",
+    "claude",
+    "cursor",
+    "codex"
+  ]
 }
