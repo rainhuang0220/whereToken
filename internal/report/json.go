@@ -17,6 +17,7 @@ type jsonRow struct {
 }
 
 type jsonSnap struct {
+	Schema            int       `json:"schema"`
 	Period            string    `json:"period"`
 	Scope             string    `json:"scope,omitempty"`
 	Total             int64     `json:"total"`
@@ -36,6 +37,7 @@ type jsonSnap struct {
 
 func WriteJSON(w io.Writer, snap Snapshot) error {
 	out := jsonSnap{
+		Schema:      1,
 		Period:      snap.Period,
 		Scope:       snap.Scope,
 		Total:       snap.Total,

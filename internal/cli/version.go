@@ -2,29 +2,36 @@ package cli
 
 import (
 	"runtime/debug"
-	"testing"
+	"strings"
 )
 
 func ResolveVersion(ldflag string) string {
 	if ldflag != "" && ldflag != "dev" {
-		return ldflag
+		return tidyVersion(ldflag)
 	}
 	if info, ok := debug.ReadBuildInfo(); ok {
 		if v := info.Main.Version; v != "" && v != "(devel)" {
-			return v
+			return tidyVersion(v)
 		}
 	}
 	if ldflag == "" {
 		return "dev"
 	}
-	return ldflag
+	return "dev"
 }
 
-func TestResolveVersionPrefersLdflag(t *testing.T) {
-	if got := ResolveVersion("1.2.3"); got != "1.2.3" {
-		t.Fatal(got)
+func tidyVersion(v string) string {
+	v = strings.TrimSpace(v)
+	v = strings.TrimSuffix(v, "+dirty")
+	if strings.HasPrefix(v, "v0.0.0-") {
+		i := strings.LastIndex(v, "-")
+		if i >= 0 && i+1 < len(v) {
+			rev := v[i+1:]
+			if len(rev) > 7 {
+				rev = rev[:7]
+			}
+			return "dev-" + rev
+		}
 	}
-	if got := ResolveVersion(""); got == "" {
-		t.Fatal("empty")
-	}
+	return v
 }

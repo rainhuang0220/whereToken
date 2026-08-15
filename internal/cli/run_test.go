@@ -261,6 +261,9 @@ func TestRunProgressOnStderrWhenTTY(t *testing.T) {
 	if !strings.Contains(errb.String(), "正在读") {
 		t.Fatalf("stderr=%s", errb.String())
 	}
+	if !strings.Contains(errb.String(), "\r") {
+		t.Fatal("progress should reuse one stderr line")
+	}
 	if strings.Contains(out.String(), "正在读") {
 		t.Fatal("progress leaked to stdout")
 	}

@@ -17,7 +17,8 @@ INSTALL
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,
-requests, user turns. Then a ranking of tools and vendors.
+requests, user turns. Then a 7-day spark and a ranking of tools and vendors
+(with share of total). Degraded Trae/Cursor logins become footnotes.
 
 FLAGS
   --today              only today (local timezone; weeks start Monday)

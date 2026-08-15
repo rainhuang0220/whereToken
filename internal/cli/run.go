@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -109,11 +110,24 @@ func (a *App) doScan(home adapter.Home, quiet bool) scan.Result {
 	if quiet || !a.StderrTTY {
 		return scan.Run(home, scan.AllAdapters())
 	}
+	width := 0
 	return scan.RunWithProgress(home, scan.AllAdapters(), func(p scan.Progress) {
 		if p.Status != scan.ProgressReading {
+			if p.Index >= p.Total && width > 0 {
+				fmt.Fprintf(a.Stderr, "\r%s\r", strings.Repeat(" ", width))
+				width = 0
+			}
 			return
 		}
-		fmt.Fprintln(a.Stderr, p.Label)
+		line := p.Label
+		pad := width - table.DisplayWidth(line)
+		if pad < 0 {
+			pad = 0
+		}
+		fmt.Fprintf(a.Stderr, "\r%s%s", line, strings.Repeat(" ", pad))
+		if w := table.DisplayWidth(line); w > width {
+			width = w
+		}
 	})
 }
 

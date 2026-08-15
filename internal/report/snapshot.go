@@ -161,7 +161,74 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 			snap.Notes = append(snap.Notes, msg)
 		}
 	}
+	if (snap.Scope != "" || !snap.ShowStreaks) && tokenlessModels(snap.Models) {
+		msg := "有的模型只有请求次数、账本没写 token（Cursor 会话标题常这样）"
+		dup := false
+		for _, n := range snap.Notes {
+			if n == msg {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			snap.Notes = append(snap.Notes, msg)
+		}
+	}
+	snap.Notes = pruneNotes(snap.Notes, f, snap.Tools)
 	return snap, nil
+}
+
+func pruneNotes(notes []string, f Filter, tools []Row) []string {
+	if !f.Today {
+		return notes
+	}
+	keep := map[string]struct{}{}
+	add := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return
+		}
+		keep[s] = struct{}{}
+		keep[strings.ToLower(s)] = struct{}{}
+	}
+	add(f.Tool)
+	if f.Tool != "" {
+		add(metric.SourceLabel(f.Tool))
+	}
+	for _, r := range tools {
+		add(r.ID)
+		add(r.Label)
+	}
+	var out []string
+	for _, n := range notes {
+		label, _, ok := strings.Cut(n, " · ")
+		if !ok {
+			out = append(out, n)
+			continue
+		}
+		if strings.Contains(label, "厂家") {
+			out = append(out, n)
+			continue
+		}
+		if _, hit := keep[label]; hit {
+			out = append(out, n)
+			continue
+		}
+		if _, hit := keep[strings.ToLower(label)]; hit {
+			out = append(out, n)
+			continue
+		}
+	}
+	return out
+}
+
+func tokenlessModels(rows []Row) bool {
+	for _, r := range rows {
+		if r.Total == 0 && r.Requests > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func rowFrom(s metric.Slice) Row {

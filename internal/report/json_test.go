@@ -34,6 +34,9 @@ func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	if m["total_m"] != "11.68 M" {
 		t.Fatalf("total_m=%v", m["total_m"])
 	}
+	if m["schema"].(float64) != 1 {
+		t.Fatalf("schema=%v", m["schema"])
+	}
 	if m["hit_rate_text"] != "85.2%" {
 		t.Fatalf("hit=%v", m["hit_rate_text"])
 	}

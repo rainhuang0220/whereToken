@@ -370,3 +370,59 @@ func TestAggregateConservation(t *testing.T) {
 		t.Fatalf("total=%d", sum.All.Total())
 	}
 }
+
+func TestTodayDropsUnrelatedLoginNotes(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "Trae") {
+			t.Fatalf("today should not foot-note unused Trae: %v", snap.Notes)
+		}
+	}
+}
+
+func TestTodayKeepsTraeNoteWhenSliced(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}, Filter{Today: true, Tool: "trae"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "Trae") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("notes=%v", snap.Notes)
+	}
+}
+
+func TestTokenlessModelGetsFootnote(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	events = append(events, event.UsageEvent{
+		Source: "claude", Vendor: "anthropic", Model: "chat-title", RequestID: "z",
+		Timestamp: ts(loc, 2026, 8, 16, 13), Quality: event.QualityAuthoritative,
+	})
+	snap, err := Build(events, turns, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "没写 token") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("notes=%v models=%+v", snap.Notes, snap.Models)
+	}
+}

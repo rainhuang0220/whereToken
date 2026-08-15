@@ -1,0 +1,92 @@
+.TH WHERETOKEN 1 "August 2026" "whereToken" "User Commands"
+.SH NAME
+wheretoken \- local coding-agent token usage as a character table
+.SH SYNOPSIS
+.B wheretoken
+[\fIflags\fR]
+.br
+.B wheretoken serve
+[\fB--port\fR \fI8787\fR]
+.br
+.B wheretoken scan
+[\fB--json\fR]
+.br
+.B wheretoken sources
+.br
+.B wheretoken completion
+\fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
+.SH DESCRIPTION
+Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Codex,
+OpenCode, Cursor, Trae) and prints six figures since records began: total tokens
+in millions (M), cache hit rate, max consecutive-use streak, current streak,
+request count, and user-turn count. Then rankings by tool and vendor.
+.PP
+Token math is
+.B total = miss + cache_read + cache_create + output
+and
+.B hit_rate = cache_read / (cache_read + miss + cache_create)
+(hit rate ignores output).
+.PP
+The dashboard
+.B wheretoken serve
+binds
+.B 127.0.0.1
+only.
+.SH OPTIONS
+.TP
+.B --today
+Only today in the local timezone. Weeks start Monday.
+.TP
+.B --tool \fINAME\fR
+Slice by tool. Also
+.BR --claude ", " --kimi ", " --codex ", " --opencode ", " --cursor ", " --trae .
+.TP
+.B --vendor \fINAME\fR
+Slice by vendor (anthropic, moonshot, openai, \.\.\.).
+.TP
+.B --model \fINAME\fR
+Slice by model id.
+.TP
+.B --json
+JSON on stdout. Tables stay the default.
+.TP
+.B --ascii
+ASCII box drawing (also automatic on old Windows consoles).
+.TP
+.B --no-color
+No ANSI. Same as
+.BR NO_COLOR .
+.TP
+.B -q ", " --quiet
+No scan-progress lines on stderr.
+.TP
+.B --home \fIDIR\fR
+Fake home directory (tests).
+.SH EXIT STATUS
+.TP
+.B 0
+Success, including zero data or a degraded Trae/Cursor login.
+.TP
+.B 1
+Runtime failure.
+.TP
+.B 2
+Usage error (unknown command, tool, vendor, or model).
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+Disable ANSI.
+.TP
+.B WHERETOKEN_ASCII
+ASCII box drawing.
+.TP
+.B WHERETOKEN_HOME
+Override home (same idea as
+.BR --home ).
+.TP
+.B WHERETOKEN_EXTRA_ROOTS
+Extra homes (Unix :, Windows ;, or commas).
+.SH PRIVACY
+Read-only local files. No telemetry. Never prints JWTs or access tokens.
+.SH SEE ALSO
+https://github.com/rainhuang0220/whereToken

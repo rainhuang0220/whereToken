@@ -33,6 +33,14 @@ func TestRedactAccessTokenQuery(t *testing.T) {
 	}
 }
 
+func TestRedactAuthorizationHeader(t *testing.T) {
+	in := "cursor: Authorization: Bearer abc.def.ghi leaked"
+	out := Redact(in)
+	if strings.Contains(out, "abc.def.ghi") || strings.Contains(strings.ToLower(out), "bearer abc") {
+		t.Fatalf("leaked: %q", out)
+	}
+}
+
 func TestRedactLeavesNormalErrors(t *testing.T) {
 	in := "trae: 登录态在加密存储中，没有可读的 JWT 文件"
 	if got := Redact(in); got != in {
