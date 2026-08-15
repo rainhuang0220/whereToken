@@ -36,28 +36,9 @@ func TestSummaryMatchesScan(t *testing.T) {
 	srv := httptest.NewServer(NewMux(home))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/api/summary")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status=%d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var payload struct {
-		All struct {
-			Total int64 `json:"total"`
-		} `json:"all"`
-	}
-	if err := json.Unmarshal(body, &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload.All.Total != want.Summary.All.Total() {
-		t.Fatalf("http total=%d scan total=%d", payload.All.Total, want.Summary.All.Total())
+	posted := postScanJSON(t, srv)
+	if posted.All.Total != want.Summary.All.Total() {
+		t.Fatalf("http total=%d scan total=%d", posted.All.Total, want.Summary.All.Total())
 	}
 }
 
@@ -80,11 +61,19 @@ func TestSummaryIncludesCalendar(t *testing.T) {
 
 	srv := httptest.NewServer(NewMux(testhome.New(dir)))
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/api/summary")
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

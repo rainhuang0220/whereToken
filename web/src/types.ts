@@ -37,6 +37,7 @@ export type SourceVendorView = {
 }
 
 export type SummaryPayload = {
+  scanned_at?: string
   all: SliceView
   by_source: SliceView[]
   by_vendor: SliceView[]

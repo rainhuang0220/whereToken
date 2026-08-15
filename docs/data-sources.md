@@ -302,7 +302,7 @@ CN 主机 `trae-api-cn.mchost.guru`；国际版路径不含 `CN` 时用 `coresg-
 | user_turns | 每个 billing `session_id` 一次（Trae 把该字段当 user message id） |
 | 请求 | 对应 API 事件数（无本地 bubble 可双计） |
 
-**缺登录态 / 登录态失效：** `errors[]` 含 `trae: 未找到本机登录态` 或 `trae: 本机登录态已失效`；token 列为 **degraded** 且 0，不编造。重新在 Trae 里登录后即可（whereToken 不接收粘贴的 JWT）。
+**缺登录态 / 登录态失效：** `errors[]` 含 `trae: 未找到本机登录态` 或 `trae: 本机登录态已失效`；token 列为 **degraded** 且 0，不编造。在 Trae 里重新登录后点 whereToken 的 **刷新**（不要只重载浏览器）。whereToken 不接收粘贴的 JWT。
 
 ---
 

@@ -50,3 +50,33 @@ describe('home rail copy', () => {
     expect(home).not.toMatch(/packs/)
   })
 })
+
+describe('firing observatory', () => {
+  const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')
+  const store = readFileSync(join(SRC, 'stores/summary.ts'), 'utf8')
+  const api = readFileSync(join(SRC, 'api.ts'), 'utf8')
+  const css = readFileSync(join(SRC, 'styles.css'), 'utf8')
+
+  it('does not wipe summary to empty when 刷新 starts', () => {
+    expect(store).not.toMatch(/this\.payload\s*=\s*null/)
+    expect(store).toMatch(/if\s*\(\s*this\.loading\s*\)/)
+    expect(api).toMatch(/\/api\/scan/)
+    expect(home).toMatch(/class="hearth"/)
+    expect(home).toMatch(/FiringVeil/)
+    expect(home).toMatch(/<KilnWall/)
+    const veil = readFileSync(join(SRC, 'components/FiringVeil.vue'), 'utf8')
+    expect(veil).toMatch(/aria-live="polite"/)
+    expect(veil).toMatch(/class="firing-veil"/)
+  })
+
+  it('keeps the kiln in the hearth and charges with theme embers, static under reduced motion', () => {
+    expect(css).toMatch(/\.firing-veil/)
+    expect(css).toMatch(/\.firing-charge/)
+    expect(css).toMatch(/--ember-/)
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/)
+    const reduced = css.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]+?)\n\}/)
+    expect(reduced, 'missing reduced-motion block').toBeTruthy()
+    expect(reduced![1]).toMatch(/\.firing-charge/)
+    expect(home).toMatch(/KilnWall/)
+  })
+})

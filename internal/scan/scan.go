@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/claude"
@@ -19,9 +20,28 @@ import (
 )
 
 type Result struct {
-	Summary metric.Summary
-	Roots   []adapter.SourceRoot
-	Errors  []string
+	Summary   metric.Summary
+	Roots     []adapter.SourceRoot
+	Errors    []string
+	ScannedAt time.Time
+}
+
+const (
+	ProgressReading = "reading"
+	ProgressDone    = "done"
+	ProgressError   = "error"
+)
+
+type Progress struct {
+	Source string `json:"source"`
+	Label  string `json:"label"`
+	Index  int    `json:"index"`
+	Total  int    `json:"total"`
+	Status string `json:"status"`
+}
+
+func readingLabel(id string) string {
+	return "正在读 " + metric.SourceLabel(id) + "…"
 }
 
 func AllAdapters() []adapter.Adapter {
@@ -55,14 +75,29 @@ func extraHomes() []adapter.Home {
 }
 
 func Run(home adapter.Home, adapters []adapter.Adapter) Result {
+	return RunWithProgress(home, adapters, nil)
+}
+
+func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(Progress)) Result {
 	var events []event.UsageEvent
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
 	var errs []string
 	seenPath := map[string]struct{}{}
 	homes := append([]adapter.Home{home}, extraHomes()...)
-	for _, h := range homes {
-		for _, a := range adapters {
+	total := len(adapters)
+	for i, a := range adapters {
+		if report != nil {
+			report(Progress{
+				Source: a.ID(),
+				Label:  readingLabel(a.ID()),
+				Index:  i + 1,
+				Total:  total,
+				Status: ProgressReading,
+			})
+		}
+		hadErr := false
+		for _, h := range homes {
 			found := a.Discover(h)
 			for _, root := range found {
 				if _, ok := seenPath[root.Path]; ok {
@@ -76,9 +111,23 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 					turns = append(turns, te)
 				})
 				if err != nil {
+					hadErr = true
 					errs = append(errs, a.ID()+": "+err.Error())
 				}
 			}
+		}
+		if report != nil {
+			st := ProgressDone
+			if hadErr {
+				st = ProgressError
+			}
+			report(Progress{
+				Source: a.ID(),
+				Label:  readingLabel(a.ID()),
+				Index:  i + 1,
+				Total:  total,
+				Status: st,
+			})
 		}
 	}
 	if errs == nil {
@@ -117,9 +166,10 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 		})
 	}
 	return Result{
-		Summary: sum,
-		Roots:   roots,
-		Errors:  errs,
+		Summary:   sum,
+		Roots:     roots,
+		Errors:    errs,
+		ScannedAt: time.Now(),
 	}
 }
 
@@ -148,6 +198,7 @@ type drillJSON struct {
 }
 
 type summaryJSON struct {
+	ScannedAt      string             `json:"scanned_at,omitempty"`
 	All            metric.SliceView   `json:"all"`
 	BySource       []metric.SliceView `json:"by_source"`
 	ByVendor       []metric.SliceView `json:"by_vendor"`
@@ -157,7 +208,7 @@ type summaryJSON struct {
 	Errors         []string           `json:"errors"`
 }
 
-func EncodeSummary(w io.Writer, r Result) error {
+func buildSummaryJSON(r Result) summaryJSON {
 	out := summaryJSON{
 		All:      metric.View(r.Summary.All),
 		Calendar: r.Summary.Calendar,
@@ -167,6 +218,9 @@ func EncodeSummary(w io.Writer, r Result) error {
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
 		Errors: r.Errors,
+	}
+	if !r.ScannedAt.IsZero() {
+		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)
 	}
 	if out.Errors == nil {
 		out.Errors = []string{}
@@ -211,7 +265,15 @@ func EncodeSummary(w io.Writer, r Result) error {
 	for id, pack := range r.Summary.DrillByVendor {
 		out.Drill.ByVendor[id] = metric.ViewDrill(pack)
 	}
+	return out
+}
+
+func MarshalSummary(r Result) ([]byte, error) {
+	return json.Marshal(buildSummaryJSON(r))
+}
+
+func EncodeSummary(w io.Writer, r Result) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	return enc.Encode(out)
+	return enc.Encode(buildSummaryJSON(r))
 }

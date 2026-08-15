@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -9,24 +10,29 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
+type server struct {
+	home     adapter.Home
+	adapters []adapter.Adapter
+	mu       sync.Mutex
+	last     *scan.Result
+	scanning bool
+}
+
 func NewMux(home adapter.Home) http.Handler {
+	return NewMuxWith(home, scan.AllAdapters())
+}
+
+func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
+	s := &server{home: home, adapters: adapters}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/summary", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		res := scan.Run(home, scan.AllAdapters())
-		if err := scan.EncodeSummary(w, res); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
+	mux.HandleFunc("/api/summary", s.getSummary)
+	mux.HandleFunc("/api/scan", s.postScan)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if dir := webDist(); dir != "" {
 			serveWeb(w, r, dir)
@@ -36,6 +42,107 @@ func NewMux(home adapter.Home) http.Handler {
 		io.WriteString(w, "whereToken")
 	})
 	return mux
+}
+
+func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	s.mu.Lock()
+	last := s.last
+	s.mu.Unlock()
+	if last == nil {
+		if err := scan.EncodeSummary(w, scan.Result{Errors: []string{}}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	if err := scan.EncodeSummary(w, *last); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.beginScan() {
+		http.Error(w, "煅烧进行中", http.StatusConflict)
+		return
+	}
+	defer s.endScan()
+
+	stream := strings.Contains(r.Header.Get("Accept"), "text/event-stream")
+	var flush http.Flusher
+	if stream {
+		fl, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "stream unsupported", http.StatusInternalServerError)
+			return
+		}
+		flush = fl
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Connection", "keep-alive")
+		w.WriteHeader(http.StatusOK)
+		flush.Flush()
+	}
+
+	var report func(scan.Progress)
+	if stream {
+		report = func(p scan.Progress) {
+			raw, err := json.Marshal(p)
+			if err != nil {
+				return
+			}
+			writeSSE(w, flush, "progress", string(raw))
+		}
+	}
+	res := scan.RunWithProgress(s.home, s.adapters, report)
+	s.mu.Lock()
+	cp := res
+	s.last = &cp
+	s.mu.Unlock()
+
+	if stream {
+		raw, err := scan.MarshalSummary(res)
+		if err != nil {
+			writeSSE(w, flush, "error", `{"error":"encode"}`)
+			return
+		}
+		writeSSE(w, flush, "complete", string(raw))
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err := scan.EncodeSummary(w, res); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func writeSSE(w http.ResponseWriter, flush http.Flusher, event, data string) {
+	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, data)
+	flush.Flush()
+}
+
+func (s *server) beginScan() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.scanning {
+		return false
+	}
+	s.scanning = true
+	return true
+}
+
+func (s *server) endScan() {
+	s.mu.Lock()
+	s.scanning = false
+	s.mu.Unlock()
 }
 
 func serveWeb(w http.ResponseWriter, r *http.Request, dir string) {
