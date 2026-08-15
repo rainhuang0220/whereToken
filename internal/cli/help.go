@@ -62,6 +62,7 @@ EXAMPLES
   wheretoken --cursor
   wheretoken --today --cursor
   wheretoken --tool=claude --json
+  wheretoken --model=k3
   wheretoken --offline --quiet
   wheretoken serve
   wheretoken completion zsh
