@@ -104,3 +104,48 @@ func TestBuildCalendarCurrentStreakIncludesTodayWhenUsed(t *testing.T) {
 		t.Fatalf("current=%d", cal.All.Stats.CurrentStreak)
 	}
 }
+
+func TestBuildCalendarVendorMinimaxUsesOnlyThoseEvents(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", RequestID: "a", Timestamp: ts(loc, 2026, 8, 15, 10, 0), Miss: 100},
+		{Source: "claude", Vendor: "minimax", RequestID: "b", Timestamp: ts(loc, 2026, 8, 15, 11, 0), Miss: 40},
+	}
+	cal := BuildCalendar(events, loc, now)
+	mm := cal.ByVendor["minimax"]
+	if len(mm.Days) != 1 || mm.Days[0].Total != 40 {
+		t.Fatalf("minimax days=%v", mm.Days)
+	}
+	if mm.Stats.PeakTotal != 40 {
+		t.Fatalf("minimax peak=%d", mm.Stats.PeakTotal)
+	}
+	var all int64
+	for _, d := range cal.All.Days {
+		all += d.Total
+	}
+	if all != 140 {
+		t.Fatalf("all=%d", all)
+	}
+}
+
+func TestBuildCalendarLevelsUseSeriesQuartilesNotGlobalMax(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", RequestID: "big", Timestamp: ts(loc, 2026, 8, 10, 10, 0), Miss: 1_000_000},
+		{Source: "opencode", Vendor: "anthropic", RequestID: "s1", Timestamp: ts(loc, 2026, 8, 11, 10, 0), Miss: 10},
+		{Source: "opencode", Vendor: "anthropic", RequestID: "s2", Timestamp: ts(loc, 2026, 8, 12, 10, 0), Miss: 10},
+		{Source: "opencode", Vendor: "anthropic", RequestID: "s3", Timestamp: ts(loc, 2026, 8, 13, 10, 0), Miss: 10},
+	}
+	cal := BuildCalendar(events, loc, now)
+	oc := cal.BySource["opencode"]
+	if len(oc.Days) != 3 {
+		t.Fatalf("opencode days=%d", len(oc.Days))
+	}
+	for _, d := range oc.Days {
+		if d.Level != 2 {
+			t.Fatalf("equal small days should be mid level, got %d on %s", d.Level, d.Date)
+		}
+	}
+}

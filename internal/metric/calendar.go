@@ -48,19 +48,95 @@ func BuildCalendar(events []event.UsageEvent, loc *time.Location, now time.Time)
 	}
 	weekStart := today.AddDate(0, 0, -(weekday - 1))
 	from := weekStart.AddDate(0, 0, -52*7)
-	return Calendar{
+	cal := Calendar{
 		WeekStart:  "monday",
 		Timezone:   loc.String(),
 		WindowFrom: from.Format("2006-01-02"),
 		WindowTo:   today.Format("2006-01-02"),
-		All:        finishSeries(bucketDays(events, loc), today),
+		All:        finishSeries(bucketDays(events, loc, nil), today),
 		BySource:   map[string]CalendarSeries{},
 		ByVendor:   map[string]CalendarSeries{},
 	}
+	sources := map[string]struct{}{}
+	vendors := map[string]struct{}{}
+	for _, e := range events {
+		sources[e.Source] = struct{}{}
+		vendors[e.Vendor] = struct{}{}
+	}
+	for id := range sources {
+		src := id
+		cal.BySource[id] = finishSeries(bucketDays(events, loc, func(e event.UsageEvent) bool { return e.Source == src }), today)
+	}
+	for id := range vendors {
+		vend := id
+		cal.ByVendor[id] = finishSeries(bucketDays(events, loc, func(e event.UsageEvent) bool { return e.Vendor == vend }), today)
+	}
+	return cal
 }
 
 func finishSeries(days []Day, today time.Time) CalendarSeries {
+	days = assignLevels(days)
 	return CalendarSeries{Days: days, Stats: computeStats(days, today)}
+}
+
+func assignLevels(days []Day) []Day {
+	var nonzero []int64
+	for _, d := range days {
+		if d.Total > 0 {
+			nonzero = append(nonzero, d.Total)
+		}
+	}
+	sort.Slice(nonzero, func(i, j int) bool { return nonzero[i] < nonzero[j] })
+	for i := range days {
+		days[i].Level = intensityLevel(days[i].Total, nonzero)
+	}
+	return days
+}
+
+func intensityLevel(total int64, nonzero []int64) int {
+	if total <= 0 || len(nonzero) == 0 {
+		return 0
+	}
+	n := len(nonzero)
+	q1 := quantileNearest(nonzero, 0.25)
+	q2 := quantileNearest(nonzero, 0.50)
+	q3 := quantileNearest(nonzero, 0.75)
+	if q1 == nonzero[n-1] {
+		return 2
+	}
+	switch {
+	case total <= q1:
+		return 1
+	case total <= q2:
+		return 2
+	case total <= q3:
+		return 3
+	default:
+		return 4
+	}
+}
+
+func quantileNearest(sorted []int64, p float64) int64 {
+	n := len(sorted)
+	if n == 0 {
+		return 0
+	}
+	idx := int(ceilFloat(float64(n)*p)) - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= n {
+		idx = n - 1
+	}
+	return sorted[idx]
+}
+
+func ceilFloat(x float64) int {
+	i := int(x)
+	if float64(i) < x {
+		return i + 1
+	}
+	return i
 }
 
 func computeStats(days []Day, today time.Time) CalendarStats {
@@ -130,10 +206,13 @@ func truncateDay(t time.Time) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
 }
 
-func bucketDays(events []event.UsageEvent, loc *time.Location) []Day {
+func bucketDays(events []event.UsageEvent, loc *time.Location, keep func(event.UsageEvent) bool) []Day {
 	index := map[string]int{}
 	var days []Day
 	for _, e := range events {
+		if keep != nil && !keep(e) {
+			continue
+		}
 		if e.Timestamp.IsZero() {
 			continue
 		}
