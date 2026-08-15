@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -140,6 +140,26 @@ describe('theme pack manifest', () => {
     expect(store[STORAGE_KEY]).toBe('qingmo')
   })
 
+  it('can preview a glaze without writing localStorage', () => {
+    const attrs: Record<string, string> = {}
+    const store: Record<string, string> = {}
+    applyTheme('ink', {
+      persist: false,
+      root: {
+        setAttribute(name, value) {
+          attrs[name] = value
+        },
+      },
+      storage: {
+        setItem(key, value) {
+          store[key] = value
+        },
+      },
+    })
+    expect(attrs['data-theme']).toBe('ink')
+    expect(store[STORAGE_KEY]).toBeUndefined()
+  })
+
   it('keeps body text, ash labels, and emphasis readable on the field', () => {
     for (const theme of themes) {
       const { void: bg, bone, ash, 'ember-4': hot, warn } = theme.tokens
@@ -225,16 +245,32 @@ function ruleBody(css: string, selector: string): string {
   return match![1]
 }
 
-describe('glaze switcher density', () => {
-  it('fits eight marks in a compact rail row', () => {
+describe('theme is a page, not a home strip', () => {
+  it('does not ship the eight-mark rail switcher', () => {
+    expect(existsSync(join(SRC_ROOT, 'themes/Switcher.vue'))).toBe(false)
     const css = readFileSync(join(SRC_ROOT, 'styles.css'), 'utf8')
-    const packs = ruleBody(css, '.packs')
-    const btn = ruleBody(css, '.packs button')
-    const gap = Number(packs.match(/gap:\s*([0-9.]+)rem/)?.[1])
-    const width = Number(btn.match(/width:\s*([0-9.]+)rem/)?.[1])
-    expect(gap).toBeGreaterThan(0)
-    expect(width).toBeGreaterThan(0)
-    expect(8 * width + 7 * gap).toBeLessThanOrEqual(12)
+    expect(css).not.toMatch(/\.packs\b/)
+  })
+
+  it('routes /themes to a glaze hall', () => {
+    const router = readFileSync(join(SRC_ROOT, 'router.ts'), 'utf8')
+    expect(router).toMatch(/path:\s*['"]\/themes['"]/)
+    expect(router).toMatch(/createWebHistory/)
+  })
+
+  it('previews every glaze ramp and commits with 应用', () => {
+    const page = readFileSync(join(SRC_ROOT, 'pages/Themes.vue'), 'utf8')
+    expect(page).toMatch(/v-for="t in themes"/)
+    expect(page).toMatch(/ember-1/)
+    expect(page).toMatch(/ember-4/)
+    expect(page).toMatch(/应用/)
+    expect(page).toMatch(/返回/)
+    expect(page).toMatch(/persist:\s*false/)
+    expect(page).toMatch(/applyTheme\(/)
+    expect(page).toMatch(/push\(\s*['"]\/['"]\s*\)/)
+    for (const mark of ['窑', '苔', '瓷', '绛', '青', '霜', '昼', '墨']) {
+      expect(themes.some((t) => t.mark === mark), mark).toBe(true)
+    }
   })
 })
 

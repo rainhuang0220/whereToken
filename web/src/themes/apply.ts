@@ -13,6 +13,7 @@ export function applyTheme(
   opts?: {
     root?: ThemeRoot
     storage?: ThemeStorage
+    persist?: boolean
   },
 ): ThemeId {
   const resolved = resolveThemeId(id)
@@ -20,10 +21,12 @@ export function applyTheme(
   const storage =
     opts?.storage ?? (typeof localStorage !== 'undefined' ? localStorage : undefined)
   root?.setAttribute('data-theme', resolved)
-  try {
-    storage?.setItem(STORAGE_KEY, resolved)
-  } catch {
-    /* private mode / tests without storage */
+  if (opts?.persist !== false) {
+    try {
+      storage?.setItem(STORAGE_KEY, resolved)
+    } catch {
+      /* private mode / tests without storage */
+    }
   }
   return resolved
 }

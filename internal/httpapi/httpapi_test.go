@@ -127,3 +127,55 @@ func TestListenRefusesNonLocalhost(t *testing.T) {
 		t.Fatal("expected refuse")
 	}
 }
+
+func TestSPAFallbackServesThemes(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<!doctype html>SPA"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "asset.js"), []byte("js"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("WHERETOKEN_WEB", dir)
+
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/themes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("themes status=%d", resp.StatusCode)
+	}
+	if string(body) != "<!doctype html>SPA" {
+		t.Fatalf("themes body=%q", body)
+	}
+
+	asset, err := http.Get(srv.URL + "/asset.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer asset.Body.Close()
+	js, err := io.ReadAll(asset.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(js) != "js" {
+		t.Fatalf("asset body=%q", js)
+	}
+
+	missing, err := http.Get(srv.URL + "/missing.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer missing.Body.Close()
+	if missing.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing asset status=%d", missing.StatusCode)
+	}
+}

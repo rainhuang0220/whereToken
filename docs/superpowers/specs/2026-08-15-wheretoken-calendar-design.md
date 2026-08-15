@@ -1,9 +1,8 @@
 # whereToken 窑墙规格（视觉 + 日历）
 
 Date: 2026-08-15
-Status: 第 3 轮锁死。方案 B 与两轴已批准，本文件不重开。
+Status: 第 4 轮：窑墙是年度强度图，不是规划日历。去掉月标与星期槽；tooltip 跟指针。釉色改走 `/themes` 页。
 Parent: [`2026-08-15-wheretoken-design.md`](./2026-08-15-wheretoken-design.md)
-Decisions: [`opt.md`](../../../opt.md) 第 3 轮
 Plan: [`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](../plans/2026-08-15-wheretoken-calendar.md)
 
 ---
@@ -38,7 +37,7 @@ Plan: [`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](../plans/2026
 
 | 对象 | 偷什么 | 明确不偷 |
 |------|--------|----------|
-| GitHub contribution graph | 周为列、星期为行、`grid-auto-flow: column`、5 档强度、空 vs 有、hover 出当日值、月标签贴在整周列上、一三五标星期 | 周日周、primer 绿、圆角 2px 的「绿豆子」、commit 文案 |
+| GitHub contribution graph | 周为列、星期为行、`grid-auto-flow: column`、5 档强度、空 vs 有、hover 出当日值 | 月标签、星期槽（一三五 / `1 3 5`）、周日周、primer 绿、圆角豆子、commit 文案。墙已有当日 tooltip，月份和星期槽是多余的方向标 |
 | GitLab | 可周一为周首；空格与有值必须一眼可分 | 蓝梯度、`>30 commits → 最深` 这种绝对阈值 |
 | WakaTime / wakafetch | 热力是「花掉的时间」不是「提交次数」；tooltip 带单位 | README 用的 GitHub 绿 SVG 皮肤 |
 | tokscale TUI Stats | 把贡献墙当一等视图，而不是表下面的 chart；筛选源会重绘墙 | Primer 主题循环、3D 砖块、排行榜、成本 |
@@ -99,7 +98,7 @@ Google Fonts，开源可商用：
 |------|------|------|
 | 大数 | **Big Shoulders Display** 800 | 峰值 M、两段连烧、合计 M |
 | 中文 | **Chiron Hei HK** 400/600 | 标题、轴名、表头、tooltip |
-| 日期 / 坐标 | **Martian Mono** | 月标签、星期、扫描时间 |
+| 日期 / 坐标 | **Martian Mono** | 扫描时间、铸造数字旁的日期、窑墙 caption |
 
 禁止：Inter、Roboto、Arial、system-ui 作为主栈、Space Grotesk、ZCOOL XiaoWei、Courier Prime、Noto Sans SC 作为主中文（Chiron 缺字时才 fallback Source Han Sans / Noto Sans SC）。
 
@@ -109,8 +108,8 @@ Google Fonts，开源可商用：
 
 从上到下，只有这一条脊柱：
 
-1. **顶栏极瘦：** 左 `whereToken`，右本地时间 + 刷新。无 kicker「本机观测」，无双线报头。
-2. **窑墙（英雄）：** 左墙右印。墙 = 53 列 × 7 行方格。右印三块铸造数字：峰值（日期 + M）、当前连烧（天）、最长连烧（天）。
+1. **顶栏极瘦：** 左 `whereToken`，右本地时间 + **主题** + **刷新**（同一重量的两个 lever）。釉色不在首页铺成一排印记；**主题** 打开 `/themes` 釉厅，浏览器后退回窑墙。
+2. **窑墙（英雄）：** 左墙右印。墙 = 53 列 × 7 行方格，**没有**月标、**没有**星期槽。右印三块铸造数字：峰值（日期 + M）、当前连烧（天）、最长连烧（天）。
 3. **轴切换：** 一段阻尼条。先「合计」，再工具（Claude Code / Kimi / Codex / OpenCode，有数据才出现），再厂家（Anthropic / …）。当前项铜底。切轴 = 换 `calendar.all | calendar.by_source[id] | calendar.by_vendor[id]`，墙和三块数字一起变。
 4. **合计六列：** 一行仪器数字，不是六张卡片。墙已经是主角，这里是复核。
 5. **按工具 / 按厂家表：** 留下，但改成密排仪器表（无衬线账本章名、无浅色 zebra）。行可点，等于切到该轴（与阻尼条同步）。
@@ -123,7 +122,7 @@ Google Fonts，开源可商用：
 
 - 首次：周列从左到右点亮，列延迟 12ms，时长 280ms，`ease-out`。
 - 切轴：砖 `background-color` 280ms；铸造数字替换，不滚动数字马戏团。
-- hover：砖微抬 1px + tooltip（日期、当日 `total_m`、四列 M）。
+- hover：指针旁立刻出现两行中文 caption（`M月D日` + 当日 `total_m`）；不抬砖、不 3D、不 dump 四列。`pointer-events: none`，不挡下一格。
 - `prefers-reduced-motion: reduce`：全部瞬时。
 
 纹理：一层 4% 不透明度的 grain（CSS repeating-conic 或 SVG noise），不是紫色 mesh。
@@ -139,8 +138,8 @@ Google Fonts，开源可商用：
 - **窗口：** 含「今天」的这一周为最后一列。向前 52 个完整周。第一列的周一可能早于「今天减 364 天」。
 - **今天之后** 的格子（本周未来）：`kind=future`，不是空烧。
 - **窗口内、今天及以前、total=0：** `kind=empty`，冷黏土。这是「这天没花」，不是「系统没数据」。
-- 月标签：该月第一次出现的那一列上方写 `1月`…`12月`（中文数字月）。
-- 行标签：只标 `一` `三` `五`（对齐 GitHub 标 Sun/Wed/Fri 的密度，但周一为顶行）。
+- **不要月标签。** 墙顶不写 `1月`…`12月`。GitHub 用月份给匿名小格定向；whereToken 的 hover 已经给出 `M月D日`，月标是噪音。
+- **不要星期槽。** 左侧不写 `一三五` / `1 3 5`。行仍是周一到周日（数据），但不画 gutter。
 
 砖尺寸：桌面 `--cell: 12px`，间隙 3px；窄屏墙横向滚动，不把 53 列挤成不可点的 4px。
 
@@ -154,7 +153,12 @@ total = miss + cache_read + cache_create + output
 
 同一本地日多条事件相加（先按现有 `request_id` 规则 merge，再按日加）。
 
-Tooltip 单位全部 `*_m`（后端格式化）。不要出「1234567 tokens」。
+Tooltip 只有两行，跟鼠标走（`position: fixed` + `clientX/Y`），不是 GitHub 那种钉在格子上、离指针很远的气泡：
+
+1. `M月D日`（如 `8月15日`），默认不写年
+2. 当日 `total_m`（后端 `FormatM`）。空砖 `0.00 M`，未来格 `未到`
+
+不要写「消耗」，不要第三行，不要星期名，不要未命中/缓存/厂家。单位禁止自造。
 
 ### 4.3 过滤
 
@@ -318,10 +322,11 @@ Series: {
 
 - 自定义 CSS Grid 墙，**不用** ECharts calendar / heatmap。
 - 删除 `ShareBars.vue`（ECharts 条）。`echarts` 依赖若无其它图则卸掉。
-- 新组件：`KilnWall.vue`（格子+月/星期+图例）、`FoundryMarks.vue`（峰值/连烧）、`AxisDamper.vue`（合计/工具/厂家切换）。
+- 组件：`KilnWall.vue`（格子 + 跟指针的两行 caption + 冷→白热图例，无月/星期 chrome）、`FoundryMarks.vue`（峰值/连烧）、`AxisDamper.vue`（合计/工具/厂家切换）、`pages/Themes.vue`（`/themes` 釉厅）。
 - store 只存 payload + 当前 `axis: { kind: 'all'|'source'|'vendor', id: string }`。切轴是查表。
-- tooltip：`2026-08-15 · 12.40 M` 加四列。
-- 无障碍：墙 `role="img"` + 文字摘要「过去 53 周一共 N 天有用量，峰值 DATE M，当前连烧 D 天」；每砖 `title` 兜底。
+- tooltip：`8月15日` / `12.40 M` 两行。未来格第二行 `未到`。
+- 无障碍：墙 `role="img"` + 文字摘要「过去 53 周一共 N 天有用量，峰值 DATE M，当前连烧 D 天」；caption `role="status"`，不靠 native `title`。
+- 釉色：首页只有 **主题** lever；`/themes` 每块釉自带空→热砖阶和 void/bone/ash/ember。点预览只改 `data-theme`（不写 storage）；**应用** 才写入 `localStorage['wheretoken.theme']` 并回到 `/`。浏览器后退未应用则恢复进入页时的釉。
 
 ---
 

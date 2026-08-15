@@ -67,17 +67,12 @@ export function layoutCells(opts: {
   return cells
 }
 
-export function monthLabels(cells: Cell[]): { weekIndex: number; label: string }[] {
-  const seen = new Set<string>()
-  const out: { weekIndex: number; label: string }[] = []
-  for (const cell of cells) {
-    const month = cell.date.slice(0, 7)
-    if (seen.has(month)) continue
-    seen.add(month)
-    const m = Number(cell.date.slice(5, 7))
-    out.push({ weekIndex: cell.weekIndex, label: `${m}月` })
-  }
-  return out
+export function brickCaption(cell: Cell): { date: string; amount: string } {
+  const parts = cell.date.split('-')
+  const date = `${Number(parts[1])}月${Number(parts[2])}日`
+  if (cell.kind === 'future') return { date, amount: '未到' }
+  if (cell.kind === 'empty' || !cell.day) return { date, amount: '0.00 M' }
+  return { date, amount: cell.day.total_m }
 }
 
 export const emptySeries: CalendarSeries = {

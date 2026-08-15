@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutCells, selectDrill, selectSeries, wallCells } from './grid'
+import { brickCaption, layoutCells, selectDrill, selectSeries, wallCells } from './grid'
 import type { Calendar, Day, SummaryPayload } from './types'
 
 const lit: Day = {
@@ -16,6 +16,59 @@ const lit: Day = {
   total_m: '0.0000 M',
   level: 2,
 }
+
+describe('brickCaption', () => {
+  const base = {
+    level: 0,
+    weekday: 4,
+    weekIndex: 0,
+  }
+
+  it('is two Chinese lines: M月D日 and the backend FormatM string', () => {
+    expect(
+      brickCaption({
+        ...base,
+        date: '2026-08-15',
+        kind: 'lit',
+        level: 4,
+        day: lit,
+      }),
+    ).toEqual({ date: '8月15日', amount: '0.0000 M' })
+    expect(
+      brickCaption({
+        ...base,
+        date: '2026-01-01',
+        kind: 'lit',
+        day: { ...lit, date: '2026-01-01', total_m: '12.40 M' },
+      }),
+    ).toEqual({ date: '1月1日', amount: '12.40 M' })
+  })
+
+  it('uses 0.00 M for empty clay and 未到 for future days', () => {
+    expect(brickCaption({ ...base, date: '2026-08-13', kind: 'empty' })).toEqual({
+      date: '8月13日',
+      amount: '0.00 M',
+    })
+    expect(brickCaption({ ...base, date: '2026-08-16', kind: 'future' })).toEqual({
+      date: '8月16日',
+      amount: '未到',
+    })
+  })
+
+  it('does not mention 消耗, weekday, year, or vendor columns', () => {
+    const cap = brickCaption({
+      ...base,
+      date: '2026-08-15',
+      kind: 'lit',
+      day: lit,
+    })
+    const blob = `${cap.date}\n${cap.amount}`
+    expect(blob).not.toMatch(/消耗/)
+    expect(blob).not.toMatch(/星期|周[一二三四五六日]/)
+    expect(blob).not.toMatch(/2026/)
+    expect(blob).not.toMatch(/未命中|缓存|输出/)
+  })
+})
 
 describe('layoutCells', () => {
   it('marks missing in-window days empty and dates after today future', () => {

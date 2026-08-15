@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/scan"
@@ -27,13 +29,48 @@ func NewMux(home adapter.Home) http.Handler {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if dir := webDist(); dir != "" {
-			http.FileServer(http.Dir(dir)).ServeHTTP(w, r)
+			serveWeb(w, r, dir)
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		io.WriteString(w, "whereToken")
 	})
 	return mux
+}
+
+func serveWeb(w http.ResponseWriter, r *http.Request, dir string) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	rel := path.Clean("/" + r.URL.Path)
+	full := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(rel, "/")))
+	if !insideDir(dir, full) {
+		http.NotFound(w, r)
+		return
+	}
+	if rel == "/" {
+		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+		return
+	}
+	st, err := os.Stat(full)
+	if err == nil && !st.IsDir() {
+		http.ServeFile(w, r, full)
+		return
+	}
+	if path.Ext(rel) != "" {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+}
+
+func insideDir(dir, target string) bool {
+	rel, err := filepath.Rel(dir, target)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
 func Listen(addr string, home adapter.Home) error {
