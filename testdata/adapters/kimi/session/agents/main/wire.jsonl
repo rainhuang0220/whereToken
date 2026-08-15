@@ -1,0 +1,4 @@
+{"type":"turn.prompt","origin":{"kind":"user"},"time":1786722811961}
+{"type":"usage.record","model":"kimi-code/k3","usage":{"inputOther":100,"output":10,"inputCacheRead":900,"inputCacheCreation":0},"usageScope":"turn","time":1786722944364}
+{"type":"usage.record","model":"kimi-code/k3","usage":{"inputOther":50,"output":5,"inputCacheRead":100,"inputCacheCreation":20},"usageScope":"turn","time":1786722975161}
+{"type":"turn.prompt","origin":{"kind":"tool"},"time":1786722976000}
