@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestParseQuiet(t *testing.T) {
+	f, err := Parse([]string{"--quiet"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !f.Quiet {
+		t.Fatal("quiet")
+	}
+	f, err = Parse([]string{"-q"})
+	if err != nil || !f.Quiet {
+		t.Fatalf("%+v %v", f, err)
+	}
+}
+
 func TestParseHomeOverride(t *testing.T) {
 	f, err := Parse([]string{"--home", "/tmp/fake-home"})
 	if err != nil {

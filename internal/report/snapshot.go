@@ -19,7 +19,9 @@ type Filter struct {
 
 type Row struct {
 	ID, Label    string
+	Total        int64
 	TotalM       string
+	ShareText    string
 	HitRateText  string
 	Requests     int64
 	UserTurns    int64
@@ -39,6 +41,7 @@ type Snapshot struct {
 	Requests      int64
 	UserTurns     int64
 	ShowStreaks   bool
+	Last7         []int64
 	Tools         []Row
 	Vendors       []Row
 	Models        []Row
@@ -101,6 +104,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 
 	sum := metric.Aggregate(fe, ft)
 	view := metric.View(sum.All)
+	cal := metric.BuildCalendar(fe, loc, now)
 	snap := Snapshot{
 		Period:        period(f, now),
 		Scope:         scope(f),
@@ -108,8 +112,8 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		TotalM:        view.TotalM,
 		HitRate:       view.HitRate,
 		HitRateText:   view.HitRateText,
-		MaxStreak:     sum.Calendar.All.Stats.LongestStreak,
-		CurrentStreak: sum.Calendar.All.Stats.CurrentStreak,
+		MaxStreak:     cal.All.Stats.LongestStreak,
+		CurrentStreak: cal.All.Stats.CurrentStreak,
 		Requests:      sum.All.Requests,
 		UserTurns:     sum.All.UserTurns,
 		ShowStreaks:   !f.Today,
@@ -138,6 +142,12 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	snap.Notes = notes(errs, f.Discovered)
 	snap.Tools = mergeDiscovered(snap.Tools, f.Discovered, f.Tool, f.Today)
 	snap.Vendors = rankVendors(snap.Vendors)
+	applyShares(snap.Tools, snap.Total)
+	applyShares(snap.Vendors, snap.Total)
+	applyShares(snap.Models, snap.Total)
+	if snap.ShowStreaks {
+		snap.Last7 = metric.LastNDailyTotals(cal.All.Days, now, 7)
+	}
 	if unknownVendorTotal(snap.Vendors) > 0 {
 		msg := "Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
 		dup := false
@@ -159,6 +169,7 @@ func rowFrom(s metric.Slice) Row {
 	return Row{
 		ID:           s.ID,
 		Label:        s.Label,
+		Total:        s.Total(),
 		TotalM:       v.TotalM,
 		HitRateText:  v.HitRateText,
 		Requests:     s.Requests,
@@ -166,6 +177,12 @@ func rowFrom(s metric.Slice) Row {
 		RequestsText: metric.FormatCount(s.Requests),
 		TurnsText:    metric.FormatCount(s.UserTurns),
 		Quality:      s.Quality,
+	}
+}
+
+func applyShares(rows []Row, total int64) {
+	for i := range rows {
+		rows[i].ShareText = metric.FormatShare(rows[i].Total, total)
 	}
 }
 

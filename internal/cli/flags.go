@@ -31,6 +31,7 @@ type Flags struct {
 	JSON, Today     bool
 	ASCII           bool
 	NoColor         bool
+	Quiet           bool
 	Tool, Vendor    string
 	Model, Home     string
 	Port            int
@@ -89,6 +90,8 @@ func Parse(args []string) (Flags, error) {
 	fs.BoolVar(&f.Today, "today", false, "")
 	fs.BoolVar(&f.ASCII, "ascii", false, "")
 	fs.BoolVar(&f.NoColor, "no-color", false, "")
+	fs.BoolVar(&f.Quiet, "quiet", false, "")
+	fs.BoolVar(&f.Quiet, "q", false, "")
 	fs.StringVar(&f.Home, "home", "", "")
 	fs.IntVar(&f.Port, "port", f.Port, "")
 	toolFlag := fs.String("tool", "", "")

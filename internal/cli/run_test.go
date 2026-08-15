@@ -70,7 +70,7 @@ func TestRunDefaultPrintsP0Table(t *testing.T) {
 		t.Fatalf("code=%d err=%s", code, errb.String())
 	}
 	s := out.String()
-	for _, want := range []string{"总用量", "命中率", "最长连烧", "11.68 M", "85.2%"} {
+	for _, want := range []string{"总用量", "命中率", "最长连烧", "11.68 M", "85.2%", "占比", "近7日"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing %q in\n%s", want, s)
 		}
@@ -215,7 +215,7 @@ func TestRunNO_COLORNoEscape(t *testing.T) {
 
 func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	h := HelpText()
-	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME"} {
+	for _, want := range []string{"go install", "npm install", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}
@@ -232,6 +232,20 @@ func TestRunSourcesListsRoots(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "kimi") || !strings.Contains(out.String(), "/tmp/fake") {
 		t.Fatalf("%s", out.String())
+	}
+}
+
+func TestRunQuietSuppressesProgress(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, _, errb := testApp([]string{"--quiet"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	app.StderrTTY = true
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if strings.Contains(errb.String(), "正在读") {
+		t.Fatalf("quiet still printed progress: %s", errb.String())
 	}
 }
 

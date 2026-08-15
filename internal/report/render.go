@@ -21,6 +21,10 @@ func Render(snap Snapshot, opt Options) string {
 	var b strings.Builder
 	b.WriteString(title(snap))
 	b.WriteByte('\n')
+	if spark := sparkLine(snap, opt.ASCII); spark != "" {
+		b.WriteString(spark)
+		b.WriteByte('\n')
+	}
 	b.WriteByte('\n')
 	b.WriteString(table.KPIBox(kpiCells(snap), style))
 	b.WriteString(legend())
@@ -100,13 +104,33 @@ func days(n int) string {
 	return fmt.Sprintf("%s 天", metric.FormatCount(int64(n)))
 }
 
+func sparkLine(snap Snapshot, ascii bool) string {
+	if !snap.ShowStreaks || len(snap.Last7) == 0 {
+		return ""
+	}
+	var max int64
+	for _, v := range snap.Last7 {
+		if v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		return ""
+	}
+	bar := table.Spark(snap.Last7, ascii)
+	if ascii {
+		return "7d  " + bar
+	}
+	return "近7日  " + bar
+}
+
 func legend() string {
 	return "  合计 = 未命中 + 缓存读 + 缓存写 + 输出。命中率不含输出。\n"
 }
 
 func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle) string {
-	headers := []string{kind, "合计", "命中率", "请求"}
-	align := []table.Align{table.AlignLeft, table.AlignRight, table.AlignRight, table.AlignRight}
+	headers := []string{kind, "合计", "占比", "命中率", "请求"}
+	align := []table.Align{table.AlignLeft, table.AlignRight, table.AlignRight, table.AlignRight, table.AlignRight}
 	if withTurns {
 		headers = append(headers, "回合")
 		align = append(align, table.AlignRight)
@@ -123,7 +147,11 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle) strin
 		if kind == "模型" {
 			label = table.Truncate(label, 36)
 		}
-		line := []string{label, r.TotalM, r.HitRateText, r.RequestsText}
+		share := r.ShareText
+		if share == "" {
+			share = "—"
+		}
+		line := []string{label, r.TotalM, share, r.HitRateText, r.RequestsText}
 		if withTurns {
 			line = append(line, r.TurnsText)
 		}

@@ -11,6 +11,7 @@ USAGE
 
 INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+  curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   npm install -g wheretoken          # GitHub Release binary; no Go required
   npx wheretoken
 
@@ -28,6 +29,7 @@ FLAGS
   --json               JSON on stdout (tables are the default)
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
+  -q, --quiet          no scan-progress lines on stderr
   --home DIR           fake home directory (tests)
 
 ENV

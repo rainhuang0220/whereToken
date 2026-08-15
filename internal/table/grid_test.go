@@ -74,3 +74,21 @@ func TestRankedTableAlignsCJK(t *testing.T) {
 		t.Fatalf("%s", got)
 	}
 }
+
+func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
+	cells := [2][3]KPI{
+		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},
+		{{Label: "当前连烧", Value: "1 天"}, {Label: "请求", Value: "9,223,372"}, {Label: "用户回合", Value: "8"}},
+	}
+	got := KPIBox(cells, BoxUnicode)
+	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
+	w := DisplayWidth(lines[0])
+	for i, line := range lines {
+		if DisplayWidth(line) != w {
+			t.Fatalf("line %d width %d want %d\n%q\n%s", i, DisplayWidth(line), w, line, got)
+		}
+	}
+	if !strings.Contains(got, "1,000,000.00 M") {
+		t.Fatalf("%s", got)
+	}
+}

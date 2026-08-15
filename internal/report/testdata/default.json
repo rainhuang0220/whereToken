@@ -8,11 +8,21 @@
   "current_streak_days": 2,
   "requests": 3,
   "user_turns": 3,
+  "last_7d": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    10100000,
+    1580000
+  ],
   "tools": [
     {
       "id": "claude",
       "label": "Claude Code",
       "total_m": "10.65 M",
+      "share": "91.2%",
       "hit_rate_text": "85.7%",
       "requests": 2,
       "user_turns": 2
@@ -21,6 +31,7 @@
       "id": "kimi",
       "label": "Kimi Code",
       "total_m": "1.03 M",
+      "share": "8.8%",
       "hit_rate_text": "80.0%",
       "requests": 1,
       "user_turns": 1
@@ -31,6 +42,7 @@
       "id": "anthropic",
       "label": "Anthropic",
       "total_m": "10.10 M",
+      "share": "86.5%",
       "hit_rate_text": "90.0%",
       "requests": 1
     },
@@ -38,6 +50,7 @@
       "id": "moonshot",
       "label": "Moonshot",
       "total_m": "1.03 M",
+      "share": "8.8%",
       "hit_rate_text": "80.0%",
       "requests": 1
     },
@@ -45,6 +58,7 @@
       "id": "minimax",
       "label": "MiniMax",
       "total_m": "0.55 M",
+      "share": "4.7%",
       "hit_rate_text": "0.0%",
       "requests": 1
     }

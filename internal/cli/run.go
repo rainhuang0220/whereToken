@@ -76,9 +76,9 @@ func (a *App) Run() int {
 	case CommandServe:
 		return a.runServe(flags, home)
 	case CommandScan:
-		return a.runScanJSON(home)
+		return a.runScanJSON(home, flags.Quiet)
 	case CommandSources:
-		return a.runSources(home)
+		return a.runSources(home, flags.Quiet)
 	case CommandCompletion:
 		script, err := Completion(flags.CompletionShell)
 		if err != nil {
@@ -102,11 +102,11 @@ func (a *App) resolveHome(override string) adapter.Home {
 	return scan.RealHome()
 }
 
-func (a *App) doScan(home adapter.Home) scan.Result {
+func (a *App) doScan(home adapter.Home, quiet bool) scan.Result {
 	if a.Scan != nil {
 		return a.Scan(home)
 	}
-	if !a.StderrTTY {
+	if quiet || !a.StderrTTY {
 		return scan.Run(home, scan.AllAdapters())
 	}
 	return scan.RunWithProgress(home, scan.AllAdapters(), func(p scan.Progress) {
@@ -118,7 +118,7 @@ func (a *App) doScan(home adapter.Home) scan.Result {
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
-	res := a.doScan(home)
+	res := a.doScan(home, flags.Quiet)
 	fil := report.Filter{
 		Today:      flags.Today,
 		Tool:       flags.Tool,
@@ -148,8 +148,8 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	return ExitOK
 }
 
-func (a *App) runScanJSON(home adapter.Home) int {
-	res := a.doScan(home)
+func (a *App) runScanJSON(home adapter.Home, quiet bool) int {
+	res := a.doScan(home, quiet)
 	if err := scan.EncodeSummary(a.Stdout, res); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail
@@ -157,8 +157,8 @@ func (a *App) runScanJSON(home adapter.Home) int {
 	return ExitOK
 }
 
-func (a *App) runSources(home adapter.Home) int {
-	res := a.doScan(home)
+func (a *App) runSources(home adapter.Home, quiet bool) int {
+	res := a.doScan(home, quiet)
 	for _, root := range res.Roots {
 		fmt.Fprintf(a.Stdout, "%s\t%s\n", root.ID, root.Path)
 	}

@@ -13,7 +13,8 @@ func TestFormatM(t *testing.T) {
 		{1_741, "0.0017 M"},
 		{9_999, "0.0100 M"},
 		{10_000, "0.01 M"},
-		{1_000_000_000_000, "1000000.00 M"},
+		{1_000_000_000_000, "1,000,000.00 M"},
+		{2_299_980_000, "2,299.98 M"},
 	}
 	for _, c := range cases {
 		if got := FormatM(c.in); got != c.want {
@@ -39,6 +40,18 @@ func TestFormatCount(t *testing.T) {
 		if got := FormatCount(c.in); got != c.want {
 			t.Fatalf("FormatCount(%d)=%q want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestFormatShare(t *testing.T) {
+	if got := FormatShare(10_650_000, 11_680_000); got != "91.2%" {
+		t.Fatalf("got %q", got)
+	}
+	if got := FormatShare(0, 0); got != "—" {
+		t.Fatalf("zero %q", got)
+	}
+	if got := FormatShare(0, 100); got != "0.0%" {
+		t.Fatalf("zero part %q", got)
 	}
 }
 

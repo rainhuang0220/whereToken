@@ -21,7 +21,7 @@ func TestRenderP0LabelsAndValues(t *testing.T) {
 		"总用量", "命中率", "最长连烧", "当前连烧", "请求", "用户回合",
 		"11.68 M", "85.2%", "2 天",
 		"Claude Code", "Kimi Code", "Anthropic", "MiniMax", "Moonshot",
-		"命中率不含输出",
+		"命中率不含输出", "占比", "近7日",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in\n%s", want, out)

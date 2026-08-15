@@ -37,6 +37,19 @@ func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	if m["hit_rate_text"] != "85.2%" {
 		t.Fatalf("hit=%v", m["hit_rate_text"])
 	}
+	if _, ok := m["last_7d"]; !ok {
+		t.Fatal("missing last_7d")
+	}
+	tools := m["tools"].([]any)
+	row := tools[0].(map[string]any)
+	if row["share"] != "91.2%" {
+		t.Fatalf("share=%v", row["share"])
+	}
+	for _, k := range []string{"period", "total", "total_m", "hit_rate_text", "requests", "user_turns", "tools", "vendors", "notes"} {
+		if _, ok := m[k]; !ok {
+			t.Fatalf("missing key %s", k)
+		}
+	}
 	if m["requests"].(float64) != 3 {
 		t.Fatalf("requests=%v", m["requests"])
 	}

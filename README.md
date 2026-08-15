@@ -7,10 +7,11 @@ go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 wheretoken
 ```
 
-Windows / macOS / Linux, without installing Go, after a [GitHub Release](https://github.com/rainhuang0220/whereToken/releases):
+No Go? After a [GitHub Release](https://github.com/rainhuang0220/whereToken/releases):
 
 ```bash
-npm install -g wheretoken
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+# or: npm install -g wheretoken
 # or: npx wheretoken
 ```
 
@@ -22,23 +23,24 @@ Six figures **since records began**, then rankings. Units are **M** (million tok
 
 ```
 whereToken · 有账本以来
+近7日  ▁▂▃▅▇█▃
 
 ┌────────────┬────────────┬────────────┐
 │ 总用量     │ 命中率     │ 最长连烧   │
-│  2299.98 M │      89.8% │      13 天 │
+│  2,299.98 M │      89.8% │      13 天 │
 ├────────────┼────────────┼────────────┤
 │ 当前连烧   │ 请求       │ 用户回合   │
 │       7 天 │     52,167 │      2,216 │
 └────────────┴────────────┴────────────┘
   合计 = 未命中 + 缓存读 + 缓存写 + 输出。命中率不含输出。
 
-工具               合计   命中率     请求    回合
-─────────────────────────────────────────────────
-Cursor        1561.08 M    92.5%   45,737   1,861
-Claude Code    358.23 M    70.3%    4,080     105
-Kimi Code      330.04 M    98.8%    1,661      44
+工具               合计    占比   命中率     请求    回合
+────────────────────────────────────────────────────────
+Cursor        1561.08 M   67.9%    92.5%   45,737   1,861
+Claude Code    358.23 M   15.6%    70.3%    4,080     105
+Kimi Code      330.04 M   14.3%    98.8%    1,661      44
 …
-Trae             0.00 M        —        0       0
+Trae             0.00 M    0.0%        —        0       0
 ```
 
 Your numbers will differ. Trae/Cursor token columns need that app signed in; the table says so instead of crashing or faking zeros as “unused.”
@@ -52,6 +54,7 @@ wheretoken --model=k3
 wheretoken --today --cursor
 wheretoken --json               # scripts; tables stay the default
 wheretoken --ascii              # old Windows consoles
+wheretoken --quiet              # no “正在读 …” on stderr
 wheretoken completion zsh          # also bash, fish, powershell
 ```
 

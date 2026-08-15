@@ -9,4 +9,7 @@ cli-fixture:
 build-all:
 	bash scripts/build-all.sh
 
-.PHONY: test cli-fixture build-all
+install-script:
+	bash -n scripts/install.sh
+
+.PHONY: test cli-fixture build-all install-script

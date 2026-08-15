@@ -327,6 +327,41 @@ func isUsage(err error) bool {
 	return false
 }
 
+func TestSnapshotSharesAndLast7(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.Last7) != 7 {
+		t.Fatalf("last7=%v", snap.Last7)
+	}
+	if snap.Last7[5] != 10_100_000 || snap.Last7[6] != 1_580_000 {
+		t.Fatalf("last7=%v", snap.Last7)
+	}
+	if len(snap.Tools) < 2 {
+		t.Fatalf("tools=%v", snap.Tools)
+	}
+	if snap.Tools[0].ShareText != "91.2%" || snap.Tools[1].ShareText != "8.8%" {
+		t.Fatalf("shares %+v %+v", snap.Tools[0], snap.Tools[1])
+	}
+}
+
+func TestSnapshotTodayOmitsLast7(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.Last7) != 0 {
+		t.Fatalf("today last7=%v", snap.Last7)
+	}
+}
+
 func TestAggregateConservation(t *testing.T) {
 	loc := shanghai()
 	events, turns := fixture(loc)

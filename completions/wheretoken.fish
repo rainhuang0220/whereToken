@@ -6,6 +6,7 @@ complete -c wheretoken -l json
 complete -c wheretoken -l today
 complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
+complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l tool -r -a "claude kimi codex opencode cursor trae"
 complete -c wheretoken -l vendor -r
 complete -c wheretoken -l model -r

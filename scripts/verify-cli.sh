@@ -13,6 +13,7 @@ out="$("$dir/wheretoken" --home "$dir" --ascii)"
 echo "$out"
 echo "$out" | grep -q '0.0012 M'
 echo "$out" | grep -q 'Kimi'
+echo "$out" | grep -q '占比'
 if echo "$out" | grep -q eyJ; then
   echo "jwt leaked" >&2
   exit 1

@@ -149,3 +149,24 @@ func TestBuildCalendarLevelsUseSeriesQuartilesNotGlobalMax(t *testing.T) {
 		}
 	}
 }
+
+func TestLastNDailyTotalsFillsZeros(t *testing.T) {
+	loc := shanghai()
+	today := ts(loc, 2026, 8, 16, 12, 0)
+	days := []Day{
+		{Date: "2026-08-15", Total: 100},
+		{Date: "2026-08-16", Total: 40},
+	}
+	got := LastNDailyTotals(days, today, 7)
+	if len(got) != 7 {
+		t.Fatalf("len=%d", len(got))
+	}
+	if got[5] != 100 || got[6] != 40 {
+		t.Fatalf("%v", got)
+	}
+	for i := 0; i < 5; i++ {
+		if got[i] != 0 {
+			t.Fatalf("day %d = %d", i, got[i])
+		}
+	}
+}

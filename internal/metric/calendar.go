@@ -8,18 +8,18 @@ import (
 )
 
 type Day struct {
-	Date          string `json:"date"`
-	Miss          int64  `json:"miss"`
-	CacheRead     int64  `json:"cache_read"`
-	CacheCreate   int64  `json:"cache_create"`
-	Output        int64  `json:"output"`
-	Total         int64  `json:"total"`
-	MissM         string `json:"miss_m"`
-	CacheReadM    string `json:"cache_read_m"`
-	CacheCreateM  string `json:"cache_create_m"`
-	OutputM       string `json:"output_m"`
-	TotalM        string `json:"total_m"`
-	Level         int    `json:"level"`
+	Date         string `json:"date"`
+	Miss         int64  `json:"miss"`
+	CacheRead    int64  `json:"cache_read"`
+	CacheCreate  int64  `json:"cache_create"`
+	Output       int64  `json:"output"`
+	Total        int64  `json:"total"`
+	MissM        string `json:"miss_m"`
+	CacheReadM   string `json:"cache_read_m"`
+	CacheCreateM string `json:"cache_create_m"`
+	OutputM      string `json:"output_m"`
+	TotalM       string `json:"total_m"`
+	Level        int    `json:"level"`
 }
 
 type CalendarStats struct {
@@ -36,13 +36,13 @@ type CalendarSeries struct {
 }
 
 type Calendar struct {
-	WeekStart  string                     `json:"week_start"`
-	Timezone   string                     `json:"timezone"`
-	WindowFrom string                     `json:"window_from"`
-	WindowTo   string                     `json:"window_to"`
-	All        CalendarSeries             `json:"all"`
-	BySource   map[string]CalendarSeries  `json:"by_source"`
-	ByVendor   map[string]CalendarSeries  `json:"by_vendor"`
+	WeekStart  string                    `json:"week_start"`
+	Timezone   string                    `json:"timezone"`
+	WindowFrom string                    `json:"window_from"`
+	WindowTo   string                    `json:"window_to"`
+	All        CalendarSeries            `json:"all"`
+	BySource   map[string]CalendarSeries `json:"by_source"`
+	ByVendor   map[string]CalendarSeries `json:"by_vendor"`
 }
 
 func BuildCalendar(events []event.UsageEvent, loc *time.Location, now time.Time) Calendar {
@@ -220,6 +220,23 @@ func longestStreak(used map[string]int64, today time.Time) int {
 		run = 0
 	}
 	return best
+}
+
+func LastNDailyTotals(days []Day, today time.Time, n int) []int64 {
+	if n <= 0 {
+		return nil
+	}
+	byDate := map[string]int64{}
+	for _, d := range days {
+		byDate[d.Date] = d.Total
+	}
+	today = truncateDay(today)
+	out := make([]int64, n)
+	for i := 0; i < n; i++ {
+		day := today.AddDate(0, 0, i-(n-1))
+		out[i] = byDate[day.Format("2006-01-02")]
+	}
+	return out
 }
 
 func truncateDay(t time.Time) time.Time {

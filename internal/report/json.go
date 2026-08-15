@@ -10,6 +10,7 @@ type jsonRow struct {
 	Label       string `json:"label"`
 	Total       int64  `json:"total,omitempty"`
 	TotalM      string `json:"total_m"`
+	Share       string `json:"share,omitempty"`
 	HitRateText string `json:"hit_rate_text"`
 	Requests    int64  `json:"requests"`
 	UserTurns   int64  `json:"user_turns,omitempty"`
@@ -26,6 +27,7 @@ type jsonSnap struct {
 	CurrentStreakDays int       `json:"current_streak_days,omitempty"`
 	Requests          int64     `json:"requests"`
 	UserTurns         int64     `json:"user_turns"`
+	Last7             []int64   `json:"last_7d,omitempty"`
 	Tools             []jsonRow `json:"tools"`
 	Vendors           []jsonRow `json:"vendors"`
 	Models            []jsonRow `json:"models,omitempty"`
@@ -49,6 +51,7 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 	if snap.ShowStreaks {
 		out.MaxStreakDays = snap.MaxStreak
 		out.CurrentStreakDays = snap.CurrentStreak
+		out.Last7 = snap.Last7
 	}
 	if snap.Scope != "" || !snap.ShowStreaks {
 		out.Models = jsonRows(snap.Models, false)
@@ -71,6 +74,7 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			ID:          r.ID,
 			Label:       r.Label,
 			TotalM:      r.TotalM,
+			Share:       r.ShareText,
 			HitRateText: r.HitRateText,
 			Requests:    r.Requests,
 		}
