@@ -76,5 +76,7 @@ echo "$err" | grep -q claude
 mod="$("$dir/wheretoken" --home "$dir" --model=k3 --ascii --quiet)"
 echo "$mod" | grep -q '0.0012 M'
 echo "$mod" | grep -q '用户回合'
+modjson="$("$dir/wheretoken" --home "$dir" --model=k3 --json --quiet)"
+echo "$modjson" | grep -q '"hide_turns": true'
 
 echo "ok fixture CLI"

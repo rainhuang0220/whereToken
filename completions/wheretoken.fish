@@ -9,7 +9,7 @@ complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
 complete -c wheretoken -l tool -r -a "claude kimi codex opencode cursor trae"
-complete -c wheretoken -l vendor -r
+complete -c wheretoken -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba unknown"
 complete -c wheretoken -l model -r
 complete -c wheretoken -l claude -l kimi -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r
