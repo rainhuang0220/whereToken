@@ -1,0 +1,226 @@
+package metric
+
+import (
+	"fmt"
+	"sort"
+
+	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/vendor"
+)
+
+type Slice struct {
+	ID, Label                              string
+	Miss, CacheRead, CacheCreate, Output   int64
+	Requests, UserTurns                    int64
+	Quality                                event.Quality
+}
+
+func (s Slice) Total() int64 {
+	return s.Miss + s.CacheRead + s.CacheCreate + s.Output
+}
+
+type SourceVendor struct {
+	Source, Vendor, SourceLabel, VendorLabel string
+	Miss, CacheRead, CacheCreate, Output     int64
+	Requests                                 int64
+}
+
+func (s SourceVendor) Total() int64 {
+	return s.Miss + s.CacheRead + s.CacheCreate + s.Output
+}
+
+type Summary struct {
+	All             Slice
+	BySource        []Slice
+	ByVendor        []Slice
+	BySourceVendor  []SourceVendor
+}
+
+type SliceView struct {
+	ID            string   `json:"id"`
+	Label         string   `json:"label"`
+	Miss          int64    `json:"miss"`
+	CacheRead     int64    `json:"cache_read"`
+	CacheCreate   int64    `json:"cache_create"`
+	Output        int64    `json:"output"`
+	Total         int64    `json:"total"`
+	MissM         string   `json:"miss_m"`
+	CacheReadM    string   `json:"cache_read_m"`
+	CacheCreateM  string   `json:"cache_create_m"`
+	OutputM       string   `json:"output_m"`
+	TotalM        string   `json:"total_m"`
+	HitRate       *float64 `json:"hit_rate"`
+	HitRateText   string   `json:"hit_rate_text"`
+	Requests      int64    `json:"requests"`
+	UserTurns     int64    `json:"user_turns"`
+	Quality       string   `json:"quality"`
+}
+
+func View(s Slice) SliceView {
+	v := SliceView{
+		ID:           s.ID,
+		Label:        s.Label,
+		Miss:         s.Miss,
+		CacheRead:    s.CacheRead,
+		CacheCreate:  s.CacheCreate,
+		Output:       s.Output,
+		Total:        s.Total(),
+		MissM:        FormatM(s.Miss),
+		CacheReadM:   FormatM(s.CacheRead),
+		CacheCreateM: FormatM(s.CacheCreate),
+		OutputM:      FormatM(s.Output),
+		TotalM:       FormatM(s.Total()),
+		HitRateText:  "—",
+		Requests:     s.Requests,
+		UserTurns:    s.UserTurns,
+		Quality:      string(s.Quality),
+	}
+	if pct, ok := HitRate(s.Miss, s.CacheRead, s.CacheCreate); ok {
+		v.HitRate = &pct
+		v.HitRateText = fmt.Sprintf("%.1f%%", pct)
+	}
+	return v
+}
+
+func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
+	merged := mergeByRequest(events)
+
+	all := Slice{ID: "all", Label: "合计"}
+	bySource := map[string]*Slice{}
+	byVendor := map[string]*Slice{}
+	byCross := map[string]*SourceVendor{}
+
+	for _, e := range merged {
+		addSlice(&all, e)
+		src := getSlice(bySource, e.Source, sourceLabel(e.Source))
+		addSlice(src, e)
+		vend := getSlice(byVendor, e.Vendor, vendor.Label(e.Vendor))
+		addSlice(vend, e)
+		key := e.Source + "\x00" + e.Vendor
+		cross := byCross[key]
+		if cross == nil {
+			cross = &SourceVendor{
+				Source:      e.Source,
+				Vendor:      e.Vendor,
+				SourceLabel: sourceLabel(e.Source),
+				VendorLabel: vendor.Label(e.Vendor),
+			}
+			byCross[key] = cross
+		}
+		cross.Miss += e.Miss
+		cross.CacheRead += e.CacheRead
+		cross.CacheCreate += e.CacheCreate
+		cross.Output += e.Output
+		cross.Requests++
+	}
+
+	for _, t := range turns {
+		all.UserTurns++
+		src := getSlice(bySource, t.Source, sourceLabel(t.Source))
+		src.UserTurns++
+	}
+
+	sum := Summary{All: all}
+	for _, s := range bySource {
+		sum.BySource = append(sum.BySource, *s)
+	}
+	for _, s := range byVendor {
+		sum.ByVendor = append(sum.ByVendor, *s)
+	}
+	for _, s := range byCross {
+		sum.BySourceVendor = append(sum.BySourceVendor, *s)
+	}
+	sort.Slice(sum.BySource, func(i, j int) bool { return sum.BySource[i].Total() > sum.BySource[j].Total() })
+	sort.Slice(sum.ByVendor, func(i, j int) bool { return sum.ByVendor[i].Total() > sum.ByVendor[j].Total() })
+	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
+	return sum
+}
+
+func mergeByRequest(events []event.UsageEvent) []event.UsageEvent {
+	var out []event.UsageEvent
+	index := map[string]int{}
+	for _, e := range events {
+		if e.RequestID == "" {
+			out = append(out, e)
+			continue
+		}
+		key := e.Source + "\x00" + e.RequestID
+		if i, ok := index[key]; ok {
+			out[i] = maxEvent(out[i], e)
+			continue
+		}
+		index[key] = len(out)
+		out = append(out, e)
+	}
+	return out
+}
+
+func maxEvent(a, b event.UsageEvent) event.UsageEvent {
+	if b.Miss > a.Miss {
+		a.Miss = b.Miss
+	}
+	if b.CacheRead > a.CacheRead {
+		a.CacheRead = b.CacheRead
+	}
+	if b.CacheCreate > a.CacheCreate {
+		a.CacheCreate = b.CacheCreate
+	}
+	if b.Output > a.Output {
+		a.Output = b.Output
+	}
+	if b.Reasoning > a.Reasoning {
+		a.Reasoning = b.Reasoning
+	}
+	if qualityRank(b.Quality) > qualityRank(a.Quality) {
+		a.Quality = b.Quality
+	}
+	return a
+}
+
+func qualityRank(q event.Quality) int {
+	switch q {
+	case event.QualityDegraded:
+		return 3
+	case event.QualityEstimated:
+		return 2
+	case event.QualityAuthoritative:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func addSlice(s *Slice, e event.UsageEvent) {
+	s.Miss += e.Miss
+	s.CacheRead += e.CacheRead
+	s.CacheCreate += e.CacheCreate
+	s.Output += e.Output
+	s.Requests++
+	if qualityRank(e.Quality) > qualityRank(s.Quality) {
+		s.Quality = e.Quality
+	}
+}
+
+func getSlice(m map[string]*Slice, id, label string) *Slice {
+	if s, ok := m[id]; ok {
+		return s
+	}
+	s := &Slice{ID: id, Label: label}
+	m[id] = s
+	return s
+}
+
+func sourceLabel(id string) string {
+	switch id {
+	case "claude":
+		return "Claude Code"
+	case "kimi":
+		return "Kimi Code"
+	case "opencode":
+		return "OpenCode"
+	case "codex":
+		return "Codex"
+	default:
+		return id
+	}
+}

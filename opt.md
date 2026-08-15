@@ -97,7 +97,7 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 
 - **选择：** 公开 GitHub 仓库 `rainhuang0220/whereToken`（与 PlainList/Flow/docxeditor 一致）。若用户要改私有，下一轮改 visibility。
 - 每一轮「核验通过」才提交并 push。v0 的核验 = 规格自检（无占位、公式自洽、数据源与本机一致）。
-- `git commit` **禁止** `Co-authored-by:`，禁止把 Cursor/Claude/Codex 等写进 contributors。
+- `git commit` **禁止** `Co-authored-by:`，禁止把 Cursor/Claude/Codex 等写进 contributors。Cursor 会在 `git commit -m` 之后注入 trailer；本仓库用 `git commit-tree` 写提交来绕开。
 - 不改 git config；用已有 `user.name=rainhuang0220`。
 
 ## 0.10 许可证

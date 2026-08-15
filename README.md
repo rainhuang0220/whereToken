@@ -57,4 +57,4 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 ## 许可
 
-规划阶段未选定开源许可证；实现开始前会在 `opt.md` 记一笔并补 `LICENSE`。
+MIT。见 [`LICENSE`](LICENSE)。
