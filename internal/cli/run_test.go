@@ -163,6 +163,48 @@ func TestRunJSON(t *testing.T) {
 	}
 }
 
+func TestRunJSONIgnoresASCIIAndNeverANSI(t *testing.T) {
+	app, out, errb := testApp([]string{"--json", "--ascii"})
+	app.StdoutTTY = true
+	app.LookupEnv = func(k string) string {
+		if k == "FORCE_COLOR" {
+			return "1"
+		}
+		return ""
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "+--") || strings.Contains(s, "┌") || strings.Contains(s, "\x1b") {
+		t.Fatalf("json must stay machine-readable:\n%s", s)
+	}
+}
+
+func TestRunRespectsWHERETOKEN_HOME(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	app, out, errb := testApp(nil)
+	app.Scan = nil
+	app.Home = nil
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_HOME" {
+			return dir
+		}
+		return ""
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "Kimi") || strings.Contains(s, "Cursor") || strings.Contains(s, "Claude") {
+		t.Fatalf("scanned the real home instead of WHERETOKEN_HOME:\n%s", s)
+	}
+	if !strings.Contains(s, "0.00 M") {
+		t.Fatalf("expected empty fake home, got:\n%s", s)
+	}
+}
+
 func TestRunScanJSONRedactsJWT(t *testing.T) {
 	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abc"
 	app, out, errb := testApp([]string{"scan"})

@@ -25,3 +25,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - `--model` slices do not inherit the tool's user-turn count (turns have no model id); the table shows — not 0
 - `--model=k3` matches `kimi-code/k3`; `--json` sets `hide_turns` when that KPI is not meaningful
 - Fish completion lists vendor ids the same way zsh already did
+- Honor `WHERETOKEN_HOME` through the CLI's env lookup (tests and `--home` stay fake-home only)

@@ -98,6 +98,11 @@ func (a *App) resolveHome(override string) adapter.Home {
 	if override != "" {
 		return testhome.New(override)
 	}
+	if a.LookupEnv != nil {
+		if v := strings.TrimSpace(a.LookupEnv("WHERETOKEN_HOME")); v != "" {
+			return testhome.New(v)
+		}
+	}
 	if a.Home != nil {
 		return a.Home
 	}
