@@ -174,6 +174,19 @@ func TestFilterVendorMiniMax(t *testing.T) {
 	}
 }
 
+func TestUnknownModelSuggestsCloseName(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	_, err := Build(events, turns, nil, Filter{Model: "k4"}, now, loc)
+	if err == nil || !isUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(err.Error(), "k3") {
+		t.Fatalf("should suggest k3: %v", err)
+	}
+}
+
 func TestUnknownModelIsUsage(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

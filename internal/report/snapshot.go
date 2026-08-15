@@ -74,7 +74,11 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 			}
 		}
 		if !found {
-			return Snapshot{}, usageErr{msg: fmt.Sprintf("unknown model %q", f.Model)}
+			msg := fmt.Sprintf("unknown model %q", f.Model)
+			if s := suggestModel(f.Model, events); s != "" {
+				msg += fmt.Sprintf(" (did you mean %q?)", s)
+			}
+			return Snapshot{}, usageErr{msg: msg}
 		}
 	}
 

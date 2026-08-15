@@ -149,7 +149,7 @@ func Parse(args []string) (Flags, error) {
 	if strings.TrimSpace(*toolFlag) != "" {
 		id, ok := metric.LookupSource(*toolFlag)
 		if !ok {
-			return Flags{}, usageError{msg: fmt.Sprintf("unknown tool %q (known: %s)", *toolFlag, strings.Join(metric.KnownSourceIDs(), ", "))}
+			return Flags{}, unknownName("tool", *toolFlag, suggestKnown(*toolFlag, metric.KnownSourceIDs()), metric.KnownSourceIDs())
 		}
 		add(id)
 	}
@@ -164,7 +164,7 @@ func Parse(args []string) (Flags, error) {
 	if strings.TrimSpace(*vendorFlag) != "" {
 		id, ok := vendor.LookupName(*vendorFlag)
 		if !ok {
-			return Flags{}, usageError{msg: fmt.Sprintf("unknown vendor %q (known: %s)", *vendorFlag, strings.Join(vendor.KnownIDs(), ", "))}
+			return Flags{}, unknownName("vendor", *vendorFlag, suggestKnown(*vendorFlag, vendor.KnownIDs()), vendor.KnownIDs())
 		}
 		f.Vendor = id
 	}

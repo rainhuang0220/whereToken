@@ -108,12 +108,32 @@ func TestParseConflictingToolsIsUsage(t *testing.T) {
 	}
 }
 
+func TestParseUnknownToolSuggestsClaude(t *testing.T) {
+	_, err := Parse([]string{"--tool=claud"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(err.Error(), "claude") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestParseUnknownToolIsUsage(t *testing.T) {
 	_, err := Parse([]string{"--tool=windsurf"})
 	if err == nil || !IsUsage(err) {
 		t.Fatalf("err=%v", err)
 	}
 	if err == nil || !strings.Contains(err.Error(), "windsurf") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestParseUnknownVendorSuggestsAnthropic(t *testing.T) {
+	_, err := Parse([]string{"--vendor=anthropc"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(err.Error(), "anthropic") {
 		t.Fatalf("err=%v", err)
 	}
 }
