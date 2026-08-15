@@ -76,17 +76,19 @@ type sourceVendorView struct {
 }
 
 type summaryJSON struct {
-	All            metric.SliceView   `json:"all"`
-	BySource       []metric.SliceView `json:"by_source"`
-	ByVendor       []metric.SliceView `json:"by_vendor"`
-	BySourceVendor []sourceVendorView `json:"by_source_vendor"`
-	Errors         []string           `json:"errors"`
+	All            metric.SliceView              `json:"all"`
+	BySource       []metric.SliceView            `json:"by_source"`
+	ByVendor       []metric.SliceView            `json:"by_vendor"`
+	BySourceVendor []sourceVendorView            `json:"by_source_vendor"`
+	Calendar       metric.Calendar               `json:"calendar"`
+	Errors         []string                      `json:"errors"`
 }
 
 func EncodeSummary(w io.Writer, r Result) error {
 	out := summaryJSON{
-		All:    metric.View(r.Summary.All),
-		Errors: r.Errors,
+		All:      metric.View(r.Summary.All),
+		Calendar: r.Summary.Calendar,
+		Errors:   r.Errors,
 	}
 	if out.Errors == nil {
 		out.Errors = []string{}

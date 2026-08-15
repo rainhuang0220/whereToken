@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
@@ -30,10 +31,11 @@ func (s SourceVendor) Total() int64 {
 }
 
 type Summary struct {
-	All             Slice
-	BySource        []Slice
-	ByVendor        []Slice
-	BySourceVendor  []SourceVendor
+	All            Slice
+	BySource       []Slice
+	ByVendor       []Slice
+	BySourceVendor []SourceVendor
+	Calendar       Calendar
 }
 
 type SliceView struct {
@@ -133,6 +135,7 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	sort.Slice(sum.BySource, func(i, j int) bool { return sum.BySource[i].Total() > sum.BySource[j].Total() })
 	sort.Slice(sum.ByVendor, func(i, j int) bool { return sum.ByVendor[i].Total() > sum.ByVendor[j].Total() })
 	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
+	sum.Calendar = BuildCalendar(merged, time.Local, time.Now())
 	return sum
 }
 

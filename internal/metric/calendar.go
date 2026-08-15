@@ -8,32 +8,41 @@ import (
 )
 
 type Day struct {
-	Date                                 string
-	Miss, CacheRead, CacheCreate, Output int64
-	Total                                int64
-	Level                                int
+	Date          string `json:"date"`
+	Miss          int64  `json:"miss"`
+	CacheRead     int64  `json:"cache_read"`
+	CacheCreate   int64  `json:"cache_create"`
+	Output        int64  `json:"output"`
+	Total         int64  `json:"total"`
+	MissM         string `json:"miss_m"`
+	CacheReadM    string `json:"cache_read_m"`
+	CacheCreateM  string `json:"cache_create_m"`
+	OutputM       string `json:"output_m"`
+	TotalM        string `json:"total_m"`
+	Level         int    `json:"level"`
 }
 
 type CalendarStats struct {
-	PeakDate      string
-	PeakTotal     int64
-	CurrentStreak int
-	LongestStreak int
+	PeakDate      string `json:"peak_date"`
+	PeakTotal     int64  `json:"peak_total"`
+	PeakTotalM    string `json:"peak_total_m"`
+	CurrentStreak int    `json:"current_streak"`
+	LongestStreak int    `json:"longest_streak"`
 }
 
 type CalendarSeries struct {
-	Days  []Day
-	Stats CalendarStats
+	Days  []Day         `json:"days"`
+	Stats CalendarStats `json:"stats"`
 }
 
 type Calendar struct {
-	WeekStart  string
-	Timezone   string
-	WindowFrom string
-	WindowTo   string
-	All        CalendarSeries
-	BySource   map[string]CalendarSeries
-	ByVendor   map[string]CalendarSeries
+	WeekStart  string                     `json:"week_start"`
+	Timezone   string                     `json:"timezone"`
+	WindowFrom string                     `json:"window_from"`
+	WindowTo   string                     `json:"window_to"`
+	All        CalendarSeries             `json:"all"`
+	BySource   map[string]CalendarSeries  `json:"by_source"`
+	ByVendor   map[string]CalendarSeries  `json:"by_vendor"`
 }
 
 func BuildCalendar(events []event.UsageEvent, loc *time.Location, now time.Time) Calendar {
@@ -75,8 +84,20 @@ func BuildCalendar(events []event.UsageEvent, loc *time.Location, now time.Time)
 }
 
 func finishSeries(days []Day, today time.Time) CalendarSeries {
+	if days == nil {
+		days = []Day{}
+	}
 	days = assignLevels(days)
-	return CalendarSeries{Days: days, Stats: computeStats(days, today)}
+	for i := range days {
+		days[i].MissM = FormatM(days[i].Miss)
+		days[i].CacheReadM = FormatM(days[i].CacheRead)
+		days[i].CacheCreateM = FormatM(days[i].CacheCreate)
+		days[i].OutputM = FormatM(days[i].Output)
+		days[i].TotalM = FormatM(days[i].Total)
+	}
+	stats := computeStats(days, today)
+	stats.PeakTotalM = FormatM(stats.PeakTotal)
+	return CalendarSeries{Days: days, Stats: stats}
 }
 
 func assignLevels(days []Day) []Day {
