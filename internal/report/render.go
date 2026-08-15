@@ -77,6 +77,13 @@ func title(snap Snapshot) string {
 	return strings.Join(parts, " · ")
 }
 
+func turnKPI(snap Snapshot) string {
+	if snap.HideTurns {
+		return "—"
+	}
+	return metric.FormatCount(snap.UserTurns)
+}
+
 func kpiCells(snap Snapshot) [2][3]table.KPI {
 	if snap.ShowStreaks {
 		return [2][3]table.KPI{
@@ -88,7 +95,7 @@ func kpiCells(snap Snapshot) [2][3]table.KPI {
 			{
 				{Label: "当前连烧", Value: days(snap.CurrentStreak)},
 				{Label: "请求", Value: metric.FormatCount(snap.Requests)},
-				{Label: "用户回合", Value: metric.FormatCount(snap.UserTurns)},
+				{Label: "用户回合", Value: turnKPI(snap)},
 			},
 		}
 	}
@@ -99,7 +106,7 @@ func kpiCells(snap Snapshot) [2][3]table.KPI {
 			{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 		},
 		{
-			{Label: "用户回合", Value: metric.FormatCount(snap.UserTurns)},
+			{Label: "用户回合", Value: turnKPI(snap)},
 			{Label: "工具数", Value: metric.FormatCount(int64(len(snap.Tools)))},
 			{Label: "厂家数", Value: metric.FormatCount(int64(len(snap.Vendors)))},
 		},

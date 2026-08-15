@@ -41,6 +41,7 @@ type Snapshot struct {
 	Requests      int64
 	UserTurns     int64
 	ShowStreaks   bool
+	HideTurns     bool
 	Last7         []int64
 	Tools         []Row
 	Vendors       []Row
@@ -117,6 +118,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		Requests:      sum.All.Requests,
 		UserTurns:     sum.All.UserTurns,
 		ShowStreaks:   !f.Today,
+		HideTurns:     f.Model != "",
 		Quality:       sum.All.Quality,
 	}
 

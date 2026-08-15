@@ -224,6 +224,13 @@ func TestFilterModelK3(t *testing.T) {
 	if snap.TotalM != "1.03 M" || snap.Requests != 1 || snap.UserTurns != 0 {
 		t.Fatalf("%+v", snap)
 	}
+	if !snap.HideTurns {
+		t.Fatal("model slice must hide turn KPI")
+	}
+	out := Render(snap, Options{})
+	if !strings.Contains(out, "用户回合") || !strings.Contains(out, "—") {
+		t.Fatalf("expected em dash for unknown turns:\n%s", out)
+	}
 }
 
 func TestDegradedNoteFromErrors(t *testing.T) {
@@ -359,6 +366,15 @@ func TestSnapshotTodayOmitsLast7(t *testing.T) {
 	}
 	if len(snap.Last7) != 0 {
 		t.Fatalf("today last7=%v", snap.Last7)
+	}
+}
+
+func TestReportIsUsage(t *testing.T) {
+	if IsUsage(nil) {
+		t.Fatal("nil")
+	}
+	if !IsUsage(usageErr{msg: "unknown model"}) {
+		t.Fatal("usageErr")
 	}
 }
 
