@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go test
+        run: go test ./...
+
+      - name: Go build
+        shell: bash
+        run: |
+          out=wheretoken
+          if [ "${{ runner.os }}" = "Windows" ]; then out=wheretoken.exe; fi
+          go build -o "$out" ./cmd/wheretoken
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Web tests
+        working-directory: web
+        run: npm ci && npm test
+
+      - name: npm wrapper tests
+        working-directory: npm
+        env:
+          WHERETOKEN_SKIP_DOWNLOAD: "1"
+        run: npm test
