@@ -6,6 +6,7 @@ import FoundryMarks from './components/FoundryMarks.vue'
 import KilnWall from './components/KilnWall.vue'
 import KpiRow from './components/KpiRow.vue'
 import SliceTable from './components/SliceTable.vue'
+import ThemeSwitcher from './themes/Switcher.vue'
 import { selectDrill, selectSeries, todayISO, wallCells } from './grid'
 import { useSummaryStore } from './stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables } from './types'
@@ -41,8 +42,6 @@ onMounted(() => {
 
 <template>
   <div class="forge">
-    <div class="watermark" aria-hidden="true">消耗</div>
-
     <header class="rail">
       <h1>whereToken</h1>
       <div class="rail-meta">
@@ -50,6 +49,7 @@ onMounted(() => {
         <button type="button" class="lever" :disabled="store.loading" @click="store.refresh()">
           {{ store.loading ? '煅烧中…' : '再扫' }}
         </button>
+        <ThemeSwitcher />
       </div>
     </header>
 

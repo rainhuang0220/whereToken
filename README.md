@@ -40,7 +40,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。默认读你已�
 
 ## 当前状态
 
-可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
+可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开窑墙。右上角六个字切釉色（窑 / 苔 / 瓷 / 绛 / 青 / 霜），记在本机 `localStorage`。
 
 Cursor：本机 `state.vscdb` 提供请求与用户回合；token 四列在用户授权后走 Cursor 账号 DashboardService（`GetFilteredUsageEvents` / `GetAggregatedUsageEvents`）。本机 `bubble.tokenCount` 仍几乎全是 0，不把上下文窗口快照加成用量。没有登录态时 `errors[]` 会写 `cursor: 未找到本机登录态`，token 列保持 degraded。只有 `~/.cursor`、没有 vscdb 时才显示「已发现，无用量」。
 
@@ -53,6 +53,31 @@ Cursor：本机 `state.vscdb` 提供请求与用户回合；token 四列在用�
 
 实现计划：[`docs/superpowers/plans/2026-08-15-wheretoken.md`](docs/superpowers/plans/2026-08-15-wheretoken.md) · [`docs/superpowers/plans/2026-08-15-wheretoken-calendar.md`](docs/superpowers/plans/2026-08-15-wheretoken-calendar.md)。
 
+## 第一次跑
+
+需要 **Go 1.25+**，以及 **Node**（只用来编 `web/`）。
+
+```bash
+cd /Users/rainhuang/Desktop/whereToken
+cd web && npm install && npm run build && cd ..
+go run ./cmd/wheretoken serve
+```
+
+浏览器打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。第一次扫描大约 **10 秒**：要打 Cursor 账号用量接口，再读本机各家数据库。页面像没更新时硬刷新：**Cmd+Shift+R**。
+
+## 再开一次
+
+杀掉占着 8787 的进程，重新编前端，再 serve：
+
+```bash
+cd /Users/rainhuang/Desktop/whereToken
+lsof -tiTCP:8787 | xargs kill
+cd web && npm run build && cd ..
+go run ./cmd/wheretoken serve
+```
+
+`serve` 每次请求读磁盘上的 `web/dist`。只改了 Vue/CSS 时编一次 dist 再硬刷新即可；Go 代码变了才需要重启进程。
+
 ## 开发命令
 
 ```bash
@@ -61,8 +86,8 @@ go run ./cmd/wheretoken scan --json
 go run ./cmd/wheretoken sources
 cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve          # http://127.0.0.1:8787 ，被占用则 8788–8797
-# serve 读的是 web/dist。改过 Vue 必须先 npm run build，并重启 serve。
-# 不要拿一个旧的 serve 配新页面：旧 /api/summary 没有 calendar 时墙会是空的。
+# serve 读的是 web/dist。改 Vue/CSS 先 npm run build，然后 Cmd+Shift+R。
+# Go 代码变了才需要重启进程。不要拿一个旧的 serve 配新 API。
 
 cd web && npm run dev                  # Vite :5173，把 /api 代理到 127.0.0.1:8787
 # 另开终端：go run ./cmd/wheretoken serve

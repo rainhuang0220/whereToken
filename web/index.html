@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>whereToken</title>
+    <script>
+      (function () {
+        var allowed = ['kiln', 'moss', 'porcelain', 'jiang', 'qingmo', 'frost']
+        var id = 'kiln'
+        try {
+          var raw = localStorage.getItem('wheretoken.theme')
+          if (allowed.indexOf(raw) !== -1) id = raw
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', id)
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

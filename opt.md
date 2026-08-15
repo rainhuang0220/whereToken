@@ -5,6 +5,40 @@
 
 ---
 
+# 第 7 轮：釉色包 + 去掉「消耗」水印（2026-08-15）
+
+触发：用户要可切换主题（说「插件」），窑墙必须跟着重漆；巨大「消耗」水印必须删；README 要能复制粘贴的第一次跑 / 再开一次。
+
+## 7.1 水印
+
+- **选择：** 删掉 `.watermark`「消耗」。窑的隐喻留在釉色和字体，不靠巨型汉字撑场。
+- **理由：** 用户原话太 tacky，mandatory delete。
+
+## 7.2 主题是一份 manifest，不是散落的 hex
+
+- **选择：** `web/src/themes/` 釉色包。`manifest.ts` 是唯一调色盘；CSS 只写 `var(--void)` / `var(--ember-*)` / `color-mix(...)`。Vite 把 `themeStylesheet()` 打进 `virtual:wheretoken-themes.css`。`document.documentElement[data-theme]` + `localStorage['wheretoken.theme']`。
+- **不选：** 每个 Vue 文件里写死 hex；半切换（标题换了砖还是窑橙）。
+- **切换 UI：** 右上角六个字 窑苔瓷绛青霜，不是设置页。
+
+## 7.3 六套釉
+
+| id | 名 | 为什么在 whereToken 成立 |
+|----|----|--------------------------|
+| kiln | **窑** | 默认。炉膛黑 + 焦褐到白热。现有产品皮肤，抽出变量，不改味道。 |
+| moss | **苔** | 淡绿纸底 + 草绿加厚。空砖仍是可辨的冷苔，不是 Bootstrap 绿按钮。浅色场上「烧得越狠砖越深」，和 GitHub 绿秀无关，是苔藓长厚。 |
+| porcelain | **瓷** | 高岭土暖白为主，青釉蓝和墨作发丝线。不是 Twitter 白底蓝链。砖从素坯走到青花再到近黑。 |
+| jiang | **绛** | 粉黑：木炭底上的热玫瑰红，不是 Barbie 浅粉。账本里的「烧」换成绛色窑火。 |
+| qingmo | **青墨** | 松烟纸 + 青釉。token 是一笔墨越写越亮的青。比窑更冷、比霜更有铜绿。 |
+| frost | **霜碳** | 碳灰墙，只有最热一档结霜白蓝。冷账本：大部分是炭，峰值才起霜。 |
+
+- **对比：** Vitest 钉 `bone` / `ash` / `ember-4` / `warn` 对 `void` ≥ 4.5；空砖 `clay` 必须异于 `mortar` 和页面底。浅色釉的 `ember-4` 走深色（苔藓底、墨）才能当标题色；深色釉的 `ember-4` 走高光。
+
+## 7.4 serve 与 dist
+
+- **选择：** `http.FileServer` 每次请求读 `web/dist`。改前端编 dist 后硬刷新即可；不必为 CSS 杀 8787。README 仍给出 `lsof -tiTCP:8787 | xargs kill` 的完整再开一次命令，因为用户要复制即用。
+
+---
+
 # 第 6 轮：Cursor 账号用量 API（2026-08-15 23:00）
 
 触发：用户明确推翻「永远不用 Cursor 登录 / cursor.com CSV」。本机 `tokenCount` 全 0 不能当账。人正在这台 Mac 的 Cursor 里登录。
