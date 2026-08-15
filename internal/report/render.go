@@ -10,6 +10,7 @@ import (
 
 type Options struct {
 	ASCII bool
+	Color bool
 }
 
 func Render(snap Snapshot, opt Options) string {
@@ -41,12 +42,18 @@ func Render(snap Snapshot, opt Options) string {
 	}
 	if len(snap.Notes) > 0 {
 		b.WriteByte('\n')
-		b.WriteString("注\n")
+		var nb strings.Builder
+		nb.WriteString("注\n")
 		for _, n := range snap.Notes {
-			b.WriteString("  · ")
-			b.WriteString(n)
-			b.WriteByte('\n')
+			nb.WriteString("  · ")
+			nb.WriteString(n)
+			nb.WriteByte('\n')
 		}
+		block := nb.String()
+		if opt.Color {
+			block = table.Dim(block, true)
+		}
+		b.WriteString(block)
 	}
 	return b.String()
 }

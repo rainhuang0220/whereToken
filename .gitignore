@@ -20,8 +20,8 @@ opt.md
 
 # language artifacts (future)
 node_modules/
-dist/
-dist-ssr/
+/web/dist/
+/web/dist-ssr/
 coverage/
 /bin/
 tmp/

@@ -13,6 +13,7 @@ func TestFormatM(t *testing.T) {
 		{1_741, "0.0017 M"},
 		{9_999, "0.0100 M"},
 		{10_000, "0.01 M"},
+		{1_000_000_000_000, "1000000.00 M"},
 	}
 	for _, c := range cases {
 		if got := FormatM(c.in); got != c.want {

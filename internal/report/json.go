@@ -16,35 +16,35 @@ type jsonRow struct {
 }
 
 type jsonSnap struct {
-	Period              string   `json:"period"`
-	Scope               string   `json:"scope,omitempty"`
-	Total               int64    `json:"total"`
-	TotalM              string   `json:"total_m"`
-	HitRate             *float64 `json:"hit_rate"`
-	HitRateText         string   `json:"hit_rate_text"`
-	MaxStreakDays       int      `json:"max_streak_days,omitempty"`
-	CurrentStreakDays   int      `json:"current_streak_days,omitempty"`
-	Requests            int64    `json:"requests"`
-	UserTurns           int64    `json:"user_turns"`
-	Tools               []jsonRow `json:"tools"`
-	Vendors             []jsonRow `json:"vendors"`
-	Models              []jsonRow `json:"models,omitempty"`
-	Notes               []string `json:"notes"`
+	Period            string    `json:"period"`
+	Scope             string    `json:"scope,omitempty"`
+	Total             int64     `json:"total"`
+	TotalM            string    `json:"total_m"`
+	HitRate           *float64  `json:"hit_rate"`
+	HitRateText       string    `json:"hit_rate_text"`
+	MaxStreakDays     int       `json:"max_streak_days,omitempty"`
+	CurrentStreakDays int       `json:"current_streak_days,omitempty"`
+	Requests          int64     `json:"requests"`
+	UserTurns         int64     `json:"user_turns"`
+	Tools             []jsonRow `json:"tools"`
+	Vendors           []jsonRow `json:"vendors"`
+	Models            []jsonRow `json:"models,omitempty"`
+	Notes             []string  `json:"notes"`
 }
 
 func WriteJSON(w io.Writer, snap Snapshot) error {
 	out := jsonSnap{
-		Period:            snap.Period,
-		Scope:             snap.Scope,
-		Total:             snap.Total,
-		TotalM:            snap.TotalM,
-		HitRate:           snap.HitRate,
-		HitRateText:       snap.HitRateText,
-		Requests:          snap.Requests,
-		UserTurns:         snap.UserTurns,
-		Tools:             jsonRows(snap.Tools, true),
-		Vendors:           jsonRows(snap.Vendors, false),
-		Notes:             snap.Notes,
+		Period:      snap.Period,
+		Scope:       snap.Scope,
+		Total:       snap.Total,
+		TotalM:      snap.TotalM,
+		HitRate:     snap.HitRate,
+		HitRateText: snap.HitRateText,
+		Requests:    snap.Requests,
+		UserTurns:   snap.UserTurns,
+		Tools:       jsonRows(snap.Tools, true),
+		Vendors:     jsonRows(snap.Vendors, false),
+		Notes:       snap.Notes,
 	}
 	if snap.ShowStreaks {
 		out.MaxStreakDays = snap.MaxStreak

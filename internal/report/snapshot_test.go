@@ -135,6 +135,19 @@ func TestFilterToolClaude(t *testing.T) {
 	}
 }
 
+func TestFilterTodayAndCursor(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Today: true, Tool: "cursor"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "0.00 M" || snap.Scope != "Cursor" || !strings.Contains(snap.Period, "今天") {
+		t.Fatalf("%+v", snap)
+	}
+}
+
 func TestFilterTodayAndTool(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

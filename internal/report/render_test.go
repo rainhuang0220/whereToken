@@ -107,6 +107,26 @@ func TestRenderZeroData(t *testing.T) {
 	}
 }
 
+func TestRenderDimsNotesOnlyWhenColor(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := Render(snap, Options{})
+	if strings.Contains(plain, "\x1b") {
+		t.Fatal("plain had ANSI")
+	}
+	color := Render(snap, Options{Color: true})
+	if !strings.Contains(color, "\x1b[2m") {
+		t.Fatalf("expected dim notes:\n%s", color)
+	}
+	if strings.Contains(color, "\x1b[2m总用量") {
+		t.Fatal("must not dim KPI labels")
+	}
+}
+
 func TestRenderRedactsNotes(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

@@ -133,11 +133,8 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		return ExitOK
 	}
 	ascii := table.UseASCII(flags.ASCII, a.GOOS, a.LookupEnv)
-	out := report.Render(snap, report.Options{ASCII: ascii})
 	color := table.UseColor(flags.NoColor, a.StdoutTTY, a.LookupEnv)
-	if color && len(snap.Notes) > 0 {
-		// notes already in out; leave as-is — color is opt-in dim of the 注 block later
-	}
+	out := report.Render(snap, report.Options{ASCII: ascii, Color: color})
 	fmt.Fprint(a.Stdout, out)
 	return ExitOK
 }

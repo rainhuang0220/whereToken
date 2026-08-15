@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -11,9 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/scan"
+	"github.com/rainhuang0220/whereToken/internal/webembed"
 )
 
 type server struct {
@@ -36,6 +39,10 @@ func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if dir := webDist(); dir != "" {
 			serveWeb(w, r, dir)
+			return
+		}
+		if fsys, ok := webembed.FS(); ok {
+			serveFS(w, r, fsys)
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -143,6 +150,43 @@ func (s *server) endScan() {
 	s.mu.Lock()
 	s.scanning = false
 	s.mu.Unlock()
+}
+
+func serveFS(w http.ResponseWriter, r *http.Request, fsys fs.FS) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	rel := path.Clean("/" + r.URL.Path)
+	name := strings.TrimPrefix(rel, "/")
+	if name == "" || rel == "/" {
+		name = "index.html"
+	}
+	f, err := fsys.Open(name)
+	if err != nil {
+		if path.Ext(rel) != "" {
+			http.NotFound(w, r)
+			return
+		}
+		name = "index.html"
+		f, err = fsys.Open(name)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil || st.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+	rs, ok := f.(io.ReadSeeker)
+	if !ok {
+		http.Error(w, "unsupported file", http.StatusInternalServerError)
+		return
+	}
+	http.ServeContent(w, r, name, time.Time{}, rs)
 }
 
 func serveWeb(w http.ResponseWriter, r *http.Request, dir string) {

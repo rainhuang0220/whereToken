@@ -61,12 +61,9 @@ Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failur
 
 ### Dashboard
 
-Same scan, kiln wall in the browser:
+GitHub Release binaries embed the kiln UI. `go install` embeds a short HTML stub; from a clone, `cd web && npm run build` then `wheretoken serve` uses `web/dist`.
 
 ```bash
-git clone https://github.com/rainhuang0220/whereToken.git
-cd whereToken
-cd web && npm install && npm run build && cd ..
 go run ./cmd/wheretoken serve
 ```
 
@@ -104,7 +101,7 @@ go run ./cmd/wheretoken serve
 bash scripts/verify-local.sh
 ```
 
-CI runs `go test` on Ubuntu, macOS, and Windows.
+CI runs `go test` on Ubuntu, macOS, and Windows. Workflow files: [`ci/github-workflows/`](ci/github-workflows/) (`scripts/install-github-workflows.sh` copies them to `.github/workflows` when the remote token allows it).
 
 ## License
 

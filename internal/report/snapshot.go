@@ -11,39 +11,39 @@ import (
 )
 
 type Filter struct {
-	Today          bool
-	Tool, Vendor   string
-	Model          string
-	Discovered     []metric.Slice
+	Today        bool
+	Tool, Vendor string
+	Model        string
+	Discovered   []metric.Slice
 }
 
 type Row struct {
-	ID, Label      string
-	TotalM         string
-	HitRateText    string
-	Requests       int64
-	UserTurns      int64
-	RequestsText   string
-	TurnsText      string
-	Quality        event.Quality
+	ID, Label    string
+	TotalM       string
+	HitRateText  string
+	Requests     int64
+	UserTurns    int64
+	RequestsText string
+	TurnsText    string
+	Quality      event.Quality
 }
 
 type Snapshot struct {
-	Period, Scope  string
-	Total          int64
-	TotalM         string
-	HitRate        *float64
-	HitRateText    string
-	MaxStreak      int
-	CurrentStreak  int
-	Requests       int64
-	UserTurns      int64
-	ShowStreaks    bool
-	Tools          []Row
-	Vendors        []Row
-	Models         []Row
-	Notes          []string
-	Quality        event.Quality
+	Period, Scope string
+	Total         int64
+	TotalM        string
+	HitRate       *float64
+	HitRateText   string
+	MaxStreak     int
+	CurrentStreak int
+	Requests      int64
+	UserTurns     int64
+	ShowStreaks   bool
+	Tools         []Row
+	Vendors       []Row
+	Models        []Row
+	Notes         []string
+	Quality       event.Quality
 }
 
 type usageErr struct{ msg string }
