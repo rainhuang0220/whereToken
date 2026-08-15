@@ -16,6 +16,7 @@ data/
 !.env.example
 auth.json
 credentials.json
+opt.md
 
 # language artifacts (future)
 node_modules/

@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Status: 方案 B 已批准；按工具 × 按厂家拆分为一等需求
-Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../../opt.md) · [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md) · [`2026-08-15-wheretoken-calendar-design.md`](./2026-08-15-wheretoken-calendar-design.md)（窑墙视觉 + 日历，第 3 轮）
+Companion: [`docs/data-sources.md`](../../data-sources.md) · [`docs/superpowers/plans/2026-08-15-wheretoken.md`](../plans/2026-08-15-wheretoken.md) · [`2026-08-15-wheretoken-calendar-design.md`](./2026-08-15-wheretoken-calendar-design.md)（窑墙视觉 + 日历）
 
 ---
 
@@ -249,7 +249,6 @@ CLI 汇总必须与页面 KPI **同一函数**算出，禁止两套公式。日�
 ```
 whereToken/
   README.md
-  opt.md
   docs/
     data-sources.md
     superpowers/specs/…
@@ -352,8 +351,8 @@ requestId max、tool_result、degraded 旗标。
 
 ## 13. 规格自检
 
-- 无 TBD/TODO 占位。第 0 轮三问已在 `opt.md` 关闭。第 3 轮周首/时区/分桶/连烧收口已在日历规格锁死。
-- 公式在 §4 与 opt.md 0.5、README 一致。
+- 无 TBD/TODO 占位。周首 / 时区 / 分桶 / 连烧收口已在日历规格锁死。
+- 公式在 §4 与 README 一致。
 - P0 四源均有本机证据（data-sources.md）。
 - 范围是一个产品、一条扫描管道，不需要拆成多个仓库。
 - 「用户回合」不会有两种解释：Claude 排除 tool_result，Kimi 用 `origin.kind==user`。
