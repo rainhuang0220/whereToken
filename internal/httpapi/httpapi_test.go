@@ -136,6 +136,9 @@ func TestMuxSetsNoSniffAndDenyFrame(t *testing.T) {
 	if resp.Header.Get("X-Frame-Options") != "DENY" {
 		t.Fatalf("frame=%q", resp.Header.Get("X-Frame-Options"))
 	}
+	if resp.Header.Get("Referrer-Policy") != "no-referrer" {
+		t.Fatalf("referrer=%q", resp.Header.Get("Referrer-Policy"))
+	}
 }
 
 func TestListenRefusesNonLocalhost(t *testing.T) {

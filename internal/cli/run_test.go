@@ -163,6 +163,21 @@ func TestRunJSON(t *testing.T) {
 	}
 }
 
+func TestRunScanJSONRedactsJWT(t *testing.T) {
+	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abc"
+	app, out, errb := testApp([]string{"scan"})
+	res := fixtureResult()
+	res.Errors = []string{"trae: bearer " + jwt}
+	app.Scan = func(adapter.Home) scan.Result { return res }
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "eyJ") || strings.Contains(s, jwt) {
+		t.Fatalf("scan JSON leaked JWT:\n%s", s)
+	}
+}
+
 func TestRunTodayCursorCombo(t *testing.T) {
 	app, out, errb := testApp([]string{"--today", "--cursor"})
 	if code := app.Run(); code != ExitOK {

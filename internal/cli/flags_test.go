@@ -220,6 +220,20 @@ func TestParseWidth(t *testing.T) {
 	}
 }
 
+func TestParseBadPortIsUsage(t *testing.T) {
+	_, err := Parse([]string{"serve", "--port", "nope"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestParseNegativeWidthIsUsage(t *testing.T) {
+	_, err := Parse([]string{"--width", "-3"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestParseTodayOfflineCursor(t *testing.T) {
 	f, err := Parse([]string{"--today", "--offline", "--cursor", "--quiet"})
 	if err != nil {

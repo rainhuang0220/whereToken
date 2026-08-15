@@ -116,6 +116,13 @@ func Parse(args []string) (Flags, error) {
 		return Flags{}, usageError{msg: strings.TrimSpace(err.Error()) + "\ntry `wheretoken --help`"}
 	}
 
+	if f.Width < 0 {
+		return Flags{}, usageError{msg: "invalid --width (must be >= 0)\ntry `wheretoken --help`"}
+	}
+	if f.Port <= 0 || f.Port > 65535 {
+		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	}
+
 	if f.Command == CommandCompletion {
 		left := fs.Args()
 		if len(left) > 0 {
