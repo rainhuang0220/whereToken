@@ -116,8 +116,15 @@ func TestParseConflictingToolsIsUsage(t *testing.T) {
 	if err == nil || !IsUsage(err) {
 		t.Fatalf("err=%v", err)
 	}
+	if !strings.Contains(err.Error(), "conflicting") {
+		t.Fatalf("err=%v", err)
+	}
 	_, err = Parse([]string{"--cursor", "--tool=kimi"})
 	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	_, err = Parse([]string{"--claude", "--kimi"})
+	if err == nil || !IsUsage(err) || !strings.Contains(err.Error(), "conflicting") {
 		t.Fatalf("err=%v", err)
 	}
 }

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -204,6 +205,19 @@ func TestRunServeDoesNotScanTable(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "总用量") {
 		t.Fatal("serve should not print the table")
+	}
+}
+
+func TestRunServeFailureIsExitFail(t *testing.T) {
+	app, _, errb := testApp([]string{"serve", "--port", "8787"})
+	app.Serve = func(addr string, home adapter.Home) error {
+		return errors.New("bind 127.0.0.1:8787: address already in use")
+	}
+	if code := app.Run(); code != ExitFail {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(errb.String(), "already in use") {
+		t.Fatalf("stderr=%s", errb.String())
 	}
 }
 

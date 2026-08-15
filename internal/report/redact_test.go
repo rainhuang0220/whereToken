@@ -49,6 +49,14 @@ func TestRedactXAPIKey(t *testing.T) {
 	}
 }
 
+func TestRedactOpenAIAndAnthropicHeaders(t *testing.T) {
+	in := "cursor: openai-api-key: sess-abcdefghijklmnopqrstuvwxyz anthropic-api-key: my-ant-secret-value-here"
+	out := Redact(in)
+	if strings.Contains(out, "sess-abcdefghijklmnopqrstuvwxyz") || strings.Contains(out, "my-ant-secret-value-here") {
+		t.Fatalf("leaked: %q", out)
+	}
+}
+
 func TestRedactLeavesNormalErrors(t *testing.T) {
 	in := "trae: 登录态在加密存储中，没有可读的 JWT 文件"
 	if got := Redact(in); got != in {

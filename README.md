@@ -66,6 +66,7 @@ wheretoken --model=k3
 wheretoken --today --cursor
 wheretoken --json               # scripts; tables stay the default
 wheretoken --ascii              # old Windows consoles
+wheretoken --width 40           # ranking drops 回合/请求 before turning names into C...
 wheretoken --quiet              # no “正在读 …” on stderr
 wheretoken --offline            # local ledgers only; skip Cursor/Trae APIs
 wheretoken completion zsh          # also bash, fish, powershell

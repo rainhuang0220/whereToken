@@ -17,3 +17,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Narrow terminals drop ranking columns (回合, then 请求) instead of turning every name into `C...`
 - `--cursor` / `--tool` slices no longer foot-note an unused Trae login
 - Hide the model ranking when every model is 0.00 M (offline Cursor was a 40-row zero dump)
+- Redact `openai-api-key` / `anthropic-api-key` headers the same way as JWTs
