@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -73,6 +74,33 @@ func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
 	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "completions/*"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("goreleaser missing %q", want)
+		}
+	}
+}
+
+func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	root := filepath.Join(filepath.Dir(file), "..", "..", "ci", "github-workflows")
+	sha := regexp.MustCompile(`^[0-9a-f]{40}$`)
+	uses := regexp.MustCompile(`uses:\s+(\S+)`)
+	for _, name := range []string{"ci.yml", "release.yml"} {
+		body, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range uses.FindAllStringSubmatch(string(body), -1) {
+			ref := m[1]
+			_, at, ok := strings.Cut(ref, "@")
+			if !ok {
+				t.Errorf("%s: uses %s has no ref", name, ref)
+				continue
+			}
+			if !sha.MatchString(at) {
+				t.Errorf("%s: unpinned action %s", name, ref)
+			}
 		}
 	}
 }
