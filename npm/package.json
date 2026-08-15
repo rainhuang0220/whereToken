@@ -1,0 +1,33 @@
+{
+  "name": "wheretoken",
+  "version": "0.1.0",
+  "description": "Local coding-agent token usage as a character table",
+  "license": "MIT",
+  "bin": {
+    "wheretoken": "bin/wheretoken"
+  },
+  "scripts": {
+    "postinstall": "node install.js",
+    "test": "node --test lib/platform.test.js"
+  },
+  "files": [
+    "bin/wheretoken",
+    "install.js",
+    "lib/platform.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rainhuang0220/whereToken.git",
+    "directory": "npm"
+  },
+  "bugs": {
+    "url": "https://github.com/rainhuang0220/whereToken/issues"
+  },
+  "homepage": "https://github.com/rainhuang0220/whereToken#readme",
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["tokens", "cli", "claude", "cursor", "codex"]
+}

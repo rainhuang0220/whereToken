@@ -23,7 +23,7 @@ node_modules/
 dist/
 dist-ssr/
 coverage/
-bin/
+/bin/
 tmp/
 # Go module vendor dir (root only — do not ignore internal/vendor)
 /vendor/

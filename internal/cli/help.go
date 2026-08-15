@@ -11,6 +11,8 @@ USAGE
 
 INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+  npm install -g wheretoken          # GitHub Release binary; no Go required
+  npx wheretoken
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,

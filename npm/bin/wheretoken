@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+'use strict'
+
+const { spawn } = require('child_process')
+const fs = require('fs')
+const path = require('path')
+
+const name = process.platform === 'win32' ? 'wheretoken.exe' : 'wheretoken'
+const bin = path.join(__dirname, name)
+
+if (!fs.existsSync(bin)) {
+  process.stderr.write(
+    'wheretoken: native binary not installed.\n' +
+      '  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest\n' +
+      '  or wait for a GitHub Release, then re-run npm install -g wheretoken\n',
+  )
+  process.exit(1)
+}
+
+const child = spawn(bin, process.argv.slice(2), { stdio: 'inherit' })
+child.on('exit', (code, signal) => {
+  if (signal) {
+    process.exit(1)
+  }
+  process.exit(code == null ? 1 : code)
+})

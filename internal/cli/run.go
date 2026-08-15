@@ -52,7 +52,7 @@ func (a *App) Run() int {
 		a.GOOS = runtime.GOOS
 	}
 	if a.Version == "" {
-		a.Version = versionFromBuild()
+		a.Version = ResolveVersion("dev")
 	}
 
 	flags, err := Parse(a.Args)
@@ -192,8 +192,4 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 	}
 	fmt.Fprintln(a.Stderr, lastErr.Error())
 	return ExitFail
-}
-
-func versionFromBuild() string {
-	return "dev"
 }
