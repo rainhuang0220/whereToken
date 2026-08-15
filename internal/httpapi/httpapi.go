@@ -27,6 +27,14 @@ type server struct {
 	scanning bool
 }
 
+func NewHTTPServer(addr string, home adapter.Home) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           NewMux(home),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+}
+
 func NewMux(home adapter.Home) http.Handler {
 	return NewMuxWith(home, scan.AllAdapters())
 }
@@ -236,7 +244,7 @@ func Listen(addr string, home adapter.Home) error {
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{Addr: addr, Handler: NewMux(home)}
+	srv := NewHTTPServer(addr, home)
 	return srv.Serve(ln)
 }
 

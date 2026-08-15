@@ -218,7 +218,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			continue
 		}
 		fmt.Fprintf(a.Stderr, "http://%s\n", addr)
-		srv := &http.Server{Addr: addr, Handler: httpapi.NewMux(home)}
+		srv := httpapi.NewHTTPServer(addr, home)
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail

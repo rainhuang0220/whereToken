@@ -2,6 +2,8 @@ module github.com/rainhuang0220/whereToken
 
 go 1.25.0
 
+toolchain go1.25.13
+
 require (
 	github.com/mattn/go-isatty v0.0.24
 	modernc.org/sqlite v1.56.0

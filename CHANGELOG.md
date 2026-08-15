@@ -9,3 +9,4 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - `--today`, `--tool`/`--vendor`/`--model`, brand flags, `--json`, `--ascii`, `--no-color`, `--quiet`, `--offline`, `--width`
 - Exit `0` ok (including zero data / degraded login), `1` runtime, `2` usage
 - Never prints JWTs or access tokens
+- `wheretoken serve` sets `ReadHeaderTimeout`; go.mod pins `toolchain go1.25.13` for stdlib TLS/HTTP fixes

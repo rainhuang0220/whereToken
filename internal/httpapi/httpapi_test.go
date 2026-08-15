@@ -14,6 +14,16 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
+func TestNewHTTPServerSetsReadHeaderTimeout(t *testing.T) {
+	s := NewHTTPServer("127.0.0.1:0", testhome.New(t.TempDir()))
+	if s.ReadHeaderTimeout <= 0 {
+		t.Fatal("ReadHeaderTimeout must be set")
+	}
+	if s.Addr != "127.0.0.1:0" {
+		t.Fatalf("addr=%s", s.Addr)
+	}
+}
+
 func TestSummaryMatchesScan(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
