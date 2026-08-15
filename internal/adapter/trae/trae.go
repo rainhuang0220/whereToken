@@ -32,6 +32,7 @@ var traeProducts = []string{
 }
 
 var errNoLocalAuth = errors.New("未找到本机登录态")
+var errEncryptedLocalAuth = errors.New("登录态在加密存储中，没有可读的 JWT 文件")
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 	jwt := firstJWT(home)
@@ -104,13 +105,17 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 		return err
 	}
 	token := strings.TrimSpace(readAuthFile(root.AuthPath))
+	encrypted := false
 	if token == "" {
-		token = readStorageJSONToken(path)
+		token, encrypted = inspectStorageJSONAuth(path)
 	}
 	token = stripJWTPrefix(token)
 	if token == "" {
 		if len(sessions) == 0 {
 			return nil
+		}
+		if encrypted {
+			return errEncryptedLocalAuth
 		}
 		return errNoLocalAuth
 	}
@@ -298,15 +303,15 @@ func stripJWTPrefix(token string) string {
 	return token
 }
 
-func readStorageJSONToken(vscdbPath string) string {
+func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
 	p := filepath.Join(filepath.Dir(vscdbPath), "storage.json")
 	raw, err := os.ReadFile(p)
 	if err != nil {
-		return ""
+		return "", false
 	}
 	var obj map[string]any
 	if json.Unmarshal(raw, &obj) != nil {
-		return ""
+		return "", false
 	}
 	for k, v := range obj {
 		if !strings.Contains(k, "iCubeAuthInfo://icube.cloudide") {
@@ -314,7 +319,11 @@ func readStorageJSONToken(vscdbPath string) string {
 		}
 		s, _ := v.(string)
 		s = strings.TrimSpace(s)
-		if s == "" || !strings.HasPrefix(s, "{") {
+		if s == "" {
+			continue
+		}
+		if !strings.HasPrefix(s, "{") {
+			encrypted = true
 			continue
 		}
 		var auth struct {
@@ -324,10 +333,10 @@ func readStorageJSONToken(vscdbPath string) string {
 			continue
 		}
 		if tok := strings.TrimSpace(auth.Token); tok != "" {
-			return tok
+			token = tok
 		}
 	}
-	return ""
+	return token, encrypted
 }
 
 func openRO(path string) (*sql.DB, error) {

@@ -208,6 +208,18 @@ type summaryJSON struct {
 	Errors         []string           `json:"errors"`
 }
 
+func viewWithError(s metric.Slice, errs []string) metric.SliceView {
+	v := metric.View(s)
+	prefix := s.ID + ": "
+	for _, msg := range errs {
+		if strings.HasPrefix(msg, prefix) {
+			v.Error = strings.TrimPrefix(msg, prefix)
+			break
+		}
+	}
+	return v
+}
+
 func buildSummaryJSON(r Result) summaryJSON {
 	out := summaryJSON{
 		All:      metric.View(r.Summary.All),
@@ -226,10 +238,10 @@ func buildSummaryJSON(r Result) summaryJSON {
 		out.Errors = []string{}
 	}
 	for _, s := range r.Summary.BySource {
-		out.BySource = append(out.BySource, metric.View(s))
+		out.BySource = append(out.BySource, viewWithError(s, r.Errors))
 	}
 	for _, s := range r.Summary.ByVendor {
-		out.ByVendor = append(out.ByVendor, metric.View(s))
+		out.ByVendor = append(out.ByVendor, viewWithError(s, r.Errors))
 	}
 	if out.BySource == nil {
 		out.BySource = []metric.SliceView{}

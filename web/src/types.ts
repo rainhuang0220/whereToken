@@ -16,6 +16,7 @@ export type SliceView = {
   requests: number
   user_turns: number
   quality: string
+  error?: string
 }
 
 export type SourceVendorView = {

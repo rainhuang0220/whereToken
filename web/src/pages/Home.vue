@@ -7,6 +7,7 @@ import FoundryMarks from '../components/FoundryMarks.vue'
 import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
+import { observatoryDegradedLines } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables } from '../types'
@@ -35,12 +36,21 @@ const loginHint = computed(() => {
       (e) =>
         e.startsWith(`${id}:`) && (e.includes('已失效') || e.includes('未找到本机登录态')),
     )
+  const hasRowError = (id: string) =>
+    payload.value?.by_source?.some((s) => s.id === id && Boolean(s.error))
   const names: string[] = []
-  if (!traeAbsent.value && (expired('trae') || traeDegraded.value)) names.push('Trae')
-  if (!cursorAbsent.value && (expired('cursor') || cursorDegraded.value)) names.push('Cursor')
+  if (!traeAbsent.value && !hasRowError('trae') && (expired('trae') || traeDegraded.value)) {
+    names.push('Trae')
+  }
+  if (!cursorAbsent.value && !hasRowError('cursor') && (expired('cursor') || cursorDegraded.value)) {
+    names.push('Cursor')
+  }
   if (!names.length) return ''
   return `${names.join(' / ')} 需要 IDE 已登录。登录后点「刷新」重新煅烧本机账本；浏览器重载只会显示上次结果。`
 })
+const degradedLines = computed(() =>
+  payload.value ? observatoryDegradedLines(payload.value) : [],
+)
 const axis = ref<AxisSel>({ kind: 'all', id: 'all' })
 
 const series = computed<CalendarSeries>(() => selectSeries(payload.value, axis.value))
@@ -85,6 +95,7 @@ onMounted(() => {
     <p v-if="claudeDegraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
     <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
     <p v-if="traeAbsent" class="note">检测到 Trae 目录，但没有可读的用量账本。</p>
+    <p v-for="line in degradedLines" :key="line" class="note">{{ line }}</p>
     <p v-if="loginHint" class="note">{{ loginHint }}</p>
 
     <AxisDamper

@@ -38,7 +38,9 @@ const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命�
           <td class="name">
             {{ row.label }}
             <span v-if="row.quality === 'absent'" class="qual">已发现，无用量</span>
-            <span v-else-if="row.quality === 'degraded'" class="qual">降级</span>
+            <span v-else-if="row.quality === 'degraded'" class="qual">
+              降级<span v-if="row.error"> · {{ row.error }}</span>
+            </span>
           </td>
           <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
           <td class="num">{{ row.requests }}</td>

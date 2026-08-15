@@ -166,6 +166,25 @@ func TestParseMissingAuthChineseErrorNoSecret(t *testing.T) {
 	}
 }
 
+func TestParseEncryptedStorageJSONChineseErrorNoSecret(t *testing.T) {
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: `{"list":[{"sessionId":"sess-1"}]}`},
+	})
+	// Trae CN encrypts iCubeAuthInfo; fixture is a format prefix only, not a real token.
+	raw := []byte(`{"iCubeAuthInfo://icube.cloudide":"dGMFEAAAfixture-encrypted-blob"}`)
+	if err := os.WriteFile(filepath.Join(filepath.Dir(db), "storage.json"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "trae", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+	if err == nil || !strings.Contains(err.Error(), "登录态在加密存储中，没有可读的 JWT 文件") {
+		t.Fatalf("err=%v", err)
+	}
+	if strings.Contains(err.Error(), "dGMFEAAA") || strings.Contains(err.Error(), "fixture-encrypted") || strings.Contains(err.Error(), "eyJ") {
+		t.Fatalf("error leaked storage blob: %v", err)
+	}
+}
+
 func TestParseEmptyDirEmitsNothing(t *testing.T) {
 	var n int
 	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "trae", Path: t.TempDir()}, func(event.UsageEvent) {

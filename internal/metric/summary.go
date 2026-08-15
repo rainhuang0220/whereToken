@@ -59,6 +59,7 @@ type SliceView struct {
 	Requests     int64    `json:"requests"`
 	UserTurns    int64    `json:"user_turns"`
 	Quality      string   `json:"quality"`
+	Error        string   `json:"error,omitempty"`
 }
 
 func View(s Slice) SliceView {

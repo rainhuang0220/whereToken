@@ -2,6 +2,7 @@ package scan
 
 import (
 	"database/sql"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -190,6 +191,124 @@ func TestRunTraeMissingAuthIsDegradedNotInvented(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("errors=%v", r.Errors)
+	}
+}
+
+func TestMarshalSummaryPutsTraeErrorOnSourceRow(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "Library", "Application Support", "Trae CN", "User", "globalStorage")
+	if err := os.MkdirAll(gs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(gs, "state.vscdb")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+		"memento/icube-ai-agent-storage", `{"list":[{"sessionId":"sess-1"}]}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	r := Run(testhome.New(dir), AllAdapters())
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		BySource []struct {
+			ID      string `json:"id"`
+			Quality string `json:"quality"`
+			Error   string `json:"error"`
+		} `json:"by_source"`
+		ByVendor []struct {
+			ID    string `json:"id"`
+			Error string `json:"error"`
+		} `json:"by_vendor"`
+		Errors []string `json:"errors"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	var traeErr string
+	for _, s := range payload.BySource {
+		if s.ID != "trae" {
+			continue
+		}
+		if s.Quality != string(event.QualityDegraded) {
+			t.Fatalf("trae quality=%s", s.Quality)
+		}
+		traeErr = s.Error
+	}
+	if traeErr != "未找到本机登录态" {
+		t.Fatalf("by_source trae error=%q payload.errors=%v", traeErr, payload.Errors)
+	}
+	if strings.Contains(traeErr, "eyJ") || strings.Contains(strings.ToLower(traeErr), "bearer") {
+		t.Fatal("row error leaked auth")
+	}
+}
+
+func TestMarshalSummaryPutsEncryptedTraeErrorOnSourceRow(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "Library", "Application Support", "Trae CN", "User", "globalStorage")
+	if err := os.MkdirAll(gs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(gs, "state.vscdb")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO ItemTable (key, value) VALUES (?, ?)`,
+		"memento/icube-ai-agent-storage", `{"list":[{"sessionId":"sess-1"}]}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	rawStorage := []byte(`{"iCubeAuthInfo://icube.cloudide":"dGMFEAAAfixture-encrypted-blob"}`)
+	if err := os.WriteFile(filepath.Join(gs, "storage.json"), rawStorage, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	r := Run(testhome.New(dir), AllAdapters())
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		BySource []struct {
+			ID    string `json:"id"`
+			Error string `json:"error"`
+		} `json:"by_source"`
+		Errors []string `json:"errors"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	var traeErr string
+	for _, s := range payload.BySource {
+		if s.ID == "trae" {
+			traeErr = s.Error
+		}
+	}
+	if traeErr != "登录态在加密存储中，没有可读的 JWT 文件" {
+		t.Fatalf("by_source trae error=%q errors=%v", traeErr, payload.Errors)
+	}
+	blob := string(raw)
+	if strings.Contains(blob, "dGMFEAAA") || strings.Contains(blob, "fixture-encrypted") || strings.Contains(blob, "eyJ") {
+		t.Fatal("summary leaked storage blob")
 	}
 }
 
