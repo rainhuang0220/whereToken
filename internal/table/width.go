@@ -24,16 +24,22 @@ func PadRight(s string, width int) string {
 }
 
 func Truncate(s string, width int) string {
+	return TruncateEllipsis(s, width, "…")
+}
+
+func TruncateEllipsis(s string, width int, ell string) string {
 	if width <= 0 {
 		return ""
 	}
 	if DisplayWidth(s) <= width {
 		return s
 	}
-	const ell = "…"
+	if ell == "" {
+		ell = "…"
+	}
 	ew := DisplayWidth(ell)
 	if width <= ew {
-		return ell
+		return truncateRunes(ell, width)
 	}
 	limit := width - ew
 	n := 0
@@ -47,6 +53,20 @@ func Truncate(s string, width int) string {
 		n += w
 	}
 	return string(b) + ell
+}
+
+func truncateRunes(s string, width int) string {
+	n := 0
+	var b []rune
+	for _, r := range s {
+		w := runeWidth(r)
+		if n+w > width {
+			break
+		}
+		b = append(b, r)
+		n += w
+	}
+	return string(b)
 }
 
 func PadLeft(s string, width int) string {

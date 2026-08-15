@@ -22,6 +22,7 @@
     {
       "id": "claude",
       "label": "Claude Code",
+      "total": 10650000,
       "total_m": "10.65 M",
       "share": "91.2%",
       "hit_rate_text": "85.7%",
@@ -31,6 +32,7 @@
     {
       "id": "kimi",
       "label": "Kimi Code",
+      "total": 1030000,
       "total_m": "1.03 M",
       "share": "8.8%",
       "hit_rate_text": "80.0%",
@@ -42,6 +44,7 @@
     {
       "id": "anthropic",
       "label": "Anthropic",
+      "total": 10100000,
       "total_m": "10.10 M",
       "share": "86.5%",
       "hit_rate_text": "90.0%",
@@ -50,6 +53,7 @@
     {
       "id": "moonshot",
       "label": "Moonshot",
+      "total": 1030000,
       "total_m": "1.03 M",
       "share": "8.8%",
       "hit_rate_text": "80.0%",
@@ -58,6 +62,7 @@
     {
       "id": "minimax",
       "label": "MiniMax",
+      "total": 550000,
       "total_m": "0.55 M",
       "share": "4.7%",
       "hit_rate_text": "0.0%",

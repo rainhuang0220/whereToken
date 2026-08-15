@@ -161,7 +161,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 			snap.Notes = append(snap.Notes, msg)
 		}
 	}
-	if (snap.Scope != "" || !snap.ShowStreaks) && tokenlessModels(snap.Models) {
+	if (snap.Scope != "" || !snap.ShowStreaks) && tokenlessModels(snap.Models) && !(snap.Total == 0 && snap.Requests > 0) {
 		msg := "有的模型只有请求次数、账本没写 token（Cursor 会话标题常这样）"
 		dup := false
 		for _, n := range snap.Notes {
@@ -175,6 +175,19 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		}
 	}
 	snap.Notes = pruneNotes(snap.Notes, f, snap.Tools)
+	if snap.Total == 0 && snap.Requests > 0 {
+		msg := "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）"
+		dup := false
+		for _, n := range snap.Notes {
+			if n == msg {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			snap.Notes = append(snap.Notes, msg)
+		}
+	}
 	return snap, nil
 }
 
@@ -207,6 +220,10 @@ func pruneNotes(notes []string, f Filter, tools []Row) []string {
 			continue
 		}
 		if strings.Contains(label, "厂家") {
+			out = append(out, n)
+			continue
+		}
+		if strings.EqualFold(label, "offline") {
 			out = append(out, n)
 			continue
 		}

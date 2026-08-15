@@ -95,6 +95,29 @@ func TestRankedTableFitsWidth(t *testing.T) {
 	}
 }
 
+func TestFitRankedTableASCIIEllipsis(t *testing.T) {
+	got := FitRankedTable(
+		[]string{"tool", "total", "hit"},
+		[][]string{
+			{"this-is-a-very-long-tool-name-that-should-shrink", "8.10 M", "52.1%"},
+		},
+		[]Align{AlignLeft, AlignRight, AlignRight},
+		BoxASCII,
+		40,
+	)
+	if strings.Contains(got, "…") {
+		t.Fatalf("unicode ellipsis on ascii table:\n%s", got)
+	}
+	if !strings.Contains(got, "...") {
+		t.Fatalf("expected ascii ellipsis:\n%s", got)
+	}
+	for i, line := range strings.Split(strings.TrimRight(got, "\n"), "\n") {
+		if DisplayWidth(line) > 40 {
+			t.Fatalf("line %d width %d > 40\n%q\n%s", i, DisplayWidth(line), line, got)
+		}
+	}
+}
+
 func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
 	cells := [2][3]KPI{
 		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},

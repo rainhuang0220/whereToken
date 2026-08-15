@@ -10,19 +10,21 @@ const (
 )
 
 type BoxStyle struct {
-	TL, TR, BL, BR, H, V, TJ, BJ, LJ, RJ, X string
+	TL, TR, BL, BR, H, V, TJ, BJ, LJ, RJ, X, Ellipsis string
 }
 
 var BoxUnicode = BoxStyle{
 	TL: "┌", TR: "┐", BL: "└", BR: "┘",
 	H: "─", V: "│",
 	TJ: "┬", BJ: "┴", LJ: "├", RJ: "┤", X: "┼",
+	Ellipsis: "…",
 }
 
 var BoxASCII = BoxStyle{
 	TL: "+", TR: "+", BL: "+", BR: "+",
 	H: "-", V: "|",
 	TJ: "+", BJ: "+", LJ: "+", RJ: "+", X: "+",
+	Ellipsis: "...",
 }
 
 type KPI struct {
@@ -110,7 +112,11 @@ func FitRankedTable(headers []string, rows [][]string, align []Align, style BoxS
 	}
 	clip := func(s string, i int) string {
 		if i == 0 && DisplayWidth(s) > widths[0] {
-			return Truncate(s, widths[0])
+			ell := style.Ellipsis
+			if ell == "" {
+				ell = "…"
+			}
+			return TruncateEllipsis(s, widths[0], ell)
 		}
 		return s
 	}

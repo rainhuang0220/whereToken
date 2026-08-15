@@ -426,3 +426,46 @@ func TestTokenlessModelGetsFootnote(t *testing.T) {
 		t.Fatalf("notes=%v models=%+v", snap.Notes, snap.Models)
 	}
 }
+
+func TestZeroTotalWithRequestsNote(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", Model: "composer", RequestID: "a",
+		Timestamp: now, Quality: event.QualityDegraded,
+	}}
+	snap, err := Build(events, nil, nil, Filter{Tool: "cursor"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.Total != 0 || snap.Requests != 1 {
+		t.Fatalf("total=%d req=%d", snap.Total, snap.Requests)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "总用量") && strings.Contains(n, "只记了次数") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("notes=%v", snap.Notes)
+	}
+}
+
+func TestTodayKeepsOfflineNote(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{"offline · 只用本机账本，没有请求 Cursor/Trae 云端"}, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.HasPrefix(n, "offline ·") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("today dropped offline: %v", snap.Notes)
+	}
+}

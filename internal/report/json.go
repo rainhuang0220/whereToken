@@ -8,7 +8,7 @@ import (
 type jsonRow struct {
 	ID          string `json:"id"`
 	Label       string `json:"label"`
-	Total       int64  `json:"total,omitempty"`
+	Total       int64  `json:"total"`
 	TotalM      string `json:"total_m"`
 	Share       string `json:"share,omitempty"`
 	HitRateText string `json:"hit_rate_text"`
@@ -75,6 +75,7 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 		item := jsonRow{
 			ID:          r.ID,
 			Label:       r.Label,
+			Total:       r.Total,
 			TotalM:      r.TotalM,
 			Share:       r.ShareText,
 			HitRateText: r.HitRateText,

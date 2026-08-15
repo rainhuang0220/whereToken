@@ -161,3 +161,35 @@ func TestWriteJSONTodayOmitsLast7AndStreaks(t *testing.T) {
 		t.Fatalf("schema=%v", m["schema"])
 	}
 }
+
+func TestWriteJSONRowIncludesRawTotal(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	tools := m["tools"].([]any)
+	row := tools[0].(map[string]any)
+	total, ok := row["total"].(float64)
+	if !ok {
+		t.Fatalf("tools[0].total missing: %s", buf.String())
+	}
+	if total != 10_650_000 {
+		t.Fatalf("tools[0].total=%v", total)
+	}
+	vendors := m["vendors"].([]any)
+	v0 := vendors[0].(map[string]any)
+	if v0["total"].(float64) != 10_100_000 {
+		t.Fatalf("vendors[0].total=%v", v0["total"])
+	}
+}

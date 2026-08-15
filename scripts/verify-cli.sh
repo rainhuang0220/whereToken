@@ -29,10 +29,31 @@ fi
 json="$("$dir/wheretoken" --home "$dir" --json --quiet)"
 echo "$json" | grep -q '"schema": 1'
 echo "$json" | grep -q '"total_m"'
+echo "$json" | grep -q '"total":'
 if echo "$json" | grep -q '"events"'; then
   echo "raw events in --json" >&2
   exit 1
 fi
+
+vendor="$("$dir/wheretoken" --home "$dir" --vendor=moonshot --ascii --quiet)"
+echo "$vendor" | grep -q 'Moonshot'
+echo "$vendor" | grep -q '0.0012 M'
+
+today_json="$("$dir/wheretoken" --home "$dir" --today --json --quiet)"
+if echo "$today_json" | grep -q '"last_7d"'; then
+  echo "today json leaked last_7d" >&2
+  exit 1
+fi
+
+off="$("$dir/wheretoken" --home "$dir" --offline --ascii --quiet)"
+echo "$off" | head -n 2 | grep -q 'offline'
+
+set +e
+err="$("$dir/wheretoken" --home "$dir" --vendor=anthropc --quiet 2>&1)"
+code=$?
+set -e
+test "$code" -eq 2
+echo "$err" | grep -q anthropic
 
 empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"

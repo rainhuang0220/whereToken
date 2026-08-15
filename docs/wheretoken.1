@@ -65,6 +65,11 @@ Local ledgers only. Skip Cursor/Trae account APIs.
 .TP
 .B --home \fIDIR\fR
 Fake home directory (tests).
+.TP
+.B --width \fIN\fR
+Cap ranking table width.
+.B COLUMNS
+does the same.
 .SH EXIT STATUS
 .TP
 .B 0
@@ -86,6 +91,10 @@ ASCII box drawing.
 .B WHERETOKEN_HOME
 Override home (same idea as
 .BR --home ).
+.TP
+.B WHERETOKEN_OFFLINE
+Same as
+.BR --offline .
 .TP
 .B WHERETOKEN_EXTRA_ROOTS
 Extra homes (Unix :, Windows ;, or commas).
