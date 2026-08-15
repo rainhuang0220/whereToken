@@ -13,6 +13,7 @@ var (
 	xAPIKeyRE         = regexp.MustCompile(`(?i)x-api-key:\s*\S+`)
 	openaiAPIKeyRE    = regexp.MustCompile(`(?i)openai-api-key:\s*\S+`)
 	anthropicAPIKeyRE = regexp.MustCompile(`(?i)anthropic-api-key:\s*\S+`)
+	googAPIKeyRE      = regexp.MustCompile(`(?i)x-goog-api-key:\s*\S+`)
 	tokenParamRE      = regexp.MustCompile(`(?i)((?:access|refresh|id)_token|api[_-]?key)=[^&\s]+`)
 )
 
@@ -23,6 +24,7 @@ func Redact(s string) string {
 	s = xAPIKeyRE.ReplaceAllString(s, "x-api-key: [redacted]")
 	s = openaiAPIKeyRE.ReplaceAllString(s, "openai-api-key: [redacted]")
 	s = anthropicAPIKeyRE.ReplaceAllString(s, "anthropic-api-key: [redacted]")
+	s = googAPIKeyRE.ReplaceAllString(s, "x-goog-api-key: [redacted]")
 	s = skRE.ReplaceAllString(s, "[redacted]")
 	s = hexRE.ReplaceAllString(s, "[redacted]")
 	s = tokenParamRE.ReplaceAllString(s, "${1}=[redacted]")

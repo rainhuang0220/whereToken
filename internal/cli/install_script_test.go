@@ -74,7 +74,7 @@ func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "completions/*"} {
+	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "docs/cli-json.schema.json", "completions/*", "nfpms:", "deb", "rpm"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("goreleaser missing %q", want)
 		}
@@ -132,9 +132,26 @@ func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{`class Wheretoken`, `head "https://github.com/rainhuang0220/whereToken.git"`, "./cmd/wheretoken", "docs/wheretoken.1", "bash_completion", "zsh_completion"} {
+	for _, want := range []string{`class Wheretoken`, `head "https://github.com/rainhuang0220/whereToken.git"`, "./cmd/wheretoken", "docs/wheretoken.1", "bash_completion", "zsh_completion", "fish_completion"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("formula missing %q", want)
+		}
+	}
+}
+
+func TestManPageMentionsJSONSchema(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "wheretoken.1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("man page missing %q", want)
 		}
 	}
 }
