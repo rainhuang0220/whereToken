@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -120,6 +121,18 @@ func TestRunCursorVscdbConservation(t *testing.T) {
 	}
 	if vendSum != r.Summary.All.Total() {
 		t.Fatalf("vendor sum=%d all=%d", vendSum, r.Summary.All.Total())
+	}
+	foundAuthErr := false
+	for _, e := range r.Errors {
+		if strings.Contains(e, "未找到本机登录态") {
+			foundAuthErr = true
+		}
+		if strings.Contains(strings.ToLower(e), "bearer") {
+			t.Fatalf("error leaked auth: %s", e)
+		}
+	}
+	if !foundAuthErr {
+		t.Fatalf("errors=%v", r.Errors)
 	}
 }
 

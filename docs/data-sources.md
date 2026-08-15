@@ -2,7 +2,7 @@
 
 规格里的适配器合同以本文件为准。数字是**这一天这一台机器**的快照，用来做夹具和核验基线，不是产品承诺的「你也有这么多」。
 
-扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。
+扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。Cursor 用量接口是用户授权的例外：只使用 Cursor 本机已写入的登录态，只打 Cursor 自己的主机，永不打印或提交 token。
 
 工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。
 
@@ -23,7 +23,7 @@
 | `~/.opencode/` | OpenCode 安装目录 | 否（只有 npm 包装） | 忽略 |
 | `~/.config/opencode/` | OpenCode 配置 | 否（无用量） | 忽略 |
 | `~/.cursor/` | Cursor | 目录在；ai-tracking **无 token 列**（请求次数也不能当模型调用） | 发现回退 |
-| `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | Cursor | **是**（bubble 请求/回合；tokenCount 本机全 0） | P0 账本，键前缀查询 |
+| `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | Cursor | **是**（bubble 请求/回合 + 本机登录态调 Cursor DashboardService） | P0；token 来自账号 API |
 | `~/.minimax/` | MiniMax agent | sqlite 仅 `agents` 表，未见 token | P1 探测 |
 | `~/.copilot/` | Copilot CLI | 未见 otel jsonl | P1 探测 |
 | `~/.openclaw/` | OpenClaw | 目录存在，本轮未深挖字段 | P1 |
@@ -218,58 +218,53 @@
 
 ## P0-5 Cursor（2026-08-15 复测，本机 macOS）
 
-**根：** `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`（2.3 GB + 4.5 MB WAL）。`~/.cursor` 只作发现回退。禁止 Cookie / Keychain / `cursor.com` CSV。
+**根：** `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`（2.3 GB + 4.5 MB WAL）。`~/.cursor` 只作发现回退。
 
-**表：** `cursorDiskKV`（KV）、`composerHeaders`（会话索引，含 `isSubagent` 与工作区路径）、`ItemTable`（UI 状态，不用作用量）。
+**用户授权（2026-08-15 23:00）：** 可用本机 Cursor 已经写入的登录态，向 **Cursor 自己的** 用量接口拉取 **当前这个账号** 的 token。不上其它厂商云、不上传 chats、不把 token/会话写进 git。
 
-**只允许键前缀查询**（生产代码禁止 `SELECT *` / `SELECT value FROM cursorDiskKV`）：
+**登录态（只读键名，永不打印值）：** `ItemTable` 键 `cursorAuth/accessToken`（Bearer）。缺席时再看同目录 `storage.json` 的同名键。401 时才读 `cursorAuth/refreshToken`，仅内存刷新，不写回 Cursor 库。禁止 Cookie 商店 / Keychain / 把 JWT 写进夹具。
 
-| 前缀 | 本机行数 | 用途 |
-|------|--------:|------|
-| `composerData:%` | 328 | 会话默认 `modelConfig.modelName`；`usageData` **全部空对象** |
-| `bubbleId:%` | ~55,458 | 消息：`type` 1=用户 / 2=助手或工具；`tokenCount.inputTokens` / `outputTokens`；`capabilityType`；`modelInfo.modelName`（只出现在用户泡） |
-| `agentKv:%` | ~107k | 不读（blob，无用量列） |
-| `composer.content.%` / `checkpointId:%` / `inlineDiff:%` | 大 | 不读 |
+**用量接口（Cursor 桌面端已在调用的 DashboardService，Connect JSON）：**
 
-**bubble 字段（json_extract，不取 `text` / `thinking` / `toolFormerData` 正文）：**
+| 方法 | 路径 |
+|------|------|
+| 带时间戳的明细（日历优先） | `POST https://api2.cursor.sh/aiserver.v1.DashboardService/GetFilteredUsageEvents` |
+| 按模型合计（明细空时回退） | `POST https://api2.cursor.sh/aiserver.v1.DashboardService/GetAggregatedUsageEvents` |
 
-| whereToken | Cursor 字段 |
-|------------|-------------|
-| miss | `tokenCount.inputTokens`（本机 **全部为 0**） |
-| output | `tokenCount.outputTokens`（本机 **全部为 0**） |
-| cache_read / cache_create | 无本地列；恒 0 |
-| requests | `type=2` 且 `capabilityType != 30`（30=thinking，与随后的工具/正文同一代，不另计请求） |
-| user_turns | `type=1` 且 composer **不是** `composerHeaders.isSubagent` |
-| 时间 | bubble `createdAt` RFC3339 |
-| 模型 | 用户泡 `modelInfo.modelName`，沿用到随后的助手泡；否则会话 `modelConfig.modelName` |
-| 厂家 | `vendor.Lookup(model)`（claude→Anthropic，gpt→OpenAI，MiniMax→MiniMax，kimi→Moonshot，gemini→Google，grok/composer/default→Unknown） |
-| 质量 | token 字段非 0 → authoritative；全 0 → **degraded**（账本在，用量列是占位） |
+请求窗：本地时区往前 53 周。`Authorization: Bearer <accessToken>`，主机只允许 `api2.cursor.sh` / `cursor.com`。测试用 `httptest`，夹具 JWT 为 `test-token`。
 
-**本机合计（2026-08-15，前缀查询，不把上下文快照当账单）：**
+**字段映射：**
 
-| 项 | 值 |
-|----|---:|
-| type=1 用户泡 | 1,970 |
-| 其中 subagent | 143 |
-| **真用户回合** | **1,827** |
-| type=2 | ~53.5k（会话还在涨） |
-| 其中 thinking (`capabilityType=30`) | ~10k |
-| **请求** | **43,550**（2026-08-15 22:57 `scan --json` 与 `scripts/sum_cursor.py` 一致） |
-| tokenCount 非 0 行 | **0** |
-| miss / cache / output | **0** |
-| 厂家拆分（请求，token 均为 0） | Unknown 29,840 · MiniMax 6,527 · Anthropic 5,783 · Moonshot 770 · OpenAI 342 · Google 288 |
+| whereToken | 来源 |
+|------------|------|
+| miss | API `inputTokens` |
+| cache_read | API `cacheReadTokens` |
+| cache_create | API `cacheWriteTokens` |
+| output | API `outputTokens` |
+| 时间 / 窑墙 | `GetFilteredUsageEvents` 的 `timestamp`（unix ms）。若只有 aggregations、没有逐条时间戳，token 记在扫描当日，窑墙没有真实日分布 |
+| 模型 / 厂家 | `model` / `modelIntent` → `vendor.Lookup` |
+| 质量 | API 有 token → **authoritative** |
+| requests | **本机 bubble**：`type=2` 且 `capabilityType != 30` |
+| user_turns | **本机 bubble**：`type=1` 且不是 subagent |
+| 时间（请求/回合） | bubble `createdAt` |
 
-**明确不算用量（会虚增数百万）：**
+**守恒：** token 合计只来自账号 API 事件；本机 0-token 请求行不进入 token 总和（SkipRequest 的 API 行不计入 requests）。不要把 API token 和 bubble `tokenCount` 再加一遍。
 
-- `composerData.promptTokenBreakdown.totalUsedTokens`（126 个会话有；是**当前上下文窗口快照**，类别还标着 `estimatedTokens`）
-- `composerData.contextTokensUsed`（149 个会话）
-- `bubble.contextWindowStatusAtCreation.tokensUsed`（357 个泡，sum≈34.5M，同样是窗口占用不是请求增量）
-- `ItemTable` `aiCodeTracking.dailyStats.*`（行数，不是 token）
-- `~/.cursor/ai-tracking/ai-code-tracking.db`：`ai_code_hashes` 有 `requestId`/`model`/`conversationId`，**没有 token 列**；13,234 行里 distinct `requestId` 只有 69，不能当请求次数
+**本机 bubble 仍扫（键前缀，不取正文）：** 请求/回合定义同上。`tokenCount` 本机仍几乎全 0，有 API 时忽略本地 tokenCount，避免双计。
 
-**workspaceStorage/\*/state.vscdb：** 本机 34 个。全局 `composerHeaders.workspaceIdentifier.uri.fsPath` 已覆盖 259/267 会话，不必再扫工作区库。
+**明确不算用量：** `promptTokenBreakdown` / `contextTokensUsed` / `contextWindowStatusAtCreation` / `ai-code-tracking.db` 无 token 列。
 
-**产品决定：** Cursor 是真实工具源（六列都在）。token 列诚实为 0 + `quality=degraded`。不上云。
+**缺登录态：** 仍发出本机请求/回合；`errors[]` 含 `cursor: 未找到本机登录态`；token 列保持 degraded/0。
+
+**核验：** `python3 scripts/sum_cursor.py` 只对照 **requests / user_turns**。token 四列以 `scan --json` 的 Cursor 账号 API 为准。
+
+**本机库结构（请求/回合，键前缀查询）：** `cursorDiskKV`、`composerHeaders`、`ItemTable`（登录态键，不是用量）。禁止 `SELECT *` / 把 `cursorDiskKV` value blob 整行读进内存。`composerData:%` 的 `usageData` 本机全空；`bubbleId:%` 的 `tokenCount` 本机全 0，不能当账单。`ItemTable` 只按键名读 `cursorAuth/accessToken`（及 401 时的 `refreshToken`）。
+
+**本机请求/回合快照（2026-08-15 22:57，前缀查询）：** 真用户回合 1,827；请求 43,550；tokenCount 非 0 行 0。厂家拆分是请求数不是 token。
+
+**明确不算用量（会虚增数百万）：** `promptTokenBreakdown.totalUsedTokens`、`contextTokensUsed`、`bubble.contextWindowStatusAtCreation.tokensUsed`、`ItemTable` `aiCodeTracking.dailyStats.*`、`~/.cursor/ai-tracking/ai-code-tracking.db`（无 token 列）。
+
+**workspaceStorage/\*/state.vscdb：** 不必再扫；全局 `composerHeaders` 已覆盖工作区路径。
 
 ---
 
@@ -292,7 +287,7 @@
 # Claude：requestId 去重后的 max(usage)，并输出质量旗标比例
 # OpenCode：SELECT 四列 SUM，应等于 message.tokens 聚合
 # Codex：每个 rollout 最后一个前进的 total_token_usage，应等于 delta 之和
-# Cursor：bubble tokenCount 求和（本机应为 0）+ 请求/回合
+# Cursor：sum_cursor.py 对照 requests/user_turns；token 四列以账号 API 为准
 # python3 scripts/sum_cursor.py
 ```
 

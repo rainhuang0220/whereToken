@@ -23,13 +23,13 @@ Companion: [`docs/data-sources.md`](../../data-sources.md) · [`opt.md`](../../.
 5. Kimi / OpenCode 总量与本机再算脚本误差为 0。
 6. Codex 不因重复 `token_count` 而翻倍。
 7. Claude 标明数据质量，用户回合不含 tool_result。
-8. 不上传任何会话；不读取密钥文件。
+8. 不上传任何会话；不把密钥写进 git。Cursor 用量接口须用户授权，且只用 Cursor 本机登录态打 Cursor 自己的主机。
 
 非目标（v1）：
 
 - 美元估价、订阅 quota 条、leaderboard、多用户账号、云同步。
 - 替代 ccusage / tokscale 的 TUI。
-- 把 Cursor 云端 CSV 当账本。
+- 把 Cursor 云端 CSV 当**唯一**账本（可用 Cursor 自己的 DashboardService；CSV 不是本轮主路径）。
 - 修改任何 agent 的原始文件。
 
 ---
@@ -138,7 +138,7 @@ cache_hit_rate   = cache_read / (cache_read + miss + cache_create)   // 分母 0
 
 | quality | 何时 | UI |
 |---------|------|-----|
-| authoritative | 源提供最终 usage（Kimi `usage.record`、OpenCode message tokens、Codex 前进的 cumulative） | 无标记 |
+| authoritative | 源提供最终 usage（Kimi `usage.record`、OpenCode message tokens、Codex 前进的 cumulative、**用户授权的 Cursor 账号 API**） | 无标记 |
 | degraded | Claude 等：cache 可信、input/output 可能是占位 | 黄标「输入/输出可能偏低」 |
 | estimated | 只能用字符/4 之类（v1 不采用） | v1 不进总表 |
 | absent | 检测到工具但没有 token 账本（Cursor P1） | 灰行「已发现，无用量」 |

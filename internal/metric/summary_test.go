@@ -55,3 +55,20 @@ func TestAggregateDedupesRequestID(t *testing.T) {
 		t.Fatalf("max fields %+v", sum.All)
 	}
 }
+
+func TestAggregateSkipRequestKeepsTokenTotals(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "cursor", Vendor: "anthropic", RequestID: "bubble", Quality: event.QualityDegraded},
+		{Source: "cursor", Vendor: "anthropic", RequestID: "api-1", Miss: 40, CacheRead: 200, CacheCreate: 10, Output: 5, Quality: event.QualityAuthoritative, SkipRequest: true},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.Requests != 1 {
+		t.Fatalf("requests=%d want 1 (API row must not count as a request)", sum.All.Requests)
+	}
+	if sum.All.Total() != 255 {
+		t.Fatalf("total=%d", sum.All.Total())
+	}
+	if sum.BySourceVendor[0].Requests != 1 {
+		t.Fatalf("cross requests=%d", sum.BySourceVendor[0].Requests)
+	}
+}

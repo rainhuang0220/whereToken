@@ -57,7 +57,7 @@ onMounted(() => {
     <p v-if="claudeDegraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
     <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
     <p v-else-if="cursorDegraded" class="note">
-      Cursor 已计入请求与回合（本机 state.vscdb）。bubble.tokenCount 多为 0，未把上下文窗口快照加成用量，也不上云拉 CSV。
+      Cursor 已计入本机请求与回合。token 列若为 0，是因为没有拉到 Cursor 账号用量（见下方 errors），不是没扫到。
     </p>
 
     <template v-if="payload">

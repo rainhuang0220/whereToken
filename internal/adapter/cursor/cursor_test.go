@@ -44,6 +44,23 @@ func TestDiscoverPrefersStateVscdb(t *testing.T) {
 	}
 }
 
+func TestParseMissingAuthReturnsChineseError(t *testing.T) {
+	dir := t.TempDir()
+	db := writeVscdb(t, dir, []kv{
+		{key: "composerData:sess-a", value: `{"composerId":"sess-a","createdAt":1700000000000,"modelConfig":{"modelName":"claude-opus-4-6"},"usageData":{}}`},
+		{key: "bubbleId:sess-a:u1", value: `{"type":1,"createdAt":"2026-02-09T14:44:05.860Z","tokenCount":{"inputTokens":0,"outputTokens":0}}`},
+		{key: "bubbleId:sess-a:a1", value: `{"type":2,"createdAt":"2026-02-09T14:44:08.000Z","tokenCount":{"inputTokens":0,"outputTokens":0}}`},
+	}, nil)
+
+	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+	if err == nil || !strings.Contains(err.Error(), "未找到本机登录态") {
+		t.Fatalf("err=%v", err)
+	}
+	if strings.Contains(strings.ToLower(err.Error()), "bearer") || strings.Contains(err.Error(), "eyJ") {
+		t.Fatal("error must not include credentials")
+	}
+}
+
 func TestParseEmptyDirEmitsNothing(t *testing.T) {
 	var n int
 	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "cursor", Path: t.TempDir()}, func(event.UsageEvent) {
@@ -122,7 +139,7 @@ func TestParseBubbleTokensAndTurns(t *testing.T) {
 		evs = append(evs, e)
 	}, func(te event.TurnEvent) {
 		turns = append(turns, te)
-	}); err != nil {
+	}); err != nil && !strings.Contains(err.Error(), "未找到本机登录态") {
 		t.Fatal(err)
 	}
 	if len(turns) != 1 {
@@ -210,7 +227,7 @@ func TestParseDoesNotCreditContextMeter(t *testing.T) {
 	var evs []event.UsageEvent
 	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(e event.UsageEvent) {
 		evs = append(evs, e)
-	}, func(event.TurnEvent) {}); err != nil {
+	}, func(event.TurnEvent) {}); err != nil && !strings.Contains(err.Error(), "未找到本机登录态") {
 		t.Fatal(err)
 	}
 	if len(evs) != 1 {
@@ -251,6 +268,13 @@ func TestProductionSQLIsPrefixOnly(t *testing.T) {
 	}
 	if strings.Contains(body, "FROM cursorDiskKV") && !strings.Contains(body, "LIKE") {
 		t.Fatal("cursorDiskKV query without LIKE")
+	}
+	apiSrc, err := os.ReadFile(filepath.Join(filepath.Dir(file), "api.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(apiSrc), "log.") {
+		t.Fatal("must not log API traffic")
 	}
 }
 

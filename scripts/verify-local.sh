@@ -72,10 +72,22 @@ if vscdb.is_file():
         raise SystemExit("cursor: vscdb present but missing in scan JSON")
     if sl.get("quality") == "absent":
         raise SystemExit("cursor: quality=absent despite state.vscdb")
-    for field in ("miss", "cache_read", "cache_create", "output", "requests", "user_turns"):
+    for field in ("requests", "user_turns"):
         if int(py[field]) != int(sl[field]):
             raise SystemExit(f"cursor {field}: python={py[field]} scan={sl[field]}")
-    print(f"ok cursor requests={py['requests']} turns={py['user_turns']} total={py['total']}")
+    if sl.get("quality") != "authoritative":
+        for field in ("miss", "cache_read", "cache_create", "output"):
+            if int(py[field]) != int(sl[field]):
+                raise SystemExit(f"cursor {field}: python={py[field]} scan={sl[field]}")
+        print(f"ok cursor requests={py['requests']} turns={py['user_turns']} total={py['total']} (local tokens)")
+    else:
+        print(
+            "ok cursor requests="
+            f"{sl['requests']} turns={sl['user_turns']} "
+            f"miss_m={sl.get('miss_m')} cache_read_m={sl.get('cache_read_m')} "
+            f"cache_create_m={sl.get('cache_create_m')} output_m={sl.get('output_m')} "
+            f"total_m={sl.get('total_m')} quality={sl.get('quality')}"
+        )
 else:
     print("skip cursor: state.vscdb absent")
 

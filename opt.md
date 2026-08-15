@@ -5,6 +5,30 @@
 
 ---
 
+# 第 6 轮：Cursor 账号用量 API（2026-08-15 23:00）
+
+触发：用户明确推翻「永远不用 Cursor 登录 / cursor.com CSV」。本机 `tokenCount` 全 0 不能当账。人正在这台 Mac 的 Cursor 里登录。
+
+## 6.1 新隐私边界
+
+- **旧：** 不上 Cursor 云、不读登录 Cookie、不拉 CSV。
+- **新（用户原话）：** 可以用 **Cursor 已经登录的同一个账号**，走 **Cursor 自己的 API/界面**，拉 **这个用户** 的用量。
+- **仍禁止：** 上传 chats；打其它厂商云；把 token / JWT 写进 git、夹具、日志、Authorization 打印。
+
+## 6.2 接口与登录态
+
+- **选择：** Cursor 桌面端已在调用的 `https://api2.cursor.sh` `aiserver.v1.DashboardService`（Connect JSON）。优先 `GetFilteredUsageEvents`（有 timestamp + cache 四列），空则回退 `GetAggregatedUsageEvents`（按模型合计，无逐日时间戳）。
+- **登录态：** 只读 `ItemTable` 键 `cursorAuth/accessToken` 作 Bearer；401 才读 `cursorAuth/refreshToken` 内存刷新。测试 `httptest` + 假 JWT `test-token`。
+- **不选：** 刮 HTML；把 tokscale CSV 当主路径（仅当账号 UI 自己用导出时才考虑，本轮不需要）。
+
+## 6.3 映射与守恒
+
+- token 四列 + 窑墙日期来自账号 API；requests / user_turns 仍来自本机 bubble。API 行 `SkipRequest`，避免请求数双计。有 API token 时丢掉 bubble `tokenCount`（本机本就是 0）。
+- 质量：API 有 token → `authoritative`。无登录态 → `errors[]` 含 `cursor: 未找到本机登录态`，token 列 degraded。
+- **后果：** 窑墙在 Cursor 轴上会按 API 时间戳点亮（仅 aggregations 时诚实记成扫描当日）。
+
+---
+
 # 第 5 轮：Cursor 必须是真源（2026-08-15）
 
 触发：用户在 Cursor 里用了 whereToken，却看到 Cursor「已发现，无用量」，觉得账本把一年的 Cursor 使用抹掉了。
@@ -91,11 +115,11 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 | P0 | Kimi Code `~/.kimi-code/sessions/**/wire.jsonl` 的 `usage.record` | 有。约 330.04 M，命中率 98.81% | 字段干净，作为第一个黄金夹具 |
 | P0 | OpenCode `~/.local/share/opencode/opencode.db` | 有。session 合计与 message.tokens 一致，约 1.74 M | 只读；禁止读 `credential` / `account` |
 | P0 | Codex `~/.codex/sessions/**/rollout-*.jsonl` 的 `token_count` | 有 29 个 rollout | 用累计 `total_token_usage` 的增量，禁止对重复 snapshot 求和 |
-| P0 | Cursor `state.vscdb` 键前缀 | 有请求/回合；tokenCount 本机全 0 | 第 5 轮改为真源。禁止 CSV；禁止把上下文快照当用量 |
+| P0 | Cursor `state.vscdb` 键前缀 + 本机登录态调 Cursor DashboardService | 请求/回合在本地；token 走账号 API | 第 6 轮用户授权。禁止把 JWT 写入 git；禁止上下文快照当用量 |
 | P1 | 发现器：家目录 `.*` + macOS Application Support 里能识别的其它 agent | 目录存在但用量字段未核完 | MiniMax / Copilot / Trae / OpenClaw 等 |
 | P2 | Gemini / Qwen / Amp / Factory / Goose / Hermes / pi | 本机无对应家目录 | 适配器接口先留好，有目录再点亮 |
 
-**不扫：** `auth.json`、Keychain、浏览器 Cookie、厂商账单 API。
+**不扫：** `auth.json`、Keychain、浏览器 Cookie、其它厂商账单 API。Cursor 账号用量是第 6 轮用户授权的例外。
 
 ## 0.7 Claude「用户回合」定义（锁死）
 
@@ -110,7 +134,8 @@ user_turns = 真人回合，排除 tool_result / 工具回灌
 - SQLite 源用 `mode=ro`。
 - 仪表盘默认只展示聚合与会话元数据（源、模型、时间、工作区路径、token）。默认不展示 prompt 正文。
 - 绑定 `127.0.0.1`，不默认对局域网开放。
-- Cursor 的 2.3GB `state.vscdb` 只允许**有键前缀的查询**，禁止全表 dump 进内存。
+- Cursor 的 2.3GB `state.vscdb` 只允许**有键前缀的查询**，禁止全表 dump 进内存。`ItemTable` 只按键名读登录态，永不打印值。
+- 第 6 轮起：可用本机 Cursor 登录态打 `api2.cursor.sh` DashboardService，只拉当前用户用量。
 
 ## 0.9 仓库与提交习惯
 

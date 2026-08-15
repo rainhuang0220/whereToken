@@ -3,6 +3,7 @@ package cursor
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,7 +20,11 @@ import (
 
 const thinkingCapability = 30
 
-type Adapter struct{}
+type Adapter struct {
+	HTTP    *http.Client
+	APIBase string
+	Now     func() time.Time
+}
 
 func (Adapter) ID() string { return "cursor" }
 
@@ -39,12 +44,12 @@ func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 	return nil
 }
 
-func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	path := resolveDB(root.Path)
 	if path == "" {
 		return nil
 	}
-	return parseDB(path, root, emit, emitTurn)
+	return a.parseDB(path, root, emit, emitTurn)
 }
 
 func resolveDB(p string) string {
@@ -67,7 +72,7 @@ func resolveDB(p string) string {
 	return ""
 }
 
-func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	db, err := openRO(path)
 	if err != nil {
 		return err
@@ -85,7 +90,38 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 	if err != nil {
 		return err
 	}
+	token, err := readItem(db, authAccessTokenKey)
+	if err != nil {
+		return err
+	}
+	if token == "" {
+		token = readStorageJSONToken(path)
+	}
 
+	var apiEvents []event.UsageEvent
+	var apiErr error
+	if token != "" {
+		refresh, rerr := readItem(db, authRefreshTokenKey)
+		if rerr != nil {
+			return rerr
+		}
+		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)
+	}
+
+	useAPI := apiErr == nil && hasTokenTotals(apiEvents)
+	emitLocal(composers, bubbles, root, emit, emitTurn, useAPI)
+	if useAPI {
+		for _, e := range apiEvents {
+			emit(e)
+		}
+	}
+	if token == "" {
+		return errNoLocalAuth
+	}
+	return apiErr
+}
+
+func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent), stripTokens bool) {
 	bySess := map[string][]bubbleRow{}
 	for _, b := range bubbles {
 		bySess[b.composerID] = append(bySess[b.composerID], b)
@@ -126,7 +162,10 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 			}
 			miss, cacheRead, cacheCreate, out := b.miss, b.cacheRead, b.cacheCreate, b.output
 			q := event.QualityDegraded
-			if miss != 0 || cacheRead != 0 || cacheCreate != 0 || out != 0 {
+			if stripTokens {
+				miss, cacheRead, cacheCreate, out = 0, 0, 0, 0
+				q = ""
+			} else if miss != 0 || cacheRead != 0 || cacheCreate != 0 || out != 0 {
 				q = event.QualityAuthoritative
 			}
 			emit(event.UsageEvent{
@@ -146,7 +185,6 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 			})
 		}
 	}
-	return nil
 }
 
 type composerMeta struct {

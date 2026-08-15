@@ -19,9 +19,9 @@
 
 ## 这是什么
 
-whereToken 是一个**本机优先**的 token 用量观测器。它不去云端拉账单，而是去读你已经写在磁盘上的会话账本：
+whereToken 是一个**本机优先**的 token 用量观测器。默认读你已经写在磁盘上的会话账本：
 
-`~/.claude` · `~/.codex` · `~/.kimi-code` · `~/.local/share/opencode` · `~/.cursor` · 以及家目录里其它能识别的 agent 根。
+`~/.claude` · `~/.codex` · `~/.kimi-code` · `~/.local/share/opencode` · Cursor 的 `state.vscdb`。Cursor 的 **token 四列**在用户授权后走 Cursor 自己的账号用量接口（本机登录态，不上传 chats）。
 
 **有什么算什么。** 适配器按目录探测；扫到的才进表，扫不到的不假装有数。
 
@@ -42,7 +42,7 @@ whereToken 是一个**本机优先**的 token 用量观测器。它不去云端�
 
 可运行：`wheretoken scan --json` 给出合计 / 按工具 / 按厂家 / 窑墙日历 / 下钻；`wheretoken serve` 在 `127.0.0.1` 打开暗色消耗墙。
 
-Cursor 来自本机 `state.vscdb`（键前缀查询）：请求与用户回合是实的；`bubble.tokenCount` 在本机几乎全是 0，标 `degraded`，不把上下文窗口快照加成用量，不拉云端 CSV。只有 `~/.cursor`、没有 vscdb 时才显示「已发现，无用量」。
+Cursor：本机 `state.vscdb` 提供请求与用户回合；token 四列在用户授权后走 Cursor 账号 DashboardService（`GetFilteredUsageEvents` / `GetAggregatedUsageEvents`）。本机 `bubble.tokenCount` 仍几乎全是 0，不把上下文窗口快照加成用量。没有登录态时 `errors[]` 会写 `cursor: 未找到本机登录态`，token 列保持 degraded。只有 `~/.cursor`、没有 vscdb 时才显示「已发现，无用量」。
 
 必读：
 
@@ -76,7 +76,7 @@ bash scripts/verify-local.sh           # Kimi / OpenCode 与本机磁盘对照�
 
 ## 原则（从第一天就锁）
 
-1. **只读本地。** 不上传会话，不做排行榜，不读 `auth.json` 去调厂商账单 API（Cursor 云端 CSV 那条路明确不做，见规格）。
+1. **只读本地，加用户授权的 Cursor 账号接口。** 不上传会话，不做排行榜，不读 `auth.json` 去打其它厂商。Cursor 可用本机已登录账号拉自己的用量；JWT 不进 git、不进日志。
 2. **诚实。** Claude JSONL 的 `input_tokens` / `output_tokens` 有已知占位 bug；UI 必须标数据质量，而不是把错数印成真理。
 3. **单位 M。** 内部用整数 token 累加，展示时 `/ 1e6`。禁止在累加路径上先除再加。
 4. **提交不含 AI 署名。** 本仓库的 git 提交不写 Co-authored-by，不把编码助手列入贡献者。

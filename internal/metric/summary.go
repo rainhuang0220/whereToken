@@ -116,7 +116,9 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 		cross.CacheRead += e.CacheRead
 		cross.CacheCreate += e.CacheCreate
 		cross.Output += e.Output
-		cross.Requests++
+		if !e.SkipRequest {
+			cross.Requests++
+		}
 	}
 
 	for _, t := range turns {
@@ -202,7 +204,9 @@ func addSlice(s *Slice, e event.UsageEvent) {
 	s.CacheRead += e.CacheRead
 	s.CacheCreate += e.CacheCreate
 	s.Output += e.Output
-	s.Requests++
+	if !e.SkipRequest {
+		s.Requests++
+	}
 	if qualityRank(e.Quality) > qualityRank(s.Quality) {
 		s.Quality = e.Quality
 	}
