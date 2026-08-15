@@ -187,6 +187,19 @@ func TestUnknownModelIsUsage(t *testing.T) {
 	}
 }
 
+func TestFilterModelCaseInsensitive(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Model: "K3"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "1.03 M" {
+		t.Fatalf("%+v", snap)
+	}
+}
+
 func TestFilterModelK3(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

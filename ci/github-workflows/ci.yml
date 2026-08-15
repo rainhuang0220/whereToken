@@ -47,3 +47,7 @@ jobs:
         env:
           WHERETOKEN_SKIP_DOWNLOAD: "1"
         run: npm test
+
+      - name: CLI fixture (not Windows bash-only)
+        if: runner.os != 'Windows'
+        run: bash scripts/verify-cli.sh
