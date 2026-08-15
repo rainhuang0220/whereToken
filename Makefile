@@ -18,4 +18,7 @@ build-all:
 install-script:
 	bash -n scripts/install.sh
 
-.PHONY: test vet race cli-fixture build-all install-script
+govulncheck:
+	bash scripts/govulncheck.sh
+
+.PHONY: test vet race cli-fixture build-all install-script govulncheck

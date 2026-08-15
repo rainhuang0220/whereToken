@@ -9,7 +9,7 @@ import (
 func FormatM(tokens int64) string {
 	m := float64(tokens) / 1_000_000
 	var s string
-	if tokens != 0 && m < 0.01 {
+	if tokens != 0 && m > -0.01 && m < 0.01 {
 		s = fmt.Sprintf("%.4f", m)
 	} else {
 		s = fmt.Sprintf("%.2f", m)

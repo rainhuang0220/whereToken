@@ -212,3 +212,13 @@ func TestParseWidth(t *testing.T) {
 		t.Fatalf("width=%d", f.Width)
 	}
 }
+
+func TestParseTodayOfflineCursor(t *testing.T) {
+	f, err := Parse([]string{"--today", "--offline", "--cursor", "--quiet"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !f.Today || !f.Offline || f.Tool != "cursor" || !f.Quiet {
+		t.Fatalf("%+v", f)
+	}
+}

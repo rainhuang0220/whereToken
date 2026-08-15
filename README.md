@@ -21,7 +21,7 @@ From a clone with Homebrew:
 brew install --HEAD Formula/wheretoken.rb
 ```
 
-`go install` needs **Go 1.25+**. The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet).
+`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet).
 
 ## What you see
 

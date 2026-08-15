@@ -131,3 +131,33 @@ func TestGoldenTables(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteJSONTodayOmitsLast7AndStreaks(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := m["last_7d"]; ok {
+		t.Fatalf("today json should omit last_7d: %s", buf.String())
+	}
+	if _, ok := m["max_streak_days"]; ok {
+		t.Fatalf("today json should omit streaks: %s", buf.String())
+	}
+	if _, ok := m["models"]; !ok {
+		t.Fatal("today json should include models")
+	}
+	if m["schema"].(float64) != 1 {
+		t.Fatalf("schema=%v", m["schema"])
+	}
+}
