@@ -21,6 +21,9 @@ func TestDisplayWidthCJKVsASCII(t *testing.T) {
 		{"😀", 2},
 		{"Ａ", 2},
 		{"，", 2},
+		{"🚀", 2},
+		{"🫶", 2},
+		{"한", 2},
 	}
 	for _, c := range cases {
 		if got := DisplayWidth(c.in); got != c.want {

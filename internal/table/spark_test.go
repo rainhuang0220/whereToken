@@ -26,6 +26,14 @@ func TestSparkEmpty(t *testing.T) {
 	}
 }
 
+func TestSparkClampsNegative(t *testing.T) {
+	got := Spark([]int64{-5, 0, 10}, false)
+	runes := []rune(got)
+	if len(runes) != 3 || runes[0] != '▁' || runes[2] != '█' {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestSparkBlockWidthIsOne(t *testing.T) {
 	s := Spark([]int64{1, 2, 3, 4, 5, 6, 7}, false)
 	if DisplayWidth(s) != 7 {

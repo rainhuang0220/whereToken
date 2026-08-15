@@ -259,3 +259,13 @@ func TestAllowedURLRejectsLoopback(t *testing.T) {
 		t.Fatal("loopback should be rejected unless it is APIBase")
 	}
 }
+
+func TestAllowedURLRejectsLookalikeHost(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "https://api.trae.ai.evil.example/v1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if (Adapter{}).allowedURL(req.URL) {
+		t.Fatal("suffix host must not match")
+	}
+}

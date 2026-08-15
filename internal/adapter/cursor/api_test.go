@@ -309,6 +309,16 @@ func TestRestrictRedirectHonorsAPIBase(t *testing.T) {
 	}
 }
 
+func TestAllowedURLRejectsLookalikeHost(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "https://api2.cursor.sh.evil.example/v1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if (Adapter{}).allowedURL(req.URL) {
+		t.Fatal("suffix host must not match")
+	}
+}
+
 func TestAllowedURLRejectsLoopback(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/steal", nil)
 	if err != nil {

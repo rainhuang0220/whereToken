@@ -117,7 +117,11 @@ func isWide(r rune) bool {
 		return true
 	case r >= 0x1F300 && r <= 0x1F64F:
 		return true
+	case r >= 0x1F680 && r <= 0x1F6FF:
+		return true
 	case r >= 0x1F900 && r <= 0x1F9FF:
+		return true
+	case r >= 0x1FA00 && r <= 0x1FAFF:
 		return true
 	case r >= 0x20000 && r <= 0x3FFFD:
 		return true

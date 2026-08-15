@@ -122,6 +122,7 @@ Field mapping: [`docs/data-sources.md`](docs/data-sources.md). Not in this relea
 ```bash
 go test ./...
 make test                          # go + web + npm wrapper
+make ci                            # fmt-check + vet + test + race + fixture CLI
 bash scripts/verify-cli.sh         # table against testdata, not $HOME
 bash scripts/verify-local.sh       # optional: this machine's ledgers
 cd web && npm install && npm test && npm run build

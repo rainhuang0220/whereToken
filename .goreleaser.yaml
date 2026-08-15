@@ -27,7 +27,7 @@ archives:
       - LICENSE
       - README.md
       - CHANGELOG.md
-      - docs/wheretoken.1
+      - docs/cli-json.schema.json
       - completions/*
     format_overrides:
       - goos: windows

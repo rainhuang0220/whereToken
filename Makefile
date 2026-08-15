@@ -24,4 +24,6 @@ govulncheck:
 fmt-check:
 	test -z "$$(gofmt -l .)"
 
-.PHONY: test vet race cli-fixture build-all install-script govulncheck fmt-check
+ci: fmt-check vet test race cli-fixture
+
+.PHONY: test vet race cli-fixture build-all install-script govulncheck fmt-check ci
