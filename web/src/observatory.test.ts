@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { observatoryCursorWindowHint, observatoryDegradedLines, observatoryEmptyHint } from './observatory'
+import {
+  observatoryCursorWindowHint,
+  observatoryDegradedLines,
+  observatoryEmptyHint,
+  observatoryScanErrorHint,
+} from './observatory'
 import type { SliceView, SummaryPayload } from './types'
 
 function row(partial: Partial<SliceView> & Pick<SliceView, 'id' | 'label'>): SliceView {
@@ -91,6 +96,17 @@ describe('observatoryCursorWindowHint', () => {
         by_source: [row({ id: 'cursor', label: 'Cursor', quality: 'degraded', total: 0 })],
       }),
     ).toBe('')
+  })
+})
+
+describe('observatoryScanErrorHint', () => {
+  it('explains a 409 when there is no previous scan to keep on screen', () => {
+    expect(observatoryScanErrorHint('煅烧进行中', false)).toBe('另一处正在刷新。等这次煅烧结束再点。')
+    expect(observatoryScanErrorHint('scan 409', false)).toBe('另一处正在刷新。等这次煅烧结束再点。')
+  })
+
+  it('stays quiet when a previous payload is still showing', () => {
+    expect(observatoryScanErrorHint('煅烧进行中', true)).toBe('')
   })
 })
 

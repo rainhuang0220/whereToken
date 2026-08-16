@@ -11,6 +11,15 @@ export function observatoryCursorWindowHint(
   return ''
 }
 
+export function observatoryScanErrorHint(error: string, hasPayload: boolean): string {
+  const msg = error.trim()
+  if (!msg || hasPayload) return ''
+  if (msg.includes('409') || msg.includes('煅烧进行中')) {
+    return '另一处正在刷新。等这次煅烧结束再点。'
+  }
+  return '扫描没完成。看上面的错误后再点「刷新」。'
+}
+
 export function observatoryEmptyHint(
   payload: Pick<SummaryPayload, 'all' | 'by_source'>,
 ): string {

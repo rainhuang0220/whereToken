@@ -8,7 +8,12 @@ import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
 import { formatCount } from '../format'
-import { observatoryCursorWindowHint, observatoryDegradedLines, observatoryEmptyHint } from '../observatory'
+import {
+  observatoryCursorWindowHint,
+  observatoryDegradedLines,
+  observatoryEmptyHint,
+  observatoryScanErrorHint,
+} from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables } from '../types'
@@ -56,6 +61,7 @@ const emptyHint = computed(() => (payload.value ? observatoryEmptyHint(payload.v
 const cursorWindowHint = computed(() =>
   payload.value ? observatoryCursorWindowHint(payload.value) : '',
 )
+const scanErrorHint = computed(() => observatoryScanErrorHint(store.error, Boolean(payload.value)))
 const offlineBanner = computed(() =>
   payload.value?.offline ? 'offline · 只用本机账本，没有请求 Cursor/Trae 云端' : '',
 )
@@ -100,6 +106,7 @@ onMounted(() => {
     </header>
 
     <p v-if="store.error" class="err">{{ store.error }}</p>
+    <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
     <p v-if="offlineBanner" class="note">{{ offlineBanner }}</p>
     <p v-if="emptyHint" class="note">{{ emptyHint }}</p>
     <p v-if="cursorWindowHint" class="note">{{ cursorWindowHint }}</p>
