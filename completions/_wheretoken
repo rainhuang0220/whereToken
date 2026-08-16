@@ -9,7 +9,7 @@ _arguments -s \
   '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
   '--offline[skip Cursor/Trae account APIs]' \
   '--tool[tool id]:tool:(claude kimi codex opencode cursor trae)' \
-  '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba unknown)' \
+  '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
   '--model[model id]:model:' \
   '--claude[slice Claude Code]' \
   '--kimi[slice Kimi Code]' \

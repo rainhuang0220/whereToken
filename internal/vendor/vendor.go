@@ -28,6 +28,8 @@ func Lookup(model, provider string) string {
 		return "openai"
 	case strings.Contains(blob, "gemini"):
 		return "google"
+	case strings.Contains(blob, "grok") || strings.Contains(blob, "xai") || strings.Contains(blob, "x-ai"):
+		return "xai"
 	default:
 		return "unknown"
 	}
@@ -62,13 +64,15 @@ func Label(id string) string {
 		return "Zhipu"
 	case "alibaba":
 		return "Alibaba"
+	case "xai":
+		return "xAI"
 	default:
 		return "未知厂家"
 	}
 }
 
 func KnownIDs() []string {
-	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "unknown"}
+	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "xai", "unknown"}
 }
 
 func LookupName(name string) (string, bool) {

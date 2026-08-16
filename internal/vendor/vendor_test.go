@@ -17,6 +17,8 @@ func TestLookup(t *testing.T) {
 		{"Seed-Code", "", "doubao"},
 		{"glm-5.2", "", "zhipu"},
 		{"qwen-3.7-plus", "", "alibaba"},
+		{"grok-4", "", "xai"},
+		{"grok-2", "xai", "xai"},
 	}
 	for _, c := range cases {
 		if got := Lookup(c.model, c.provider); got != c.want {
@@ -42,6 +44,8 @@ func TestLookupName(t *testing.T) {
 		{"zhipu", "zhipu"},
 		{"Zhipu", "zhipu"},
 		{"alibaba", "alibaba"},
+		{"xai", "xai"},
+		{"xAI", "xai"},
 		{"unknown", "unknown"},
 		{"Unknown", "unknown"},
 		{"未知厂家", "unknown"},
@@ -72,5 +76,8 @@ func TestLabel(t *testing.T) {
 	}
 	if Label("doubao") != "Doubao" {
 		t.Fatal(Label("doubao"))
+	}
+	if Label("xai") != "xAI" {
+		t.Fatal(Label("xai"))
 	}
 }
