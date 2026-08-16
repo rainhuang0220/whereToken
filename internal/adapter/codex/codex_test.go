@@ -75,6 +75,34 @@ func TestLastTokenUsageFallback(t *testing.T) {
 	}
 }
 
+func TestLastThenMatchingTotalDoesNotDoubleCount(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sessions", "2026", "01", "01", "rollout-last-then-total.jsonl")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"timestamp":"2026-01-01T00:00:00Z","type":"turn_context","payload":{"model":"gpt-5"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":30,"reasoning_output_tokens":5}}}}
+{"timestamp":"2026-01-01T00:00:02Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":30,"reasoning_output_tokens":5}}}}
+`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "codex", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("last then matching total double-counted: events=%d", len(evs))
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != 135 {
+		t.Fatalf("total=%d", sum.All.Total())
+	}
+}
+
 func TestLongJSONLLine(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sessions", "2026", "01", "01", "rollout-long.jsonl")

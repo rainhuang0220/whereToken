@@ -8,7 +8,7 @@ import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
 import { formatCount } from '../format'
-import { observatoryDegradedLines, observatoryEmptyHint } from '../observatory'
+import { observatoryCursorWindowHint, observatoryDegradedLines, observatoryEmptyHint } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables } from '../types'
@@ -53,6 +53,9 @@ const degradedLines = computed(() =>
   payload.value ? observatoryDegradedLines(payload.value) : [],
 )
 const emptyHint = computed(() => (payload.value ? observatoryEmptyHint(payload.value) : ''))
+const cursorWindowHint = computed(() =>
+  payload.value ? observatoryCursorWindowHint(payload.value) : '',
+)
 const offlineBanner = computed(() =>
   payload.value?.offline ? 'offline · 只用本机账本，没有请求 Cursor/Trae 云端' : '',
 )
@@ -99,6 +102,7 @@ onMounted(() => {
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-if="offlineBanner" class="note">{{ offlineBanner }}</p>
     <p v-if="emptyHint" class="note">{{ emptyHint }}</p>
+    <p v-if="cursorWindowHint" class="note">{{ cursorWindowHint }}</p>
     <p v-if="claudeDegraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
     <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
     <p v-if="traeAbsent" class="note">检测到 Trae 目录，但没有可读的用量账本。</p>
@@ -151,6 +155,7 @@ onMounted(() => {
               <th class="name">厂家</th>
               <th class="num">未命中</th>
               <th class="num">缓存读</th>
+              <th class="num">缓存写</th>
               <th class="num">输出</th>
               <th class="num">合计</th>
               <th class="num">请求</th>
@@ -162,6 +167,7 @@ onMounted(() => {
               <td class="name">{{ row.vendor_label }}</td>
               <td class="num">{{ row.miss_m }}</td>
               <td class="num">{{ row.cache_read_m }}</td>
+              <td class="num">{{ row.cache_create_m }}</td>
               <td class="num">{{ row.output_m }}</td>
               <td class="num">{{ row.total_m }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>

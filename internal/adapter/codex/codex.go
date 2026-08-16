@@ -176,6 +176,10 @@ func handleRolloutLine(b []byte, path string, root adapter.SourceRoot, st *rollo
 			emitUsage(path, root, st.model, ts, &st.seq, tokenUsage{}, cur, emit)
 			st.lastSeen = cur
 			st.haveLast = true
+			if !st.haveTotal {
+				st.prevTotal = cur
+				st.haveTotal = true
+			}
 		}
 	case "response_item":
 		var p itemPayload

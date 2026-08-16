@@ -25,6 +25,11 @@
 - `--help` vendor list includes `xai`
 - Chinese README says 刷新 rescans and that the dashboard does not load third-party fonts
 - Tool and vendor table rows are keyboard-activatable (Enter/Space); absent rows stay inert
+- Trae billing JSON no longer double-counts a parent total and its session leaves, and two models in one session sum instead of taking max
+- Codex `last_token_usage` followed by a matching `total_token_usage` is one request, not two
+- Trae rows without a timestamp stay undated so the kiln does not dump them on today
+- 工具 × 厂家 includes 缓存写; session drill request counts use thousands grouping
+- Authoritative Cursor tokens footnote the 53-week account window
 
 ## 0.1.1 — 2026-08-17
 

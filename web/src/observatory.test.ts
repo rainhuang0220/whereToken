@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { observatoryDegradedLines, observatoryEmptyHint } from './observatory'
+import { observatoryCursorWindowHint, observatoryDegradedLines, observatoryEmptyHint } from './observatory'
 import type { SliceView, SummaryPayload } from './types'
 
 function row(partial: Partial<SliceView> & Pick<SliceView, 'id' | 'label'>): SliceView {
@@ -73,6 +73,24 @@ describe('observatoryDegradedLines', () => {
         by_source: [row({ id: 'trae', label: 'Trae' })],
       }),
     ).toEqual([])
+  })
+})
+
+describe('observatoryCursorWindowHint', () => {
+  it('tells the truth when Cursor tokens came from the 53-week account API', () => {
+    expect(
+      observatoryCursorWindowHint({
+        by_source: [row({ id: 'cursor', label: 'Cursor', quality: 'authoritative', total: 1_680_000_000 })],
+      }),
+    ).toBe('Cursor 的 token 列是近 53 周账号用量；请求和回合仍是本机全部会话。')
+  })
+
+  it('stays quiet when Cursor is only local bubbles', () => {
+    expect(
+      observatoryCursorWindowHint({
+        by_source: [row({ id: 'cursor', label: 'Cursor', quality: 'degraded', total: 0 })],
+      }),
+    ).toBe('')
   })
 })
 

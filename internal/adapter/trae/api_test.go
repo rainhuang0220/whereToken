@@ -209,6 +209,58 @@ func TestOfflineDoesNotCallBillingAPI(t *testing.T) {
 	}
 }
 
+func TestParseSessionUsageDoesNotDoubleParentAndLeaf(t *testing.T) {
+	raw := []byte(`{
+	  "data": {
+	    "input_token": 1000,
+	    "output_token": 20,
+	    "user_usage_group_by_session": {
+	      "session_id": "s1",
+	      "model_name": "DeepSeek-V4-Flash",
+	      "extra_info": {
+	        "input_token": 1000,
+	        "output_token": 20,
+	        "cache_read_token": 0,
+	        "cache_write_token": 0
+	      }
+	    }
+	  }
+	}`)
+	evs := parseSessionUsage(raw, "/tmp")
+	if len(evs) != 1 {
+		t.Fatalf("events=%d %+v", len(evs), evs)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != 1020 {
+		t.Fatalf("double-counted parent+leaf total=%d", sum.All.Total())
+	}
+}
+
+func TestParseSessionUsageSumsTwoModelsInOneSession(t *testing.T) {
+	raw := []byte(`{
+	  "user_usage_group_by_session": [
+	    {"session_id":"s1","model_name":"DeepSeek-V4-Flash","extra_info":{"input_token":100,"output_token":10}},
+	    {"session_id":"s1","model_name":"glm-5","extra_info":{"input_token":200,"output_token":20}}
+	  ]
+	}`)
+	evs := parseSessionUsage(raw, "/tmp")
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != 330 {
+		t.Fatalf("same session_id collapsed to max: total=%d events=%d", sum.All.Total(), len(evs))
+	}
+}
+
+func TestParseSessionUsageLeavesUnknownTimeZero(t *testing.T) {
+	raw := []byte(`{"session_id":"s1","model_name":"k3","extra_info":{"input_token":10,"output_token":1}}`)
+	evs := parseSessionUsage(raw, "/tmp")
+	if len(evs) != 1 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if !evs[0].Timestamp.IsZero() {
+		t.Fatalf("no time in payload must stay zero so the kiln does not dump it on today: %s", evs[0].Timestamp)
+	}
+}
+
 func TestDefaultHTTPClientTimeout(t *testing.T) {
 	c := Adapter{}.client()
 	if c.Timeout != 20*time.Second {

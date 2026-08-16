@@ -78,7 +78,7 @@ function sessionLabel(row: SessionView): string {
             <td class="name">{{ row.workspace }}</td>
             <td class="num">{{ row.last_date || '—' }}</td>
             <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
-            <td class="num">{{ row.requests }}</td>
+            <td class="num">{{ formatCount(row.requests) }}</td>
             <td class="num">{{ formatCount(row.user_turns) }}</td>
           </tr>
         </tbody>

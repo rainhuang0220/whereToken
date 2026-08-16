@@ -37,13 +37,7 @@ func (a Adapter) fetchAccountUsage(sourceRoot, token string, sessions []string) 
 			continue
 		}
 		parsed := parseSessionUsage(raw, sourceRoot)
-		now := a.now()
-		for i := range parsed {
-			if parsed[i].Timestamp.IsZero() {
-				parsed[i].Timestamp = now
-			}
-			out = append(out, parsed[i])
-		}
+		out = append(out, parsed...)
 	}
 	if len(out) == 0 && lastErr != nil {
 		return nil, lastErr
@@ -59,33 +53,36 @@ func parseSessionUsage(raw []byte, sourceRoot string) []event.UsageEvent {
 		return nil
 	}
 	var out []event.UsageEvent
-	walkUsage(top, sourceRoot, &out)
+	seq := 0
+	walkUsage(top, sourceRoot, &out, &seq)
 	return out
 }
 
-func walkUsage(v any, sourceRoot string, out *[]event.UsageEvent) {
+func walkUsage(v any, sourceRoot string, out *[]event.UsageEvent, seq *int) {
 	switch x := v.(type) {
 	case map[string]any:
-		if ev, ok := usageFromMap(x, sourceRoot); ok {
+		nested := pick(x, "user_usage_group_by_session", "data")
+		if nested != nil {
+			walkUsage(nested, sourceRoot, out, seq)
+		} else if ev, ok := usageFromMap(x, sourceRoot); ok {
+			*seq++
+			ev.RequestID = fmt.Sprintf("%s:%d", ev.RequestID, *seq)
 			*out = append(*out, ev)
-		}
-		if nested := pick(x, "user_usage_group_by_session", "data"); nested != nil {
-			walkUsage(nested, sourceRoot, out)
 		}
 		for k, child := range x {
 			if k == "user_usage_group_by_session" || k == "data" || k == "extra_info" || k == "usage" {
 				continue
 			}
 			if _, isMap := child.(map[string]any); isMap {
-				walkUsage(child, sourceRoot, out)
+				walkUsage(child, sourceRoot, out, seq)
 			}
 			if _, isSlice := child.([]any); isSlice {
-				walkUsage(child, sourceRoot, out)
+				walkUsage(child, sourceRoot, out, seq)
 			}
 		}
 	case []any:
 		for _, child := range x {
-			walkUsage(child, sourceRoot, out)
+			walkUsage(child, sourceRoot, out, seq)
 		}
 	}
 }

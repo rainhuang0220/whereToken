@@ -157,6 +157,12 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		snap.Notes = appendUniqueNote(snap.Notes, "有的模型只有请求次数、账本没写 token（Cursor 会话标题常这样）")
 	}
 	snap.Notes = pruneNotes(snap.Notes, f, snap.Tools)
+	for _, r := range snap.Tools {
+		if r.ID == "cursor" && r.Quality == event.QualityAuthoritative && r.Total != 0 {
+			snap.Notes = appendUniqueNote(snap.Notes, "Cursor · token 列是近 53 周账号用量，请求/回合仍是本机全部会话")
+			break
+		}
+	}
 	if snap.Total == 0 && snap.Requests > 0 {
 		snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
 	}

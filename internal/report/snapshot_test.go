@@ -225,6 +225,28 @@ func TestUnknownVendorNoteIsChinese(t *testing.T) {
 	}
 }
 
+func TestCursorAuthoritativeNoteMentions53WeekWindow(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", Model: "composer", RequestID: "api-1",
+		Timestamp: now, Miss: 1_000_000, Quality: event.QualityAuthoritative, SkipRequest: true,
+	}}
+	snap, err := Build(events, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "53") && strings.Contains(n, "Cursor") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("authoritative Cursor tokens must say they are a 53-week account window: %v", snap.Notes)
+	}
+}
+
 func TestFilterTodayUsesLocalDate(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

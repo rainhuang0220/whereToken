@@ -1,5 +1,16 @@
 import type { SliceView, SummaryPayload } from './types'
 
+export function observatoryCursorWindowHint(
+  payload: Pick<SummaryPayload, 'by_source'>,
+): string {
+  for (const row of payload.by_source ?? []) {
+    if (row.id === 'cursor' && row.quality === 'authoritative' && row.total !== 0) {
+      return 'Cursor 的 token 列是近 53 周账号用量；请求和回合仍是本机全部会话。'
+    }
+  }
+  return ''
+}
+
 export function observatoryEmptyHint(
   payload: Pick<SummaryPayload, 'all' | 'by_source'>,
 ): string {

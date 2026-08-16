@@ -50,6 +50,22 @@ describe('axis damper copy', () => {
   })
 })
 
+describe('drill sessions', () => {
+  it('groups session request counts like the other tables', () => {
+    const vue = readFileSync(join(SRC, 'components/DrillPanel.vue'), 'utf8')
+    expect(vue).toMatch(/formatCount\(row\.requests\)/)
+    expect(vue).not.toMatch(/\{\{\s*row\.requests\s*\}\}/)
+  })
+})
+
+describe('cross table', () => {
+  it('shows 缓存写 so 合计 matches the visible columns', () => {
+    const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')
+    expect(home).toMatch(/缓存写/)
+    expect(home).toMatch(/cache_create_m/)
+  })
+})
+
 describe('home rail copy', () => {
   it('labels the rescan control 刷新, not 再扫', () => {
     const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')
