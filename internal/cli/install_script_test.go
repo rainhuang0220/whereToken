@@ -110,6 +110,27 @@ func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {
 	}
 }
 
+func TestGitHubActionsWorkflowsAreInstalled(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	root := filepath.Join(filepath.Dir(file), "..", "..")
+	for _, name := range []string{"ci.yml", "release.yml"} {
+		want, err := os.ReadFile(filepath.Join(root, "ci", "github-workflows", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := os.ReadFile(filepath.Join(root, ".github", "workflows", name))
+		if err != nil {
+			t.Fatalf("GitHub Actions only runs files under .github/workflows (%s): %v", name, err)
+		}
+		if string(got) != string(want) {
+			t.Fatalf(".github/workflows/%s drifted from ci/github-workflows/%s", name, name)
+		}
+	}
+}
+
 func TestCIRunsGofmt(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
