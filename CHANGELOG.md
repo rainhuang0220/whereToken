@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
+- Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
+
 ## 0.1.1 — 2026-08-17
 
 Query and install polish for a stranger's first run.

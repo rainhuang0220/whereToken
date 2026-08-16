@@ -95,7 +95,7 @@ func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "docs/cli-json.schema.json", "completions/*", "nfpms:", "deb", "rpm"} {
+	for _, want := range []string{"LICENSE", "README.md", "CHANGELOG.md", "docs/wheretoken.1", "docs/cli-json.schema.json", "completions/*", "nfpms:", "deb", "rpm", `isEnvSet "MACOS_SIGN_P12"`, "MACOS_NOTARY_KEY", "MACOS_NOTARY_KEY_ID", "MACOS_NOTARY_ISSUER_ID"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("goreleaser missing %q", want)
 		}
@@ -208,7 +208,7 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if strings.Contains(rs, "Pushing those files needs a GitHub token") {
 		t.Fatal("README must not tell strangers that Actions is blocked on workflow scope")
 	}
-	for _, want := range []string{"unsigned", "Homebrew tap", "not on the npm registry", "signed in"} {
+	for _, want := range []string{"unsigned", "brew tap rainhuang0220/wheretoken", "not on the npm registry", "signed in"} {
 		if !strings.Contains(strings.ToLower(rs), strings.ToLower(want)) && !strings.Contains(rs, want) {
 			t.Errorf("README missing honest not-yet %q", want)
 		}
@@ -216,8 +216,11 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if !strings.Contains(rs, "unsigned") {
 		t.Fatal("README should say GitHub binaries are unsigned")
 	}
-	if !strings.Contains(rs, "Homebrew tap") && !strings.Contains(rs, "brew tap") {
-		t.Fatal("README should say there is no Homebrew tap")
+	if !strings.Contains(rs, "brew tap rainhuang0220/wheretoken") || !strings.Contains(rs, "brew install wheretoken") {
+		t.Fatal("README should show brew tap rainhuang0220/wheretoken then brew install wheretoken")
+	}
+	if strings.Contains(rs, "no Homebrew tap") || strings.Contains(rs, "There is **no Homebrew tap**") {
+		t.Fatal("README must not claim there is no Homebrew tap after the tap exists")
 	}
 	if !strings.Contains(rs, "signed in") && !strings.Contains(rs, "已登录") {
 		t.Fatal("README should say Trae/Cursor token columns need those apps signed in")
@@ -254,7 +257,7 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port", "--today --kimi", "unsigned"} {
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port", "--today --kimi", "unsigned", "brew tap rainhuang0220/wheretoken"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("man page missing %q", want)
 		}
@@ -279,6 +282,46 @@ func TestReleaseWorkflowInstallsNodeBeforeGoreleaser(t *testing.T) {
 	}
 	if !strings.Contains(s, "49933ea5288caeca8642d1e84afbd3f7d6820020") {
 		t.Fatal("release.yml should pin setup-node to the same SHA as ci.yml")
+	}
+	for _, want := range []string{
+		"secrets.MACOS_SIGN_P12",
+		"secrets.MACOS_SIGN_PASSWORD",
+		"secrets.MACOS_NOTARY_KEY",
+		"secrets.MACOS_NOTARY_KEY_ID",
+		"secrets.MACOS_NOTARY_ISSUER_ID",
+		"publishing unsigned binaries",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("release.yml missing skip-if-missing signing %q", want)
+		}
+	}
+}
+
+func TestMacOSSigningDocListsSecretNamesOnly(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "macos-signing.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"MACOS_SIGN_P12",
+		"MACOS_SIGN_PASSWORD",
+		"MACOS_NOTARY_KEY",
+		"MACOS_NOTARY_KEY_ID",
+		"MACOS_NOTARY_ISSUER_ID",
+		"Never paste",
+		"skips signing",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("macos-signing.md missing %q", want)
+		}
+	}
+	if strings.Contains(s, "BEGIN CERTIFICATE") || strings.Contains(s, "-----BEGIN") {
+		t.Fatal("macos-signing.md must not contain certificate material")
 	}
 }
 

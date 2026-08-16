@@ -12,9 +12,10 @@ USAGE
 INSTALL
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+  brew tap rainhuang0220/wheretoken && brew install wheretoken
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
-  brew install --HEAD ./Formula/wheretoken.rb  # from a clone; no tap
-No Homebrew tap, no npm package. GitHub Release binaries are unsigned.
+  brew install --HEAD ./Formula/wheretoken.rb  # from a clone
+No npm package. GitHub Release binaries are unsigned.
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,

@@ -36,6 +36,26 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# macOS signing/notarization is skip-if-missing.
+# GitHub Actions secrets (values only in the GitHub UI; never commit them):
+#   MACOS_SIGN_P12, MACOS_SIGN_PASSWORD,
+#   MACOS_NOTARY_KEY, MACOS_NOTARY_KEY_ID, MACOS_NOTARY_ISSUER_ID
+# See docs/macos-signing.md. Windows Authenticode is not wired.
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      ids:
+        - wheretoken
+      sign:
+        certificate: "{{.Env.MACOS_SIGN_P12}}"
+        password: "{{.Env.MACOS_SIGN_PASSWORD}}"
+      notarize:
+        issuer_id: "{{.Env.MACOS_NOTARY_ISSUER_ID}}"
+        key_id: "{{.Env.MACOS_NOTARY_KEY_ID}}"
+        key: "{{.Env.MACOS_NOTARY_KEY}}"
+        wait: true
+        timeout: 20m
+
 release:
   name_template: "{{.Tag}}"
   mode: keep-existing

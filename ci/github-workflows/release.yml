@@ -25,10 +25,39 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      # Apple signing is skip-if-missing. Create Repository secrets with these
+      # exact names (values in GitHub UI only — never paste them into chat):
+      #   MACOS_SIGN_P12            Developer ID Application .p12, base64
+      #   MACOS_SIGN_PASSWORD       password for that .p12
+      #   MACOS_NOTARY_KEY          App Store Connect API .p8, base64
+      #   MACOS_NOTARY_KEY_ID       key id (also in AuthKey_*.p8 filename)
+      #   MACOS_NOTARY_ISSUER_ID    issuer UUID from App Store Connect
+      # See docs/macos-signing.md. Windows Authenticode is not wired yet.
+      - name: Enable Apple signing when secrets exist
+        env:
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          if [ -n "$MACOS_SIGN_P12" ] && [ -n "$MACOS_SIGN_PASSWORD" ] && [ -n "$MACOS_NOTARY_KEY" ] && [ -n "$MACOS_NOTARY_KEY_ID" ] && [ -n "$MACOS_NOTARY_ISSUER_ID" ]; then
+            {
+              printf 'MACOS_SIGN_P12<<EOF\n%s\nEOF\n' "$MACOS_SIGN_P12"
+              printf 'MACOS_SIGN_PASSWORD<<EOF\n%s\nEOF\n' "$MACOS_SIGN_PASSWORD"
+              printf 'MACOS_NOTARY_KEY<<EOF\n%s\nEOF\n' "$MACOS_NOTARY_KEY"
+              printf 'MACOS_NOTARY_KEY_ID<<EOF\n%s\nEOF\n' "$MACOS_NOTARY_KEY_ID"
+              printf 'MACOS_NOTARY_ISSUER_ID<<EOF\n%s\nEOF\n' "$MACOS_NOTARY_ISSUER_ID"
+            } >> "$GITHUB_ENV"
+            echo "Apple signing secrets present; goreleaser will sign and notarize macOS binaries."
+          else
+            echo "Apple signing secrets absent or incomplete; publishing unsigned binaries."
+          fi
+
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --timeout 60m
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
