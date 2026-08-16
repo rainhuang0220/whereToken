@@ -100,7 +100,7 @@ func TestRunDefaultPrintsP0Table(t *testing.T) {
 		t.Fatalf("code=%d err=%s", code, errb.String())
 	}
 	s := out.String()
-	for _, want := range []string{"总用量", "命中率", "最长连烧", "11.68 M", "85.2%", "占比", "近7日"} {
+	for _, want := range []string{"总用量", "命中率", "最长连烧", "当前连烧", "请求", "用户回合", "11.68 M", "85.2%", "占比", "近7日"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing %q in\n%s", want, s)
 		}
@@ -354,10 +354,18 @@ func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	if strings.Contains(h, "消耗") {
 		t.Fatal("help must not watermark 消耗")
 	}
-	for _, want := range []string{"go install", "GOPATH", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "install.sh", "install.ps1", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb"} {
+	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}
+	}
+	if strings.Contains(h, "GOPATH") {
+		t.Fatal("help must not lecture GOPATH")
+	}
+	curl := strings.Index(h, "curl -fsSL")
+	goInst := strings.Index(h, "go install")
+	if curl < 0 || goInst < 0 || curl > goInst {
+		t.Fatal("help INSTALL should lead with curl | bash, then go install")
 	}
 }
 

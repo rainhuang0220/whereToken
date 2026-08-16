@@ -1,7 +1,16 @@
 package cli
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -22,15 +31,21 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 	for _, want := range []string{
 		"wheretoken_${os}_${arch}.tar.gz",
 		"github.com/rainhuang0220/whereToken",
-		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
-		`GOBIN="$BIN_DIR" go install`,
 		"darwin", "linux", "amd64", "arm64",
 		"checksums.txt", "sha256",
-		"2>/dev/null",
+		"WHERETOKEN_RELEASE_URL",
+		"releases/latest/download",
+		"export PATH=",
+		"$HOME/.local/bin",
+		"/usr/local/bin",
+		"next: wheretoken",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.sh missing %q", want)
 		}
+	}
+	if strings.Contains(s, "GOPATH") || strings.Contains(s, "go env GOPATH") {
+		t.Fatal("install.sh must not print a GOPATH lecture")
 	}
 	if strings.Contains(s, "eyJ") {
 		t.Fatal("install.sh must not contain JWT material")
@@ -51,15 +66,19 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 		"wheretoken_windows_${goarch}.zip",
 		"wheretoken.exe",
 		"github.com/rainhuang0220/whereToken",
-		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
 		"amd64", "arm64",
-		"$env:GOBIN",
 		"checksums.txt",
 		"SHA256",
+		"releases/latest/download",
+		"SetEnvironmentVariable",
+		"next: wheretoken",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.ps1 missing %q", want)
 		}
+	}
+	if strings.Contains(s, "GOPATH") {
+		t.Fatal("install.ps1 must not print a GOPATH lecture")
 	}
 	if strings.Contains(s, "eyJ") {
 		t.Fatal("install.ps1 must not contain JWT material")
@@ -168,8 +187,26 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if !strings.Contains(string(readme), "not on the npm registry") {
 		t.Fatal("README should say the npm package is not on the registry yet")
 	}
-	if !strings.Contains(string(readme), "GOPATH") {
-		t.Fatal("README should mention GOPATH/bin for go install")
+	curl := "curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash"
+	irm := "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+	goInstall := "go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest"
+	rs := string(readme)
+	if !strings.Contains(rs, curl) {
+		t.Fatal("README must show the curl | bash one-liner")
+	}
+	if !strings.Contains(rs, irm) {
+		t.Fatal("README must show the PowerShell irm | iex one-liner")
+	}
+	ci := strings.Index(rs, curl)
+	gi := strings.Index(rs, goInstall)
+	if gi >= 0 && ci > gi {
+		t.Fatal("README should lead with curl | bash, then go install as an alternative")
+	}
+	if strings.Contains(rs, "GOPATH") {
+		t.Fatal("README must not lecture GOPATH; binary install is the default")
+	}
+	if strings.Contains(rs, "Pushing those files needs a GitHub token") {
+		t.Fatal("README must not tell strangers that Actions is blocked on workflow scope")
 	}
 }
 
@@ -200,9 +237,182 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "GOPATH", "go install", "--port"} {
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("man page missing %q", want)
 		}
+	}
+	if strings.Contains(s, "GOPATH") {
+		t.Fatal("man page must not lecture GOPATH")
+	}
+}
+
+func TestReleaseWorkflowInstallsNodeBeforeGoreleaser(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "ci", "github-workflows", "release.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	if !strings.Contains(s, "setup-node") {
+		t.Fatal("release.yml must setup Node so goreleaser can build web/")
+	}
+	if !strings.Contains(s, "49933ea5288caeca8642d1e84afbd3f7d6820020") {
+		t.Fatal("release.yml should pin setup-node to the same SHA as ci.yml")
+	}
+}
+
+func TestPackageReleaseScriptNamesChecksums(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "scripts", "package-release.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"wheretoken_${goos}_${goarch}.tar.gz",
+		"wheretoken_windows_${goarch}.zip",
+		"checksums.txt",
+		"main.version",
+		"darwin", "linux", "windows", "amd64", "arm64",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("package-release.sh missing %q", want)
+		}
+	}
+}
+
+func TestInstallShDownloadsVerifiedRelease(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("bash installer")
+	}
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl")
+	}
+	if _, err := exec.LookPath("tar"); err != nil {
+		t.Skip("tar")
+	}
+
+	osName := runtime.GOOS
+	arch := runtime.GOARCH
+	asset := fmt.Sprintf("wheretoken_%s_%s.tar.gz", osName, arch)
+
+	payload := []byte("#!/bin/sh\necho wheretoken 0.1.0\n")
+	var tarbuf bytes.Buffer
+	gz := gzip.NewWriter(&tarbuf)
+	tw := tar.NewWriter(gz)
+	hdr := &tar.Header{Name: "wheretoken", Mode: 0755, Size: int64(len(payload))}
+	if err := tw.WriteHeader(hdr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write(payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	archive := tarbuf.Bytes()
+	sum := sha256.Sum256(archive)
+	checksums := fmt.Sprintf("%x  %s\n", sum, asset)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/"+asset, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(archive)
+	})
+	mux.HandleFunc("/checksums.txt", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, checksums)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	script := filepath.Join(filepath.Dir(file), "..", "..", "scripts", "install.sh")
+	prefix := t.TempDir()
+	cmd := exec.Command("bash", script)
+	cmd.Env = append(os.Environ(),
+		"PREFIX="+prefix,
+		"WHERETOKEN_RELEASE_URL="+srv.URL,
+		"PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("install.sh: %v\n%s", err, out)
+	}
+	got := string(out)
+	if strings.Contains(got, "GOPATH") {
+		t.Fatalf("GOPATH lecture:\n%s", got)
+	}
+	bin := filepath.Join(prefix, "bin", "wheretoken")
+	st, err := os.Stat(bin)
+	if err != nil {
+		t.Fatalf("binary missing: %v\n%s", err, got)
+	}
+	if st.Mode()&0o111 == 0 {
+		t.Fatalf("binary not executable: %v", st.Mode())
+	}
+	if !strings.Contains(got, "export PATH=") {
+		t.Fatalf("expected one PATH line when prefix/bin is not on PATH:\n%s", got)
+	}
+	if strings.Count(got, "export PATH=") > 1 {
+		t.Fatalf("PATH hint should be one line:\n%s", got)
+	}
+	if !strings.Contains(got, "next: wheretoken") {
+		t.Fatalf("should tell the user to run wheretoken next:\n%s", got)
+	}
+}
+
+func TestInstallShRejectsChecksumMismatch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("bash installer")
+	}
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl")
+	}
+
+	osName := runtime.GOOS
+	arch := runtime.GOARCH
+	asset := fmt.Sprintf("wheretoken_%s_%s.tar.gz", osName, arch)
+	archive := []byte("not-a-real-tarball")
+	checksums := fmt.Sprintf("%x  %s\n", sha256.Sum256([]byte("other")), asset)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/"+asset, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(archive)
+	})
+	mux.HandleFunc("/checksums.txt", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, checksums)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	script := filepath.Join(filepath.Dir(file), "..", "..", "scripts", "install.sh")
+	cmd := exec.Command("bash", script)
+	cmd.Env = append(os.Environ(),
+		"PREFIX="+t.TempDir(),
+		"WHERETOKEN_RELEASE_URL="+srv.URL,
+		"PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+	)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("expected checksum failure\n%s", out)
+	}
+	if strings.Contains(string(out), "GOPATH") {
+		t.Fatalf("GOPATH lecture on checksum failure:\n%s", out)
 	}
 }

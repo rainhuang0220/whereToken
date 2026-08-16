@@ -6,6 +6,7 @@
 # runtime / local caches
 data/
 .wheretoken/
+/dist/
 *.db
 *.db-shm
 *.db-wal

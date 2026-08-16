@@ -36,6 +36,10 @@ archives:
 checksum:
   name_template: checksums.txt
 
+release:
+  name_template: "{{.Tag}}"
+  mode: keep-existing
+
 nfpms:
   - id: default
     maintainer: rainhuang0220 <iamrainhuang@163.com>

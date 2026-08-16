@@ -10,10 +10,9 @@ USAGE
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
-  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
-  export PATH="$(go env GOPATH)/bin:$PATH"   # if the shell cannot find wheretoken
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
   brew install --HEAD ./Formula/wheretoken.rb  # from a clone
 
 With no flags, scans ledgers already on this machine and prints six figures

@@ -6,6 +6,7 @@ const http = require('https')
 const os = require('os')
 const path = require('path')
 const crypto = require('crypto')
+const { spawnSync } = require('child_process')
 const { githubAsset, parseChecksum } = require('./lib/platform')
 
 const pkg = require('./package.json')

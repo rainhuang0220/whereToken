@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 — 2026-08-16
 
 CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, requests, turns), then tool/vendor rankings with share and a 7-day spark.
 
-- Install: `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest` (put `$(go env GOPATH)/bin` on PATH), `scripts/install.sh`, `scripts/install.ps1`, `brew install --HEAD ./Formula/wheretoken.rb`. The npm package is not on the registry.
+- Install: `curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash` (Windows: `irm …/install.ps1 | iex`). `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest` if you already have Go. Homebrew: `brew install --HEAD ./Formula/wheretoken.rb`. The npm package is not on the registry.
+- GitHub Release archives (darwin/linux/windows, amd64/arm64) plus `checksums.txt` (SHA-256)
 - `wheretoken serve` still serves the kiln dashboard on `127.0.0.1`; `--offline` / `WHERETOKEN_OFFLINE` skip Cursor/Trae APIs on dashboard 刷新 too
 - `--today`, `--tool`/`--vendor`/`--model`, brand flags, `--json`, `--ascii`, `--no-color`, `--quiet`, `--offline`, `--width`
 - Exit `0` ok (including zero data / degraded login), `1` runtime, `2` usage
@@ -27,7 +28,7 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Fish completion lists vendor ids the same way zsh already did
 - Honor `WHERETOKEN_HOME` through the CLI's env lookup (tests and `--home` stay fake-home only)
 - CI runs `gofmt -l`; `make fmt-check` does the same locally
-- `--help` examples include `--model=k3`; INSTALL lists `--version` and GOPATH/bin, not unpublished npm
+- `--help` examples include `--model=k3`; INSTALL leads with curl / irm, then `go install`
 - `install.sh` / `install.ps1` fall back to `go install` into PREFIX when no GitHub Release exists (and do not print the GitHub 404)
 - Man page EXAMPLES; fixture script asserts COLUMNS=40 still spells Kimi
 - Cursor and Trae HTTP clients have a 20s timeout contract test

@@ -5,8 +5,36 @@
 set -euo pipefail
 
 REPO="${WHERETOKEN_REPO:-rainhuang0220/whereToken}"
-PREFIX="${PREFIX:-$HOME/.local}"
-BIN_DIR="${BIN_DIR:-$PREFIX/bin}"
+
+path_has() {
+  case ":$PATH:" in
+    *:"$1":*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+choose_bin_dir() {
+  if [ -n "${BIN_DIR:-}" ]; then
+    printf '%s\n' "$BIN_DIR"
+    return
+  fi
+  if [ -n "${PREFIX:-}" ]; then
+    printf '%s\n' "$PREFIX/bin"
+    return
+  fi
+  local_default="$HOME/.local/bin"
+  if path_has "$local_default"; then
+    printf '%s\n' "$local_default"
+    return
+  fi
+  if [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
+    printf '%s\n' /usr/local/bin
+    return
+  fi
+  printf '%s\n' "$local_default"
+}
+
+BIN_DIR="$(choose_bin_dir)"
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -26,7 +54,7 @@ case "$os" in
   darwin) os=darwin ;;
   linux) os=linux ;;
   mingw*|msys*|cygwin*)
-    echo "wheretoken: on Windows use scripts/install.ps1 or go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
+    echo "wheretoken: on Windows use scripts/install.ps1" >&2
     exit 1
     ;;
   *)
@@ -46,42 +74,52 @@ esac
 asset="wheretoken_${os}_${arch}.tar.gz"
 
 version="${WHERETOKEN_VERSION:-}"
-if [ -z "$version" ]; then
-  version=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | tr -d '\r' | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1 || true)
-fi
 version="${version#v}"
 
-if [ -z "$version" ]; then
-  if command -v go >/dev/null 2>&1; then
-    echo "wheretoken: no GitHub Release; installing with go install" >&2
-    mkdir -p "$BIN_DIR"
-    GOBIN="$BIN_DIR" go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@latest"
-    echo "wheretoken: installed $BIN_DIR/wheretoken" >&2
-    if ! command -v wheretoken >/dev/null 2>&1; then
-      echo "wheretoken: add $BIN_DIR to PATH" >&2
-    fi
-    "$BIN_DIR/wheretoken" --version || true
-    exit 0
-  fi
-  echo "wheretoken: no GitHub Release yet. Install with Go:" >&2
-  echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
-  echo "  export PATH=\"\$(go env GOPATH)/bin:\$PATH\"" >&2
-  exit 1
+if [ -n "${WHERETOKEN_RELEASE_URL:-}" ]; then
+  base="${WHERETOKEN_RELEASE_URL%/}"
+elif [ -n "$version" ]; then
+  base="https://github.com/${REPO}/releases/download/v${version}"
+else
+  base="https://github.com/${REPO}/releases/latest/download"
 fi
 
-url="https://github.com/${REPO}/releases/download/v${version}/${asset}"
+url="${base}/${asset}"
+sums_url="${base}/checksums.txt"
+
+finish() {
+  echo "wheretoken: installed ${BIN_DIR}/wheretoken" >&2
+  if ! path_has "$BIN_DIR"; then
+    echo "export PATH=\"${BIN_DIR}:\$PATH\"" >&2
+  fi
+  echo "next: wheretoken" >&2
+  "${BIN_DIR}/wheretoken" --version >&2 || true
+}
+
+go_fallback() {
+  if ! command -v go >/dev/null 2>&1; then
+    echo "wheretoken: download failed (${url})" >&2
+    exit 1
+  fi
+  echo "wheretoken: no GitHub Release; installing with go install" >&2
+  mkdir -p "$BIN_DIR"
+  GOBIN="$BIN_DIR" go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@latest"
+  finish
+  exit 0
+}
+
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 echo "wheretoken: downloading ${url}" >&2
-if ! curl -fsSL -o "$tmp/$asset" "$url"; then
-  echo "wheretoken: download failed. Try:" >&2
-  echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
-  exit 1
+if ! curl -fsSL -A wheretoken-install -o "$tmp/$asset" "$url"; then
+  if [ -n "${WHERETOKEN_RELEASE_URL:-}" ]; then
+    echo "wheretoken: download failed" >&2
+    exit 1
+  fi
+  go_fallback
 fi
-sums_url="https://github.com/${REPO}/releases/download/v${version}/checksums.txt"
-if ! curl -fsSL -o "$tmp/checksums.txt" "$sums_url"; then
-  echo "wheretoken: no checksums.txt for v${version}; refusing to install" >&2
-  echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
+if ! curl -fsSL -A wheretoken-install -o "$tmp/checksums.txt" "$sums_url"; then
+  echo "wheretoken: no checksums.txt; refusing to install" >&2
   exit 1
 fi
 if command -v sha256sum >/dev/null 2>&1; then
@@ -104,9 +142,10 @@ if [ -z "$bin" ]; then
   exit 1
 fi
 mkdir -p "$BIN_DIR"
-install -m 0755 "$bin" "$BIN_DIR/wheretoken"
-echo "wheretoken: installed $BIN_DIR/wheretoken" >&2
-if ! command -v wheretoken >/dev/null 2>&1; then
-  echo "wheretoken: add $BIN_DIR to PATH" >&2
+if command -v install >/dev/null 2>&1; then
+  install -m 0755 "$bin" "$BIN_DIR/wheretoken"
+else
+  cp "$bin" "$BIN_DIR/wheretoken"
+  chmod 0755 "$BIN_DIR/wheretoken"
 fi
-"$BIN_DIR/wheretoken" --version || true
+finish

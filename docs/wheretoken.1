@@ -41,14 +41,15 @@ binds
 .B 127.0.0.1
 only.
 .SH INSTALL
-.B go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+.nf
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+.fi
 .PP
-Put
-.B $(go env GOPATH)/bin
-on
-.B PATH
-if the shell cannot find
-.BR wheretoken .
+Windows:
+.B irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+.PP
+If you already have Go:
+.B go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 .SH OPTIONS
 .TP
 .B -h ", " --help

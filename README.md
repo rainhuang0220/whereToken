@@ -3,19 +3,17 @@
 See where your **local** coding-agent tokens went. One command, a character table. No cloud, no USD prices, no telemetry.
 
 ```bash
-go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
-export PATH="$(go env GOPATH)/bin:$PATH"   # skip if `wheretoken` is already on PATH
-wheretoken
-```
-
-`scripts/install.sh` / `scripts/install.ps1` download a GitHub Release when one exists (SHA-256 checked). Otherwise they fall back to that same `go install` (into `~/.local/bin` or `%LOCALAPPDATA%\whereToken\bin`) when Go is on PATH:
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+```
+
+Then run `wheretoken`. Archives are SHA-256 checked against `checksums.txt`. If you already have Go 1.25+:
+
+```bash
+go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
 From a clone with Homebrew:
@@ -24,7 +22,7 @@ From a clone with Homebrew:
 brew install --HEAD ./Formula/wheretoken.rb
 ```
 
-`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). After a [GitHub Release](https://github.com/rainhuang0220/whereToken/releases), the installers download the OS archive and verify **SHA-256** against `checksums.txt`. The `npm/` wrapper is **not on the npm registry** yet.
+The `npm/` wrapper is **not on the npm registry** yet.
 
 ## What you see
 
@@ -126,7 +124,9 @@ cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve
 ```
 
-CI YAML for Ubuntu, macOS, and Windows lives in [`ci/github-workflows/`](ci/github-workflows/). GitHub Actions only runs files under `.github/workflows`; `scripts/install-github-workflows.sh` copies them there. Pushing those files needs a GitHub token with the `workflow` scope.
+`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it).
+
+CI runs on GitHub Actions (Ubuntu, macOS, Windows). The same YAML is kept in [`ci/github-workflows/`](ci/github-workflows/).
 
 ## License
 
@@ -136,4 +136,14 @@ MIT. See [`LICENSE`](LICENSE).
 
 ## 中文
 
-本机 coding agent 的 token 用量。装好后输入 `wheretoken` 得到字符表：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）。不写美元价，不做遥测，不打印 JWT。工具 ≠ 厂家。
+本机 coding agent 的 token 用量。一行安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+```
+
+```powershell
+irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+```
+
+然后输入 `wheretoken`：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）。不写美元价，不做遥测，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。

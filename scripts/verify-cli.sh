@@ -15,7 +15,11 @@ echo "$ver" | grep -q wheretoken
 
 "$dir/wheretoken" --help | grep -q USAGE
 "$dir/wheretoken" --help | grep -q 'EXIT CODES'
-"$dir/wheretoken" --help | grep -q GOPATH
+"$dir/wheretoken" --help | grep -q 'curl -fsSL'
+if "$dir/wheretoken" --help | grep -q GOPATH; then
+  echo "help lectures GOPATH" >&2
+  exit 1
+fi
 if "$dir/wheretoken" --help | grep -q 'npm install'; then
   echo "help advertises unpublished npm" >&2
   exit 1

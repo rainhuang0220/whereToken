@@ -5,12 +5,12 @@ Installs the [whereToken](https://github.com/rainhuang0220/whereToken) CLI witho
 This package is **not on the npm registry** yet. Until it is published, install with:
 
 ```bash
-go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
-When a GitHub Release exists, postinstall verifies **SHA-256** against `checksums.txt` before installing.
+If you already have Go:
 
-```text
+```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 

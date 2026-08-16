@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 
 $repo = if ($env:WHERETOKEN_REPO) { $env:WHERETOKEN_REPO } else { 'rainhuang0220/whereToken' }
 $prefix = if ($env:PREFIX) { $env:PREFIX } else { Join-Path $env:LOCALAPPDATA 'whereToken' }
-$binDir = Join-Path $prefix 'bin'
+$binDir = if ($env:BIN_DIR) { $env:BIN_DIR } else { Join-Path $prefix 'bin' }
 
 switch -Regex ($env:PROCESSOR_ARCHITECTURE) {
   'AMD64' { $goarch = 'amd64' }
@@ -16,55 +16,77 @@ switch -Regex ($env:PROCESSOR_ARCHITECTURE) {
 }
 
 $version = $env:WHERETOKEN_VERSION
-if (-not $version) {
-  try {
-    $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'wheretoken-install' }
-    $version = [string]$rel.tag_name
-  } catch {
-    $version = ''
-  }
-}
-$version = $version -replace '^v', ''
+if ($version) { $version = $version -replace '^v', '' }
 
-if (-not $version) {
-  if (Get-Command go -ErrorAction SilentlyContinue) {
-    Write-Host 'wheretoken: no GitHub Release; installing with go install'
-    New-Item -ItemType Directory -Path $binDir -Force | Out-Null
-    $oldGobin = $env:GOBIN
-    $env:GOBIN = $binDir
-    try {
-      go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
-    } finally {
-      if ($null -eq $oldGobin) { Remove-Item Env:GOBIN -ErrorAction SilentlyContinue } else { $env:GOBIN = $oldGobin }
-    }
-    $exe = Join-Path $binDir 'wheretoken.exe'
-    Write-Host "wheretoken: installed $exe"
-    $onPath = $env:PATH -split ';' | Where-Object { $_ -eq $binDir }
-    if (-not $onPath) {
-      Write-Host "wheretoken: add $binDir to PATH"
-    }
-    if (Test-Path $exe) { & $exe --version }
-    exit 0
+if ($env:WHERETOKEN_RELEASE_URL) {
+  $base = $env:WHERETOKEN_RELEASE_URL.TrimEnd('/')
+} elseif ($version) {
+  $base = "https://github.com/$repo/releases/download/v$version"
+} else {
+  $base = "https://github.com/$repo/releases/latest/download"
+}
+
+function Add-UserPath([string]$dir) {
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (-not $userPath) { $userPath = '' }
+  $parts = @($userPath -split ';' | Where-Object { $_ -ne '' })
+  if ($parts -contains $dir) {
+    $env:PATH = "$dir;$env:PATH"
+    return
   }
-  Write-Host 'wheretoken: no GitHub Release yet. Install with Go:'
-  Write-Host '  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest'
-  exit 1
+  $new = if ($userPath) { "$dir;$userPath" } else { $dir }
+  [Environment]::SetEnvironmentVariable('Path', $new, 'User')
+  $env:PATH = "$dir;$env:PATH"
+}
+
+function Show-Next {
+  $exe = Join-Path $binDir 'wheretoken.exe'
+  Write-Host "wheretoken: installed $exe"
+  Add-UserPath $binDir
+  Write-Host 'next: wheretoken'
+  if (Test-Path $exe) { & $exe --version }
+}
+
+function Install-WithGo {
+  if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
+    Write-Host 'wheretoken: download failed'
+    exit 1
+  }
+  Write-Host 'wheretoken: no GitHub Release; installing with go install'
+  New-Item -ItemType Directory -Path $binDir -Force | Out-Null
+  $oldGobin = $env:GOBIN
+  $env:GOBIN = $binDir
+  try {
+    go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+  } finally {
+    if ($null -eq $oldGobin) { Remove-Item Env:GOBIN -ErrorAction SilentlyContinue } else { $env:GOBIN = $oldGobin }
+  }
+  Show-Next
+  exit 0
 }
 
 $asset = "wheretoken_windows_${goarch}.zip"
-$url = "https://github.com/$repo/releases/download/v$version/$asset"
+$url = "$base/$asset"
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('wheretoken-' + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
   $zip = Join-Path $tmp $asset
   Write-Host "wheretoken: downloading $url"
-  Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
-  $sumsUrl = "https://github.com/$repo/releases/download/v$version/checksums.txt"
+  try {
+    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+  } catch {
+    if ($env:WHERETOKEN_RELEASE_URL) {
+      Write-Host 'wheretoken: download failed'
+      exit 1
+    }
+    Install-WithGo
+  }
+  $sumsUrl = "$base/checksums.txt"
   $sums = Join-Path $tmp 'checksums.txt'
   try {
     Invoke-WebRequest -Uri $sumsUrl -OutFile $sums -UseBasicParsing
   } catch {
-    throw "no checksums.txt for v$version; refusing to install"
+    throw 'no checksums.txt; refusing to install'
   }
   $line = Get-Content $sums | Where-Object { $_ -like "*$asset*" } | Select-Object -First 1
   if (-not $line) { throw "checksums.txt did not list $asset" }
@@ -76,15 +98,9 @@ try {
   if (-not $exe) { throw 'archive had no wheretoken.exe' }
   New-Item -ItemType Directory -Path $binDir -Force | Out-Null
   Copy-Item $exe.FullName (Join-Path $binDir 'wheretoken.exe') -Force
-  Write-Host "wheretoken: installed $(Join-Path $binDir 'wheretoken.exe')"
-  $onPath = $env:PATH -split ';' | Where-Object { $_ -eq $binDir }
-  if (-not $onPath) {
-    Write-Host "wheretoken: add $binDir to PATH"
-  }
-  & (Join-Path $binDir 'wheretoken.exe') --version
+  Show-Next
 } catch {
   Write-Host "wheretoken: $($_.Exception.Message)"
-  Write-Host '  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest'
   exit 1
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
