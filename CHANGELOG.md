@@ -9,7 +9,7 @@ Query and install polish for a stranger's first run.
 - Unknown flags exit 2 as `unknown flag "--name"` (not Go's `flag provided but not defined`)
 - `--help` examples include `--today --kimi`; INSTALL says no tap, no npm, unsigned binaries
 - README has a short **Not yet** list (unsigned, no tap, no npm, Trae/Cursor need those apps signed in)
-- `Formula/wheretoken.rb` pins the `v0.1.0` source tarball SHA256 and still offers `--HEAD`
+- `Formula/wheretoken.rb` pins the `v0.1.1` source tarball SHA256 and still offers `--HEAD`
 
 ## 0.1.0 — 2026-08-16
 
