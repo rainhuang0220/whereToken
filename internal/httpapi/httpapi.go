@@ -27,10 +27,10 @@ type server struct {
 	scanning bool
 }
 
-func NewHTTPServer(addr string, home adapter.Home) *http.Server {
+func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {
 	return &http.Server{
 		Addr:              addr,
-		Handler:           NewMux(home),
+		Handler:           NewMuxWith(home, scan.Adapters(offline)),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }
@@ -253,7 +253,7 @@ func Listen(addr string, home adapter.Home) error {
 	if err != nil {
 		return err
 	}
-	srv := NewHTTPServer(addr, home)
+	srv := NewHTTPServer(addr, home, false)
 	return srv.Serve(ln)
 }
 

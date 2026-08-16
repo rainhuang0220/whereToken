@@ -264,6 +264,16 @@ func TestParseFlagsBeforeServe(t *testing.T) {
 	}
 }
 
+func TestParseFlagsAroundServe(t *testing.T) {
+	f, err := Parse([]string{"--offline", "--quiet", "serve", "--port", "8799"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandServe || !f.Offline || !f.Quiet || f.Port != 8799 {
+		t.Fatalf("%+v", f)
+	}
+}
+
 func TestParseFlagsBeforeSources(t *testing.T) {
 	f, err := Parse([]string{"--home", "/tmp/fake-home", "--quiet", "sources"})
 	if err != nil {

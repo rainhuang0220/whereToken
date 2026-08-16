@@ -29,7 +29,7 @@ type App struct {
 	LookupEnv func(string) string
 	Scan      func(adapter.Home) scan.Result
 	Home      adapter.Home
-	Serve     func(addr string, home adapter.Home) error
+	Serve     func(addr string, home adapter.Home, offline bool) error
 	GOOS      string
 	StdoutTTY bool
 	StderrTTY bool
@@ -158,7 +158,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		}
 		return ExitFail
 	}
-	if flags.Offline || (a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true")) {
+	if a.wantOffline(flags) {
 		const msg = "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
 		dup := false
 		for _, n := range snap.Notes {
@@ -214,8 +214,9 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 	var lastErr error
 	for p := start; p <= end; p++ {
 		addr := fmt.Sprintf("127.0.0.1:%d", p)
+		offline := a.wantOffline(flags)
 		if a.Serve != nil {
-			if err := a.Serve(addr, home); err != nil {
+			if err := a.Serve(addr, home, offline); err != nil {
 				fmt.Fprintln(a.Stderr, err.Error())
 				return ExitFail
 			}
@@ -227,7 +228,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			continue
 		}
 		fmt.Fprintf(a.Stderr, "http://%s\n", addr)
-		srv := httpapi.NewHTTPServer(addr, home)
+		srv := httpapi.NewHTTPServer(addr, home, offline)
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
@@ -257,4 +258,15 @@ func resolveWidth(flag int, getenv func(string) string) int {
 		return 0
 	}
 	return n
+}
+
+func (a *App) wantOffline(flags Flags) bool {
+	if flags.Offline {
+		return true
+	}
+	if a.LookupEnv == nil {
+		return false
+	}
+	v := a.LookupEnv("WHERETOKEN_OFFLINE")
+	return v == "1" || v == "true"
 }

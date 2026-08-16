@@ -5,7 +5,7 @@
 CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, requests, turns), then tool/vendor rankings with share and a 7-day spark.
 
 - Install: `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest` (put `$(go env GOPATH)/bin` on PATH), `scripts/install.sh`, `scripts/install.ps1`, `brew install --HEAD ./Formula/wheretoken.rb`. The npm package is not on the registry.
-- `wheretoken serve` still serves the kiln dashboard on `127.0.0.1`
+- `wheretoken serve` still serves the kiln dashboard on `127.0.0.1`; `--offline` / `WHERETOKEN_OFFLINE` skip Cursor/Trae APIs on dashboard 刷新 too
 - `--today`, `--tool`/`--vendor`/`--model`, brand flags, `--json`, `--ascii`, `--no-color`, `--quiet`, `--offline`, `--width`
 - Exit `0` ok (including zero data / degraded login), `1` runtime, `2` usage
 - Never prints JWTs or access tokens
@@ -33,7 +33,7 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Cursor and Trae HTTP clients have a 20s timeout contract test
 - Redirects off Cursor/Trae API hosts are rejected (loopback too, unless it is APIBase)
 - `wheretoken sources` with no ledgers keeps stdout empty and hints on stderr
-- Flags may precede a subcommand (`wheretoken --home DIR sources`)
+- Flags may precede a subcommand (`wheretoken --home DIR sources`) and also follow it (`wheretoken --offline serve --port 8799`)
 - Redact `x-goog-api-key` the same way as other vendor API-key headers
 - Ranking tables treat rocket/extended emoji and Hangul as double-width
 - Narrow terminals wrap the legend, offline banner, and footnotes instead of letting them spill

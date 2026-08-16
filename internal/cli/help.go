@@ -34,7 +34,7 @@ FLAGS
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
-  --offline            local ledgers only; skip Cursor/Trae account APIs
+  --offline            local ledgers only; skip Cursor/Trae APIs (table and serve)
   --home DIR           fake home directory (tests)
   --port N             serve bind port (default 8787; tries 8787–8797 if busy)
   --width N            cap ranking width; drop 回合/请求 before truncating names

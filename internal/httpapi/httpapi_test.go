@@ -15,12 +15,19 @@ import (
 )
 
 func TestNewHTTPServerSetsReadHeaderTimeout(t *testing.T) {
-	s := NewHTTPServer("127.0.0.1:0", testhome.New(t.TempDir()))
+	s := NewHTTPServer("127.0.0.1:0", testhome.New(t.TempDir()), false)
 	if s.ReadHeaderTimeout <= 0 {
 		t.Fatal("ReadHeaderTimeout must be set")
 	}
 	if s.Addr != "127.0.0.1:0" {
 		t.Fatalf("addr=%s", s.Addr)
+	}
+}
+
+func TestNewHTTPServerOfflineStillServes(t *testing.T) {
+	s := NewHTTPServer("127.0.0.1:0", testhome.New(t.TempDir()), true)
+	if s.Handler == nil {
+		t.Fatal("offline server needs a handler")
 	}
 }
 

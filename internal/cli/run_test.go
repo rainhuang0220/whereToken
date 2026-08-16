@@ -247,7 +247,7 @@ func TestRunScanJSONStillFullSummary(t *testing.T) {
 func TestRunServeDoesNotScanTable(t *testing.T) {
 	app, out, errb := testApp([]string{"serve", "--port", "8787"})
 	called := false
-	app.Serve = func(addr string, home adapter.Home) error {
+	app.Serve = func(addr string, home adapter.Home, _ bool) error {
 		called = true
 		if !strings.HasPrefix(addr, "127.0.0.1:") {
 			t.Fatalf("addr=%s", addr)
@@ -265,9 +265,45 @@ func TestRunServeDoesNotScanTable(t *testing.T) {
 	}
 }
 
+func TestRunServePassesOfflineFlag(t *testing.T) {
+	app, _, errb := testApp([]string{"serve", "--offline", "--port", "8790"})
+	var got *bool
+	app.Serve = func(addr string, home adapter.Home, offline bool) error {
+		got = &offline
+		return nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if got == nil || !*got {
+		t.Fatal("serve must receive offline=true so dashboard 刷新 skips Cursor/Trae APIs")
+	}
+}
+
+func TestRunServeHonorsOfflineEnv(t *testing.T) {
+	app, _, errb := testApp([]string{"serve", "--port", "8790"})
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_OFFLINE" {
+			return "1"
+		}
+		return ""
+	}
+	offline := false
+	app.Serve = func(addr string, home adapter.Home, off bool) error {
+		offline = off
+		return nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !offline {
+		t.Fatal("WHERETOKEN_OFFLINE=1 must make serve skip cloud APIs")
+	}
+}
+
 func TestRunServeFailureIsExitFail(t *testing.T) {
 	app, _, errb := testApp([]string{"serve", "--port", "8787"})
-	app.Serve = func(addr string, home adapter.Home) error {
+	app.Serve = func(addr string, home adapter.Home, _ bool) error {
 		return errors.New("bind 127.0.0.1:8787: address already in use")
 	}
 	if code := app.Run(); code != ExitFail {

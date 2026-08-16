@@ -82,45 +82,11 @@ func Parse(args []string) (Flags, error) {
 		rest = args[1:]
 	}
 
-	fs := flag.NewFlagSet("wheretoken", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	fs.BoolVar(&f.Help, "h", false, "")
-	fs.BoolVar(&f.Help, "help", false, "")
-	fs.BoolVar(&f.Version, "version", false, "")
-	fs.BoolVar(&f.Version, "V", false, "")
-	fs.BoolVar(&f.JSON, "json", f.JSON, "")
-	fs.BoolVar(&f.Today, "today", false, "")
-	fs.BoolVar(&f.ASCII, "ascii", false, "")
-	fs.BoolVar(&f.NoColor, "no-color", false, "")
-	fs.BoolVar(&f.Quiet, "quiet", false, "")
-	fs.BoolVar(&f.Quiet, "q", false, "")
-	fs.BoolVar(&f.Offline, "offline", false, "")
-	fs.StringVar(&f.Home, "home", "", "")
-	fs.IntVar(&f.Port, "port", f.Port, "")
-	fs.IntVar(&f.Width, "width", 0, "")
-	toolFlag := fs.String("tool", "", "")
-	vendorFlag := fs.String("vendor", "", "")
-	modelFlag := fs.String("model", "", "")
+	var toolFlag, vendorFlag, modelFlag string
 	var claude, kimi, codex, opencode, trae, cursor bool
-	fs.BoolVar(&claude, "claude", false, "")
-	fs.BoolVar(&kimi, "kimi", false, "")
-	fs.BoolVar(&codex, "codex", false, "")
-	fs.BoolVar(&opencode, "opencode", false, "")
-	fs.BoolVar(&trae, "trae", false, "")
-	fs.BoolVar(&cursor, "cursor", false, "")
-	if err := fs.Parse(rest); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			f.Help = true
-			return f, nil
-		}
-		return Flags{}, usageError{msg: strings.TrimSpace(err.Error()) + "\ntry `wheretoken --help`"}
-	}
-
-	if f.Width < 0 {
-		return Flags{}, usageError{msg: "invalid --width (must be >= 0)\ntry `wheretoken --help`"}
-	}
-	if f.Port <= 0 || f.Port > 65535 {
-		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	fs := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &codex, &opencode, &trae, &cursor)
+	if err := parseFlagSet(fs, &f, rest); err != nil {
+		return Flags{}, err
 	}
 
 	if f.Command == CommandCompletion {
@@ -135,12 +101,32 @@ func Parse(args []string) (Flags, error) {
 		return f, nil
 	}
 	if extra := fs.Args(); len(extra) > 0 {
-		if err := applyTrailingCommand(&f, extra); err != nil {
+		leftover, err := applyTrailingCommand(&f, extra)
+		if err != nil {
 			return Flags{}, err
 		}
 		if f.Command == CommandCompletion || f.Help || f.Version {
+			if len(leftover) > 0 {
+				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+			}
 			return f, nil
 		}
+		if len(leftover) > 0 {
+			fs2 := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &codex, &opencode, &trae, &cursor)
+			if err := parseFlagSet(fs2, &f, leftover); err != nil {
+				return Flags{}, err
+			}
+			if extra2 := fs2.Args(); len(extra2) > 0 {
+				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra2[0])}
+			}
+		}
+	}
+
+	if f.Width < 0 {
+		return Flags{}, usageError{msg: "invalid --width (must be >= 0)\ntry `wheretoken --help`"}
+	}
+	if f.Port <= 0 || f.Port > 65535 {
+		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
 	}
 
 	var tools []string
@@ -165,10 +151,10 @@ func Parse(args []string) (Flags, error) {
 	if cursor {
 		add("cursor")
 	}
-	if strings.TrimSpace(*toolFlag) != "" {
-		id, ok := metric.LookupSource(*toolFlag)
+	if strings.TrimSpace(toolFlag) != "" {
+		id, ok := metric.LookupSource(toolFlag)
 		if !ok {
-			return Flags{}, unknownName("tool", *toolFlag, suggestKnown(*toolFlag, metric.KnownSourceIDs()), metric.KnownSourceIDs())
+			return Flags{}, unknownName("tool", toolFlag, suggestKnown(toolFlag, metric.KnownSourceIDs()), metric.KnownSourceIDs())
 		}
 		add(id)
 	}
@@ -180,56 +166,86 @@ func Parse(args []string) (Flags, error) {
 		f.Tool = uniq[0]
 	}
 
-	if strings.TrimSpace(*vendorFlag) != "" {
-		id, ok := vendor.LookupName(*vendorFlag)
+	if strings.TrimSpace(vendorFlag) != "" {
+		id, ok := vendor.LookupName(vendorFlag)
 		if !ok {
-			return Flags{}, unknownName("vendor", *vendorFlag, suggestKnown(*vendorFlag, vendor.KnownIDs()), vendor.KnownIDs())
+			return Flags{}, unknownName("vendor", vendorFlag, suggestKnown(vendorFlag, vendor.KnownIDs()), vendor.KnownIDs())
 		}
 		f.Vendor = id
 	}
-	f.Model = strings.TrimSpace(*modelFlag)
+	f.Model = strings.TrimSpace(modelFlag)
 	return f, nil
 }
 
-func applyTrailingCommand(f *Flags, extra []string) error {
+func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi, codex, opencode, trae, cursor *bool) *flag.FlagSet {
+	fs := flag.NewFlagSet("wheretoken", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.BoolVar(&f.Help, "h", f.Help, "")
+	fs.BoolVar(&f.Help, "help", f.Help, "")
+	fs.BoolVar(&f.Version, "version", f.Version, "")
+	fs.BoolVar(&f.Version, "V", f.Version, "")
+	fs.BoolVar(&f.JSON, "json", f.JSON, "")
+	fs.BoolVar(&f.Today, "today", f.Today, "")
+	fs.BoolVar(&f.ASCII, "ascii", f.ASCII, "")
+	fs.BoolVar(&f.NoColor, "no-color", f.NoColor, "")
+	fs.BoolVar(&f.Quiet, "quiet", f.Quiet, "")
+	fs.BoolVar(&f.Quiet, "q", f.Quiet, "")
+	fs.BoolVar(&f.Offline, "offline", f.Offline, "")
+	fs.StringVar(&f.Home, "home", f.Home, "")
+	fs.IntVar(&f.Port, "port", f.Port, "")
+	fs.IntVar(&f.Width, "width", f.Width, "")
+	fs.StringVar(toolFlag, "tool", *toolFlag, "")
+	fs.StringVar(vendorFlag, "vendor", *vendorFlag, "")
+	fs.StringVar(modelFlag, "model", *modelFlag, "")
+	fs.BoolVar(claude, "claude", *claude, "")
+	fs.BoolVar(kimi, "kimi", *kimi, "")
+	fs.BoolVar(codex, "codex", *codex, "")
+	fs.BoolVar(opencode, "opencode", *opencode, "")
+	fs.BoolVar(trae, "trae", *trae, "")
+	fs.BoolVar(cursor, "cursor", *cursor, "")
+	return fs
+}
+
+func parseFlagSet(fs *flag.FlagSet, f *Flags, args []string) error {
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			f.Help = true
+			return nil
+		}
+		return usageError{msg: strings.TrimSpace(err.Error()) + "\ntry `wheretoken --help`"}
+	}
+	return nil
+}
+
+func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
+	rest := extra[1:]
 	switch extra[0] {
 	case "help":
-		if len(extra) > 1 {
-			return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
-		}
 		f.Help = true
-		return nil
+		return rest, nil
 	case "version":
-		if len(extra) > 1 {
-			return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
-		}
 		f.Version = true
-		return nil
+		return rest, nil
 	case "serve":
 		f.Command = CommandServe
+		return rest, nil
 	case "scan":
 		f.Command = CommandScan
 		f.JSON = true
+		return rest, nil
 	case "sources":
 		f.Command = CommandSources
+		return rest, nil
 	case "completion":
 		f.Command = CommandCompletion
-		rest := extra[1:]
-		if len(rest) > 0 {
+		if len(rest) > 0 && !strings.HasPrefix(rest[0], "-") {
 			f.CompletionShell = rest[0]
 			rest = rest[1:]
 		}
-		if len(rest) > 0 {
-			return usageError{msg: fmt.Sprintf("unexpected extra argument %q", rest[0])}
-		}
-		return nil
+		return rest, nil
 	default:
-		return usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", extra[0])}
+		return nil, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", extra[0])}
 	}
-	if len(extra) > 1 {
-		return usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[1])}
-	}
-	return nil
 }
 
 func unique(in []string) []string {
