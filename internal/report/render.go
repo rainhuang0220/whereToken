@@ -29,7 +29,7 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
-	b.WriteString(table.KPIBox(kpiCells(snap), style))
+	b.WriteString(table.FitKPIBox(kpiCells(snap), style, opt.Width))
 	b.WriteString(legend(opt.Width))
 	if len(snap.Tools) > 0 && snap.Scope == "" {
 		b.WriteByte('\n')

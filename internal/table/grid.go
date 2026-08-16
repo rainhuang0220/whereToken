@@ -32,6 +32,19 @@ type KPI struct {
 }
 
 func KPIBox(cells [2][3]KPI, style BoxStyle) string {
+	return FitKPIBox(cells, style, 0)
+}
+
+func FitKPIBox(cells [2][3]KPI, style BoxStyle, maxWidth int) string {
+	clip := func(s string, inner int) string {
+		if inner < 1 {
+			inner = 1
+		}
+		if DisplayWidth(s) <= inner {
+			return s
+		}
+		return TruncateEllipsis(s, inner, style.Ellipsis)
+	}
 	colW := [3]int{}
 	for c := 0; c < 3; c++ {
 		for r := 0; r < 2; r++ {
@@ -43,11 +56,29 @@ func KPIBox(cells [2][3]KPI, style BoxStyle) string {
 			colW[c] = 12
 		}
 	}
+	if maxWidth > 0 {
+		for {
+			total := colW[0] + colW[1] + colW[2] + 4
+			if total <= maxWidth {
+				break
+			}
+			widest := 0
+			for c := 1; c < 3; c++ {
+				if colW[c] > colW[widest] {
+					widest = c
+				}
+			}
+			if colW[widest] <= 4 {
+				break
+			}
+			colW[widest]--
+		}
+	}
 	cellLeft := func(text string, w int) string {
-		return " " + PadRight(text, w-2) + " "
+		return " " + PadRight(clip(text, w-2), w-2) + " "
 	}
 	cellRight := func(text string, w int) string {
-		return " " + PadLeft(text, w-2) + " "
+		return " " + PadLeft(clip(text, w-2), w-2) + " "
 	}
 	hline := func(left, mid, right string) string {
 		return left + strings.Repeat(style.H, colW[0]) + mid + strings.Repeat(style.H, colW[1]) + mid + strings.Repeat(style.H, colW[2]) + right

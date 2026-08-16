@@ -99,7 +99,10 @@ func handleRow(raw, sessionID, path string, seq int, root adapter.SourceRoot, em
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return
 	}
-	ts := time.UnixMilli(m.Time.Created).UTC()
+	var ts time.Time
+	if m.Time.Created > 0 {
+		ts = time.UnixMilli(m.Time.Created).UTC()
+	}
 	if m.Role == "user" {
 		emitTurn(event.TurnEvent{Source: "opencode", SessionID: sessionID, Timestamp: ts})
 	}

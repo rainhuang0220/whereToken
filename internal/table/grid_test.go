@@ -136,6 +136,22 @@ func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
 	}
 }
 
+func TestKPIBoxFitsGivenWidth(t *testing.T) {
+	cells := [2][3]KPI{
+		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},
+		{{Label: "当前连烧", Value: "1 天"}, {Label: "请求", Value: "9,223,372"}, {Label: "用户回合", Value: "8,901"}},
+	}
+	got := FitKPIBox(cells, BoxASCII, 40)
+	for i, line := range strings.Split(strings.TrimRight(got, "\n"), "\n") {
+		if DisplayWidth(line) > 40 {
+			t.Fatalf("line %d width %d > 40\n%q\n%s", i, DisplayWidth(line), line, got)
+		}
+	}
+	if !strings.Contains(got, "总用量") || !strings.Contains(got, "命中率") {
+		t.Fatalf("narrow KPI lost labels:\n%s", got)
+	}
+}
+
 func TestFitRankedTableSixColumnsAt40(t *testing.T) {
 	got := FitRankedTable(
 		[]string{"工具", "合计", "占比", "命中率", "请求", "回合"},

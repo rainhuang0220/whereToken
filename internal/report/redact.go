@@ -17,10 +17,14 @@ var (
 	tokenParamRE      = regexp.MustCompile(`(?i)((?:access|refresh|id)_token|api[_-]?key)=[^&\s]+`)
 	cookieRE          = regexp.MustCompile(`(?i)((?:set-)?cookie):\s*.+`)
 	cloudIDEJWTRE     = regexp.MustCompile(`(?i)cloud-ide-jwt\s+\S+`)
+	cloudideTokenRE   = regexp.MustCompile(`(?i)x-cloudide-token:\s*\S+`)
+	jsonTokenRE       = regexp.MustCompile(`(?i)"((?:access|refresh|id)_token|token)"\s*:\s*"[^"]+"`)
 )
 
 func Redact(s string) string {
 	s = cookieRE.ReplaceAllString(s, "${1}: [redacted]")
+	s = cloudideTokenRE.ReplaceAllString(s, "X-Cloudide-Token: [redacted]")
+	s = jsonTokenRE.ReplaceAllString(s, `"${1}":"[redacted]"`)
 	s = cloudIDEJWTRE.ReplaceAllString(s, "Cloud-IDE-JWT [redacted]")
 	s = jwtRE.ReplaceAllString(s, "[redacted]")
 	s = bearerRE.ReplaceAllString(s, "bearer [redacted]")

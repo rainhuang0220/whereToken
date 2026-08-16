@@ -61,6 +61,37 @@ func TestParseMessageTokens(t *testing.T) {
 	}
 }
 
+func TestParseMissingCreatedStaysZeroTime(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "opencode.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE message (id TEXT, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?)`,
+		"a1", "s1", 0, 0, `{"role":"assistant","tokens":{"input":10,"output":1},"modelID":"k3","providerID":"kimi-for-coding"}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "opencode", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if !evs[0].Timestamp.IsZero() {
+		t.Fatalf("missing created must stay zero, not 1970: %s", evs[0].Timestamp)
+	}
+}
+
 func TestPartTokensNotDoubleCounted(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "opencode.db")

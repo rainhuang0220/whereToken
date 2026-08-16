@@ -9,6 +9,12 @@
 - `--help` says `scan` is observatory JSON, not schema 1, and that `go install` / `brew --HEAD` are the CLI table
 - `wheretoken completion zsh --quiet` is valid (flags after the shell name)
 - Empty-home `--today` uses the same “本机没有找到账本” line as the all-time table
+- `POST /api/scan` / `GET /api/summary` refuse a foreign `Origin` / `Referer`
+- From a clone, `go run` uses `./web/dist` only when `go.mod` is this module; README says `WHERETOKEN_WEB`
+- OpenCode rows without `time.created` stay undated (not 1970)
+- Same-millisecond Kimi `usage.record` rows stay two requests
+- Redact `X-Cloudide-Token` and JSON `access_token` / `refresh_token` fields
+- The KPI box shrinks with `--width` instead of overflowing a 40-column terminal
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
 - Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
 - `wheretoken serve` prints that 刷新 rescans and that reloading the tab does not

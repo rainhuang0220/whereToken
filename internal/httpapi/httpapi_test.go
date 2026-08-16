@@ -280,6 +280,63 @@ func TestLocalHost(t *testing.T) {
 	}
 }
 
+func TestScanRejectsForeignOrigin(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Origin", "https://evil.example")
+	req.Header.Set("Accept", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status=%d want 403 for foreign Origin", resp.StatusCode)
+	}
+}
+
+func TestScanAllowsLocalOrigin(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Origin", "http://127.0.0.1:8787")
+	req.Header.Set("Accept", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d want 200 for local Origin", resp.StatusCode)
+	}
+}
+
+func TestWebDistUsesCwdWhenThisModule(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module github.com/rainhuang0220/whereToken\n\ngo 1.25.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dist := filepath.Join(dir, "web", "dist")
+	if err := os.MkdirAll(dist, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	t.Setenv("WHERETOKEN_WEB", "")
+	got := webDist()
+	if got != dist {
+		t.Fatalf("clone serve should use ./web/dist when go.mod is this module: %q", got)
+	}
+}
+
 func TestScanRejectsNonLocalHost(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))

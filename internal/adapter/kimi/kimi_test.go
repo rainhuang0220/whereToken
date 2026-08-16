@@ -27,6 +27,33 @@ func TestDiscoverDedupesKimiSymlink(t *testing.T) {
 	}
 }
 
+func TestParseSameMillisecondRecordsStayDistinct(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, "sessions", "x", "s", "agents", "main")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wire := filepath.Join(sess, "wire.jsonl")
+	body := `{"type":"usage.record","time":1700000000000,"model":"k3","usage":{"inputOther":10,"output":1,"inputCacheRead":0,"inputCacheCreation":0}}
+{"type":"usage.record","time":1700000000000,"model":"k3","usage":{"inputOther":20,"output":2,"inputCacheRead":0,"inputCacheCreation":0}}
+`
+	if err := os.WriteFile(wire, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "kimi", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if evs[0].RequestID == evs[1].RequestID {
+		t.Fatalf("same-ms rows must not share request id: %q", evs[0].RequestID)
+	}
+}
+
 func TestParseUsageRecord(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Join(filepath.Dir(file), "..", "..", "..", "testdata", "adapters", "kimi")

@@ -88,6 +88,7 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 	sc := bufio.NewScanner(f)
 	buf := make([]byte, 0, 64*1024)
 	sc.Buffer(buf, 10*1024*1024)
+	seq := 0
 	for sc.Scan() {
 		line := sc.Bytes()
 		if len(line) == 0 {
@@ -99,12 +100,13 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 		}
 		switch rec.Type {
 		case "usage.record":
+			seq++
 			ws, sess := kimiContext(root.Path, path)
 			emit(event.UsageEvent{
 				Source:      "kimi",
 				Vendor:      vendor.Lookup(rec.Model, ""),
 				SourceRoot:  root.Path,
-				RequestID:   fmt.Sprintf("%s:%d", path, rec.Time),
+				RequestID:   fmt.Sprintf("%s:%d:%d", path, rec.Time, seq),
 				SessionID:   sess,
 				Workspace:   ws,
 				Model:       rec.Model,

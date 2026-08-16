@@ -94,7 +94,7 @@ Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failur
 
 ### Dashboard
 
-GitHub Release binaries embed the kiln UI. `go install` embeds a short HTML stub; from a clone, `cd web && npm run build` then `wheretoken serve` uses `web/dist`.
+GitHub Release binaries and `brew tap rainhuang0220/wheretoken` embed the kiln UI. `go install` and `brew --HEAD` embed a short HTML stub. From a clone: `cd web && npm run build`, then from the repo root `go run ./cmd/wheretoken serve` (uses `./web/dist` only when `go.mod` is this module) or `WHERETOKEN_WEB=web/dist wheretoken serve`.
 
 ```bash
 go run ./cmd/wheretoken serve

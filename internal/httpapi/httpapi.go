@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -74,7 +75,7 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !localHost(r) {
+	if !localHost(r) || !localPage(r) {
 		http.Error(w, "localhost only", http.StatusForbidden)
 		return
 	}
@@ -103,7 +104,7 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !localHost(r) {
+	if !localHost(r) || !localPage(r) {
 		http.Error(w, "localhost only", http.StatusForbidden)
 		return
 	}
@@ -255,6 +256,24 @@ func insideDir(dir, target string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
+func localPage(r *http.Request) bool {
+	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
+		return localOrigin(origin)
+	}
+	if ref := strings.TrimSpace(r.Header.Get("Referer")); ref != "" {
+		return localOrigin(ref)
+	}
+	return true
+}
+
+func localOrigin(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return localHost(&http.Request{Host: u.Host})
+}
+
 func localHost(r *http.Request) bool {
 	host := r.Host
 	if host == "" {
@@ -292,6 +311,9 @@ func webDist() string {
 			return v
 		}
 	}
+	if dir := moduleWebDist(); dir != "" {
+		return dir
+	}
 	var candidates []string
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "web", "dist"))
@@ -302,4 +324,33 @@ func webDist() string {
 		}
 	}
 	return ""
+}
+
+func moduleWebDist() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	if !isWhereTokenGoMod(filepath.Join(wd, "go.mod")) {
+		return ""
+	}
+	cand := filepath.Join(wd, "web", "dist")
+	if st, err := os.Stat(cand); err == nil && st.IsDir() {
+		return cand
+	}
+	return ""
+}
+
+func isWhereTokenGoMod(path string) bool {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "module github.com/rainhuang0220/whereToken" {
+			return true
+		}
+	}
+	return false
 }
