@@ -438,7 +438,7 @@ h1 {
 
 .readout {
   display: grid;
-  grid-template-columns: 1.6fr repeat(5, 1fr);
+  grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr));
   gap: 0;
   margin: 0 0 1.6rem;
   border-top: 1px solid var(--copper);
@@ -471,6 +471,9 @@ h1 {
   font-size: 1.15rem;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .read-lead strong {
@@ -612,6 +615,16 @@ th {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+@media (max-width: 1100px) {
+  .readout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .read-cell:nth-child(4) {
+    border-left: 0;
+  }
 }
 
 @media (max-width: 900px) {

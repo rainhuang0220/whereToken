@@ -12,6 +12,8 @@ import {
   observatoryCursorWindowHint,
   observatoryDegradedLines,
   observatoryEmptyHint,
+  observatoryHasDrill,
+  observatoryHasSlice,
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
@@ -58,6 +60,8 @@ const degradedLines = computed(() =>
   payload.value ? observatoryDegradedLines(payload.value) : [],
 )
 const emptyHint = computed(() => (payload.value ? observatoryEmptyHint(payload.value) : ''))
+const showSlices = computed(() => (payload.value ? observatoryHasSlice(payload.value) : false))
+const showDrill = computed(() => observatoryHasDrill(drill.value))
 const cursorWindowHint = computed(() =>
   payload.value ? observatoryCursorWindowHint(payload.value) : '',
 )
@@ -135,7 +139,7 @@ onMounted(() => {
     <template v-if="payload">
       <KpiRow :all="payload.all" />
 
-      <div class="split">
+      <div v-if="showSlices" class="split">
         <SliceTable
           title="按工具"
           :rows="payload.by_source"
@@ -151,9 +155,9 @@ onMounted(() => {
         />
       </div>
 
-      <DrillPanel :pack="drill" />
+      <DrillPanel v-if="showDrill" :pack="drill" />
 
-      <details class="cross">
+      <details v-if="payload.by_source_vendor?.length" class="cross">
         <summary>工具 × 厂家</summary>
         <table>
           <thead>

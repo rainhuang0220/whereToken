@@ -170,6 +170,33 @@ func TestParseMissingAuthChineseErrorNoSecret(t *testing.T) {
 	}
 }
 
+func TestParseUsesPlaintextJWTInStorageJSON(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		io.WriteString(w, `{"session_id":"sess-1","model_name":"k3","extra_info":{"input_token":1,"output_token":1}}`)
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: `{"list":[{"sessionId":"sess-1"}]}`},
+	})
+	raw := []byte(`{"iCubeAuthInfo://icube.cloudide":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb"}`)
+	if err := os.WriteFile(filepath.Join(filepath.Dir(db), "storage.json"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "trae", Path: db}, func(event.UsageEvent) {
+		n++
+	}, func(event.TurnEvent) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits == 0 || n == 0 {
+		t.Fatalf("plaintext JWT in storage.json should call the API, hits=%d events=%d", hits, n)
+	}
+}
+
 func TestParseEncryptedStorageJSONChineseErrorNoSecret(t *testing.T) {
 	dir := t.TempDir()
 	db := writeProductVscdb(t, dir, "Trae CN", []kv{

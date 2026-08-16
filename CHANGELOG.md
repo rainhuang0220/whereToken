@@ -15,6 +15,8 @@
 - Same-millisecond Kimi `usage.record` rows stay two requests
 - Redact `X-Cloudide-Token` and JSON `access_token` / `refresh_token` fields
 - The KPI box shrinks with `--width` instead of overflowing a 40-column terminal
+- A plaintext JWT in Trae `storage.json` is used; only non-JSON blobs stay “encrypted storage”
+- Empty first 刷新 hides hollow ranking / drill tables; KPI readout is 2×3 below 1100px
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
 - Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
 - `wheretoken serve` prints that 刷新 rescans and that reloading the tab does not

@@ -304,6 +304,15 @@ func stripJWTPrefix(token string) string {
 	return token
 }
 
+func plaintextStorageToken(s string) string {
+	s = strings.TrimSpace(s)
+	s = stripJWTPrefix(s)
+	if strings.HasPrefix(s, "eyJ") && strings.Count(s, ".") >= 2 {
+		return s
+	}
+	return ""
+}
+
 func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
 	p := filepath.Join(filepath.Dir(vscdbPath), "storage.json")
 	raw, err := os.ReadFile(p)
@@ -324,6 +333,10 @@ func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
 			continue
 		}
 		if !strings.HasPrefix(s, "{") {
+			if tok := plaintextStorageToken(s); tok != "" {
+				token = tok
+				continue
+			}
 			encrypted = true
 			continue
 		}

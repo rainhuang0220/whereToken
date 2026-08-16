@@ -21,6 +21,17 @@ export function observatoryScanErrorHint(error: string, hasPayload: boolean): st
   return '扫描没完成。看上面的错误后再点「刷新」。'
 }
 
+export function observatoryHasSlice(
+  payload: Pick<SummaryPayload, 'by_source' | 'by_vendor'>,
+): boolean {
+  return (payload.by_source?.length ?? 0) > 0 || (payload.by_vendor?.length ?? 0) > 0
+}
+
+export function observatoryHasDrill(pack: { models?: unknown[]; workspaces?: unknown[]; sessions?: unknown[] } | null | undefined): boolean {
+  if (!pack) return false
+  return (pack.models?.length ?? 0) + (pack.workspaces?.length ?? 0) + (pack.sessions?.length ?? 0) > 0
+}
+
 export function observatoryEmptyHint(
   payload: Pick<SummaryPayload, 'all' | 'by_source'>,
 ): string {

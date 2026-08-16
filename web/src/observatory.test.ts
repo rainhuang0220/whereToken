@@ -3,6 +3,8 @@ import {
   observatoryCursorWindowHint,
   observatoryDegradedLines,
   observatoryEmptyHint,
+  observatoryHasDrill,
+  observatoryHasSlice,
   observatoryScanErrorHint,
 } from './observatory'
 import type { SliceView, SummaryPayload } from './types'
@@ -107,6 +109,20 @@ describe('observatoryScanErrorHint', () => {
 
   it('still explains a 409 when a previous payload is on screen', () => {
     expect(observatoryScanErrorHint('煅烧进行中', true)).toBe('另一处正在刷新。等这次煅烧结束再点。')
+  })
+})
+
+describe('observatoryHasSlice', () => {
+  it('hides ranking tables when the first scan found nothing', () => {
+    expect(observatoryHasSlice({ by_source: [], by_vendor: [] })).toBe(false)
+    expect(observatoryHasSlice({ by_source: [row({ id: 'kimi', label: 'Kimi Code' })], by_vendor: [] })).toBe(true)
+  })
+})
+
+describe('observatoryHasDrill', () => {
+  it('hides empty drill ledgers', () => {
+    expect(observatoryHasDrill({ models: [], workspaces: [], sessions: [] })).toBe(false)
+    expect(observatoryHasDrill({ models: [row({ id: 'k3', label: 'k3' })], workspaces: [], sessions: [] })).toBe(true)
   })
 })
 
