@@ -3,6 +3,7 @@ package table
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 func DisplayWidth(s string) int {
@@ -109,12 +110,30 @@ func Wrap(s string, width int) []string {
 
 func splitDisplay(s string, width int) (string, string) {
 	n := 0
-	lastBreak := 0
+	lastSpace := 0
+	lastPunct := 0
+	var prev rune
 	for i, r := range s {
 		w := runeWidth(r)
 		if n+w > width {
-			if lastBreak > 0 {
-				return strings.TrimRight(s[:lastBreak], " "), strings.TrimLeft(s[lastBreak:], " ")
+			if lastPunct > 0 {
+				return strings.TrimRight(s[:lastPunct], " "), strings.TrimLeft(s[lastPunct:], " ")
+			}
+			if lastSpace > 0 {
+				return strings.TrimRight(s[:lastSpace], " "), strings.TrimLeft(s[lastSpace:], " ")
+			}
+			if i > 0 && isASCIIWord(r) {
+				j := i
+				for j > 0 {
+					prevR, size := utf8.DecodeLastRuneInString(s[:j])
+					if !isASCIIWord(prevR) {
+						break
+					}
+					j -= size
+				}
+				if j > 0 {
+					return s[:j], s[j:]
+				}
 			}
 			if i == 0 {
 				i = len(string(r))
@@ -123,10 +142,14 @@ func splitDisplay(s string, width int) (string, string) {
 		}
 		n += w
 		if r == ' ' {
-			lastBreak = i
-		} else if r == '，' || r == '·' || r == '、' || r == '。' {
-			lastBreak = i + len(string(r))
+			nxt, _ := utf8.DecodeRuneInString(s[i+1:])
+			if prev != '·' && nxt != '·' && !isWide(nxt) {
+				lastSpace = i
+			}
+		} else if r == '，' || r == '。' || r == '、' {
+			lastPunct = i + len(string(r))
 		}
+		prev = r
 	}
 	return s, ""
 }
@@ -142,6 +165,13 @@ func runeWidth(r rune) int {
 		return 2
 	}
 	return 1
+}
+
+func isASCIIWord(r rune) bool {
+	return r == '_' || r == '/' || r == '-' ||
+		(r >= '0' && r <= '9') ||
+		(r >= 'A' && r <= 'Z') ||
+		(r >= 'a' && r <= 'z')
 }
 
 func isWide(r rune) bool {

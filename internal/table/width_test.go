@@ -62,6 +62,46 @@ func TestWrapKeepsShortLine(t *testing.T) {
 	}
 }
 
+func TestWrapPrefersIdeographicComma(t *testing.T) {
+	s := "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
+	got := Wrap(s, 40)
+	if len(got) < 2 {
+		t.Fatalf("expected wrap: %q", got)
+	}
+	if !strings.Contains(got[0], "只用本机账本") || !strings.HasSuffix(got[0], "，") {
+		t.Fatalf("should break after 账本，: %q", got)
+	}
+	if strings.HasPrefix(got[1], "Cursor") {
+		t.Fatalf("should not orphan Cursor/Trae: %q", got)
+	}
+}
+
+func TestWrapDoesNotFakeSecondBullet(t *testing.T) {
+	s := "  · Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
+	got := Wrap(s, 40)
+	for _, line := range got[1:] {
+		if strings.HasPrefix(strings.TrimSpace(line), "·") {
+			t.Fatalf("fake bullet: %q", got)
+		}
+	}
+}
+
+func TestWrapKeepsEnglishTokenWithCJK(t *testing.T) {
+	s := "  · Cursor · token 列不完整（该工具需要已登录）"
+	got := Wrap(s, 40)
+	if len(got) > 1 && strings.TrimSpace(got[0]) == "· Cursor · token" {
+		t.Fatalf("split after token: %q", got)
+	}
+}
+
+func TestWrapDoesNotBreakAtMiddleDot(t *testing.T) {
+	s := "  · Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
+	got := Wrap(s, 40)
+	if len(got) > 1 && strings.HasSuffix(strings.TrimSpace(got[0]), "·") {
+		t.Fatalf("broke at middle-dot bullet: %q", got)
+	}
+}
+
 func TestWrapCJKPunctuation(t *testing.T) {
 	s := "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
 	got := Wrap(s, 40)
@@ -79,5 +119,15 @@ func TestWrapCJKPunctuation(t *testing.T) {
 	gotc := strings.ReplaceAll(strings.ReplaceAll(joined, " ", ""), "，", "")
 	if !strings.Contains(gotc, "只用本机账本") || !strings.Contains(gotc, "云端") {
 		t.Fatalf("lost text: %q vs %q", got, compact)
+	}
+}
+
+func TestWrapDoesNotSplitASCIIWord(t *testing.T) {
+	s := "  · Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
+	got := Wrap(s, 40)
+	for _, line := range got {
+		if strings.HasSuffix(line, "Curso") || strings.HasPrefix(strings.TrimSpace(line), "r ") {
+			t.Fatalf("split Cursor: %q", got)
+		}
 	}
 }

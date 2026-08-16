@@ -113,6 +113,41 @@ func TestRenderBoxLinesSameWidth(t *testing.T) {
 	}
 }
 
+func TestRenderFootnoteContinuationIsIndented(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{"Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"}, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{Width: 40, ASCII: true})
+	var noteLines []string
+	capture := false
+	for _, line := range strings.Split(out, "\n") {
+		if line == "注" {
+			capture = true
+			continue
+		}
+		if capture && line != "" {
+			noteLines = append(noteLines, line)
+		}
+	}
+	if len(noteLines) < 2 {
+		t.Fatalf("expected wrapped footnote:\n%s", out)
+	}
+	if !strings.HasPrefix(noteLines[0], "  ·") {
+		t.Fatalf("first note: %q\n%s", noteLines[0], out)
+	}
+	for _, line := range noteLines[1:] {
+		if strings.HasPrefix(strings.TrimSpace(line), "·") {
+			t.Fatalf("fake bullet: %q\n%s", line, out)
+		}
+		if !strings.HasPrefix(line, "  ") {
+			t.Fatalf("missing hanging indent: %q\n%s", line, out)
+		}
+	}
+}
+
 func TestRenderFitsNarrowWidth(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

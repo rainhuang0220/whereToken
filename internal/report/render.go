@@ -20,15 +20,9 @@ func Render(snap Snapshot, opt Options) string {
 		style = table.BoxASCII
 	}
 	var b strings.Builder
-	for _, line := range table.Wrap(title(snap), opt.Width) {
-		b.WriteString(line)
-		b.WriteByte('\n')
-	}
+	writeWrapped(&b, title(snap), opt.Width)
 	if banner := offlineBanner(snap); banner != "" {
-		for _, line := range table.Wrap(banner, opt.Width) {
-			b.WriteString(line)
-			b.WriteByte('\n')
-		}
+		writeWrapped(&b, banner, opt.Width)
 	}
 	if spark := sparkLine(snap, opt.ASCII); spark != "" {
 		b.WriteString(spark)
@@ -59,10 +53,7 @@ func Render(snap Snapshot, opt Options) string {
 		var nb strings.Builder
 		nb.WriteString("注\n")
 		for _, n := range footnoteNotes {
-			for _, line := range table.Wrap("  · "+n, opt.Width) {
-				nb.WriteString(line)
-				nb.WriteByte('\n')
-			}
+			writeWrapped(&nb, "  · "+n, opt.Width)
 		}
 		block := nb.String()
 		if opt.Color {
@@ -200,6 +191,16 @@ func allSameTool(snap Snapshot) bool {
 		return true
 	}
 	return len(snap.Tools) == 1
+}
+
+func writeWrapped(b *strings.Builder, s string, width int) {
+	for i, line := range table.Wrap(s, width) {
+		if i > 0 && (width <= 0 || table.DisplayWidth(line)+2 <= width) {
+			b.WriteString("  ")
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
 }
 
 func offlineBanner(snap Snapshot) string {
