@@ -150,6 +150,20 @@ func TestRunUnknownModelExitUsage(t *testing.T) {
 	}
 }
 
+func TestRunJSONOfflineNote(t *testing.T) {
+	app, out, errb := testApp([]string{"--json", "--offline"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, `"schema": 1`) {
+		t.Fatalf("not schema 1:\n%s", s)
+	}
+	if !strings.Contains(s, "offline") || !strings.Contains(s, "本机账本") {
+		t.Fatalf("JSON must keep the offline note scripts can read:\n%s", s)
+	}
+}
+
 func TestRunJSON(t *testing.T) {
 	app, out, errb := testApp([]string{"--json"})
 	if code := app.Run(); code != ExitOK {
