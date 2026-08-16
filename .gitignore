@@ -18,6 +18,8 @@ data/
 auth.json
 credentials.json
 opt.md
+opt-handoff-*.md
+opt-chat-archive-*.tar.gz
 
 # language artifacts (future)
 node_modules/
