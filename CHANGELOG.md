@@ -35,6 +35,7 @@
 - Trae CN JWT files pick the CN API host even when the discovered product folder is named `Trae`
 - A failed first 刷新 (including 409 煅烧进行中) explains what to do instead of leaving a silent cold kiln
 - `~/.kimi` symlinked to `~/.kimi-code` is one Kimi root, not two
+- `WHERETOKEN_EXTRA_ROOTS` that only aliases the same home (symlink) is not scanned twice
 
 ## 0.1.1 — 2026-08-17
 

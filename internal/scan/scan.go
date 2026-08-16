@@ -107,6 +107,7 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
 	var errs []string
+	var seenInfos []os.FileInfo
 	seenPath := map[string]struct{}{}
 	homes := append([]adapter.Home{home}, extraHomes()...)
 	total := len(adapters)
@@ -126,6 +127,19 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 			for _, root := range found {
 				if _, ok := seenPath[root.Path]; ok {
 					continue
+				}
+				if st, err := os.Stat(root.Path); err == nil {
+					dup := false
+					for _, prev := range seenInfos {
+						if os.SameFile(prev, st) {
+							dup = true
+							break
+						}
+					}
+					if dup {
+						continue
+					}
+					seenInfos = append(seenInfos, st)
 				}
 				seenPath[root.Path] = struct{}{}
 				roots = append(roots, root)

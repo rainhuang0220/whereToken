@@ -135,6 +135,32 @@ func TestRunKimiFixture(t *testing.T) {
 	}
 }
 
+func TestRunDoesNotDoubleExtraRootSymlink(t *testing.T) {
+	dir := t.TempDir()
+	dstDir := filepath.Join(dir, ".kimi-code", "sessions", "x", "s", "agents", "main")
+	if err := os.MkdirAll(dstDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, file, _, _ := runtime.Caller(0)
+	src := filepath.Join(filepath.Dir(file), "..", "..", "testdata", "adapters", "kimi", "session", "agents", "main", "wire.jsonl")
+	data, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dstDir, "wire.jsonl"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	alias := dir + "-alias"
+	if err := os.Symlink(dir, alias); err != nil {
+		t.Skipf("symlink: %v", err)
+	}
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", alias)
+	r := Run(testhome.New(dir), AllAdapters())
+	if r.Summary.All.Total() != 1185 {
+		t.Fatalf("extra-root symlink double-counted: all=%d", r.Summary.All.Total())
+	}
+}
+
 func TestRunMarksCursorAbsent(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := t.TempDir()
