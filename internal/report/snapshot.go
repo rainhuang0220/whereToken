@@ -179,8 +179,12 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 		return notes
 	}
 	if f.Today {
+		unscoped := f.Tool == "" && f.Vendor == "" && f.Model == ""
+		if unscoped && len(snap.Tools) == 0 && !discoveredHasUsage(f.Discovered, "", true) {
+			return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。")
+		}
 		msg := "今天还没有用量。"
-		if discoveredHasUsage(f.Discovered, f.Tool, f.Vendor == "" && f.Model == "") {
+		if discoveredHasUsage(f.Discovered, f.Tool, unscoped) {
 			msg = "今天还没有用量。有账本以来请去掉 --today。"
 		}
 		return appendUniqueNote(notes, msg)

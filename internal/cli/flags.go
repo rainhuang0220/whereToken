@@ -90,13 +90,8 @@ func Parse(args []string) (Flags, error) {
 	}
 
 	if f.Command == CommandCompletion {
-		left := fs.Args()
-		if len(left) > 0 {
-			f.CompletionShell = left[0]
-			left = left[1:]
-		}
-		if len(left) > 0 {
-			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q", left[0])}
+		if err := parseCompletionTail(&f, fs.Args()); err != nil {
+			return Flags{}, err
 		}
 		return f, nil
 	}
@@ -105,7 +100,13 @@ func Parse(args []string) (Flags, error) {
 		if err != nil {
 			return Flags{}, err
 		}
-		if f.Command == CommandCompletion || f.Help || f.Version {
+		if f.Command == CommandCompletion {
+			if err := parseCompletionTail(&f, leftover); err != nil {
+				return Flags{}, err
+			}
+			return f, nil
+		}
+		if f.Help || f.Version {
 			if len(leftover) > 0 {
 				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
 			}
@@ -231,6 +232,26 @@ func flagUsageMessage(err error) string {
 		name = "-" + name
 	}
 	return "unknown flag " + quote(name)
+}
+
+func parseCompletionTail(f *Flags, args []string) error {
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		f.CompletionShell = args[0]
+		args = args[1:]
+	}
+	if len(args) == 0 {
+		return nil
+	}
+	var toolFlag, vendorFlag, modelFlag string
+	var claude, kimi, codex, opencode, trae, cursor bool
+	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &codex, &opencode, &trae, &cursor)
+	if err := parseFlagSet(fs, f, args); err != nil {
+		return err
+	}
+	if extra := fs.Args(); len(extra) > 0 {
+		return usageError{msg: fmt.Sprintf("unexpected extra argument %q", extra[0])}
+	}
+	return nil
 }
 
 func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {

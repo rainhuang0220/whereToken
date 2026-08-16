@@ -70,6 +70,28 @@ empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
 echo "$zeros" | grep -q '本机没有找到账本'
+empty_today="$("$dir/wheretoken" --home "$empty" --today --ascii --quiet)"
+echo "$empty_today" | grep -q '本机没有找到账本'
+if echo "$empty_today" | grep -q '今天还没有用量'; then
+  echo "empty-home --today pretended a ledger exists" >&2
+  exit 1
+fi
+
+scanjson="$("$dir/wheretoken" --home "$dir" --quiet scan)"
+echo "$scanjson" | grep -q '"calendar"'
+if echo "$scanjson" | grep -q '"schema": 1'; then
+  echo "scan JSON must not pretend to be schema 1" >&2
+  exit 1
+fi
+set +e
+scan_today="$("$dir/wheretoken" --home "$dir" scan --today --quiet 2>&1)"
+scan_today_code=$?
+set -e
+test "$scan_today_code" -eq 2
+echo "$scan_today" | grep -q observatory
+
+comp="$("$dir/wheretoken" completion zsh --quiet)"
+echo "$comp" | grep -q '_arguments'
 
 envhome="$(WHERETOKEN_HOME="$empty" "$dir/wheretoken" --ascii --quiet)"
 echo "$envhome" | grep -q '0.00 M'

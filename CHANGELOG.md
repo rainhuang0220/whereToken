@@ -6,6 +6,9 @@
 - Hitting Trae’s 500-session cap still keeps those 500 rows; the error is a footnote, not a zeroed Trae
 - GET `/api/summary` marks `"scanning": true` while a 刷新 is running; a 409 刷新 waits for that scan instead of leaving a dead kiln
 - A 409 still explains itself when the previous kiln is on screen
+- `--help` says `scan` is observatory JSON, not schema 1, and that `go install` / `brew --HEAD` are the CLI table
+- `wheretoken completion zsh --quiet` is valid (flags after the shell name)
+- Empty-home `--today` uses the same “本机没有找到账本” line as the all-time table
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
 - Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
 - `wheretoken serve` prints that 刷新 rescans and that reloading the tab does not

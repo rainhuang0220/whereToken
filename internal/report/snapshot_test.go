@@ -102,7 +102,12 @@ func TestSnapshotEmptyHomeExplainsMissingLedgers(t *testing.T) {
 func TestSnapshotTodayEmptyDoesNotLookBroken(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
-	snap, err := Build(nil, nil, nil, Filter{Today: true}, now, loc)
+	snap, err := Build(nil, nil, nil, Filter{
+		Today: true,
+		Discovered: []metric.Slice{{
+			ID: "kimi", Label: "Kimi Code", Miss: 200_000, Quality: event.QualityAuthoritative,
+		}},
+	}, now, loc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,8 +125,29 @@ func TestSnapshotTodayEmptyDoesNotLookBroken(t *testing.T) {
 	}
 	for _, n := range snap.Notes {
 		if strings.Contains(n, "本机没有找到账本") {
-			t.Fatalf("today-empty must not reuse the all-time empty-home copy: %v", snap.Notes)
+			t.Fatalf("today-empty with an all-time ledger must not reuse the empty-home copy: %v", snap.Notes)
 		}
+	}
+}
+
+func TestSnapshotTodayEmptyHomeUsesLedgerSentence(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "本机没有找到账本") {
+			found = true
+		}
+		if strings.Contains(n, "今天还没有用量") {
+			t.Fatalf("empty home --today must not pretend there is a ledger: %v", snap.Notes)
+		}
+	}
+	if !found {
+		t.Fatalf("empty home --today should say no ledger, notes=%v", snap.Notes)
 	}
 }
 

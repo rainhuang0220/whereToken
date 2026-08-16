@@ -338,6 +338,23 @@ func TestParseFlagsBeforeCompletion(t *testing.T) {
 	}
 }
 
+func TestParseCompletionShellThenFlags(t *testing.T) {
+	f, err := Parse([]string{"completion", "zsh", "--quiet"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandCompletion || f.CompletionShell != "zsh" || !f.Quiet {
+		t.Fatalf("%+v", f)
+	}
+	f, err = Parse([]string{"--quiet", "completion", "zsh", "--offline"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !f.Quiet || !f.Offline || f.CompletionShell != "zsh" {
+		t.Fatalf("%+v", f)
+	}
+}
+
 func TestParseFlagsBeforeUnknownCommandIsUsage(t *testing.T) {
 	_, err := Parse([]string{"--quiet", "plan"})
 	if err == nil || !IsUsage(err) {

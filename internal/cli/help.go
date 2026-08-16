@@ -5,7 +5,7 @@ const helpText = `wheretoken — local coding-agent token usage, as a character 
 USAGE
   wheretoken [flags]
   wheretoken [flags] serve [--port 8787]
-  wheretoken [flags] scan
+  wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
   wheretoken [flags] completion bash|zsh|fish|powershell
 
@@ -16,7 +16,8 @@ INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
   brew install --HEAD ./Formula/wheretoken.rb  # from a clone
 No npm package. GitHub Release binaries are unsigned.
-go install embeds the CLI table; the kiln dashboard is in GitHub Release / brew.
+go install and brew --HEAD embed the CLI table; the kiln dashboard is in
+GitHub Release and brew tap rainhuang0220/wheretoken.
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,
