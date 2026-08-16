@@ -2,12 +2,14 @@ package trae
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -15,11 +17,20 @@ import (
 )
 
 const (
-	sessionUsagePath = "/api/v1/commercial/get_session_usage"
-	defaultAPICN     = "https://trae-api-cn.mchost.guru"
-	defaultAPISG     = "https://coresg-normal.trae.ai"
-	maxSessions      = 500
+	sessionUsagePath      = "/api/v1/commercial/get_session_usage"
+	defaultAPICN          = "https://trae-api-cn.mchost.guru"
+	defaultAPISG          = "https://coresg-normal.trae.ai"
+	maxSessions           = 500
+	defaultSessionWorkers = 8
+	defaultFetchBudget    = 30 * time.Second
 )
+
+func (a Adapter) fetchBudget() time.Duration {
+	if a.FetchBudget > 0 {
+		return a.FetchBudget
+	}
+	return defaultFetchBudget
+}
 
 func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions []string) ([]event.UsageEvent, error) {
 	truncated := false
@@ -27,25 +38,74 @@ func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions 
 		sessions = sessions[:maxSessions]
 		truncated = true
 	}
+	if len(sessions) == 0 {
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), a.fetchBudget())
+	defer cancel()
+
+	jobs := make(chan string)
+	var mu sync.Mutex
 	var out []event.UsageEvent
 	var lastErr error
-	for _, id := range sessions {
-		raw, err := a.postJSON(sessionUsagePath, token, map[string]any{"session_id": id}, sourceRoot, authPath)
-		if err != nil {
-			if isUnauthorized(err) {
-				return nil, err
+	var unauth error
+	var wg sync.WaitGroup
+	workers := defaultSessionWorkers
+	if workers > len(sessions) {
+		workers = len(sessions)
+	}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for id := range jobs {
+				if ctx.Err() != nil {
+					return
+				}
+				raw, err := a.postJSON(ctx, sessionUsagePath, token, map[string]any{"session_id": id}, sourceRoot, authPath)
+				mu.Lock()
+				if err != nil {
+					if isUnauthorized(err) {
+						unauth = err
+						mu.Unlock()
+						cancel()
+						return
+					}
+					lastErr = err
+					mu.Unlock()
+					continue
+				}
+				out = append(out, parseSessionUsage(raw, sourceRoot)...)
+				mu.Unlock()
 			}
-			lastErr = err
-			continue
+		}()
+	}
+	go func() {
+		defer close(jobs)
+		for _, id := range sessions {
+			select {
+			case jobs <- id:
+			case <-ctx.Done():
+				return
+			}
 		}
-		parsed := parseSessionUsage(raw, sourceRoot)
-		out = append(out, parsed...)
+	}()
+	wg.Wait()
+	if unauth != nil {
+		return nil, unauth
+	}
+	if ctx.Err() == context.DeadlineExceeded {
+		lastErr = fmt.Errorf("账号用量接口超时")
 	}
 	if len(out) == 0 && lastErr != nil {
 		return nil, lastErr
 	}
 	if truncated {
 		return out, fmt.Errorf("只拉了前 %d 个会话", maxSessions)
+	}
+	if lastErr != nil {
+		return out, lastErr
 	}
 	return out, nil
 }
@@ -143,7 +203,7 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 	}, true
 }
 
-func (a Adapter) postJSON(path, token string, payload any, hints ...string) ([]byte, error) {
+func (a Adapter) postJSON(ctx context.Context, path, token string, payload any, hints ...string) ([]byte, error) {
 	base := a.apiBase(hints...)
 	u, err := url.Parse(base + path)
 	if err != nil {
@@ -156,7 +216,10 @@ func (a Adapter) postJSON(path, token string, payload any, hints ...string) ([]b
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(buf))
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(buf))
 	if err != nil {
 		return nil, err
 	}

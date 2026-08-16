@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -49,9 +50,12 @@ func TestDiscoverOneRootForSiblingMacProducts(t *testing.T) {
 
 func TestParseUnionsSiblingProductSessions(t *testing.T) {
 	var got []string
+	var gotMu sync.Mutex
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
+		gotMu.Lock()
 		got = append(got, string(body))
+		gotMu.Unlock()
 		io.WriteString(w, `{"user_usage_group_by_session":{"session_id":"x","model_name":"DeepSeek-V4-Flash","extra_info":{"input_token":1,"output_token":1,"cache_read_token":0,"cache_write_token":0}}}`)
 	}))
 	t.Cleanup(srv.Close)

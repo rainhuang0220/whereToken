@@ -17,10 +17,11 @@ import (
 )
 
 type Adapter struct {
-	HTTP    *http.Client
-	APIBase string
-	Now     func() time.Time
-	Offline bool
+	HTTP        *http.Client
+	APIBase     string
+	Now         func() time.Time
+	Offline     bool
+	FetchBudget time.Duration
 }
 
 func (Adapter) ID() string { return "trae" }
@@ -123,9 +124,6 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 		return nil
 	}
 	events, apiErr := a.fetchAccountUsage(path, root.AuthPath, token, sessions)
-	if apiErr != nil {
-		return apiErr
-	}
 	seenTurn := map[string]struct{}{}
 	for _, e := range events {
 		emit(e)
@@ -138,7 +136,7 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 		seenTurn[e.SessionID] = struct{}{}
 		emitTurn(event.TurnEvent{Source: "trae", SessionID: e.SessionID, Timestamp: e.Timestamp})
 	}
-	return nil
+	return apiErr
 }
 
 func resolveDB(p string) string {

@@ -1,12 +1,14 @@
 package trae
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -262,9 +264,9 @@ func TestParseSessionUsageLeavesUnknownTimeZero(t *testing.T) {
 }
 
 func TestFetchAccountUsageReportsSessionCap(t *testing.T) {
-	var hits int
+	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits++
+		hits.Add(1)
 		io.WriteString(w, `{"session_id":"s","model_name":"k3","extra_info":{"input_token":1,"output_token":1}}`)
 	}))
 	t.Cleanup(srv.Close)
@@ -277,8 +279,119 @@ func TestFetchAccountUsageReportsSessionCap(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("err=%v", err)
 	}
-	if hits != maxSessions {
-		t.Fatalf("hits=%d want %d", hits, maxSessions)
+	if got := hits.Load(); got != maxSessions {
+		t.Fatalf("hits=%d want %d", got, maxSessions)
+	}
+}
+
+func TestParseKeepsEventsWhenSessionCapHit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		id := "s"
+		if i := strings.Index(string(body), `"session_id":"`); i >= 0 {
+			rest := string(body)[i+len(`"session_id":"`):]
+			if j := strings.Index(rest, `"`); j >= 0 {
+				id = rest[:j]
+			}
+		}
+		fmt.Fprintf(w, `{"session_id":%q,"model_name":"k3","extra_info":{"input_token":1,"output_token":1}}`, id)
+	}))
+	t.Cleanup(srv.Close)
+
+	var list strings.Builder
+	list.WriteString(`{"list":[`)
+	n := maxSessions + 3
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			list.WriteByte(',')
+		}
+		fmt.Fprintf(&list, `{"sessionId":"s-%d"}`, i)
+	}
+	list.WriteString(`]}`)
+
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: list.String()},
+	})
+	jwt := filepath.Join(dir, "jwt")
+	if err := os.WriteFile(jwt, []byte(fakeJWT), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var evs []event.UsageEvent
+	err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(
+		adapter.SourceRoot{ID: "trae", Path: db, AuthPath: jwt},
+		func(e event.UsageEvent) { evs = append(evs, e) },
+		func(event.TurnEvent) {},
+	)
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("err=%v", err)
+	}
+	if len(evs) != maxSessions {
+		t.Fatalf("events=%d want the first %d sessions kept, not discarded", len(evs), maxSessions)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != int64(maxSessions)*2 {
+		t.Fatalf("total=%d after keeping capped sessions", sum.All.Total())
+	}
+}
+
+func TestFetchAccountUsageOverlapsSessionRequests(t *testing.T) {
+	var live atomic.Int32
+	var peak atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := live.Add(1)
+		for {
+			old := peak.Load()
+			if n <= old || peak.CompareAndSwap(old, n) {
+				break
+			}
+		}
+		time.Sleep(80 * time.Millisecond)
+		live.Add(-1)
+		io.WriteString(w, `{"session_id":"s","model_name":"k3","extra_info":{"input_token":1,"output_token":1}}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	sessions := make([]string, 8)
+	for i := range sessions {
+		sessions[i] = fmt.Sprintf("s-%d", i)
+	}
+	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL}
+	start := time.Now()
+	evs, err := a.fetchAccountUsage("/tmp", "", fakeJWT, sessions)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 8 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if peak.Load() < 2 {
+		t.Fatalf("peak in-flight=%d; session fetches must overlap", peak.Load())
+	}
+	if elapsed > 400*time.Millisecond {
+		t.Fatalf("elapsed=%s looks sequential", elapsed)
+	}
+}
+
+func TestFetchAccountUsageHonorsBudget(t *testing.T) {
+	block := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		<-block
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(block) })
+
+	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL, FetchBudget: 80 * time.Millisecond}
+	start := time.Now()
+	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, []string{"s1", "s2", "s3"})
+	elapsed := time.Since(start)
+	if err == nil || !strings.Contains(err.Error(), "超时") {
+		t.Fatalf("err=%v", err)
+	}
+	if elapsed > 400*time.Millisecond {
+		t.Fatalf("elapsed=%s; budget must cut a hanging Trae host", elapsed)
 	}
 }
 

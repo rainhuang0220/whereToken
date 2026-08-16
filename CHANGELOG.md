@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Trae account fetch overlaps session requests (8 at a time) and gives up after 30s instead of walking 500 × 20s
+- Hitting Trae’s 500-session cap still keeps those 500 rows; the error is a footnote, not a zeroed Trae
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
 - Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
 - `wheretoken serve` prints that 刷新 rescans and that reloading the tab does not
