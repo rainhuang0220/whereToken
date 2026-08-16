@@ -28,7 +28,7 @@ func Lookup(model, provider string) string {
 		return "openai"
 	case strings.Contains(blob, "gemini"):
 		return "google"
-	case strings.Contains(blob, "grok") || strings.Contains(blob, "xai") || strings.Contains(blob, "x-ai"):
+	case strings.Contains(blob, "grok") || p == "xai" || p == "x-ai" || strings.HasPrefix(m, "xai-") || strings.HasPrefix(m, "x-ai-"):
 		return "xai"
 	default:
 		return "unknown"

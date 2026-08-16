@@ -19,6 +19,7 @@ func TestLookup(t *testing.T) {
 		{"qwen-3.7-plus", "", "alibaba"},
 		{"grok-4", "", "xai"},
 		{"grok-2", "xai", "xai"},
+		{"maxai-foo", "", "unknown"},
 	}
 	for _, c := range cases {
 		if got := Lookup(c.model, c.provider); got != c.want {
