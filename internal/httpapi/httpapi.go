@@ -127,6 +127,7 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	res := scan.RunWithProgress(s.home, s.adapters, report)
+	res.Offline = scan.CloudSkipped(s.adapters)
 	s.mu.Lock()
 	cp := res
 	s.last = &cp

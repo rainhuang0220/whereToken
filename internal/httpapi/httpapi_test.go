@@ -206,3 +206,33 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 		t.Fatalf("missing asset status=%d", missing.StatusCode)
 	}
 }
+
+func TestOfflineScanJSONMarksOffline(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	mux := NewMuxWith(testhome.New(t.TempDir()), scan.Adapters(true))
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Offline bool `json:"offline"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Offline {
+		t.Fatalf("offline mux scan JSON must mark offline: %s", body)
+	}
+}

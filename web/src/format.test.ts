@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom } from './format'
+import { columnsFrom, formatCount } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -31,5 +31,15 @@ describe('columnsFrom', () => {
       '0.0012 M',
       '85.1%',
     ])
+  })
+})
+
+describe('formatCount', () => {
+  it('groups thousands the same way the CLI table does', () => {
+    expect(formatCount(0)).toBe('0')
+    expect(formatCount(999)).toBe('999')
+    expect(formatCount(1000)).toBe('1,000')
+    expect(formatCount(52927)).toBe('52,927')
+    expect(formatCount(2323430000)).toBe('2,323,430,000')
   })
 })

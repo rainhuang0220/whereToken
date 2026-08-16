@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCount } from '../format'
 import type { SliceView } from '../types'
 
 defineProps<{ all: SliceView }>()
@@ -24,11 +25,11 @@ defineProps<{ all: SliceView }>()
     </div>
     <div class="read-cell">
       <span class="read-k">请求</span>
-      <strong>{{ all.requests }}</strong>
+      <strong>{{ formatCount(all.requests) }}</strong>
     </div>
     <div class="read-cell">
       <span class="read-k">用户回合</span>
-      <strong>{{ all.user_turns }}</strong>
+      <strong>{{ formatCount(all.user_turns) }}</strong>
     </div>
   </section>
 </template>

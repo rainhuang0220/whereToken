@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom } from '../format'
+import { columnsFrom, formatCount } from '../format'
 import type { DrillTables, SessionView, SliceView } from '../types'
 
 defineProps<{
@@ -32,7 +32,7 @@ function sessionLabel(row: SessionView): string {
             <tr v-for="row in pack.models" :key="row.id">
               <td class="name">{{ row.label }}</td>
               <td v-for="(cell, i) in columnsFrom(row as SliceView)" :key="i" class="num">{{ cell }}</td>
-              <td class="num">{{ row.requests }}</td>
+              <td class="num">{{ formatCount(row.requests) }}</td>
             </tr>
           </tbody>
         </table>
@@ -51,7 +51,7 @@ function sessionLabel(row: SessionView): string {
             <tr v-for="row in pack.workspaces" :key="row.id">
               <td class="name">{{ row.label }}</td>
               <td v-for="(cell, i) in columnsFrom(row as SliceView)" :key="i" class="num">{{ cell }}</td>
-              <td class="num">{{ row.requests }}</td>
+              <td class="num">{{ formatCount(row.requests) }}</td>
             </tr>
           </tbody>
         </table>
@@ -79,7 +79,7 @@ function sessionLabel(row: SessionView): string {
             <td class="num">{{ row.last_date || '—' }}</td>
             <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
             <td class="num">{{ row.requests }}</td>
-            <td class="num">{{ row.user_turns }}</td>
+            <td class="num">{{ formatCount(row.user_turns) }}</td>
           </tr>
         </tbody>
       </table>

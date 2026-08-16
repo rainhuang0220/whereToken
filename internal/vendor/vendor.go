@@ -63,7 +63,7 @@ func Label(id string) string {
 	case "alibaba":
 		return "Alibaba"
 	default:
-		return "Unknown"
+		return "未知厂家"
 	}
 }
 

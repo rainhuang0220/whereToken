@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { observatoryDegradedLines } from './observatory'
+import { observatoryDegradedLines, observatoryEmptyHint } from './observatory'
 import type { SliceView, SummaryPayload } from './types'
 
 function row(partial: Partial<SliceView> & Pick<SliceView, 'id' | 'label'>): SliceView {
@@ -73,5 +73,41 @@ describe('observatoryDegradedLines', () => {
         by_source: [row({ id: 'trae', label: 'Trae' })],
       }),
     ).toEqual([])
+  })
+})
+
+describe('observatoryEmptyHint', () => {
+  const zeroAll = row({ id: 'all', label: '合计', quality: 'authoritative' })
+
+  it('explains a first visit with no ledgers the same way the CLI does', () => {
+    expect(
+      observatoryEmptyHint({
+        all: zeroAll,
+        by_source: [],
+        by_vendor: [],
+      }),
+    ).toBe(
+      '本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。',
+    )
+  })
+
+  it('stays quiet when any token or request exists', () => {
+    expect(
+      observatoryEmptyHint({
+        all: { ...zeroAll, total: 1185, requests: 2 },
+        by_source: [],
+        by_vendor: [],
+      }),
+    ).toBe('')
+  })
+
+  it('stays quiet when a tool row was discovered even if usage is still zero', () => {
+    expect(
+      observatoryEmptyHint({
+        all: zeroAll,
+        by_source: [row({ id: 'cursor', label: 'Cursor', quality: 'degraded' })],
+        by_vendor: [],
+      }),
+    ).toBe('')
   })
 })

@@ -27,6 +27,7 @@ type Result struct {
 	Events    []event.UsageEvent
 	Turns     []event.TurnEvent
 	ScannedAt time.Time
+	Offline   bool
 }
 
 const (
@@ -60,6 +61,22 @@ func Adapters(offline bool) []adapter.Adapter {
 		cursor.Adapter{Offline: offline},
 		trae.Adapter{Offline: offline},
 	}
+}
+
+func CloudSkipped(adapters []adapter.Adapter) bool {
+	for _, a := range adapters {
+		switch v := a.(type) {
+		case cursor.Adapter:
+			if v.Offline {
+				return true
+			}
+		case trae.Adapter:
+			if v.Offline {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func extraHomes() []adapter.Home {
@@ -215,6 +232,7 @@ type summaryJSON struct {
 	Calendar       metric.Calendar    `json:"calendar"`
 	Drill          drillJSON          `json:"drill"`
 	Errors         []string           `json:"errors"`
+	Offline        bool               `json:"offline,omitempty"`
 }
 
 func viewWithError(s metric.Slice, errs []string) metric.SliceView {
@@ -250,7 +268,8 @@ func buildSummaryJSON(r Result) summaryJSON {
 			BySource: map[string]metric.DrillTablesView{},
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
-		Errors: redactErrors(r.Errors),
+		Errors:  redactErrors(r.Errors),
+		Offline: r.Offline,
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

@@ -214,6 +214,15 @@ func TestUnknownVendorNoteIsChinese(t *testing.T) {
 	if !found {
 		t.Fatalf("expected 未知厂家 note, notes=%v", snap.Notes)
 	}
+	var rowLabel string
+	for _, r := range snap.Vendors {
+		if r.ID == "unknown" {
+			rowLabel = r.Label
+		}
+	}
+	if rowLabel != "未知厂家" {
+		t.Fatalf("vendor row label=%q, want 未知厂家 so the Chinese table is not mixed", rowLabel)
+	}
 }
 
 func TestFilterTodayUsesLocalDate(t *testing.T) {

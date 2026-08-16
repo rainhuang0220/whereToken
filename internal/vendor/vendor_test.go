@@ -44,6 +44,7 @@ func TestLookupName(t *testing.T) {
 		{"alibaba", "alibaba"},
 		{"unknown", "unknown"},
 		{"Unknown", "unknown"},
+		{"未知厂家", "unknown"},
 	}
 	for _, c := range cases {
 		got, ok := LookupName(c.in)
@@ -63,7 +64,7 @@ func TestLabel(t *testing.T) {
 	if Label("moonshot") != "Moonshot" {
 		t.Fatal(Label("moonshot"))
 	}
-	if Label("unknown") != "Unknown" {
+	if Label("unknown") != "未知厂家" {
 		t.Fatal(Label("unknown"))
 	}
 	if Label("deepseek") != "DeepSeek" {

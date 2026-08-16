@@ -294,6 +294,36 @@ func TestRunScanJSONStillFullSummary(t *testing.T) {
 	}
 }
 
+func TestServeStartedMessageTellsStrangerAboutRefresh(t *testing.T) {
+	msg := ServeStartedMessage("127.0.0.1:8787")
+	if !strings.Contains(msg, "http://127.0.0.1:8787") {
+		t.Fatalf("missing URL:\n%s", msg)
+	}
+	if !strings.Contains(msg, "刷新") {
+		t.Fatalf("stranger must be told 刷新 rescans:\n%s", msg)
+	}
+	if !strings.Contains(msg, "重载") && !strings.Contains(msg, "F5") {
+		t.Fatalf("must say reloading the tab is not a rescan:\n%s", msg)
+	}
+}
+
+func TestRunServePrintsRefreshHint(t *testing.T) {
+	app, _, errb := testApp([]string{"serve", "--port", "8791"})
+	app.Serve = func(addr string, home adapter.Home, _ bool) error {
+		return nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := errb.String()
+	if !strings.Contains(s, "http://127.0.0.1:8791") {
+		t.Fatalf("stderr missing URL:\n%s", s)
+	}
+	if !strings.Contains(s, "刷新") {
+		t.Fatalf("stderr missing 刷新 hint:\n%s", s)
+	}
+}
+
 func TestRunServeDoesNotScanTable(t *testing.T) {
 	app, out, errb := testApp([]string{"serve", "--port", "8787"})
 	called := false

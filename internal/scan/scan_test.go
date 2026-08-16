@@ -18,6 +18,15 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
+func TestCloudSkipped(t *testing.T) {
+	if CloudSkipped(Adapters(false)) {
+		t.Fatal("online adapters")
+	}
+	if !CloudSkipped(Adapters(true)) {
+		t.Fatal("offline adapters should skip cloud")
+	}
+}
+
 func TestAdaptersOfflineFlagsCloudSources(t *testing.T) {
 	off := Adapters(true)
 	var cursorOff, traeOff bool
@@ -37,6 +46,32 @@ func TestAdaptersOfflineFlagsCloudSources(t *testing.T) {
 		if c, ok := a.(cursor.Adapter); ok && c.Offline {
 			t.Fatal("online cursor marked offline")
 		}
+	}
+}
+
+func TestMarshalSummaryMarksOffline(t *testing.T) {
+	raw, err := MarshalSummary(Result{Offline: true, Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Offline bool `json:"offline"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Offline {
+		t.Fatalf("offline scan JSON must say so: %s", raw)
+	}
+}
+
+func TestMarshalSummaryOmitsOfflineWhenOnline(t *testing.T) {
+	raw, err := MarshalSummary(Result{Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"offline": true`) {
+		t.Fatalf("online scan should not claim offline: %s", raw)
 	}
 }
 

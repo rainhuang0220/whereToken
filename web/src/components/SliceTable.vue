@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom } from '../format'
+import { columnsFrom, formatCount } from '../format'
 import type { SliceView } from '../types'
 
 const props = defineProps<{
@@ -43,8 +43,8 @@ const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命�
             </span>
           </td>
           <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
-          <td class="num">{{ row.requests }}</td>
-          <td v-if="props.showTurns" class="num">{{ row.user_turns }}</td>
+          <td class="num">{{ formatCount(row.requests) }}</td>
+          <td v-if="props.showTurns" class="num">{{ formatCount(row.user_turns) }}</td>
         </tr>
       </tbody>
     </table>

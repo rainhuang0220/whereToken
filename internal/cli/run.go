@@ -110,35 +110,41 @@ func (a *App) resolveHome(override string) adapter.Home {
 }
 
 func (a *App) doScan(home adapter.Home, quiet, offline bool) scan.Result {
-	if a.Scan != nil {
-		return a.Scan(home)
-	}
 	if a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true") {
 		offline = true
 	}
-	ads := scan.Adapters(offline)
-	if quiet || !a.StderrTTY {
-		return scan.Run(home, ads)
+	if a.Scan != nil {
+		res := a.Scan(home)
+		res.Offline = offline
+		return res
 	}
-	width := 0
-	return scan.RunWithProgress(home, ads, func(p scan.Progress) {
-		if p.Status != scan.ProgressReading {
-			if p.Index >= p.Total && width > 0 {
-				fmt.Fprintf(a.Stderr, "\r%s\r", strings.Repeat(" ", width))
-				width = 0
+	ads := scan.Adapters(offline)
+	var res scan.Result
+	if quiet || !a.StderrTTY {
+		res = scan.Run(home, ads)
+	} else {
+		width := 0
+		res = scan.RunWithProgress(home, ads, func(p scan.Progress) {
+			if p.Status != scan.ProgressReading {
+				if p.Index >= p.Total && width > 0 {
+					fmt.Fprintf(a.Stderr, "\r%s\r", strings.Repeat(" ", width))
+					width = 0
+				}
+				return
 			}
-			return
-		}
-		line := p.Label
-		pad := width - table.DisplayWidth(line)
-		if pad < 0 {
-			pad = 0
-		}
-		fmt.Fprintf(a.Stderr, "\r%s%s", line, strings.Repeat(" ", pad))
-		if w := table.DisplayWidth(line); w > width {
-			width = w
-		}
-	})
+			line := p.Label
+			pad := width - table.DisplayWidth(line)
+			if pad < 0 {
+				pad = 0
+			}
+			fmt.Fprintf(a.Stderr, "\r%s%s", line, strings.Repeat(" ", pad))
+			if w := table.DisplayWidth(line); w > width {
+				width = w
+			}
+		})
+	}
+	res.Offline = offline
+	return res
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
@@ -216,6 +222,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 		addr := fmt.Sprintf("127.0.0.1:%d", p)
 		offline := a.wantOffline(flags)
 		if a.Serve != nil {
+			fmt.Fprint(a.Stderr, ServeStartedMessage(addr))
 			if err := a.Serve(addr, home, offline); err != nil {
 				fmt.Fprintln(a.Stderr, err.Error())
 				return ExitFail
@@ -227,7 +234,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			lastErr = err
 			continue
 		}
-		fmt.Fprintf(a.Stderr, "http://%s\n", addr)
+		fmt.Fprint(a.Stderr, ServeStartedMessage(addr))
 		srv := httpapi.NewHTTPServer(addr, home, offline)
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintln(a.Stderr, err.Error())
@@ -240,6 +247,10 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 	}
 	fmt.Fprintln(a.Stderr, lastErr.Error())
 	return ExitFail
+}
+
+func ServeStartedMessage(addr string) string {
+	return fmt.Sprintf("http://%s\n页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。\n", addr)
 }
 
 func resolveWidth(flag int, getenv func(string) string) int {

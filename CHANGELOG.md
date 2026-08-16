@@ -4,6 +4,11 @@
 
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required
 - Release workflow signs and notarizes macOS binaries when `MACOS_SIGN_P12` and the other Apple secrets are set; otherwise it still publishes unsigned archives ([`docs/macos-signing.md`](docs/macos-signing.md))
+- `wheretoken serve` prints that 刷新 rescans and that reloading the tab does not
+- An empty kiln visit says the same “本机没有找到账本” line as the CLI table
+- `scan --json` / `/api/scan` mark `"offline": true` when Cursor/Trae APIs were skipped; the dashboard shows the same offline banner as the table
+- Unknown vendor rows are labeled `未知厂家`, not `Unknown`
+- Dashboard request and turn counts use the same thousands grouping as the CLI table
 
 ## 0.1.1 — 2026-08-17
 
