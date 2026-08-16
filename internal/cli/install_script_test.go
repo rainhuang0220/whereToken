@@ -26,6 +26,7 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		`GOBIN="$BIN_DIR" go install`,
 		"darwin", "linux", "amd64", "arm64",
 		"checksums.txt", "sha256",
+		"2>/dev/null",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.sh missing %q", want)

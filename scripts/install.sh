@@ -47,7 +47,7 @@ asset="wheretoken_${os}_${arch}.tar.gz"
 
 version="${WHERETOKEN_VERSION:-}"
 if [ -z "$version" ]; then
-  version=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | tr -d '\r' | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1 || true)
+  version=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | tr -d '\r' | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1 || true)
 fi
 version="${version#v}"
 

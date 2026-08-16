@@ -28,7 +28,7 @@ CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, re
 - Honor `WHERETOKEN_HOME` through the CLI's env lookup (tests and `--home` stay fake-home only)
 - CI runs `gofmt -l`; `make fmt-check` does the same locally
 - `--help` examples include `--model=k3`; INSTALL lists `--version` and GOPATH/bin, not unpublished npm
-- `install.sh` / `install.ps1` fall back to `go install` into PREFIX when no GitHub Release exists
+- `install.sh` / `install.ps1` fall back to `go install` into PREFIX when no GitHub Release exists (and do not print the GitHub 404)
 - Man page EXAMPLES; fixture script asserts COLUMNS=40 still spells Kimi
 - Cursor and Trae HTTP clients have a 20s timeout contract test
 - Redirects off Cursor/Trae API hosts are rejected (loopback too, unless it is APIBase)
