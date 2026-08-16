@@ -12,6 +12,26 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
+func goldenText(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.ReplaceAll(string(b), "\r\n", "\n")
+}
+
+func TestGoldenTextNormalizesCRLF(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "x.txt")
+	if err := os.WriteFile(p, []byte("hello\r\nworld\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := goldenText(t, p); got != "hello\nworld\n" {
+		t.Fatalf("%q", got)
+	}
+}
+
 func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
@@ -77,11 +97,8 @@ func TestWriteJSONGolden(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v\n%s", path, err, buf.String())
-	}
-	if string(want) != buf.String() {
+	want := goldenText(t, path)
+	if want != buf.String() {
 		t.Fatalf("json golden mismatch\n--- got ---\n%s\n--- want ---\n%s", buf.String(), want)
 	}
 }
@@ -122,11 +139,8 @@ func TestGoldenTables(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			want, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("read golden %s: %v\n--- got ---\n%s", path, err, got)
-			}
-			if string(want) != got {
+			want := goldenText(t, path)
+			if want != got {
 				t.Fatalf("golden %s mismatch\n--- got ---\n%s\n--- want ---\n%s", c.name, got, want)
 			}
 		})
