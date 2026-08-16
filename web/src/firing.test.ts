@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chargeAmount, parseSSEBlock, type ScanProgress } from './firing'
+import { chargeAmount, parseSSEBlock, scanEventError, type ScanProgress } from './firing'
 
 describe('firing charge', () => {
   it('maps reading index 1 of 6 to an empty charge, done 6 of 6 to full', () => {
@@ -35,5 +35,11 @@ describe('scan SSE', () => {
     expect(events[0].data).toMatch(/"source":"trae"/)
     expect(events[1].data).toMatch(/scanned_at/)
     expect(events[1].data).not.toMatch(/eyJ/)
+  })
+
+  it('surfaces the server error event instead of hanging as scan incomplete', () => {
+    const events = parseSSEBlock('event: error\ndata: {"error":"encode"}\n\n')
+    expect(scanEventError(events[0])).toBe('encode')
+    expect(scanEventError({ event: 'complete', data: '{}' })).toBe('')
   })
 })

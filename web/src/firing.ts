@@ -33,6 +33,17 @@ export function splitSSE(raw: string): { events: SSEEvent[]; rest: string } {
   return { events, rest }
 }
 
+export function scanEventError(ev: SSEEvent): string {
+  if (ev.event !== 'error' || !ev.data) return ''
+  try {
+    const parsed = JSON.parse(ev.data) as { error?: unknown }
+    if (typeof parsed.error === 'string' && parsed.error) return parsed.error
+  } catch {
+    // use the raw data line
+  }
+  return ev.data
+}
+
 export function parseSSEBlock(raw: string): SSEEvent[] {
   const padded = raw.endsWith('\n\n') ? raw : `${raw}\n\n`
   return splitSSE(padded).events

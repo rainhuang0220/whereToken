@@ -21,6 +21,7 @@
 - The kiln dashboard no longer loads Google Fonts (local-first; system fallbacks stay in the glaze stacks)
 - `grok-*` / xAI models map to vendor `xai` (label `xAI`) instead of 未知厂家
 - Linux CI runs `scripts/govulncheck.sh`
+- Dashboard 刷新 treats an SSE `error` event as a failure instead of hanging as “scan incomplete”
 
 ## 0.1.1 — 2026-08-17
 

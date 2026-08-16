@@ -1,5 +1,5 @@
 import type { SummaryPayload } from './types'
-import { parseSSEBlock, splitSSE, type ScanProgress } from './firing'
+import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
 export async function fetchSummary(): Promise<SummaryPayload> {
   const res = await fetch('/api/summary', { cache: 'no-store' })
@@ -42,6 +42,10 @@ export async function readScanStream(
     const split = done ? { events: parseSSEBlock(buf), rest: '' } : splitSSE(buf)
     buf = split.rest
     for (const ev of split.events) {
+      const err = scanEventError(ev)
+      if (err) {
+        throw new Error(err)
+      }
       if (ev.event === 'progress' && ev.data) {
         onProgress(JSON.parse(ev.data) as ScanProgress)
       }
