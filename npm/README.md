@@ -14,4 +14,4 @@ If you already have Go:
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
-Windows, macOS, and Linux. MIT. Read-only local ledgers; never prints JWTs.
+Windows, macOS, and Linux. MIT. Read-only local ledgers; never prints JWTs, API keys, or cookies.

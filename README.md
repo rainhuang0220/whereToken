@@ -164,6 +164,6 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-然后输入 `wheretoken`：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）。不写美元价，不做遥测，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。
+然后输入 `wheretoken`：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）；页内「刷新」才重新扫描，浏览器重载不是。不写美元价，不做遥测，不加载第三方字体，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。
 
 尚未：GitHub 二进制未签名、没有 npm；Trae / Cursor 的 token 列需要在那些应用里已登录。
