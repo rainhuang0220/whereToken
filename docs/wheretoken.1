@@ -13,7 +13,6 @@ wheretoken \- local coding-agent token usage as a character table
 .B wheretoken
 [\fIflags\fR]
 .B scan
-[\fB--json\fR]
 .br
 .B wheretoken
 [\fIflags\fR]
@@ -86,6 +85,8 @@ in the table.
 JSON on stdout (schema 1). Tables stay the default. See
 .B docs/cli-json.schema.json
 .
+.B scan
+emits the observatory payload (calendar, drill) and does not take table filters.
 .TP
 .B --ascii
 ASCII box drawing (also automatic on old Windows consoles).
