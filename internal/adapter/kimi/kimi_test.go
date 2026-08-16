@@ -1,13 +1,31 @@
 package kimi
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
+
+func TestDiscoverDedupesKimiSymlink(t *testing.T) {
+	dir := t.TempDir()
+	realDir := filepath.Join(dir, ".kimi-code")
+	if err := os.Mkdir(realDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, ".kimi")
+	if err := os.Symlink(realDir, link); err != nil {
+		t.Skipf("symlink: %v", err)
+	}
+	roots := Adapter{}.Discover(testhome.New(dir))
+	if len(roots) != 1 {
+		t.Fatalf("symlink of .kimi -> .kimi-code must be one root, got %d %+v", len(roots), roots)
+	}
+}
 
 func TestParseUsageRecord(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)

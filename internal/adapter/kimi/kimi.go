@@ -21,11 +21,25 @@ func (Adapter) ID() string { return "kimi" }
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 	var out []adapter.SourceRoot
+	var seen []os.FileInfo
 	for _, name := range []string{"kimi-code", "kimi"} {
 		p := home.DotDir(name)
-		if st, err := os.Stat(p); err == nil && st.IsDir() {
-			out = append(out, adapter.SourceRoot{ID: "kimi", Path: p})
+		st, err := os.Stat(p)
+		if err != nil || !st.IsDir() {
+			continue
 		}
+		dup := false
+		for _, prev := range seen {
+			if os.SameFile(prev, st) {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			continue
+		}
+		seen = append(seen, st)
+		out = append(out, adapter.SourceRoot{ID: "kimi", Path: p})
 	}
 	return out
 }
