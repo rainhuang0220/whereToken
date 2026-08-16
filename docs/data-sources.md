@@ -4,7 +4,7 @@
 
 扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。Cursor / Trae 用量接口是用户授权的例外：只使用它们本机已写入的登录态，只打它们自己的主机，永不打印或提交 token。发现路径一律经 `Home`（`os.UserHomeDir()`、XDG、Application Support、`%APPDATA%`），缺目录静默跳过。额外家目录：`WHERETOKEN_EXTRA_ROOTS`。
 
-工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。
+工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。Cursor 里的 `grok-*` 走厂家 `xai`（标签 xAI），不是未知厂家，也不是单独适配器。
 
 ---
 

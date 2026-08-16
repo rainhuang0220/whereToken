@@ -27,7 +27,7 @@ FLAGS
   -V, --version        print version
   --today              only today (local timezone; weeks start Monday)
   --tool NAME          slice by tool (claude, kimi, codex, opencode, cursor, trae)
-  --vendor NAME        slice by vendor (anthropic, moonshot, minimax, …)
+  --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
   --claude --kimi --codex --opencode --cursor --trae
                        same as --tool=that-id
