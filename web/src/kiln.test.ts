@@ -5,6 +5,14 @@ import { describe, expect, it } from 'vitest'
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)))
 
+describe('local-first dashboard', () => {
+  it('does not phone Google Fonts when the observatory opens', () => {
+    const html = readFileSync(join(SRC, '..', 'index.html'), 'utf8')
+    expect(html).not.toMatch(/fonts\.googleapis\.com/)
+    expect(html).not.toMatch(/fonts\.gstatic\.com/)
+  })
+})
+
 describe('kiln wall chrome', () => {
   const vue = readFileSync(join(SRC, 'components/KilnWall.vue'), 'utf8')
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8')

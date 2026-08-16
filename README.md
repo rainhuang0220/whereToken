@@ -104,7 +104,7 @@ Opens [http://127.0.0.1:8787](http://127.0.0.1:8787). **刷新** rescans disk (a
 
 ## Privacy
 
-Read-only local ledgers. HTTP binds `127.0.0.1` only. No telemetry. The CLI never prints JWTs, access tokens, API keys, or cookies. Do not paste secrets into issues. See [`SECURITY.md`](SECURITY.md).
+Read-only local ledgers. HTTP binds `127.0.0.1` only. No telemetry. The dashboard does not load third-party fonts. The CLI never prints JWTs, access tokens, API keys, or cookies. Do not paste secrets into issues. See [`SECURITY.md`](SECURITY.md).
 
 Paths come from the current user home (`os.UserHomeDir`, XDG, `~/Library/Application Support`, `%APPDATA%`). Missing dirs are skipped. Extra homes: `WHERETOKEN_EXTRA_ROOTS` (Unix `:`, Windows `;`, commas also work). Codex also reads `CODEX_HOME`. `WHERETOKEN_HOME` / `--home` fake a home for tests. `NO_COLOR` and `WHERETOKEN_ASCII=1` control the table.
 

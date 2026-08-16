@@ -18,6 +18,7 @@
 - Cursor / Trae / OpenCode open SQLite through one escaped `file:` URI so `?` and `#` in the path cannot steal the query
 - Axis damper aria-label is `窑墙轴`, not `消耗轴`
 - GitHub Release archives include `docs/wheretoken.1` (not only the .deb/.rpm)
+- The kiln dashboard no longer loads Google Fonts (local-first; system fallbacks stay in the glaze stacks)
 
 ## 0.1.1 — 2026-08-17
 
