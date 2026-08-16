@@ -64,6 +64,9 @@ func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	if _, ok := m["last_7d"]; !ok {
 		t.Fatal("missing last_7d")
 	}
+	if last, ok := m["last_7d"].([]any); !ok || len(last) != 7 {
+		t.Fatalf("last_7d must be 7 local days, got %#v", m["last_7d"])
+	}
 	tools := m["tools"].([]any)
 	row := tools[0].(map[string]any)
 	if row["share"] != "91.2%" {

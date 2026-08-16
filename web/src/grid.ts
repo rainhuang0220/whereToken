@@ -75,6 +75,11 @@ export function brickCaption(cell: Cell): { date: string; amount: string } {
   return { date, amount: cell.day.total_m }
 }
 
+export function brickAriaLabel(cell: Cell): string {
+  const cap = brickCaption(cell)
+  return `${cap.date} ${cap.amount}`
+}
+
 export const emptySeries: CalendarSeries = {
   days: [],
   stats: {

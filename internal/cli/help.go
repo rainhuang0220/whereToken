@@ -74,6 +74,7 @@ EXAMPLES
   wheretoken completion zsh
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
+页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。
 `
 
 func HelpText() string { return helpText }

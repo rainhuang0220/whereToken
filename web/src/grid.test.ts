@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brickCaption, layoutCells, selectDrill, selectSeries, wallCells } from './grid'
+import { brickAriaLabel, brickCaption, layoutCells, selectDrill, selectSeries, wallCells } from './grid'
 import type { Calendar, Day, SummaryPayload } from './types'
 
 const lit: Day = {
@@ -53,6 +53,18 @@ describe('brickCaption', () => {
       date: '8月16日',
       amount: '未到',
     })
+  })
+
+  it('aria label is the same two facts a pointer user sees', () => {
+    expect(
+      brickAriaLabel({
+        ...base,
+        date: '2026-08-15',
+        kind: 'lit',
+        day: lit,
+      }),
+    ).toBe('8月15日 0.0000 M')
+    expect(brickAriaLabel({ ...base, date: '2026-08-16', kind: 'future' })).toBe('8月16日 未到')
   })
 
   it('does not mention 消耗, weekday, year, or vendor columns', () => {

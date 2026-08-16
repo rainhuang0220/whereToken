@@ -207,6 +207,82 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 	}
 }
 
+func TestSummaryBeforeScanHasCalendarWindow(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/api/summary")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		ScannedAt string `json:"scanned_at"`
+		Calendar  struct {
+			WeekStart  string `json:"week_start"`
+			WindowFrom string `json:"window_from"`
+			WindowTo   string `json:"window_to"`
+		} `json:"calendar"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.ScannedAt != "" {
+		t.Fatalf("unsanned summary must not pretend it was scanned: %s", payload.ScannedAt)
+	}
+	if payload.Calendar.WeekStart != "monday" || payload.Calendar.WindowFrom == "" || payload.Calendar.WindowTo == "" {
+		t.Fatalf("cold GET /api/summary must still describe the kiln window: %s", body)
+	}
+}
+
+func TestLocalHost(t *testing.T) {
+	cases := []struct {
+		host string
+		ok   bool
+	}{
+		{"127.0.0.1:8787", true},
+		{"localhost:8787", true},
+		{"[::1]:8787", true},
+		{"evil.example", false},
+		{"0.0.0.0:8787", false},
+		{"192.168.1.2:8787", false},
+	}
+	for _, c := range cases {
+		req, err := http.NewRequest(http.MethodGet, "http://"+c.host+"/api/summary", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Host = c.host
+		if got := localHost(req); got != c.ok {
+			t.Fatalf("host %q got %v want %v", c.host, got, c.ok)
+		}
+	}
+}
+
+func TestScanRejectsNonLocalHost(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Host = "evil.example"
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status=%d body want 403 for foreign Host", resp.StatusCode)
+	}
+}
+
 func TestOfflineScanJSONMarksOffline(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	mux := NewMuxWith(testhome.New(t.TempDir()), scan.Adapters(true))

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { brickCaption, type Cell } from '../grid'
+import { brickAriaLabel, brickCaption, type Cell } from '../grid'
 
 const props = defineProps<{
   cells: Cell[]
@@ -16,6 +16,14 @@ function enter(cell: Cell, e: PointerEvent) {
   hover.value = cell
   tipX.value = e.clientX
   tipY.value = e.clientY
+}
+
+function focusBrick(cell: Cell, e: FocusEvent) {
+  hover.value = cell
+  const el = e.target as HTMLElement
+  const box = el.getBoundingClientRect()
+  tipX.value = box.left
+  tipY.value = box.bottom
 }
 
 function move(e: PointerEvent) {
@@ -40,14 +48,18 @@ const cap = computed(() => (hover.value ? brickCaption(hover.value) : null))
       @pointerleave="leave"
       @pointermove="move"
     >
-      <span
+      <button
         v-for="c in cells"
         :key="c.date"
+        type="button"
         class="brick"
         :class="{ peak: c.date === peakDate && c.kind === 'lit' }"
         :data-kind="c.kind"
         :data-level="String(c.level)"
+        :aria-label="brickAriaLabel(c)"
         @pointerenter="enter(c, $event)"
+        @focus="focusBrick(c, $event)"
+        @blur="leave"
       />
     </div>
     <p

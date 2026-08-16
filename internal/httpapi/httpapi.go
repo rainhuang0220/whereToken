@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/webembed"
 )
@@ -73,13 +74,18 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if !localHost(r) {
+		http.Error(w, "localhost only", http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	s.mu.Lock()
 	last := s.last
 	s.mu.Unlock()
 	if last == nil {
-		if err := scan.EncodeSummary(w, scan.Result{Errors: []string{}}); err != nil {
+		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil)}
+		if err := scan.EncodeSummary(w, empty); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
@@ -92,6 +98,10 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !localHost(r) {
+		http.Error(w, "localhost only", http.StatusForbidden)
 		return
 	}
 	if !s.beginScan() {
@@ -240,6 +250,18 @@ func insideDir(dir, target string) bool {
 		return false
 	}
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
+func localHost(r *http.Request) bool {
+	host := r.Host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	switch strings.ToLower(host) {
+	case "127.0.0.1", "localhost", "::1":
+		return true
+	}
+	return false
 }
 
 func Listen(addr string, home adapter.Home) error {

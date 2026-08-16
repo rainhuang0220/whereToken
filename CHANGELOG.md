@@ -9,6 +9,10 @@
 - `scan --json` / `/api/scan` mark `"offline": true` when Cursor/Trae APIs were skipped; the dashboard shows the same offline banner as the table
 - Unknown vendor rows are labeled `未知厂家`, not `Unknown`
 - Dashboard request and turn counts use the same thousands grouping as the CLI table
+- Kiln bricks are keyboard-focusable and announce the same two-line caption as pointer hover
+- `GET /api/summary` before the first 刷新 still includes a Monday-based kiln window
+- `/api/scan` and `/api/summary` refuse a non-localhost `Host`
+- `wheretoken --help` and the man page say 刷新 rescans; man page documents `COLUMNS` / `FORCE_COLOR` / `NO_UTF8`
 
 ## 0.1.1 — 2026-08-17
 

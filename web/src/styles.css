@@ -312,6 +312,8 @@ h1 {
   border: 1px solid var(--mortar);
   border-radius: var(--brick-radius, 2px);
   background: var(--clay);
+  color: inherit;
+  font: inherit;
   cursor: default;
 }
 
@@ -331,6 +333,14 @@ h1 {
 
 .brick:hover {
   outline: 1px solid var(--copper);
+}
+
+.brick:focus-visible {
+  outline: 1px solid var(--copper);
+}
+
+.brick:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .brick.peak {

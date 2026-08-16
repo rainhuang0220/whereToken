@@ -39,7 +39,9 @@ The dashboard
 .B wheretoken serve
 binds
 .B 127.0.0.1
-only.
+only. In the page,
+.B 刷新
+rescans this machine. Reloading the tab does not.
 .SH INSTALL
 .nf
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
@@ -141,6 +143,18 @@ Same as
 .TP
 .B WHERETOKEN_EXTRA_ROOTS
 Extra homes (Unix :, Windows ;, or commas).
+.TP
+.B COLUMNS
+Cap ranking table width (same as
+.BR --width ).
+.TP
+.B FORCE_COLOR
+ANSI even when stdout is not a TTY.
+.B NO_COLOR
+still wins.
+.TP
+.B NO_UTF8
+ASCII box drawing.
 .SH EXAMPLES
 .TP
 .B wheretoken
