@@ -21,14 +21,14 @@ const (
 	maxSessions      = 500
 )
 
-func (a Adapter) fetchAccountUsage(sourceRoot, token string, sessions []string) ([]event.UsageEvent, error) {
+func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions []string) ([]event.UsageEvent, error) {
 	if len(sessions) > maxSessions {
 		sessions = sessions[:maxSessions]
 	}
 	var out []event.UsageEvent
 	var lastErr error
 	for _, id := range sessions {
-		raw, err := a.postJSON(sessionUsagePath, token, map[string]any{"session_id": id}, sourceRoot)
+		raw, err := a.postJSON(sessionUsagePath, token, map[string]any{"session_id": id}, sourceRoot, authPath)
 		if err != nil {
 			if isUnauthorized(err) {
 				return nil, err
@@ -138,8 +138,8 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 	}, true
 }
 
-func (a Adapter) postJSON(path, token string, payload any, sourceRoot string) ([]byte, error) {
-	base := a.apiBase(sourceRoot)
+func (a Adapter) postJSON(path, token string, payload any, hints ...string) ([]byte, error) {
+	base := a.apiBase(hints...)
 	u, err := url.Parse(base + path)
 	if err != nil {
 		return nil, fmt.Errorf("账号用量接口地址无效")
@@ -198,12 +198,12 @@ func (a Adapter) now() time.Time {
 	return time.Now()
 }
 
-func (a Adapter) apiBase(sourceRoot string) string {
+func (a Adapter) apiBase(hints ...string) string {
 	if strings.TrimSpace(a.APIBase) != "" {
 		return strings.TrimRight(a.APIBase, "/")
 	}
-	lower := strings.ToLower(sourceRoot)
-	if strings.Contains(lower, "cn") {
+	blob := strings.ToLower(strings.Join(hints, "\n"))
+	if strings.Contains(blob, "cn") {
 		return defaultAPICN
 	}
 	return defaultAPISG

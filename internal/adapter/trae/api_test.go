@@ -261,6 +261,23 @@ func TestParseSessionUsageLeavesUnknownTimeZero(t *testing.T) {
 	}
 }
 
+func TestAPIBaseUsesCNJWTWhenProductDirIsInternational(t *testing.T) {
+	got := (Adapter{}).apiBase(
+		"/Library/Application Support/Trae/User/globalStorage/state.vscdb",
+		"/home/me/.trae-cn/trae-jwt-token",
+	)
+	if got != defaultAPICN {
+		t.Fatalf("CN JWT should pick the CN host, got %s", got)
+	}
+}
+
+func TestAPIBaseInternationalWithoutCNHint(t *testing.T) {
+	got := (Adapter{}).apiBase("/Library/Application Support/Trae/User/globalStorage/state.vscdb")
+	if got != defaultAPISG {
+		t.Fatalf("got %s", got)
+	}
+}
+
 func TestDefaultHTTPClientTimeout(t *testing.T) {
 	c := Adapter{}.client()
 	if c.Timeout != 20*time.Second {

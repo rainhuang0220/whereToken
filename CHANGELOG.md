@@ -32,6 +32,7 @@
 - Authoritative Cursor tokens footnote the 53-week account window
 - Cursor account events with the same millisecond and model keep both conversations
 - Linux CI runs `go vet` the same way `make ci` does
+- Trae CN JWT files pick the CN API host even when the discovered product folder is named `Trae`
 
 ## 0.1.1 — 2026-08-17
 

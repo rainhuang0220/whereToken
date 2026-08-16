@@ -122,7 +122,7 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 	if a.Offline {
 		return nil
 	}
-	events, apiErr := a.fetchAccountUsage(path, token, sessions)
+	events, apiErr := a.fetchAccountUsage(path, root.AuthPath, token, sessions)
 	if apiErr != nil {
 		return apiErr
 	}
