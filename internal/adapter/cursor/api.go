@@ -35,10 +35,7 @@ func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.
 		token = next
 		events, err = a.fetchUsageWithToken(sourceRoot, token)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return events, nil
+	return events, err
 }
 
 func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEvent, error) {
@@ -47,8 +44,8 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	end := now.UnixMilli()
 
 	filtered, ferr := a.fetchFiltered(token, start, end)
-	if ferr == nil && hasTokenTotals(filtered) {
-		return tagged(sourceRoot, filtered), nil
+	if hasTokenTotals(filtered) {
+		return tagged(sourceRoot, filtered), ferr
 	}
 	if isUnauthorized(ferr) {
 		return nil, ferr
@@ -73,7 +70,8 @@ func tagged(sourceRoot string, events []event.UsageEvent) []event.UsageEvent {
 
 func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEvent, error) {
 	var out []event.UsageEvent
-	var total int
+	var total, rawSeen int
+	pageSize := usagePageSize
 	for page := 1; page <= maxUsagePages; page++ {
 		body := map[string]any{
 			"teamId":    0,
@@ -84,24 +82,37 @@ func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEve
 		}
 		raw, err := a.postJSON(filteredRPC, token, body)
 		if err != nil {
+			if len(out) > 0 {
+				return out, err
+			}
 			return nil, err
 		}
-		pageEvents, pageTotal, err := parseFiltered(raw)
+		pageEvents, rawN, pageTotal, err := parseFiltered(raw)
 		if err != nil {
+			if len(out) > 0 {
+				return out, err
+			}
 			return nil, err
 		}
 		if page == 1 {
 			total = pageTotal
+			if rawN > 0 && rawN < usagePageSize {
+				pageSize = rawN
+			}
 		}
 		out = append(out, pageEvents...)
-		if len(pageEvents) == 0 {
+		rawSeen += rawN
+		if rawN == 0 {
 			break
 		}
-		if total > 0 && len(out) >= total {
+		if total > 0 && rawSeen >= total {
 			break
 		}
-		if len(pageEvents) < usagePageSize {
+		if rawN < pageSize {
 			break
+		}
+		if page == maxUsagePages && (total == 0 || rawSeen < total) {
+			return out, fmt.Errorf("只拉了前 %d 页账号用量", maxUsagePages)
 		}
 	}
 	return out, nil
@@ -230,12 +241,12 @@ func (a Adapter) allowedURL(u *url.URL) bool {
 	return false
 }
 
-func parseFiltered(raw []byte) ([]event.UsageEvent, int, error) {
+func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, error) {
 	var top map[string]any
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	if err := dec.Decode(&top); err != nil {
-		return nil, 0, fmt.Errorf("账号用量接口返回无法解析")
+		return nil, 0, 0, fmt.Errorf("账号用量接口返回无法解析")
 	}
 	total := int(flexInt(pick(top, "totalUsageEventsCount", "total_usage_events_count")))
 	list := asSlice(pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
@@ -256,7 +267,7 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, error) {
 			out = append(out, ev)
 		}
 	}
-	return out, total, nil
+	return out, len(list), total, nil
 }
 
 func parseAggregated(raw []byte, now time.Time) []event.UsageEvent {

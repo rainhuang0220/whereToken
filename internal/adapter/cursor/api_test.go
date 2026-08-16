@@ -298,6 +298,49 @@ func TestRestrictRedirectAllowsCursorAPI(t *testing.T) {
 	}
 }
 
+func TestFetchFilteredTurnsPageWhenParsedRowsAreFewerThanRaw(t *testing.T) {
+	var pages []int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Page int `json:"page"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body.Page == 0 {
+			body.Page = 1
+		}
+		pages = append(pages, body.Page)
+		if body.Page <= 1 {
+			io.WriteString(w, `{
+			  "totalUsageEventsCount": 4,
+			  "usageEventsDisplay": [
+			    {"model":"k3","tokenUsage":{"inputTokens":1,"outputTokens":1}},
+			    {"timestamp":"1"}
+			  ]
+			}`)
+			return
+		}
+		io.WriteString(w, `{
+		  "totalUsageEventsCount": 4,
+		  "usageEventsDisplay": [
+		    {"model":"k3","tokenUsage":{"inputTokens":2,"outputTokens":2}},
+		    {"timestamp":"2"}
+		  ]
+		}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pages) < 2 {
+		t.Fatalf("pages=%v; a short parsed page must not stop pagination when raw rows remain", pages)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("events=%d want both token rows", len(evs))
+	}
+}
+
 func TestParseFilteredKeepsSameMsDifferentConversations(t *testing.T) {
 	raw := []byte(`{
 	  "usageEventsDisplay": [
@@ -305,7 +348,7 @@ func TestParseFilteredKeepsSameMsDifferentConversations(t *testing.T) {
 	    {"timestamp":"1700000000000","model":"grok-4","conversationId":"conv-b","tokenUsage":{"inputTokens":20,"outputTokens":2}}
 	  ]
 	}`)
-	evs, _, err := parseFiltered(raw)
+	evs, _, _, err := parseFiltered(raw)
 	if err != nil {
 		t.Fatal(err)
 	}

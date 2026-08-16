@@ -103,7 +103,7 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)
 	}
 
-	useAPI := apiErr == nil && hasTokenTotals(apiEvents)
+	useAPI := hasTokenTotals(apiEvents)
 	emitLocal(composers, bubbles, root, emit, emitTurn, useAPI)
 	if useAPI {
 		for _, e := range apiEvents {
