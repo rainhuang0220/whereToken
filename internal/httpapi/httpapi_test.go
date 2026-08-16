@@ -207,6 +207,22 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 	}
 }
 
+func TestWebDistIgnoresCwdFolder(t *testing.T) {
+	dir := t.TempDir()
+	hijack := filepath.Join(dir, "web", "dist")
+	if err := os.MkdirAll(hijack, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(hijack, "index.html"), []byte("<h1>hijack</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	t.Setenv("WHERETOKEN_WEB", "")
+	if got := webDist(); got != "" {
+		t.Fatalf("cwd web/dist must not replace the embed: %s", got)
+	}
+}
+
 func TestSummaryBeforeScanHasCalendarWindow(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))

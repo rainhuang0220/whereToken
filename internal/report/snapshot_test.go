@@ -225,6 +225,60 @@ func TestUnknownVendorNoteIsChinese(t *testing.T) {
 	}
 }
 
+func TestEmptyHomeToolSliceExplainsMissingLedger(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{Tool: "claude"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "Claude Code") && strings.Contains(n, "没有找到账本") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("sliced empty home must say the tool is missing: %v", snap.Notes)
+	}
+}
+
+func TestEmptyHomeUnknownModelIsEmptyViewNotUsage(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{Model: "k3"}, now, loc)
+	if err != nil {
+		t.Fatalf("empty home --model=k3 must not be usage: %v", err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "k3") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("notes=%v", snap.Notes)
+	}
+}
+
+func TestTodayKeepsTraeLoginNote(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, []string{"trae: 登录态在加密存储中，没有可读的 JWT 文件"}, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "加密存储") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("--today must keep the Trae login note: %v", snap.Notes)
+	}
+}
+
 func TestCursorAuthoritativeNoteMentions53WeekWindow(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

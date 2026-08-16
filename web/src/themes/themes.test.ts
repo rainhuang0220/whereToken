@@ -247,6 +247,11 @@ describe('theme pack manifest', () => {
     }
   })
 
+  it('does not persist kiln on first paint without Apply', () => {
+    const main = readFileSync(join(SRC_ROOT, 'main.ts'), 'utf8')
+    expect(main).toMatch(/persist:\s*false/)
+  })
+
   it('lets the html boot script paint every pack before modules load', () => {
     const html = readFileSync(join(SRC_ROOT, '..', 'index.html'), 'utf8')
     const match = html.match(/var allowed = \[([^\]]+)\]/)

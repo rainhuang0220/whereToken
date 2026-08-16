@@ -87,6 +87,34 @@ func TestNeverReadsSettingsJSON(t *testing.T) {
 	}
 }
 
+func TestParseSkipsAssistantRowsWithoutRequestID(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, "projects", "x")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"type":"assistant","uuid":"u1","message":{"model":"claude-opus-4.6","usage":{"input_tokens":0,"output_tokens":1,"cache_read_input_tokens":9000,"cache_creation_input_tokens":0}}}
+{"type":"assistant","uuid":"u2","message":{"model":"claude-opus-4.6","usage":{"input_tokens":0,"output_tokens":1,"cache_read_input_tokens":9000,"cache_creation_input_tokens":0}}}
+{"type":"assistant","requestId":"r1","uuid":"u3","message":{"model":"claude-opus-4.6","usage":{"input_tokens":10,"output_tokens":4,"cache_read_input_tokens":9000,"cache_creation_input_tokens":0}}}
+`
+	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "r1" {
+		t.Fatalf("uuid-only stream rows must not become requests: %+v", evs)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.CacheRead != 9000 {
+		t.Fatalf("cache_read summed stream placeholders: %d", sum.All.CacheRead)
+	}
+}
+
 func TestDiscoverXDGConfigClaude(t *testing.T) {
 	dir := t.TempDir()
 	proj := filepath.Join(dir, ".config", "claude", "projects")

@@ -265,6 +265,51 @@ func TestRunTodayKimiCombo(t *testing.T) {
 	}
 }
 
+func TestRunOfflineEnvAddsTableBanner(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, out, errb := testApp([]string{"--ascii", "--quiet"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_OFFLINE" {
+			return "1"
+		}
+		return ""
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "offline") || !strings.Contains(out.String(), "本机账本") {
+		t.Fatalf("WHERETOKEN_OFFLINE=1 must banner the table:\n%s", out.String())
+	}
+}
+
+func TestRunEmptyHomeClaudeSliceExplains(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, out, errb := testApp([]string{"--claude", "--ascii", "--quiet"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "Claude Code") || !strings.Contains(out.String(), "没有找到账本") {
+		t.Fatalf("--claude on empty home:\n%s", out.String())
+	}
+}
+
+func TestRunEmptyHomeModelK3IsOk(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, out, errb := testApp([]string{"--model=k3", "--ascii", "--quiet"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "k3") {
+		t.Fatalf("empty home --model=k3:\n%s", out.String())
+	}
+}
+
 func TestRunEmptyHomeExplainsMissingLedgers(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	app, out, errb := testApp([]string{"--ascii", "--quiet"})
@@ -448,7 +493,7 @@ func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	if strings.Contains(h, "消耗") {
 		t.Fatal("help must not watermark 消耗")
 	}
-	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "--today --kimi", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb", "unsigned", "brew tap rainhuang0220/wheretoken", "刷新", "xai"} {
+	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "--today --kimi", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb", "unsigned", "brew tap rainhuang0220/wheretoken", "刷新", "xai", "CLI table"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}

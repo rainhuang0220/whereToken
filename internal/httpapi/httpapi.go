@@ -289,7 +289,7 @@ func webDist() string {
 			return v
 		}
 	}
-	candidates := []string{filepath.Join("web", "dist")}
+	var candidates []string
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "web", "dist"))
 	}

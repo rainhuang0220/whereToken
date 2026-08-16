@@ -65,6 +65,14 @@ func TestRedactGoogAPIKeyHeader(t *testing.T) {
 	}
 }
 
+func TestRedactCloudIDEJWT(t *testing.T) {
+	in := "trae: Cloud-IDE-JWT test-token.not-a-jwt leaked"
+	out := Redact(in)
+	if strings.Contains(out, "test-token.not-a-jwt") {
+		t.Fatalf("leaked: %q", out)
+	}
+}
+
 func TestRedactCookieHeader(t *testing.T) {
 	in := "cursor: Cookie: WorkosCursorSessionToken=user_01ABC.eyJhbGciOiJIUzI1NiJ9.payload.sig leaked"
 	out := Redact(in)

@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+export WHERETOKEN_EXTRA_ROOTS=
 dir="$(mktemp -d)"
 trap 'rm -rf "$dir"' EXIT
 dst="$dir/.kimi-code/sessions/x/s/agents/main"

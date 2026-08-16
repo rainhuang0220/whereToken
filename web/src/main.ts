@@ -11,7 +11,7 @@ import { STORAGE_KEY, applyTheme, resolveThemeId } from './themes'
 gsap.registerPlugin(Flip)
 
 try {
-  applyTheme(resolveThemeId(localStorage.getItem(STORAGE_KEY)))
+  applyTheme(resolveThemeId(localStorage.getItem(STORAGE_KEY)), { persist: false })
 } catch {
   applyTheme('kiln')
 }

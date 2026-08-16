@@ -16,10 +16,12 @@ var (
 	googAPIKeyRE      = regexp.MustCompile(`(?i)x-goog-api-key:\s*\S+`)
 	tokenParamRE      = regexp.MustCompile(`(?i)((?:access|refresh|id)_token|api[_-]?key)=[^&\s]+`)
 	cookieRE          = regexp.MustCompile(`(?i)((?:set-)?cookie):\s*.+`)
+	cloudIDEJWTRE     = regexp.MustCompile(`(?i)cloud-ide-jwt\s+\S+`)
 )
 
 func Redact(s string) string {
 	s = cookieRE.ReplaceAllString(s, "${1}: [redacted]")
+	s = cloudIDEJWTRE.ReplaceAllString(s, "Cloud-IDE-JWT [redacted]")
 	s = jwtRE.ReplaceAllString(s, "[redacted]")
 	s = bearerRE.ReplaceAllString(s, "bearer [redacted]")
 	s = authRE.ReplaceAllString(s, "authorization: [redacted]")

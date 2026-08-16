@@ -93,7 +93,9 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 			}
 			req := rec.RequestID
 			if req == "" {
-				req = rec.UUID
+				// uuid is unique per JSONL line; using it as RequestID
+				// would defeat mergeByRequest and sum stream placeholders.
+				continue
 			}
 			emit(event.UsageEvent{
 				Source:      "claude",

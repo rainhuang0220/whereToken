@@ -36,6 +36,14 @@
 - A failed first 刷新 (including 409 煅烧进行中) explains what to do instead of leaving a silent cold kiln
 - `~/.kimi` symlinked to `~/.kimi-code` is one Kimi root, not two
 - `WHERETOKEN_EXTRA_ROOTS` that only aliases the same home (symlink) is not scanned twice
+- Empty-home `--claude` / `--model=k3` explain themselves instead of a silent zero table or exit 2
+- `--today` keeps Trae/Cursor login notes
+- Claude stream rows without `requestId` are skipped so they cannot inflate cache_read
+- `wheretoken serve` no longer prefers `./web/dist` from the current working directory
+- Theme boot does not write `localStorage` until 应用
+- `verify-cli.sh` clears `WHERETOKEN_EXTRA_ROOTS`
+- `--help` says `go install` is the CLI table; kiln UI is in Release / brew
+- Redact `Cloud-IDE-JWT` headers
 
 ## 0.1.1 — 2026-08-17
 

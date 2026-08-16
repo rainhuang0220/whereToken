@@ -78,11 +78,15 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 			}
 		}
 		if !found {
-			msg := fmt.Sprintf("unknown model %q", f.Model)
-			if s := suggestModel(f.Model, events); s != "" {
-				msg += fmt.Sprintf(" (did you mean %q?)", s)
+			if len(events) == 0 {
+				// Empty machine: copying --model=k3 from --help is not a usage error.
+			} else {
+				msg := fmt.Sprintf("unknown model %q", f.Model)
+				if s := suggestModel(f.Model, events); s != "" {
+					msg += fmt.Sprintf(" (did you mean %q?)", s)
+				}
+				return Snapshot{}, usageErr{msg: msg}
 			}
-			return Snapshot{}, usageErr{msg: msg}
 		}
 	}
 
@@ -181,6 +185,15 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 		}
 		return appendUniqueNote(notes, msg)
 	}
+	if f.Tool != "" && len(snap.Tools) == 0 {
+		return appendUniqueNote(notes, metric.SourceLabel(f.Tool)+" 在这台机器上没有找到账本。")
+	}
+	if f.Vendor != "" && len(snap.Vendors) == 0 {
+		return appendUniqueNote(notes, vendor.Label(f.Vendor)+" 在这台机器上没有找到账本。")
+	}
+	if f.Model != "" && len(snap.Models) == 0 {
+		return appendUniqueNote(notes, "本机账本里没有模型 "+f.Model+"。")
+	}
 	if f.Tool == "" && f.Vendor == "" && f.Model == "" && len(snap.Tools) == 0 && len(notes) == 0 {
 		return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。")
 	}
@@ -245,6 +258,18 @@ func pruneNotes(notes []string, f Filter, tools []Row) []string {
 		}
 		if strings.EqualFold(label, "offline") {
 			out = append(out, n)
+			continue
+		}
+		if strings.Contains(n, "登录") || strings.Contains(n, "加密存储") {
+			if f.Tool != "" {
+				if strings.EqualFold(label, f.Tool) || strings.EqualFold(label, metric.SourceLabel(f.Tool)) {
+					out = append(out, n)
+				}
+				continue
+			}
+			if f.Today && len(tools) == 0 {
+				out = append(out, n)
+			}
 			continue
 		}
 		if _, hit := keep[label]; hit {

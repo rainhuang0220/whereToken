@@ -16,6 +16,7 @@ INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
   brew install --HEAD ./Formula/wheretoken.rb  # from a clone
 No npm package. GitHub Release binaries are unsigned.
+go install embeds the CLI table; the kiln dashboard is in GitHub Release / brew.
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,
