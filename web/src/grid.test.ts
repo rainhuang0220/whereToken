@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brickAriaLabel, brickCaption, layoutCells, selectDrill, selectSeries, wallCells } from './grid'
+import { brickAriaLabel, brickCaption, kilnStep, layoutCells, selectDrill, selectSeries, wallCells } from './grid'
 import type { Calendar, Day, SummaryPayload } from './types'
 
 const lit: Day = {
@@ -16,6 +16,20 @@ const lit: Day = {
   total_m: '0.0000 M',
   level: 2,
 }
+
+describe('kilnStep', () => {
+  it('moves on the 7-row week column, not through every brick', () => {
+    expect(kilnStep(0, 'ArrowDown', 21)).toBe(1)
+    expect(kilnStep(6, 'ArrowDown', 21)).toBe(6)
+    expect(kilnStep(1, 'ArrowUp', 21)).toBe(0)
+    expect(kilnStep(0, 'ArrowUp', 21)).toBe(0)
+    expect(kilnStep(0, 'ArrowRight', 21)).toBe(7)
+    expect(kilnStep(14, 'ArrowRight', 21)).toBe(14)
+    expect(kilnStep(8, 'ArrowLeft', 21)).toBe(1)
+    expect(kilnStep(3, 'Home', 21)).toBe(0)
+    expect(kilnStep(3, 'End', 21)).toBe(6)
+  })
+})
 
 describe('brickCaption', () => {
   const base = {

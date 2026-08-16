@@ -27,6 +27,15 @@ describe('kiln wall chrome', () => {
     expect(css).not.toMatch(/\.wdays\b/)
   })
 
+  it('is one tab stop, then arrows, not 371 buttons in a picture', () => {
+    const grid = readFileSync(join(SRC, 'grid.ts'), 'utf8')
+    expect(vue).not.toMatch(/role="img"/)
+    expect(vue).toMatch(/role="grid"/)
+    expect(vue).toMatch(/tabindex/)
+    expect(vue).toMatch(/kilnStep/)
+    expect(grid).toMatch(/ArrowRight/)
+  })
+
   it('shows a two-line pointer-following caption, not a cell-anchored dump', () => {
     expect(vue).toMatch(/brickCaption/)
     expect(vue).toMatch(/kiln-float/)

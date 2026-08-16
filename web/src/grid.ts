@@ -80,6 +80,29 @@ export function brickAriaLabel(cell: Cell): string {
   return `${cap.date} ${cap.amount}`
 }
 
+export function kilnStep(i: number, key: string, n: number): number {
+  if (n <= 0 || i < 0 || i >= n) return i
+  const weekday = i % 7
+  switch (key) {
+    case 'ArrowDown':
+      return weekday < 6 && i + 1 < n ? i + 1 : i
+    case 'ArrowUp':
+      return weekday > 0 ? i - 1 : i
+    case 'ArrowRight':
+      return i + 7 < n ? i + 7 : i
+    case 'ArrowLeft':
+      return i - 7 >= 0 ? i - 7 : i
+    case 'Home':
+      return i - weekday
+    case 'End': {
+      const end = i - weekday + 6
+      return end < n ? end : n - 1
+    }
+    default:
+      return i
+  }
+}
+
 export const emptySeries: CalendarSeries = {
   days: [],
   stats: {
