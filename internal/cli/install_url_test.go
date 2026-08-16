@@ -39,4 +39,11 @@ func TestReleaseAssetNamesMatchGoreleaserAndNpm(t *testing.T) {
 	if !strings.Contains(string(sh), `asset="wheretoken_${os}_${arch}.tar.gz"`) {
 		t.Fatal("install.sh asset name drifted from goreleaser")
 	}
+	ps1, err := os.ReadFile(filepath.Join(root, "scripts", "install.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(ps1), `wheretoken_windows_${goarch}.zip`) {
+		t.Fatal("install.ps1 asset name drifted from goreleaser")
+	}
 }
