@@ -48,6 +48,13 @@ func readingLabel(id string) string {
 	return "正在读 " + metric.SourceLabel(id) + "…"
 }
 
+func (p Progress) DisplayLabel(ascii bool) string {
+	if !ascii {
+		return p.Label
+	}
+	return strings.ReplaceAll(p.Label, "…", "...")
+}
+
 func AllAdapters() []adapter.Adapter {
 	return Adapters(false)
 }

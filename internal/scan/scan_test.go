@@ -18,6 +18,16 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
+func TestProgressDisplayLabelASCII(t *testing.T) {
+	p := Progress{Label: readingLabel("kimi")}
+	if !strings.Contains(p.Label, "…") {
+		t.Fatalf("label=%q", p.Label)
+	}
+	if got := p.DisplayLabel(true); strings.Contains(got, "…") || !strings.Contains(got, "...") {
+		t.Fatalf("ascii label=%q", got)
+	}
+}
+
 func TestCloudSkipped(t *testing.T) {
 	if CloudSkipped(Adapters(false)) {
 		t.Fatal("online adapters")

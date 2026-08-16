@@ -26,7 +26,7 @@ requests, user turns. Then a 7-day spark and a ranking of tools and vendors
 FLAGS
   -h, --help           this text
   -V, --version        print version
-  --today              only today (local timezone; weeks start Monday)
+  --today              only today in the local timezone
   --tool NAME          slice by tool (claude, kimi, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)

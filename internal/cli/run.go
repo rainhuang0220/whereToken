@@ -109,7 +109,7 @@ func (a *App) resolveHome(override string) adapter.Home {
 	return scan.RealHome()
 }
 
-func (a *App) doScan(home adapter.Home, quiet, offline bool) scan.Result {
+func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result {
 	if a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true") {
 		offline = true
 	}
@@ -132,7 +132,7 @@ func (a *App) doScan(home adapter.Home, quiet, offline bool) scan.Result {
 				}
 				return
 			}
-			line := p.Label
+			line := p.DisplayLabel(ascii || table.UseASCII(false, a.GOOS, a.LookupEnv))
 			pad := width - table.DisplayWidth(line)
 			if pad < 0 {
 				pad = 0
@@ -148,7 +148,7 @@ func (a *App) doScan(home adapter.Home, quiet, offline bool) scan.Result {
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
-	res := a.doScan(home, flags.Quiet, flags.Offline)
+	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
 	fil := report.Filter{
 		Today:      flags.Today,
 		Tool:       flags.Tool,
@@ -192,7 +192,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 }
 
 func (a *App) runScanJSON(home adapter.Home, quiet, offline bool) int {
-	res := a.doScan(home, quiet, offline)
+	res := a.doScan(home, quiet, offline, false)
 	if err := scan.EncodeSummary(a.Stdout, res); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail
@@ -201,7 +201,7 @@ func (a *App) runScanJSON(home adapter.Home, quiet, offline bool) int {
 }
 
 func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
-	res := a.doScan(home, quiet, offline)
+	res := a.doScan(home, quiet, offline, false)
 	if len(res.Roots) == 0 {
 		fmt.Fprintln(a.Stderr, "没有找到本机账本")
 		return ExitOK
