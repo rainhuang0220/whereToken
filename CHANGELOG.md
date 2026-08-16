@@ -24,6 +24,7 @@
 - Dashboard 刷新 treats an SSE `error` event as a failure instead of hanging as “scan incomplete”
 - `--help` vendor list includes `xai`
 - Chinese README says 刷新 rescans and that the dashboard does not load third-party fonts
+- Tool and vendor table rows are keyboard-activatable (Enter/Space); absent rows stay inert
 
 ## 0.1.1 — 2026-08-17
 

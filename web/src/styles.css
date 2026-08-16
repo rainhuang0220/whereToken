@@ -534,8 +534,17 @@ th {
 }
 
 .ledger tbody tr:hover,
+.ledger tbody tr:focus-visible,
 .ledger tbody tr.on {
   background: var(--mortar);
+}
+
+.ledger tbody tr:focus {
+  outline: none;
+}
+
+.ledger tbody tr:focus-visible {
+  outline: 1px solid var(--copper);
 }
 
 .ledger tbody tr.absent {

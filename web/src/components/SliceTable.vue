@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { columnsFrom, formatCount } from '../format'
+import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
 import type { SliceView } from '../types'
 
 const props = defineProps<{
@@ -14,6 +15,17 @@ const emit = defineEmits<{
 }>()
 
 const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命中率']
+
+function activate(id: string, quality: string) {
+  if (!rowIsSelectable(quality)) return
+  emit('select', id)
+}
+
+function onRowKey(e: KeyboardEvent, id: string, quality: string) {
+  if (!isRowActivateKey(e.key)) return
+  e.preventDefault()
+  activate(id, quality)
+}
 </script>
 
 <template>
@@ -33,7 +45,10 @@ const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命�
           v-for="row in rows"
           :key="row.id"
           :class="{ on: props.activeId === row.id, absent: row.quality === 'absent' }"
-          @click="row.quality === 'absent' ? undefined : emit('select', row.id)"
+          :tabindex="row.quality === 'absent' ? -1 : 0"
+          :role="row.quality === 'absent' ? undefined : 'button'"
+          @click="activate(row.id, row.quality)"
+          @keydown="onRowKey($event, row.id, row.quality)"
         >
           <td class="name">
             {{ row.label }}
