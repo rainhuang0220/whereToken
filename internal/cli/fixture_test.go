@@ -71,3 +71,36 @@ func TestRunKimiAliasOnFixture(t *testing.T) {
 		t.Fatalf("%s", out.String())
 	}
 }
+
+func TestRunTodayKimiOnFixtureDoesNotMixAllTime(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	dst := filepath.Join(dir, ".kimi-code", "sessions", "x", "s", "agents", "main")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, file, _, _ := runtime.Caller(0)
+	src := filepath.Join(filepath.Dir(file), "..", "..", "testdata", "adapters", "kimi", "session", "agents", "main", "wire.jsonl")
+	data, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dst, "wire.jsonl"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"--today", "--kimi", "--home", dir, "--ascii", "--quiet"})
+	app.Scan = nil
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "0.0012 M") {
+		t.Fatalf("--today --kimi mixed all-time fixture rows:\n%s", s)
+	}
+	if !strings.Contains(s, "今天") || !strings.Contains(s, "Kimi") {
+		t.Fatalf("%s", s)
+	}
+	if !strings.Contains(s, "0.00 M") {
+		t.Fatalf("fixture is 2026-08-14, test now is 2026-08-16:\n%s", s)
+	}
+}

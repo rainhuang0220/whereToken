@@ -67,10 +67,12 @@ echo "$err" | grep -q anthropic
 empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
+echo "$zeros" | grep -q '本机没有找到账本'
 
 envhome="$(WHERETOKEN_HOME="$empty" "$dir/wheretoken" --ascii --quiet)"
 echo "$envhome" | grep -q '0.00 M'
-if echo "$envhome" | grep -q Kimi; then
+echo "$envhome" | grep -q '本机没有找到账本'
+if echo "$envhome" | grep -q '占比'; then
   echo "WHERETOKEN_HOME ignored" >&2
   exit 1
 fi
@@ -94,6 +96,27 @@ echo "$mod" | grep -q '0.0012 M'
 echo "$mod" | grep -q '用户回合'
 modjson="$("$dir/wheretoken" --home "$dir" --model=k3 --json --quiet)"
 echo "$modjson" | grep -q '"hide_turns": true'
+
+today_kimi="$("$dir/wheretoken" --home "$dir" --today --kimi --ascii --quiet)"
+echo "$today_kimi" | grep -q '今天'
+echo "$today_kimi" | grep -q 'Kimi'
+if echo "$today_kimi" | grep -q '0.0012 M'; then
+  echo "--today --kimi mixed all-time rows" >&2
+  exit 1
+fi
+echo "$today_kimi" | grep -q '0.00 M'
+echo "$today_kimi" | grep -q '今天还没有用量'
+
+set +e
+err="$("$dir/wheretoken" --home "$dir" --nope --quiet 2>&1)"
+code=$?
+set -e
+test "$code" -eq 2
+echo "$err" | grep -q 'unknown flag'
+if echo "$err" | grep -q 'flag provided but not defined'; then
+  echo "unknown flag still uses Go jargon" >&2
+  exit 1
+fi
 
 narrow="$(COLUMNS=40 "$dir/wheretoken" --home "$dir" --ascii --quiet)"
 echo "$narrow" | grep -q 'Kimi'

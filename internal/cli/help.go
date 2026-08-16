@@ -13,7 +13,8 @@ INSTALL
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
-  brew install --HEAD ./Formula/wheretoken.rb  # from a clone
+  brew install --HEAD ./Formula/wheretoken.rb  # from a clone; no tap
+No Homebrew tap, no npm package. GitHub Release binaries are unsigned.
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,
@@ -52,7 +53,7 @@ ENV
 EXIT CODES
   0  ok (including zero data, or a degraded Trae/Cursor login)
   1  runtime failure
-  2  usage error (unknown command, tool, vendor, or model)
+  2  usage error (unknown command, tool, vendor, model, or flag)
 
 PRIVACY
   Read-only local files. No telemetry. Never prints JWTs or access tokens.
@@ -63,6 +64,7 @@ EXAMPLES
   wheretoken --today
   wheretoken --cursor
   wheretoken --today --cursor
+  wheretoken --today --kimi
   wheretoken --tool=claude --json
   wheretoken --model=k3
   wheretoken sources

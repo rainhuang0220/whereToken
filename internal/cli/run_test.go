@@ -197,7 +197,7 @@ func TestRunRespectsWHERETOKEN_HOME(t *testing.T) {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
 	s := out.String()
-	if strings.Contains(s, "Kimi") || strings.Contains(s, "Cursor") || strings.Contains(s, "Claude") {
+	if strings.Contains(s, "占比") {
 		t.Fatalf("scanned the real home instead of WHERETOKEN_HOME:\n%s", s)
 	}
 	if !strings.Contains(s, "0.00 M") {
@@ -231,6 +231,56 @@ func TestRunTodayCursorCombo(t *testing.T) {
 	}
 	if !strings.Contains(s, "0.00 M") {
 		t.Fatalf("cursor today should be zero in fixture:\n%s", s)
+	}
+}
+
+func TestRunTodayKimiCombo(t *testing.T) {
+	app, out, errb := testApp([]string{"--today", "--kimi", "--quiet"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "Kimi") || !strings.Contains(s, "今天") {
+		t.Fatalf("%s", s)
+	}
+	if !strings.Contains(s, "1.03 M") {
+		t.Fatalf("today kimi should be today's 1.03 M:\n%s", s)
+	}
+	if strings.Contains(s, "Claude") || strings.Contains(s, "11.68") || strings.Contains(s, "10.65") {
+		t.Fatalf("today --kimi mixed all-time/other tools:\n%s", s)
+	}
+}
+
+func TestRunEmptyHomeExplainsMissingLedgers(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, out, errb := testApp([]string{"--ascii", "--quiet"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "panic") || strings.Contains(errb.String(), "panic") {
+		t.Fatalf("empty home crashed:\n%s\n%s", s, errb.String())
+	}
+	if !strings.Contains(s, "0.00 M") {
+		t.Fatalf("expected zeros:\n%s", s)
+	}
+	if !strings.Contains(s, "本机没有找到账本") {
+		t.Fatalf("empty home should say so:\n%s", s)
+	}
+}
+
+func TestRunUnknownFlagExitUsage(t *testing.T) {
+	app, _, errb := testApp([]string{"--nope"})
+	if code := app.Run(); code != ExitUsage {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if strings.Contains(errb.String(), "flag provided but not defined") {
+		t.Fatalf("Go flag jargon: %s", errb.String())
+	}
+	if !strings.Contains(errb.String(), "unknown flag") {
+		t.Fatalf("stderr=%s", errb.String())
 	}
 }
 
@@ -354,7 +404,7 @@ func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	if strings.Contains(h, "消耗") {
 		t.Fatal("help must not watermark 消耗")
 	}
-	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb"} {
+	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "--today --kimi", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb", "unsigned"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}

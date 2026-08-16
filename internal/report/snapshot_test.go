@@ -78,6 +78,144 @@ func TestSnapshotZeroDataEmDash(t *testing.T) {
 	}
 }
 
+func TestSnapshotEmptyHomeExplainsMissingLedgers(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "本机没有找到账本") {
+			found = true
+		}
+		if strings.Contains(n, "panic") || strings.Contains(n, "stack") {
+			t.Fatalf("empty home must not look like a crash: %q", n)
+		}
+	}
+	if !found {
+		t.Fatalf("empty home should say so, notes=%v", snap.Notes)
+	}
+}
+
+func TestSnapshotTodayEmptyDoesNotLookBroken(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{Today: true}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "0.00 M" {
+		t.Fatalf("today empty total=%q", snap.TotalM)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "今天还没有用量") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("today with no rows should say so, notes=%v", snap.Notes)
+	}
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "本机没有找到账本") {
+			t.Fatalf("today-empty must not reuse the all-time empty-home copy: %v", snap.Notes)
+		}
+	}
+}
+
+func TestSnapshotTodayKimiZeroHintsToDropToday(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 17, 10)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{
+		Today: true,
+		Tool:  "kimi",
+		Discovered: []metric.Slice{{
+			ID: "kimi", Label: "Kimi Code", Miss: 200_000, CacheRead: 800_000, Output: 30_000,
+			Quality: event.QualityAuthoritative,
+		}},
+	}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "0.00 M" {
+		t.Fatalf("Aug 17 must not mix Aug 16 kimi: %+v", snap)
+	}
+	joined := strings.Join(snap.Notes, "\n")
+	if !strings.Contains(joined, "今天还没有用量") || !strings.Contains(joined, "去掉 --today") {
+		t.Fatalf("should hint to drop --today when all-time kimi exists: %v", snap.Notes)
+	}
+}
+
+func TestFilterTodayAndKimiExcludesClaudeAndYesterday(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{Today: true, Tool: "kimi"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "1.03 M" || snap.Requests != 1 || snap.UserTurns != 1 {
+		t.Fatalf("today kimi %+v", snap)
+	}
+	if snap.Scope != "Kimi Code" || !strings.Contains(snap.Period, "今天") {
+		t.Fatalf("scope=%q period=%q", snap.Scope, snap.Period)
+	}
+	for _, r := range snap.Tools {
+		if r.ID == "claude" {
+			t.Fatalf("today --kimi mixed in Claude: %+v", snap.Tools)
+		}
+	}
+	if strings.Contains(snap.TotalM, "11.68") {
+		t.Fatal("today --kimi leaked all-time total")
+	}
+}
+
+func TestFilterTodayUsesLocalMidnightNotUTC(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 8, 16, 0, 45, 0, 0, loc)
+	events := []event.UsageEvent{{
+		Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "c",
+		Timestamp: time.Date(2026, 8, 15, 16, 30, 0, 0, time.UTC),
+		Miss:      200_000, CacheRead: 800_000, Output: 30_000,
+		Quality: event.QualityAuthoritative,
+	}}
+	snap, err := Build(events, nil, nil, Filter{Today: true, Tool: "kimi"}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TotalM != "1.03 M" {
+		t.Fatalf("00:30 Shanghai is today, not UTC yesterday: %+v", snap)
+	}
+}
+
+func TestUnknownVendorNoteIsChinese(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", Model: "composer", RequestID: "a",
+		Timestamp: now, Miss: 1_000_000, Quality: event.QualityDegraded,
+	}}
+	snap, err := Build(events, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "Unknown 厂家") {
+			t.Fatalf("table notes must not mix English Unknown into 厂家: %q", n)
+		}
+		if strings.Contains(n, "未知厂家") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected 未知厂家 note, notes=%v", snap.Notes)
+	}
+}
+
 func TestFilterTodayUsesLocalDate(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

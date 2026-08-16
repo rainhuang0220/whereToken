@@ -183,6 +183,30 @@ func TestRenderZeroData(t *testing.T) {
 	if !strings.Contains(out, "0.00 M") || !strings.Contains(out, "—") {
 		t.Fatalf("%s", out)
 	}
+	if !strings.Contains(out, "本机没有找到账本") {
+		t.Fatalf("empty home should explain itself:\n%s", out)
+	}
+}
+
+func TestRenderEmptyHomeFitsNarrowWidth(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{Width: 40, ASCII: true})
+	for i, line := range strings.Split(out, "\n") {
+		if line == "" {
+			continue
+		}
+		if w := table.DisplayWidth(line); w > 40 {
+			t.Fatalf("line %d width %d > 40: %q", i, w, line)
+		}
+	}
+	if !strings.Contains(out, "本机没有找到账本") {
+		t.Fatalf("%s", out)
+	}
 }
 
 func TestRenderDimsNotesOnlyWhenColor(t *testing.T) {

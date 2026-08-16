@@ -24,6 +24,15 @@ brew install --HEAD ./Formula/wheretoken.rb
 
 The `npm/` wrapper is **not on the npm registry** yet.
 
+## Not yet
+
+Short list, not a roadmap:
+
+- GitHub Release binaries are **unsigned** (no Apple Developer cert).
+- There is **no Homebrew tap**. From a clone you can `brew install --HEAD ./Formula/wheretoken.rb` (needs Go).
+- There is **no npm package**.
+- Trae and Cursor **token columns** need those apps **signed in** on this machine. Local Claude / Kimi / Codex / OpenCode ledgers do not.
+
 ## What you see
 
 Six figures **since records began**, then rankings. Units are **M** (million tokens). Hit rate is cache-read on the input side only.
@@ -147,3 +156,5 @@ irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/inst
 ```
 
 然后输入 `wheretoken`：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）。不写美元价，不做遥测，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。
+
+尚未：GitHub 二进制未签名、没有 Homebrew tap、没有 npm；Trae / Cursor 的 token 列需要在那些应用里已登录。

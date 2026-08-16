@@ -208,6 +208,20 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if strings.Contains(rs, "Pushing those files needs a GitHub token") {
 		t.Fatal("README must not tell strangers that Actions is blocked on workflow scope")
 	}
+	for _, want := range []string{"unsigned", "Homebrew tap", "not on the npm registry", "signed in"} {
+		if !strings.Contains(strings.ToLower(rs), strings.ToLower(want)) && !strings.Contains(rs, want) {
+			t.Errorf("README missing honest not-yet %q", want)
+		}
+	}
+	if !strings.Contains(rs, "unsigned") {
+		t.Fatal("README should say GitHub binaries are unsigned")
+	}
+	if !strings.Contains(rs, "Homebrew tap") && !strings.Contains(rs, "brew tap") {
+		t.Fatal("README should say there is no Homebrew tap")
+	}
+	if !strings.Contains(rs, "signed in") && !strings.Contains(rs, "已登录") {
+		t.Fatal("README should say Trae/Cursor token columns need those apps signed in")
+	}
 }
 
 func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
@@ -225,6 +239,9 @@ func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
 			t.Errorf("formula missing %q", want)
 		}
 	}
+	if !strings.Contains(s, "sha256") || !strings.Contains(s, "archive/refs/tags/v") {
+		t.Fatal("formula should pin a GitHub tag tarball SHA256 so brew install ./Formula works without --HEAD")
+	}
 }
 
 func TestManPageMentionsJSONSchema(t *testing.T) {
@@ -237,7 +254,7 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port"} {
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port", "--today --kimi", "unsigned"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("man page missing %q", want)
 		}

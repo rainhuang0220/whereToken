@@ -50,6 +50,8 @@ Windows:
 .PP
 If you already have Go:
 .B go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+.PP
+No Homebrew tap, no npm package. GitHub Release binaries are unsigned.
 .SH OPTIONS
 .TP
 .B -h ", " --help
@@ -115,7 +117,7 @@ Success, including zero data or a degraded Trae/Cursor login.
 Runtime failure.
 .TP
 .B 2
-Usage error (unknown command, tool, vendor, or model).
+Usage error (unknown command, tool, vendor, model, or flag).
 .SH ENVIRONMENT
 .TP
 .B NO_COLOR
@@ -141,6 +143,9 @@ Table since records began.
 .TP
 .B wheretoken --today --cursor
 Today, Cursor only.
+.TP
+.B wheretoken --today --kimi
+Today, Kimi Code only. Does not mix all-time rows.
 .TP
 .B wheretoken --model=k3 --json
 Schema 1 JSON for that model.

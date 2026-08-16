@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1 — 2026-08-17
+
+Query and install polish for a stranger's first run.
+
+- Empty home prints a Chinese footnote instead of a silent zero table; `--today` with no rows says so, and `--today --kimi` (when all-time Kimi exists) hints to drop `--today` instead of mixing all-time rows
+- Unknown vendor footnote is `未知厂家`, not mixed `Unknown 厂家`
+- Unknown flags exit 2 as `unknown flag "--name"` (not Go's `flag provided but not defined`)
+- `--help` examples include `--today --kimi`; INSTALL says no tap, no npm, unsigned binaries
+- README has a short **Not yet** list (unsigned, no tap, no npm, Trae/Cursor need those apps signed in)
+- `Formula/wheretoken.rb` pins the `v0.1.0` source tarball SHA256 and still offers `--HEAD`
+
 ## 0.1.0 — 2026-08-16
 
 CLI: `wheretoken` prints a character table (total M, cache hit rate, streaks, requests, turns), then tool/vendor rankings with share and a 7-day spark.

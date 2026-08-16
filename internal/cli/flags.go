@@ -212,9 +212,22 @@ func parseFlagSet(fs *flag.FlagSet, f *Flags, args []string) error {
 			f.Help = true
 			return nil
 		}
-		return usageError{msg: strings.TrimSpace(err.Error()) + "\ntry `wheretoken --help`"}
+		return usageError{msg: flagUsageMessage(err) + "\ntry `wheretoken --help`"}
 	}
 	return nil
+}
+
+func flagUsageMessage(err error) string {
+	msg := strings.TrimSpace(err.Error())
+	const prefix = "flag provided but not defined: "
+	if !strings.HasPrefix(msg, prefix) {
+		return msg
+	}
+	name := strings.TrimPrefix(msg, prefix)
+	if strings.HasPrefix(name, "-") && !strings.HasPrefix(name, "--") && len(name) > 2 {
+		name = "-" + name
+	}
+	return "unknown flag " + quote(name)
 }
 
 func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {

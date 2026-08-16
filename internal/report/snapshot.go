@@ -151,46 +151,58 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		snap.Last7 = metric.LastNDailyTotals(cal.All.Days, now, 7)
 	}
 	if unknownVendorTotal(snap.Vendors) > 0 {
-		msg := "Unknown 厂家 · 账本没写模型名（Cursor 账号用量常这样）"
-		dup := false
-		for _, n := range snap.Notes {
-			if n == msg {
-				dup = true
-				break
-			}
-		}
-		if !dup {
-			snap.Notes = append(snap.Notes, msg)
-		}
+		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}
 	if (snap.Scope != "" || !snap.ShowStreaks) && tokenlessModels(snap.Models) && !(snap.Total == 0 && snap.Requests > 0) {
-		msg := "有的模型只有请求次数、账本没写 token（Cursor 会话标题常这样）"
-		dup := false
-		for _, n := range snap.Notes {
-			if n == msg {
-				dup = true
-				break
-			}
-		}
-		if !dup {
-			snap.Notes = append(snap.Notes, msg)
-		}
+		snap.Notes = appendUniqueNote(snap.Notes, "有的模型只有请求次数、账本没写 token（Cursor 会话标题常这样）")
 	}
 	snap.Notes = pruneNotes(snap.Notes, f, snap.Tools)
 	if snap.Total == 0 && snap.Requests > 0 {
-		msg := "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）"
-		dup := false
-		for _, n := range snap.Notes {
-			if n == msg {
-				dup = true
-				break
-			}
+		snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
+	}
+	snap.Notes = appendEmptyViewNotes(snap.Notes, snap, f)
+	return snap, nil
+}
+
+func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
+	if snap.Total != 0 || snap.Requests != 0 || snap.UserTurns != 0 {
+		return notes
+	}
+	if f.Today {
+		msg := "今天还没有用量。"
+		if discoveredHasUsage(f.Discovered, f.Tool, f.Vendor == "" && f.Model == "") {
+			msg = "今天还没有用量。有账本以来请去掉 --today。"
 		}
-		if !dup {
-			snap.Notes = append(snap.Notes, msg)
+		return appendUniqueNote(notes, msg)
+	}
+	if f.Tool == "" && f.Vendor == "" && f.Model == "" && len(snap.Tools) == 0 && len(notes) == 0 {
+		return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。")
+	}
+	return notes
+}
+
+func discoveredHasUsage(discovered []metric.Slice, tool string, unscoped bool) bool {
+	if tool == "" && !unscoped {
+		return false
+	}
+	for _, s := range discovered {
+		if tool != "" && s.ID != tool {
+			continue
+		}
+		if s.Total() != 0 || s.Requests != 0 || s.UserTurns != 0 {
+			return true
 		}
 	}
-	return snap, nil
+	return false
+}
+
+func appendUniqueNote(notes []string, msg string) []string {
+	for _, n := range notes {
+		if n == msg {
+			return notes
+		}
+	}
+	return append(notes, msg)
 }
 
 func pruneNotes(notes []string, f Filter, tools []Row) []string {

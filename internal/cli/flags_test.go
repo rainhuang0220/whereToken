@@ -183,6 +183,23 @@ func TestParseUnknownCommandIsUsage(t *testing.T) {
 	}
 }
 
+func TestParseUnknownFlagIsUsage(t *testing.T) {
+	_, err := Parse([]string{"--nope"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "flag provided but not defined") {
+		t.Fatalf("Go flag jargon: %q", msg)
+	}
+	if !strings.Contains(msg, "unknown flag") || !strings.Contains(msg, "nope") {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(msg, "wheretoken --help") {
+		t.Fatalf("should point at help: %v", err)
+	}
+}
+
 func TestParseBrandFlags(t *testing.T) {
 	for _, c := range []struct {
 		flag, want string
