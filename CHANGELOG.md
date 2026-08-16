@@ -13,6 +13,10 @@
 - `GET /api/summary` before the first 刷新 still includes a Monday-based kiln window
 - `/api/scan` and `/api/summary` refuse a non-localhost `Host`
 - `wheretoken --help` and the man page say 刷新 rescans; man page documents `COLUMNS` / `FORCE_COLOR` / `NO_UTF8`
+- Empty `Host` on a localhost bind is still allowed (old HTTP clients)
+- Error strings redact `Cookie` / `Set-Cookie` the same way as JWTs
+- Cursor / Trae / OpenCode open SQLite through one escaped `file:` URI so `?` and `#` in the path cannot steal the query
+- Axis damper aria-label is `窑墙轴`, not `消耗轴`
 
 ## 0.1.1 — 2026-08-17
 

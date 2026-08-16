@@ -65,6 +65,17 @@ func TestRedactGoogAPIKeyHeader(t *testing.T) {
 	}
 }
 
+func TestRedactCookieHeader(t *testing.T) {
+	in := "cursor: Cookie: WorkosCursorSessionToken=user_01ABC.eyJhbGciOiJIUzI1NiJ9.payload.sig leaked"
+	out := Redact(in)
+	if strings.Contains(out, "WorkosCursorSessionToken=") || strings.Contains(out, "user_01ABC") {
+		t.Fatalf("leaked: %q", out)
+	}
+	if !strings.Contains(strings.ToLower(out), "cookie") {
+		t.Fatalf("should keep the header name: %q", out)
+	}
+}
+
 func TestRedactLeavesNormalErrors(t *testing.T) {
 	in := "trae: 登录态在加密存储中，没有可读的 JWT 文件"
 	if got := Redact(in); got != in {

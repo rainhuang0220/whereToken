@@ -254,6 +254,9 @@ func insideDir(dir, target string) bool {
 
 func localHost(r *http.Request) bool {
 	host := r.Host
+	if host == "" {
+		return true
+	}
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}

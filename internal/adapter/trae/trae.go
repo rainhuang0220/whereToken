@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -344,20 +343,5 @@ func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
 }
 
 func openRO(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", path))
-	if err == nil {
-		if pingErr := db.Ping(); pingErr == nil {
-			return db, nil
-		}
-		db.Close()
-	}
-	db, err = sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro&immutable=1", path))
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, err
-	}
-	return db, nil
+	return adapter.OpenRO(path)
 }

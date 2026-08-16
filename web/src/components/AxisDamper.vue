@@ -13,7 +13,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="damper" role="tablist" aria-label="消耗轴">
+  <div class="damper" role="tablist" aria-label="窑墙轴">
     <button
       type="button"
       role="tab"

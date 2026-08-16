@@ -34,6 +34,14 @@ describe('kiln wall chrome', () => {
   })
 })
 
+describe('axis damper copy', () => {
+  it('does not call the filter row 消耗', () => {
+    const damper = readFileSync(join(SRC, 'components/AxisDamper.vue'), 'utf8')
+    expect(damper).not.toMatch(/消耗/)
+    expect(damper).toMatch(/aria-label="窑墙轴"/)
+  })
+})
+
 describe('home rail copy', () => {
   it('labels the rescan control 刷新, not 再扫', () => {
     const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')

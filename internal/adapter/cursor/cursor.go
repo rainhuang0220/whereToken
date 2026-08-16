@@ -2,7 +2,6 @@ package cursor
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -366,20 +365,5 @@ func atoi64(s string) int64 {
 }
 
 func openRO(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", path))
-	if err == nil {
-		if pingErr := db.Ping(); pingErr == nil {
-			return db, nil
-		}
-		db.Close()
-	}
-	db, err = sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro&immutable=1", path))
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, err
-	}
-	return db, nil
+	return adapter.OpenRO(path)
 }

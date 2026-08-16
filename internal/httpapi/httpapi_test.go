@@ -247,6 +247,7 @@ func TestLocalHost(t *testing.T) {
 		{"127.0.0.1:8787", true},
 		{"localhost:8787", true},
 		{"[::1]:8787", true},
+		{"", true},
 		{"evil.example", false},
 		{"0.0.0.0:8787", false},
 		{"192.168.1.2:8787", false},
