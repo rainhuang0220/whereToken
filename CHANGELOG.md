@@ -15,6 +15,10 @@
 - Same-millisecond Kimi `usage.record` rows stay two requests
 - Redact `X-Cloudide-Token` and JSON `access_token` / `refresh_token` fields
 - The KPI box shrinks with `--width` instead of overflowing a 40-column terminal
+- All-time `--json` keeps `max_streak_days` / `current_streak_days` when they are 0 (`--today` still omits them)
+- Missing `--tool` / invalid `--port` say so without Go's `flag needs an argument` / `parse error`
+- Trae keeps the current session, then memento list order, so the 500-session cap is stable
+- `--help` says `--json` is schema 1 and `scan` is a different dump
 - A plaintext JWT in Trae `storage.json` is used; only non-JSON blobs stay “encrypted storage”
 - Empty first 刷新 hides hollow ranking / drill tables; KPI readout is 2×3 below 1100px
 - Homebrew tap [`rainhuang0220/wheretoken`](https://github.com/rainhuang0220/homebrew-wheretoken) installs the GitHub Release binary (`brew tap rainhuang0220/wheretoken` then `brew install wheretoken`); no Go required

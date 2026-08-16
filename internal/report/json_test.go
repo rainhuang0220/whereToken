@@ -72,7 +72,7 @@ func TestWriteJSONHasP0AndNoClock(t *testing.T) {
 	if row["share"] != "91.2%" {
 		t.Fatalf("share=%v", row["share"])
 	}
-	for _, k := range []string{"period", "total", "total_m", "hit_rate_text", "requests", "user_turns", "tools", "vendors", "notes"} {
+	for _, k := range []string{"period", "total", "total_m", "hit_rate_text", "requests", "user_turns", "tools", "vendors", "notes", "max_streak_days", "current_streak_days"} {
 		if _, ok := m[k]; !ok {
 			t.Fatalf("missing key %s", k)
 		}
@@ -147,6 +147,34 @@ func TestGoldenTables(t *testing.T) {
 				t.Fatalf("golden %s mismatch\n--- got ---\n%s\n--- want ---\n%s", c.name, got, want)
 			}
 		})
+	}
+}
+
+func TestWriteJSONAllTimeKeepsZeroStreaks(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	max, ok := m["max_streak_days"]
+	if !ok {
+		t.Fatalf("all-time --json must keep max_streak_days even when 0: %s", buf.String())
+	}
+	cur, ok := m["current_streak_days"]
+	if !ok {
+		t.Fatalf("all-time --json must keep current_streak_days even when 0: %s", buf.String())
+	}
+	if max.(float64) != 0 || cur.(float64) != 0 {
+		t.Fatalf("empty all-time streaks max=%v current=%v", max, cur)
 	}
 }
 

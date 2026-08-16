@@ -224,6 +224,34 @@ func TestParseUnknownFlagIsUsage(t *testing.T) {
 	}
 }
 
+func TestParseMissingToolValueIsUsageWithoutGoJargon(t *testing.T) {
+	_, err := Parse([]string{"--tool"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "flag needs an argument") {
+		t.Fatalf("Go flag jargon: %q", msg)
+	}
+	if !strings.Contains(msg, "--tool") || !strings.Contains(msg, "value") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestParseInvalidPortIsUsageWithoutGoJargon(t *testing.T) {
+	_, err := Parse([]string{"--port", "nope"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "invalid value") && strings.Contains(msg, "parse error") {
+		t.Fatalf("Go flag jargon: %q", msg)
+	}
+	if !strings.Contains(msg, "--port") || !strings.Contains(msg, "nope") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestParseBrandFlags(t *testing.T) {
 	for _, c := range []struct {
 		flag, want string

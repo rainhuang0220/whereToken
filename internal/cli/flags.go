@@ -223,15 +223,32 @@ func parseFlagSet(fs *flag.FlagSet, f *Flags, args []string) error {
 
 func flagUsageMessage(err error) string {
 	msg := strings.TrimSpace(err.Error())
-	const prefix = "flag provided but not defined: "
-	if !strings.HasPrefix(msg, prefix) {
-		return msg
+	const undefined = "flag provided but not defined: "
+	if strings.HasPrefix(msg, undefined) {
+		return "unknown flag " + quote(canonicalFlag(strings.TrimPrefix(msg, undefined)))
 	}
-	name := strings.TrimPrefix(msg, prefix)
+	const needsArg = "flag needs an argument: "
+	if strings.HasPrefix(msg, needsArg) {
+		return "flag " + quote(canonicalFlag(strings.TrimPrefix(msg, needsArg))) + " needs a value"
+	}
+	const invalid = "invalid value "
+	if strings.HasPrefix(msg, invalid) {
+		rest := strings.TrimPrefix(msg, invalid)
+		val, after, ok := strings.Cut(rest, " for flag ")
+		if ok {
+			name, _, _ := strings.Cut(after, ":")
+			return "invalid " + quote(canonicalFlag(name)) + " value " + strings.TrimSpace(val)
+		}
+	}
+	return msg
+}
+
+func canonicalFlag(name string) string {
+	name = strings.TrimSpace(name)
 	if strings.HasPrefix(name, "-") && !strings.HasPrefix(name, "--") && len(name) > 2 {
-		name = "-" + name
+		return "-" + name
 	}
-	return "unknown flag " + quote(name)
+	return name
 }
 
 func parseCompletionTail(f *Flags, args []string) error {

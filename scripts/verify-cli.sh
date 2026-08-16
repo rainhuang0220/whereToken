@@ -41,6 +41,8 @@ json="$("$dir/wheretoken" --home "$dir" --json --quiet)"
 echo "$json" | grep -q '"schema": 1'
 echo "$json" | grep -q '"total_m"'
 echo "$json" | grep -q '"total":'
+echo "$json" | grep -q '"max_streak_days"'
+echo "$json" | grep -q '"current_streak_days"'
 if echo "$json" | grep -q '"events"'; then
   echo "raw events in --json" >&2
   exit 1
@@ -70,6 +72,9 @@ empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
 echo "$zeros" | grep -q '本机没有找到账本'
+empty_json="$("$dir/wheretoken" --home "$empty" --json --quiet)"
+echo "$empty_json" | grep -q '"max_streak_days": 0'
+echo "$empty_json" | grep -q '"current_streak_days": 0'
 empty_today="$("$dir/wheretoken" --home "$empty" --today --ascii --quiet)"
 echo "$empty_today" | grep -q '本机没有找到账本'
 if echo "$empty_today" | grep -q '今天还没有用量'; then

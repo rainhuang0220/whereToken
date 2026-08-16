@@ -33,7 +33,7 @@ FLAGS
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
   --claude --kimi --codex --opencode --cursor --trae
                        same as --tool=that-id
-  --json               JSON on stdout (schema 1; docs/cli-json.schema.json)
+  --json               JSON on stdout (schema 1; docs/cli-json.schema.json). scan is a different dump
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr

@@ -2,6 +2,7 @@ package trae
 
 import (
 	"database/sql"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -213,6 +214,36 @@ func TestParseEncryptedStorageJSONChineseErrorNoSecret(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "dGMFEAAA") || strings.Contains(err.Error(), "fixture-encrypted") || strings.Contains(err.Error(), "eyJ") {
 		t.Fatalf("error leaked storage blob: %v", err)
+	}
+}
+
+func TestSessionIDsFromDBKeepsListOrder(t *testing.T) {
+	dir := t.TempDir()
+	var list strings.Builder
+	list.WriteString(`{"currentSessionId":"s-now","list":[`)
+	for i := 0; i < 8; i++ {
+		if i > 0 {
+			list.WriteByte(',')
+		}
+		fmt.Fprintf(&list, `{"sessionId":"s-%d"}`, i)
+	}
+	list.WriteString(`]}`)
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: list.String()},
+		{key: "icube_session_agent_map", value: `{"s-map":"solo_agent"}`},
+	})
+	got, err := sessionIDsFromDB(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"s-now", "s-0", "s-1", "s-2", "s-3", "s-4", "s-5", "s-6", "s-7", "s-map"}
+	if len(got) != len(want) {
+		t.Fatalf("ids=%v want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ids=%v want list order with current first, not map iteration", got)
+		}
 	}
 }
 

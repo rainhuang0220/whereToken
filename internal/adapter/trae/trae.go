@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -155,6 +156,7 @@ func resolveDB(p string) string {
 
 func collectSessionIDs(globalDB string) ([]string, error) {
 	seen := map[string]struct{}{}
+	var out []string
 	var addErr error
 	add := func(path string) {
 		ids, err := sessionIDsFromDB(path)
@@ -167,7 +169,11 @@ func collectSessionIDs(globalDB string) ([]string, error) {
 			if id == "" {
 				continue
 			}
+			if _, ok := seen[id]; ok {
+				continue
+			}
 			seen[id] = struct{}{}
+			out = append(out, id)
 		}
 	}
 	parent := productParent(globalDB)
@@ -187,10 +193,6 @@ func collectSessionIDs(globalDB string) ([]string, error) {
 	}
 	if addErr != nil {
 		return nil, addErr
-	}
-	out := make([]string, 0, len(seen))
-	for id := range seen {
-		out = append(out, id)
 	}
 	return out, nil
 }
@@ -219,12 +221,17 @@ func sessionIDsFromDB(path string) ([]string, error) {
 	defer db.Close()
 
 	seen := map[string]struct{}{}
+	var out []string
 	add := func(id string) {
 		id = strings.TrimSpace(id)
 		if id == "" {
 			return
 		}
+		if _, ok := seen[id]; ok {
+			return
+		}
 		seen[id] = struct{}{}
+		out = append(out, id)
 	}
 
 	var current sql.NullString
@@ -234,7 +241,8 @@ func sessionIDsFromDB(path string) ([]string, error) {
 	rows, err := db.Query(`
 SELECT json_extract(j.value, '$.sessionId')
 FROM ItemTable, json_each(json_extract(ItemTable.value, '$.list')) AS j
-WHERE ItemTable.key = 'memento/icube-ai-agent-storage'`)
+WHERE ItemTable.key = 'memento/icube-ai-agent-storage'
+ORDER BY CAST(j.key AS INTEGER)`)
 	if err == nil {
 		for rows.Next() {
 			var id sql.NullString
@@ -247,6 +255,7 @@ WHERE ItemTable.key = 'memento/icube-ai-agent-storage'`)
 		rows.Close()
 	}
 
+	var extras []string
 	rows, err = db.Query(`
 SELECT json_each.key
 FROM ItemTable, json_each(ItemTable.value)
@@ -258,7 +267,14 @@ WHERE ItemTable.key = 'icube_session_agent_map'`)
 				rows.Close()
 				return nil, err
 			}
-			add(id.String)
+			id.String = strings.TrimSpace(id.String)
+			if id.String == "" {
+				continue
+			}
+			if _, ok := seen[id.String]; ok {
+				continue
+			}
+			extras = append(extras, id.String)
 		}
 		rows.Close()
 	}
@@ -271,14 +287,20 @@ WHERE ItemTable.key = 'icube_session_agent_map'`)
 				rows.Close()
 				return nil, err
 			}
-			add(strings.TrimPrefix(key, "all_session_badges_"))
+			id := strings.TrimSpace(strings.TrimPrefix(key, "all_session_badges_"))
+			if id == "" {
+				continue
+			}
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			extras = append(extras, id)
 		}
 		rows.Close()
 	}
-
-	out := make([]string, 0, len(seen))
-	for id := range seen {
-		out = append(out, id)
+	sort.Strings(extras)
+	for _, id := range extras {
+		add(id)
 	}
 	return out, nil
 }

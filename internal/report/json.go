@@ -24,8 +24,8 @@ type jsonSnap struct {
 	TotalM            string    `json:"total_m"`
 	HitRate           *float64  `json:"hit_rate"`
 	HitRateText       string    `json:"hit_rate_text"`
-	MaxStreakDays     int       `json:"max_streak_days,omitempty"`
-	CurrentStreakDays int       `json:"current_streak_days,omitempty"`
+	MaxStreakDays     *int      `json:"max_streak_days,omitempty"`
+	CurrentStreakDays *int      `json:"current_streak_days,omitempty"`
 	Requests          int64     `json:"requests"`
 	UserTurns         int64     `json:"user_turns"`
 	HideTurns         bool      `json:"hide_turns,omitempty"`
@@ -53,8 +53,10 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		Notes:       snap.Notes,
 	}
 	if snap.ShowStreaks {
-		out.MaxStreakDays = snap.MaxStreak
-		out.CurrentStreakDays = snap.CurrentStreak
+		max := snap.MaxStreak
+		cur := snap.CurrentStreak
+		out.MaxStreakDays = &max
+		out.CurrentStreakDays = &cur
 		out.Last7 = snap.Last7
 	}
 	if snap.Scope != "" || !snap.ShowStreaks {
