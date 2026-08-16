@@ -266,8 +266,8 @@ func TestParseDoesNotCreditContextMeter(t *testing.T) {
 	if evs[0].Miss != 0 || evs[0].Output != 0 || evs[0].CacheRead != 0 {
 		t.Fatalf("must not treat context snapshots as billed tokens: %+v", evs[0])
 	}
-	if evs[0].Vendor != "unknown" {
-		t.Fatalf("grok stays unknown vendor: %q", evs[0].Vendor)
+	if evs[0].Vendor != "xai" {
+		t.Fatalf("grok-4.5 vendor=%q want xai", evs[0].Vendor)
 	}
 }
 
