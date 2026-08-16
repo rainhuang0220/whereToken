@@ -5,7 +5,7 @@ const helpText = `wheretoken — local coding-agent token usage, as a character 
 USAGE
   wheretoken [flags]
   wheretoken [flags] serve [--port 8787]
-  wheretoken [flags] scan [--json]
+  wheretoken [flags] scan
   wheretoken [flags] sources
   wheretoken [flags] completion bash|zsh|fish|powershell
 

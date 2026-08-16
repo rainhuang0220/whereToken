@@ -122,6 +122,8 @@ fi
 
 narrow="$(COLUMNS=40 "$dir/wheretoken" --home "$dir" --ascii --quiet)"
 echo "$narrow" | grep -q 'Kimi'
+narrow_flag="$("$dir/wheretoken" --home "$dir" --width 40 --ascii --quiet)"
+echo "$narrow_flag" | grep -q 'Kimi'
 if echo "$narrow" | grep -q 'K\.\.\.'; then
   echo "COLUMNS=40 destroyed the tool name" >&2
   exit 1
