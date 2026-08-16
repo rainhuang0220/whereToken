@@ -286,7 +286,7 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port", "--today --kimi", "unsigned", "brew tap rainhuang0220/wheretoken", "COLUMNS", "FORCE_COLOR", "刷新"} {
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "install.sh", "go install", "--port", "--today --kimi", "unsigned", "brew tap rainhuang0220/wheretoken", "COLUMNS", "FORCE_COLOR", "刷新", "xai"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("man page missing %q", want)
 		}
