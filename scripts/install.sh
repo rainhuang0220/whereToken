@@ -26,7 +26,7 @@ case "$os" in
   darwin) os=darwin ;;
   linux) os=linux ;;
   mingw*|msys*|cygwin*)
-    echo "wheretoken: on Windows use npm install -g wheretoken or go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
+    echo "wheretoken: on Windows use scripts/install.ps1 or go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
     exit 1
     ;;
   *)
@@ -52,8 +52,20 @@ fi
 version="${version#v}"
 
 if [ -z "$version" ]; then
+  if command -v go >/dev/null 2>&1; then
+    echo "wheretoken: no GitHub Release; installing with go install" >&2
+    mkdir -p "$BIN_DIR"
+    GOBIN="$BIN_DIR" go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@latest"
+    echo "wheretoken: installed $BIN_DIR/wheretoken" >&2
+    if ! command -v wheretoken >/dev/null 2>&1; then
+      echo "wheretoken: add $BIN_DIR to PATH" >&2
+    fi
+    "$BIN_DIR/wheretoken" --version || true
+    exit 0
+  fi
   echo "wheretoken: no GitHub Release yet. Install with Go:" >&2
   echo "  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest" >&2
+  echo "  export PATH=\"\$(go env GOPATH)/bin:\$PATH\"" >&2
   exit 1
 fi
 

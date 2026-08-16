@@ -4,18 +4,15 @@ See where your **local** coding-agent tokens went. One command, a character tabl
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+export PATH="$(go env GOPATH)/bin:$PATH"   # skip if `wheretoken` is already on PATH
 wheretoken
 ```
 
-No Go? After a [GitHub Release](https://github.com/rainhuang0220/whereToken/releases):
+`scripts/install.sh` / `scripts/install.ps1` download a GitHub Release when one exists (SHA-256 checked). Otherwise they fall back to that same `go install` (into `~/.local/bin` or `%LOCALAPPDATA%\whereToken\bin`) when Go is on PATH:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
-# or: npm install -g wheretoken
-# or: npx wheretoken
 ```
-
-Windows (PowerShell), same release:
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
@@ -24,10 +21,10 @@ irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/inst
 From a clone with Homebrew:
 
 ```bash
-brew install --HEAD Formula/wheretoken.rb
+brew install --HEAD ./Formula/wheretoken.rb
 ```
 
-`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). The npm wrapper downloads the release binary for your OS (or prints the `go install` line if that tag is not out yet). Release installers verify **SHA-256** against `checksums.txt`.
+`go test` / `go install` use the **Go 1.25.13** toolchain from `go.mod` (Go 1.25.0+ will download it). After a [GitHub Release](https://github.com/rainhuang0220/whereToken/releases), the installers download the OS archive and verify **SHA-256** against `checksums.txt`. The `npm/` wrapper is **not on the npm registry** yet.
 
 ## What you see
 
@@ -129,7 +126,7 @@ cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve
 ```
 
-CI runs `go test` on Ubuntu, macOS, and Windows. Workflow files: [`ci/github-workflows/`](ci/github-workflows/) (`scripts/install-github-workflows.sh` copies them to `.github/workflows` when the remote token allows it).
+CI YAML for Ubuntu, macOS, and Windows lives in [`ci/github-workflows/`](ci/github-workflows/). GitHub Actions only runs files under `.github/workflows`; `scripts/install-github-workflows.sh` copies them there. Pushing those files needs a GitHub token with the `workflow` scope.
 
 ## License
 

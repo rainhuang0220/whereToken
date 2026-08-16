@@ -11,10 +11,10 @@ USAGE
 
 INSTALL
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+  export PATH="$(go env GOPATH)/bin:$PATH"   # if the shell cannot find wheretoken
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
-  npm install -g wheretoken          # GitHub Release binary; no Go required
-  npx wheretoken
+  brew install --HEAD ./Formula/wheretoken.rb  # from a clone
 
 With no flags, scans ledgers already on this machine and prints six figures
 since records began: total (M), cache hit rate, max streak, current streak,
@@ -22,6 +22,8 @@ requests, user turns. Then a 7-day spark and a ranking of tools and vendors
 (with share of total). Degraded Trae/Cursor logins become footnotes.
 
 FLAGS
+  -h, --help           this text
+  -V, --version        print version
   --today              only today (local timezone; weeks start Monday)
   --tool NAME          slice by tool (claude, kimi, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, …)
@@ -34,6 +36,7 @@ FLAGS
   -q, --quiet          no scan-progress lines on stderr
   --offline            local ledgers only; skip Cursor/Trae account APIs
   --home DIR           fake home directory (tests)
+  --port N             serve bind port (default 8787; tries 8787–8797 if busy)
   --width N            cap ranking width; drop 回合/请求 before truncating names
 
 ENV

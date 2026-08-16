@@ -2,12 +2,13 @@
 
 Installs the [whereToken](https://github.com/rainhuang0220/whereToken) CLI without requiring Go. The postinstall script downloads the GitHub Release binary for this OS/arch.
 
+This package is **not on the npm registry** yet. Until it is published, install with:
+
 ```bash
-npm install -g wheretoken
-wheretoken
+go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
-If no release exists yet, postinstall prints the `go install` line. When a release exists, postinstall verifies **SHA-256** against `checksums.txt` before installing.
+When a GitHub Release exists, postinstall verifies **SHA-256** against `checksums.txt` before installing.
 
 ```text
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest

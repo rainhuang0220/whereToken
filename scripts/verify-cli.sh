@@ -15,6 +15,11 @@ echo "$ver" | grep -q wheretoken
 
 "$dir/wheretoken" --help | grep -q USAGE
 "$dir/wheretoken" --help | grep -q 'EXIT CODES'
+"$dir/wheretoken" --help | grep -q GOPATH
+if "$dir/wheretoken" --help | grep -q 'npm install'; then
+  echo "help advertises unpublished npm" >&2
+  exit 1
+fi
 
 out="$("$dir/wheretoken" --home "$dir" --ascii --quiet)"
 echo "$out"

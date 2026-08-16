@@ -27,9 +27,27 @@ if (-not $version) {
 $version = $version -replace '^v', ''
 
 if (-not $version) {
-  Write-Host 'wheretoken: no GitHub Release yet. Install with Go or npm:'
+  if (Get-Command go -ErrorAction SilentlyContinue) {
+    Write-Host 'wheretoken: no GitHub Release; installing with go install'
+    New-Item -ItemType Directory -Path $binDir -Force | Out-Null
+    $oldGobin = $env:GOBIN
+    $env:GOBIN = $binDir
+    try {
+      go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+    } finally {
+      if ($null -eq $oldGobin) { Remove-Item Env:GOBIN -ErrorAction SilentlyContinue } else { $env:GOBIN = $oldGobin }
+    }
+    $exe = Join-Path $binDir 'wheretoken.exe'
+    Write-Host "wheretoken: installed $exe"
+    $onPath = $env:PATH -split ';' | Where-Object { $_ -eq $binDir }
+    if (-not $onPath) {
+      Write-Host "wheretoken: add $binDir to PATH"
+    }
+    if (Test-Path $exe) { & $exe --version }
+    exit 0
+  }
+  Write-Host 'wheretoken: no GitHub Release yet. Install with Go:'
   Write-Host '  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest'
-  Write-Host '  npm install -g wheretoken'
   exit 1
 }
 
@@ -67,7 +85,6 @@ try {
 } catch {
   Write-Host "wheretoken: $($_.Exception.Message)"
   Write-Host '  go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest'
-  Write-Host '  npm install -g wheretoken'
   exit 1
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue

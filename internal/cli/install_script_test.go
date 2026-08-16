@@ -23,6 +23,7 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		"wheretoken_${os}_${arch}.tar.gz",
 		"github.com/rainhuang0220/whereToken",
 		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
+		`GOBIN="$BIN_DIR" go install`,
 		"darwin", "linux", "amd64", "arm64",
 		"checksums.txt", "sha256",
 	} {
@@ -51,7 +52,7 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 		"github.com/rainhuang0220/whereToken",
 		"go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest",
 		"amd64", "arm64",
-		"npm install -g wheretoken",
+		"$env:GOBIN",
 		"checksums.txt",
 		"SHA256",
 	} {
@@ -122,6 +123,34 @@ func TestCIRunsGofmt(t *testing.T) {
 	}
 }
 
+func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	root := filepath.Join(filepath.Dir(file), "..", "..")
+	for _, rel := range []string{"README.md", "scripts/install.sh", "scripts/install.ps1", "docs/wheretoken.1"} {
+		body, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(body)
+		if strings.Contains(s, "npm install -g wheretoken") || strings.Contains(s, "npx wheretoken") {
+			t.Errorf("%s advertises unpublished npm package", rel)
+		}
+	}
+	readme, err := os.ReadFile(filepath.Join(root, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(readme), "not on the npm registry") {
+		t.Fatal("README should say the npm package is not on the registry yet")
+	}
+	if !strings.Contains(string(readme), "GOPATH") {
+		t.Fatal("README should mention GOPATH/bin for go install")
+	}
+}
+
 func TestHomebrewFormulaIsHeadBuild(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -149,7 +178,7 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(body)
-	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width"} {
+	for _, want := range []string{"cli-json.schema.json", "JWT", "127.0.0.1", "--offline", "--width", "--version", "GOPATH", "go install", "--port"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("man page missing %q", want)
 		}

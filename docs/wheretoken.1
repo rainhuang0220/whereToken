@@ -40,7 +40,22 @@ The dashboard
 binds
 .B 127.0.0.1
 only.
+.SH INSTALL
+.B go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+.PP
+Put
+.B $(go env GOPATH)/bin
+on
+.B PATH
+if the shell cannot find
+.BR wheretoken .
 .SH OPTIONS
+.TP
+.B -h ", " --help
+Show help.
+.TP
+.B -V ", " --version
+Print version.
 .TP
 .B --today
 Only today in the local timezone. Weeks start Monday.
@@ -77,6 +92,9 @@ Local ledgers only. Skip Cursor/Trae account APIs.
 .TP
 .B --home \fIDIR\fR
 Fake home directory (tests).
+.TP
+.B --port \fIN\fR
+Dashboard bind port (default 8787). If 8787 is busy, try through 8797.
 .TP
 .B --width \fIN\fR
 Cap ranking table width. On a narrow terminal, drop
