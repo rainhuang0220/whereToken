@@ -596,7 +596,7 @@ func TestRunSilentProgressWhenNotTTY(t *testing.T) {
 }
 
 func TestResolveWidthFlagAndCOLUMNS(t *testing.T) {
-	if got := resolveWidth(80, func(string) string { return "40" }); got != 80 {
+	if got := resolveWidth(80, func(string) string { return "40" }, func() int { return 20 }); got != 80 {
 		t.Fatalf("flag should win: %d", got)
 	}
 	if got := resolveWidth(0, func(k string) string {
@@ -604,16 +604,19 @@ func TestResolveWidthFlagAndCOLUMNS(t *testing.T) {
 			return "72"
 		}
 		return ""
-	}); got != 72 {
+	}, func() int { return 20 }); got != 72 {
 		t.Fatalf("COLUMNS: %d", got)
 	}
-	if got := resolveWidth(0, func(string) string { return "" }); got != 0 {
+	if got := resolveWidth(0, func(string) string { return "" }, func() int { return 40 }); got != 40 {
+		t.Fatalf("tty size: %d", got)
+	}
+	if got := resolveWidth(0, func(string) string { return "" }, nil); got != 0 {
 		t.Fatalf("empty: %d", got)
 	}
-	if got := resolveWidth(0, func(string) string { return "nope" }); got != 0 {
+	if got := resolveWidth(0, func(string) string { return "nope" }, nil); got != 0 {
 		t.Fatalf("garbage COLUMNS: %d", got)
 	}
-	if got := resolveWidth(0, func(string) string { return "-40" }); got != 0 {
+	if got := resolveWidth(0, func(string) string { return "-40" }, nil); got != 0 {
 		t.Fatalf("negative COLUMNS: %d", got)
 	}
 }

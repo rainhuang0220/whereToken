@@ -174,6 +174,9 @@ func Parse(args []string) (Flags, error) {
 		f.Vendor = id
 	}
 	f.Model = strings.TrimSpace(modelFlag)
+	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "") {
+		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
+	}
 	return f, nil
 }
 

@@ -166,6 +166,20 @@ func TestParseUnknownVendorIsUsage(t *testing.T) {
 	}
 }
 
+func TestParseScanRejectsTableFilters(t *testing.T) {
+	_, err := Parse([]string{"scan", "--today"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+	if !strings.Contains(err.Error(), "observatory") {
+		t.Fatalf("err=%v", err)
+	}
+	_, err = Parse([]string{"--tool=claude", "scan"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestParseVendorXAI(t *testing.T) {
 	f, err := Parse([]string{"--vendor=xAI"})
 	if err != nil {

@@ -22,8 +22,10 @@ const (
 )
 
 func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions []string) ([]event.UsageEvent, error) {
+	truncated := false
 	if len(sessions) > maxSessions {
 		sessions = sessions[:maxSessions]
+		truncated = true
 	}
 	var out []event.UsageEvent
 	var lastErr error
@@ -41,6 +43,9 @@ func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions 
 	}
 	if len(out) == 0 && lastErr != nil {
 		return nil, lastErr
+	}
+	if truncated {
+		return out, fmt.Errorf("只拉了前 %d 个会话", maxSessions)
 	}
 	return out, nil
 }

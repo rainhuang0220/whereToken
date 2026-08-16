@@ -44,6 +44,9 @@
 - `verify-cli.sh` clears `WHERETOKEN_EXTRA_ROOTS`
 - `--help` says `go install` is the CLI table; kiln UI is in Release / brew
 - Redact `Cloud-IDE-JWT` headers
+- Default table width follows the TTY when `COLUMNS` is unset (bash does not export it)
+- `wheretoken scan --today` is usage: observatory JSON does not take table filters
+- Trae says so when it only fetched the first 500 sessions
 
 ## 0.1.1 — 2026-08-17
 

@@ -261,6 +261,27 @@ func TestParseSessionUsageLeavesUnknownTimeZero(t *testing.T) {
 	}
 }
 
+func TestFetchAccountUsageReportsSessionCap(t *testing.T) {
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		io.WriteString(w, `{"session_id":"s","model_name":"k3","extra_info":{"input_token":1,"output_token":1}}`)
+	}))
+	t.Cleanup(srv.Close)
+	sessions := make([]string, maxSessions+3)
+	for i := range sessions {
+		sessions[i] = "s"
+	}
+	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL}
+	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, sessions)
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("err=%v", err)
+	}
+	if hits != maxSessions {
+		t.Fatalf("hits=%d want %d", hits, maxSessions)
+	}
+}
+
 func TestAPIBaseUsesCNJWTWhenProductDirIsInternational(t *testing.T) {
 	got := (Adapter{}).apiBase(
 		"/Library/Application Support/Trae/User/globalStorage/state.vscdb",

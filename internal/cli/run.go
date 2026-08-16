@@ -186,7 +186,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	}
 	ascii := table.UseASCII(flags.ASCII, a.GOOS, a.LookupEnv)
 	color := table.UseColor(flags.NoColor, a.StdoutTTY, a.LookupEnv)
-	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv)})
+	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv, a.termWidth)})
 	fmt.Fprint(a.Stdout, out)
 	return ExitOK
 }
@@ -253,22 +253,36 @@ func ServeStartedMessage(addr string) string {
 	return fmt.Sprintf("http://%s\n页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。\n", addr)
 }
 
-func resolveWidth(flag int, getenv func(string) string) int {
+func resolveWidth(flag int, getenv func(string) string, size func() int) int {
 	if flag > 0 {
 		return flag
 	}
-	if getenv == nil {
+	if getenv != nil {
+		c := strings.TrimSpace(getenv("COLUMNS"))
+		if c != "" {
+			n, err := strconv.Atoi(c)
+			if err == nil && n > 0 {
+				return n
+			}
+		}
+	}
+	if size != nil {
+		if n := size(); n > 0 {
+			return n
+		}
+	}
+	return 0
+}
+
+func (a *App) termWidth() int {
+	if !a.StdoutTTY {
 		return 0
 	}
-	c := strings.TrimSpace(getenv("COLUMNS"))
-	if c == "" {
+	w, _, err := terminalSize(int(os.Stdout.Fd()))
+	if err != nil || w <= 0 {
 		return 0
 	}
-	n, err := strconv.Atoi(c)
-	if err != nil || n <= 0 {
-		return 0
-	}
-	return n
+	return w
 }
 
 func (a *App) wantOffline(flags Flags) bool {
