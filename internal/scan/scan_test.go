@@ -75,6 +75,22 @@ func TestMarshalSummaryMarksOffline(t *testing.T) {
 	}
 }
 
+func TestMarshalSummaryMarksScanning(t *testing.T) {
+	raw, err := MarshalSummary(Result{Scanning: true, Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Scanning bool `json:"scanning"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Scanning {
+		t.Fatalf("in-flight summary must say scanning: %s", raw)
+	}
+}
+
 func TestMarshalSummaryOmitsOfflineWhenOnline(t *testing.T) {
 	raw, err := MarshalSummary(Result{Errors: []string{}})
 	if err != nil {

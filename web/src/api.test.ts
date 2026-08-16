@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readScanStream } from './api'
+import { readScanStream, waitWhileScanning } from './api'
 
 function streamOf(text: string): ReadableStream<Uint8Array> {
   return new ReadableStream({
@@ -26,5 +26,45 @@ describe('readScanStream', () => {
     )
     expect(payload.all.total).toBe(1185)
     expect(payload.scanned_at).toContain('2026-08-17')
+  })
+})
+
+describe('waitWhileScanning', () => {
+  it('returns the summary once scanning flips off', async () => {
+    let n = 0
+    const payload = await waitWhileScanning({
+      intervalMs: 0,
+      timeoutMs: 1000,
+      now: (() => {
+        let t = 0
+        return () => (t += 1)
+      })(),
+      sleep: async () => {},
+      fetchImpl: async () => {
+        n += 1
+        const body =
+          n < 3
+            ? { scanning: true }
+            : { scanning: false, scanned_at: '2026-08-17T03:00:00+08:00', all: { total: 1 } }
+        return new Response(JSON.stringify(body), { status: 200 })
+      },
+    })
+    expect(n).toBe(3)
+    expect(payload.scanned_at).toContain('2026-08-17')
+  })
+
+  it('gives up with 煅烧进行中 when the other scan never finishes', async () => {
+    await expect(
+      waitWhileScanning({
+        intervalMs: 0,
+        timeoutMs: 2,
+        now: (() => {
+          let t = 0
+          return () => (t += 1)
+        })(),
+        sleep: async () => {},
+        fetchImpl: async () => new Response(JSON.stringify({ scanning: true }), { status: 200 }),
+      }),
+    ).rejects.toThrow('煅烧进行中')
   })
 })

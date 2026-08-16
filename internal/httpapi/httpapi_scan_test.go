@@ -74,7 +74,7 @@ func TestPostScanStreamsProgressThenComplete(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Accept", "text/event-stream")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := srv.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,17 +127,18 @@ func TestPostScanStreamsProgressThenComplete(t *testing.T) {
 	}
 }
 
-func TestPostScanRejectsOverlap(t *testing.T) {
+func TestGetSummaryReportsScanningDuringOverlap(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	started := make(chan struct{})
 	gate := make(chan struct{})
 	mux := NewMuxWith(testhome.New(t.TempDir()), []adapter.Adapter{holdAdapter{started: started, gate: gate}})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
+	client := srv.Client()
 
 	done := make(chan int, 1)
 	go func() {
-		resp, err := http.Post(srv.URL+"/api/scan", "application/json", nil)
+		resp, err := client.Post(srv.URL+"/api/scan", "application/json", nil)
 		if err != nil {
 			done <- -1
 			return
@@ -153,7 +154,84 @@ func TestPostScanRejectsOverlap(t *testing.T) {
 		t.Fatal("first scan did not start")
 	}
 
-	second, err := http.Post(srv.URL+"/api/scan", "application/json", nil)
+	resp, err := client.Get(srv.URL + "/api/summary")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mid struct {
+		Scanning bool `json:"scanning"`
+	}
+	if err := json.Unmarshal(body, &mid); err != nil {
+		t.Fatal(err)
+	}
+	if !mid.Scanning {
+		t.Fatalf("GET during scan must mark scanning: %s", body)
+	}
+
+	close(gate)
+	select {
+	case code := <-done:
+		if code != http.StatusOK {
+			t.Fatalf("first scan status=%d", code)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("first scan did not finish")
+	}
+
+	after := getSummaryJSON(t, srv)
+	if after.Scanning {
+		t.Fatal("GET after scan must not stay scanning")
+	}
+}
+
+func TestPostScanSecondAfterFirstCompletes(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := writeKimiHome(t)
+	srv := httptest.NewServer(NewMux(testhome.New(dir)))
+	t.Cleanup(srv.Close)
+	first := postScanJSON(t, srv)
+	if first.All.Total != 1185 {
+		t.Fatalf("first total=%d", first.All.Total)
+	}
+	second := postScanJSON(t, srv)
+	if second.All.Total != 1185 {
+		t.Fatalf("second total=%d", second.All.Total)
+	}
+}
+
+func TestPostScanRejectsOverlap(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	started := make(chan struct{})
+	gate := make(chan struct{})
+	mux := NewMuxWith(testhome.New(t.TempDir()), []adapter.Adapter{holdAdapter{started: started, gate: gate}})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	client := srv.Client()
+	done := make(chan int, 1)
+	go func() {
+		resp, err := client.Post(srv.URL+"/api/scan", "application/json", nil)
+		if err != nil {
+			done <- -1
+			return
+		}
+		defer resp.Body.Close()
+		io.Copy(io.Discard, resp.Body)
+		done <- resp.StatusCode
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("first scan did not start")
+	}
+
+	second, err := client.Post(srv.URL+"/api/scan", "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,6 +274,7 @@ func (a holdAdapter) Parse(adapter.SourceRoot, func(event.UsageEvent), func(even
 
 type summaryWire struct {
 	ScannedAt string `json:"scanned_at"`
+	Scanning  bool   `json:"scanning"`
 	All       struct {
 		Total int64 `json:"total"`
 	} `json:"all"`
@@ -203,7 +282,7 @@ type summaryWire struct {
 
 func getSummaryJSON(t *testing.T, srv *httptest.Server) summaryWire {
 	t.Helper()
-	resp, err := http.Get(srv.URL + "/api/summary")
+	resp, err := srv.Client().Get(srv.URL + "/api/summary")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +299,7 @@ func getSummaryJSON(t *testing.T, srv *httptest.Server) summaryWire {
 
 func lastCacheControl(t *testing.T, srv *httptest.Server) string {
 	t.Helper()
-	resp, err := http.Get(srv.URL + "/api/summary")
+	resp, err := srv.Client().Get(srv.URL + "/api/summary")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +315,7 @@ func postScanJSON(t *testing.T, srv *httptest.Server) summaryWire {
 		t.Fatal(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := srv.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}

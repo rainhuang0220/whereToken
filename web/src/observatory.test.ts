@@ -105,8 +105,8 @@ describe('observatoryScanErrorHint', () => {
     expect(observatoryScanErrorHint('scan 409', false)).toBe('另一处正在刷新。等这次煅烧结束再点。')
   })
 
-  it('stays quiet when a previous payload is still showing', () => {
-    expect(observatoryScanErrorHint('煅烧进行中', true)).toBe('')
+  it('still explains a 409 when a previous payload is on screen', () => {
+    expect(observatoryScanErrorHint('煅烧进行中', true)).toBe('另一处正在刷新。等这次煅烧结束再点。')
   })
 })
 

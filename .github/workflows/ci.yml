@@ -34,7 +34,7 @@ jobs:
 
       - name: Go race (not Windows)
         if: runner.os != 'Windows'
-        run: go test -race ./internal/cli ./internal/table ./internal/report ./internal/metric ./internal/fuzzy ./internal/vendor
+        run: go test -race ./internal/cli ./internal/table ./internal/report ./internal/metric ./internal/fuzzy ./internal/vendor ./internal/httpapi ./internal/adapter/trae
 
       - name: Go build
         shell: bash

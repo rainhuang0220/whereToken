@@ -15,7 +15,7 @@ func TestServeFallsBackToEmbedWhenNoWebDist(t *testing.T) {
 	t.Setenv("WHERETOKEN_WEB", "")
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/")
+	resp, err := srv.Client().Get(srv.URL + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestServeFallsBackToEmbedWhenNoWebDist(t *testing.T) {
 		t.Fatalf("expected embedded HTML, got %q", body)
 	}
 
-	themes, err := http.Get(srv.URL + "/themes")
+	themes, err := srv.Client().Get(srv.URL + "/themes")
 	if err != nil {
 		t.Fatal(err)
 	}

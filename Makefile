@@ -7,7 +7,7 @@ vet:
 	go vet ./...
 
 race:
-	go test -race ./internal/cli ./internal/table ./internal/report ./internal/metric ./internal/fuzzy ./internal/vendor
+	go test -race ./internal/cli ./internal/table ./internal/report ./internal/metric ./internal/fuzzy ./internal/vendor ./internal/httpapi ./internal/adapter/trae
 
 cli-fixture:
 	bash scripts/verify-cli.sh

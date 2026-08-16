@@ -40,6 +40,7 @@ export type SourceVendorView = {
 export type SummaryPayload = {
   scanned_at?: string
   offline?: boolean
+  scanning?: boolean
   all: SliceView
   by_source: SliceView[]
   by_vendor: SliceView[]

@@ -83,7 +83,7 @@ func TestSummaryIncludesCalendar(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := srv.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestSummaryIncludesCalendar(t *testing.T) {
 func TestMuxSetsNoSniffAndDenyFrame(t *testing.T) {
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/")
+	resp, err := srv.Client().Get(srv.URL + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/themes")
+	resp, err := srv.Client().Get(srv.URL + "/themes")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 		t.Fatalf("themes body=%q", body)
 	}
 
-	asset, err := http.Get(srv.URL + "/asset.js")
+	asset, err := srv.Client().Get(srv.URL + "/asset.js")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestSPAFallbackServesThemes(t *testing.T) {
 		t.Fatalf("asset body=%q", js)
 	}
 
-	missing, err := http.Get(srv.URL + "/missing.js")
+	missing, err := srv.Client().Get(srv.URL + "/missing.js")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestSummaryBeforeScanHasCalendarWindow(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
 	defer srv.Close()
-	resp, err := http.Get(srv.URL + "/api/summary")
+	resp, err := srv.Client().Get(srv.URL + "/api/summary")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestScanRejectsNonLocalHost(t *testing.T) {
 	}
 	req.Host = "evil.example"
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := srv.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestOfflineScanJSONMarksOffline(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := srv.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,6 +28,7 @@ type Result struct {
 	Turns     []event.TurnEvent
 	ScannedAt time.Time
 	Offline   bool
+	Scanning  bool
 }
 
 const (
@@ -254,6 +255,7 @@ type summaryJSON struct {
 	Drill          drillJSON          `json:"drill"`
 	Errors         []string           `json:"errors"`
 	Offline        bool               `json:"offline,omitempty"`
+	Scanning       bool               `json:"scanning,omitempty"`
 }
 
 func viewWithError(s metric.Slice, errs []string) metric.SliceView {
@@ -289,8 +291,9 @@ func buildSummaryJSON(r Result) summaryJSON {
 			BySource: map[string]metric.DrillTablesView{},
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
-		Errors:  redactErrors(r.Errors),
-		Offline: r.Offline,
+		Errors:   redactErrors(r.Errors),
+		Offline:  r.Offline,
+		Scanning: r.Scanning,
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

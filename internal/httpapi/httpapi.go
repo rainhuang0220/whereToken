@@ -82,15 +82,18 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	s.mu.Lock()
 	last := s.last
+	scanning := s.scanning
 	s.mu.Unlock()
 	if last == nil {
-		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil)}
+		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil), Scanning: scanning}
 		if err := scan.EncodeSummary(w, empty); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
-	if err := scan.EncodeSummary(w, *last); err != nil {
+	cur := *last
+	cur.Scanning = scanning
+	if err := scan.EncodeSummary(w, cur); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

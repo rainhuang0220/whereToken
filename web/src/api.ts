@@ -1,6 +1,33 @@
 import type { SummaryPayload } from './types'
 import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
+export async function waitWhileScanning(opts?: {
+  fetchImpl?: typeof fetch
+  intervalMs?: number
+  timeoutMs?: number
+  now?: () => number
+  sleep?: (ms: number) => Promise<void>
+}): Promise<SummaryPayload> {
+  const doFetch = opts?.fetchImpl ?? fetch
+  const interval = opts?.intervalMs ?? 200
+  const timeout = opts?.timeoutMs ?? 60_000
+  const now = opts?.now ?? Date.now
+  const sleep = opts?.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)))
+  const start = now()
+  while (now() - start < timeout) {
+    const res = await doFetch('/api/summary', { cache: 'no-store' })
+    if (!res.ok) {
+      throw new Error(`summary ${res.status}`)
+    }
+    const payload = (await res.json()) as SummaryPayload
+    if (!payload.scanning && payload.scanned_at) {
+      return payload
+    }
+    await sleep(interval)
+  }
+  throw new Error('煅烧进行中')
+}
+
 export async function fetchSummary(): Promise<SummaryPayload> {
   const res = await fetch('/api/summary', { cache: 'no-store' })
   if (!res.ok) {
@@ -16,7 +43,7 @@ export async function rescan(onProgress: (p: ScanProgress) => void): Promise<Sum
     cache: 'no-store',
   })
   if (res.status === 409) {
-    throw new Error('煅烧进行中')
+    return waitWhileScanning()
   }
   if (!res.ok) {
     throw new Error(`scan ${res.status}`)
