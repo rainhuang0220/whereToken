@@ -16,6 +16,7 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q USAGE
 "$dir/wheretoken" --help | grep -q 'EXIT CODES'
 "$dir/wheretoken" --help | grep -q 'curl -fsSL'
+"$dir/wheretoken" --help | grep -q 刷新
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2
   exit 1

@@ -28,6 +28,7 @@ archives:
       - README.md
       - CHANGELOG.md
       - docs/cli-json.schema.json
+      - docs/wheretoken.1
       - completions/*
     format_overrides:
       - goos: windows

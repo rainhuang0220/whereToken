@@ -100,6 +100,14 @@ func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
 			t.Errorf("goreleaser missing %q", want)
 		}
 	}
+	i := strings.Index(s, "archives:")
+	j := strings.Index(s, "checksum:")
+	if i < 0 || j <= i {
+		t.Fatal("goreleaser archives block missing")
+	}
+	if !strings.Contains(s[i:j], "docs/wheretoken.1") {
+		t.Fatal("GitHub Release tarball must include the man page, not only the .deb/.rpm")
+	}
 }
 
 func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {

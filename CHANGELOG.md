@@ -17,6 +17,7 @@
 - Error strings redact `Cookie` / `Set-Cookie` the same way as JWTs
 - Cursor / Trae / OpenCode open SQLite through one escaped `file:` URI so `?` and `#` in the path cannot steal the query
 - Axis damper aria-label is `窑墙轴`, not `消耗轴`
+- GitHub Release archives include `docs/wheretoken.1` (not only the .deb/.rpm)
 
 ## 0.1.1 — 2026-08-17
 
