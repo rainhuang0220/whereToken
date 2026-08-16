@@ -17,6 +17,8 @@
 - The KPI box shrinks with `--width` instead of overflowing a 40-column terminal
 - All-time `--json` keeps `max_streak_days` / `current_streak_days` when they are 0 (`--today` still omits them)
 - Missing `--tool` / invalid `--port` say so without Go's `flag needs an argument` / `parse error`
+- 窑墙轴 skips absent tools, is one tab stop, and moves with arrow keys
+- Completions after `scan` / `serve` / `completion` no longer offer table filters those commands reject
 - Kiln bricks are one tab stop; arrow keys move on the 7-row week grid
 - Cursor account pagination continues when a page’s parsed rows are fewer than the raw list (and fewer than 1000)
 - Trae keeps the current session, then memento list order, so the 500-session cap is stable

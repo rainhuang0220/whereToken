@@ -641,6 +641,36 @@ func TestCompletionRequiresShell(t *testing.T) {
 	}
 }
 
+func TestCompletionScanOmitsTableFilters(t *testing.T) {
+	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
+		s, err := Completion(sh)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(s, "scan") {
+			t.Fatalf("%s missing scan branch", sh)
+		}
+		switch sh {
+		case "bash":
+			if !strings.Contains(s, `scan) opts="--json --quiet -q --offline --home --ascii --no-color --help"`) {
+				t.Fatalf("bash scan opts still offer table flags:\n%s", s)
+			}
+		case "zsh":
+			if strings.Contains(s, "scan)\n      _arguments") && strings.Contains(s[strings.Index(s, "scan)"):strings.Index(s, "serve)")], "--today") {
+				t.Fatalf("zsh scan branch still offers --today")
+			}
+		case "fish":
+			if !strings.Contains(s, `__fish_seen_subcommand_from scan`) || !strings.Contains(s, `-l today`) {
+				t.Fatalf("fish should hide --today after scan")
+			}
+		case "powershell":
+			if !strings.Contains(s, `'scan' { @('--json'`) {
+				t.Fatalf("powershell scan branch missing")
+			}
+		}
+	}
+}
+
 func TestCompletionShells(t *testing.T) {
 	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
 		s, err := Completion(sh)
