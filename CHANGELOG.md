@@ -20,6 +20,7 @@
 - GitHub Release archives include `docs/wheretoken.1` (not only the .deb/.rpm)
 - The kiln dashboard no longer loads Google Fonts (local-first; system fallbacks stay in the glaze stacks)
 - `grok-*` / xAI models map to vendor `xai` (label `xAI`) instead of 未知厂家
+- Linux CI runs `scripts/govulncheck.sh`
 
 ## 0.1.1 — 2026-08-17
 

@@ -137,6 +137,27 @@ func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {
 	}
 }
 
+func TestCIRunsGovulncheck(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	root := filepath.Join(filepath.Dir(file), "..", "..")
+	for _, rel := range []string{
+		filepath.Join(".github", "workflows", "ci.yml"),
+		filepath.Join("ci", "github-workflows", "ci.yml"),
+	} {
+		body, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(body)
+		if !strings.Contains(s, "scripts/govulncheck.sh") {
+			t.Fatalf("%s must run scripts/govulncheck.sh", rel)
+		}
+	}
+}
+
 func TestGitHubActionsWorkflowsAreInstalled(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

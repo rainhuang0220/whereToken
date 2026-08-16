@@ -166,6 +166,16 @@ func TestParseUnknownVendorIsUsage(t *testing.T) {
 	}
 }
 
+func TestParseVendorXAI(t *testing.T) {
+	f, err := Parse([]string{"--vendor=xAI"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Vendor != "xai" {
+		t.Fatalf("vendor=%q", f.Vendor)
+	}
+}
+
 func TestParseTodayJSONVendorModel(t *testing.T) {
 	f, err := Parse([]string{"--today", "--json", "--vendor=MiniMax", "--model=k3", "--ascii"})
 	if err != nil {

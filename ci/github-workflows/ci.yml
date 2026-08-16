@@ -59,3 +59,7 @@ jobs:
       - name: CLI fixture (not Windows bash-only)
         if: runner.os != 'Windows'
         run: bash scripts/verify-cli.sh
+
+      - name: govulncheck
+        if: runner.os == 'Linux'
+        run: bash scripts/govulncheck.sh
