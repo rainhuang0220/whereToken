@@ -30,6 +30,8 @@
 - Trae rows without a timestamp stay undated so the kiln does not dump them on today
 - 工具 × 厂家 includes 缓存写; session drill request counts use thousands grouping
 - Authoritative Cursor tokens footnote the 53-week account window
+- Cursor account events with the same millisecond and model keep both conversations
+- Linux CI runs `go vet` the same way `make ci` does
 
 ## 0.1.1 — 2026-08-17
 

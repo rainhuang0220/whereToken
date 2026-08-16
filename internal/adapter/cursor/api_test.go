@@ -298,6 +298,29 @@ func TestRestrictRedirectAllowsCursorAPI(t *testing.T) {
 	}
 }
 
+func TestParseFilteredKeepsSameMsDifferentConversations(t *testing.T) {
+	raw := []byte(`{
+	  "usageEventsDisplay": [
+	    {"timestamp":"1700000000000","model":"grok-4","conversationId":"conv-a","tokenUsage":{"inputTokens":10,"outputTokens":1}},
+	    {"timestamp":"1700000000000","model":"grok-4","conversationId":"conv-b","tokenUsage":{"inputTokens":20,"outputTokens":2}}
+	  ]
+	}`)
+	evs, _, err := parseFiltered(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	if evs[0].RequestID == evs[1].RequestID {
+		t.Fatalf("same RequestID %q collapsed two conversations", evs[0].RequestID)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != 33 {
+		t.Fatalf("same-ms conversations collapsed: total=%d", sum.All.Total())
+	}
+}
+
 func TestRestrictRedirectHonorsAPIBase(t *testing.T) {
 	a := Adapter{APIBase: "https://cursor.test.example"}
 	req, err := http.NewRequest(http.MethodGet, "https://cursor.test.example/v1", nil)

@@ -288,7 +288,7 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 	out := flexInt(pick(usage, "outputTokens", "output_tokens"))
 	cw := flexInt(pick(usage, "cacheWriteTokens", "cache_write_tokens"))
 	cr := flexInt(pick(usage, "cacheReadTokens", "cache_read_tokens"))
-	id := fmt.Sprintf("cursor-api:%d:%s:%d", ts.UnixMilli(), model, i)
+	id := fmt.Sprintf("cursor-api:%s:%d:%s:%d:%d:%d:%d:%d", session, ts.UnixMilli(), model, miss, cr, cw, out, i)
 	return event.UsageEvent{
 		Source:      "cursor",
 		Vendor:      vendor.Lookup(model, ""),

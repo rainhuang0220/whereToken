@@ -155,6 +155,9 @@ func TestCIRunsGovulncheck(t *testing.T) {
 		if !strings.Contains(s, "scripts/govulncheck.sh") {
 			t.Fatalf("%s must run scripts/govulncheck.sh", rel)
 		}
+		if !strings.Contains(s, "go vet ./...") {
+			t.Fatalf("%s must run go vet like make ci", rel)
+		}
 	}
 }
 
