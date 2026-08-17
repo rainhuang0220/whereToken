@@ -20,7 +20,26 @@ func Render(snap Snapshot, opt Options) string {
 		style = table.BoxASCII
 	}
 	var b strings.Builder
-	writeWrapped(&b, table.Ember(title(snap), opt.Color), opt.Width)
+	ttl := title(snap)
+	writeWrapped(&b, table.Ember(ttl, opt.Color), opt.Width)
+	if opt.Color {
+		ruleW := table.DisplayWidth(ttl)
+		if opt.Width > 0 && ruleW > opt.Width {
+			ruleW = opt.Width
+		}
+		if ruleW > 28 {
+			ruleW = 28
+		}
+		if ruleW < 8 {
+			ruleW = 8
+		}
+		ch := "─"
+		if opt.ASCII {
+			ch = "-"
+		}
+		b.WriteString(table.Lemon(strings.Repeat(ch, ruleW), true))
+		b.WriteByte('\n')
+	}
 	if banner := offlineBanner(snap); banner != "" {
 		writeWrapped(&b, table.Dim(banner, opt.Color), opt.Width)
 	}

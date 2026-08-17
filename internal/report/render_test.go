@@ -240,6 +240,12 @@ func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
 	if strings.Contains(color, "38;5;208") {
 		t.Fatal("must not use Claude orange 208")
 	}
+	if !strings.Contains(color, "─") && !strings.Contains(color, "-") {
+		t.Fatal("color table should underline the title")
+	}
+	if strings.Contains(plain, "whereToken · 有账本以来\n─") {
+		t.Fatal("plain table must not grow a color-only rule")
+	}
 }
 
 func TestRenderDimsNotesOnlyWhenColor(t *testing.T) {

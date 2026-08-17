@@ -7,6 +7,7 @@
 - The HUD also draws a lemon charge bar and rotates a short kiln tip
 - Each pose has a 90ms flap (hand / beads / coal) so the kid does not freeze between sources
 - Ranked table headers use lemon `228`
+- A TTY table underlines the title with a short lemon rule (plain / `--no-color` stays unchanged)
 - `--ascii` keeps `(o_o)` / `(^_^)` and English moods
 - Title color is lemon `228`, not Claude-orange `208`
 - An empty home puts the blinking kid above the zero table: 窑里还是冷的
