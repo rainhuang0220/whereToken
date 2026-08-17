@@ -408,6 +408,18 @@ h1 {
   transform: translate(2px, -6px);
 }
 
+.kiln-kid.pose-toss.flap-1 .kid-coal {
+  transform: translate(-8px, 6px);
+}
+
+.kiln-kid.pose-abacus.flap-1 .kid-abacus circle:first-of-type {
+  transform: translate(4px, 0);
+}
+
+.kiln-kid.pose-scratch.flap-1 .kid-arm.r {
+  transform: rotate(-28deg) translate(-2px, -4px);
+}
+
 .kiln-kid.pose-toss .kid-arm.r {
   transform: rotate(-70deg) translate(4px, -10px);
 }

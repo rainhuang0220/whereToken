@@ -4,17 +4,19 @@ import type { KilnKidPose } from '../kilnKid'
 withDefaults(
   defineProps<{
     pose?: KilnKidPose
+    flap?: 0 | 1
     size?: 'sm' | 'md'
   }>(),
-  { pose: 'grin', size: 'md' },
+  { pose: 'grin', flap: 0, size: 'md' },
 )
 </script>
 
 <template>
   <svg
     class="kiln-kid"
-    :class="[`is-${size}`, `pose-${pose}`]"
+    :class="[`is-${size}`, `pose-${pose}`, `flap-${flap}`]"
     :data-pose="pose"
+    :data-flap="flap"
     viewBox="0 0 64 78"
     role="img"
     aria-hidden="true"

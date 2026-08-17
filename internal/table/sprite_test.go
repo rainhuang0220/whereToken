@@ -9,7 +9,19 @@ import (
 func TestSpriteLinesAreFourRowsSameBodyWidth(t *testing.T) {
 	for _, ascii := range []bool{false, true} {
 		for tick := 0; tick < poseCount*2; tick++ {
-			body := spriteFrame(tick, ascii)
+			body := spriteFrame(tick, 0, ascii)
+			if DisplayWidth(body[0]) != spriteW {
+				t.Fatalf("ascii=%v tick=%d width %d want %d %q", ascii, tick, DisplayWidth(body[0]), spriteW, body[0])
+			}
+			flap := spriteFrame(tick, 1, ascii)
+			if len(flap) != 4 {
+				t.Fatalf("flap lines=%d", len(flap))
+			}
+			for i, line := range flap {
+				if DisplayWidth(line) != spriteW {
+					t.Fatalf("ascii=%v tick=%d flap line %d width %d %q", ascii, tick, i, DisplayWidth(line), line)
+				}
+			}
 			if len(body) != 4 {
 				t.Fatalf("ascii=%v tick=%d lines=%d", ascii, tick, len(body))
 			}
@@ -80,6 +92,9 @@ func TestSpriteTickWalks(t *testing.T) {
 	if SpriteTick(0) != PoseScratch {
 		t.Fatalf("tick 0 should scratch, got %d", SpriteTick(0))
 	}
+	if SpriteFlap(0) == SpriteFlap(100*time.Millisecond) {
+		t.Fatal("flap should twitch")
+	}
 }
 
 func TestLemonNoColor(t *testing.T) {
@@ -124,7 +139,7 @@ func TestChargeBarFills(t *testing.T) {
 }
 
 func TestSpriteHUDPutsBarOnSecondLine(t *testing.T) {
-	block := SpriteHUD(PoseAbacus, "正在读 Codex…  2/6", 2, 6, false, false)
+	block := SpriteHUD(PoseAbacus, 0, "正在读 Codex…  2/6", 2, 6, false, false)
 	lines := strings.Split(strings.TrimSuffix(block, "\n"), "\n")
 	if len(lines) != 4 {
 		t.Fatalf("%#v", lines)

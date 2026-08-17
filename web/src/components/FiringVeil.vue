@@ -15,6 +15,7 @@ const root = ref<HTMLElement | null>(null)
 const bar = ref<HTMLElement | null>(null)
 const pose = ref<KilnKidPose>(kilnKidPose(0))
 const mood = ref(kilnKidMood(0))
+const flap = ref<0 | 1>(0)
 let ctx: gsap.Context | undefined
 let kidTimer: number | undefined
 let kidTick = 0
@@ -37,9 +38,10 @@ onMounted(() => {
   if (!reduced()) {
     kidTimer = window.setInterval(() => {
       kidTick += 1
-      pose.value = kilnKidPose(kidTick)
-      mood.value = kilnKidMood(kidTick)
-    }, 180)
+      pose.value = kilnKidPose(Math.floor(kidTick / 2))
+      mood.value = kilnKidMood(Math.floor(kidTick / 2))
+      flap.value = (kidTick % 2) as 0 | 1
+    }, 90)
   }
 })
 
@@ -66,7 +68,7 @@ onUnmounted(() => {
     <div class="firing-shade" aria-hidden="true" />
     <div class="firing-copy">
       <div class="firing-mascot">
-        <KilnKid :pose="pose" size="md" />
+        <KilnKid :pose="pose" :flap="flap" size="md" />
         <p class="firing-mood">{{ mood }}</p>
       </div>
       <p class="firing-kicker">煅烧</p>

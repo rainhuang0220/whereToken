@@ -114,7 +114,7 @@ func (h *scanHUD) paintLocked() {
 	if h.last.Total > 0 {
 		cap = fmt.Sprintf("%s  %d/%d", cap, h.last.Index, h.last.Total)
 	}
-	block := table.SpriteHUD(table.SpriteTick(elapsed), cap, h.last.Index, h.last.Total, h.ascii, h.color)
+	block := table.SpriteHUD(table.SpriteTick(elapsed), table.SpriteFlap(elapsed), cap, h.last.Index, h.last.Total, h.ascii, h.color)
 	if tip := kilnTip(elapsed, h.ascii); tip != "" {
 		if h.color {
 			tip = table.Dim("  "+tip, true)

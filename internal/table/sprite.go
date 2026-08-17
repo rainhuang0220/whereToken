@@ -36,6 +36,14 @@ func SpriteTick(elapsed time.Duration) int {
 	return int(elapsed/(180*time.Millisecond)) % poseCount
 }
 
+// SpriteFlap is the in-pose twitch (hand, beads, coal) every 90ms.
+func SpriteFlap(elapsed time.Duration) int {
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	return int(elapsed/(90*time.Millisecond)) % 2
+}
+
 func SpritePose(tick int) int {
 	return mod(tick, poseCount)
 }
@@ -76,7 +84,7 @@ func SpriteMood(tick int, ascii bool) string {
 
 // SpriteLines is a 4-line kiln kid. Caption sits on the first line; mood on the last.
 func SpriteLines(tick int, caption string, ascii bool) []string {
-	body := spriteFrame(tick, ascii)
+	body := spriteFrame(tick, 0, ascii)
 	out := make([]string, len(body))
 	copy(out, body)
 	if caption != "" {
@@ -90,12 +98,12 @@ func SpriteLines(tick int, caption string, ascii bool) []string {
 }
 
 func SpriteBlock(tick int, caption string, ascii, color bool) string {
-	return composeSprite(spriteFrame(tick, ascii), extrasFor(tick, caption, "", ascii), color)
+	return composeSprite(spriteFrame(tick, 0, ascii), extrasFor(tick, caption, "", ascii), color)
 }
 
-// SpriteHUD is the live scan scene: caption, charge bar, mood.
-func SpriteHUD(tick int, caption string, index, total int, ascii, color bool) string {
-	return composeSprite(spriteFrame(tick, ascii), extrasFor(tick, caption, ChargeBar(index, total, ascii), ascii), color)
+// SpriteHUD is the live scan scene: caption, charge bar, mood, in-pose flap.
+func SpriteHUD(tick, flap int, caption string, index, total int, ascii, color bool) string {
+	return composeSprite(spriteFrame(tick, flap, ascii), extrasFor(tick, caption, ChargeBar(index, total, ascii), ascii), color)
 }
 
 func ChargeBar(index, total int, ascii bool) string {
@@ -148,18 +156,26 @@ func composeSprite(body []string, extras []string, color bool) string {
 	return b.String()
 }
 
-func spriteFrame(tick int, ascii bool) []string {
+func spriteFrame(tick int, flap int, ascii bool) []string {
 	pose := SpritePose(tick)
 	if ascii {
-		return asciiFrame(pose)
+		return asciiFrame(pose, flap)
 	}
-	return unicodeFrame(pose)
+	return unicodeFrame(pose, flap)
 }
 
-func unicodeFrame(pose int) []string {
+func unicodeFrame(pose, flap int) []string {
 	// each row is spriteW cells; tuft ∩∩, pot feet ∪∪
 	switch pose {
 	case PoseScratch:
+		if flap%2 == 1 {
+			return []string{
+				"  ~∩∩  ",
+				" (•ᴗ•) ",
+				" /~| \\ ",
+				"  ∪∪   ",
+			}
+		}
 		return []string{
 			"  ∩∩~  ",
 			" (•ᴗ•) ",
@@ -167,6 +183,14 @@ func unicodeFrame(pose int) []string {
 			"  ∪∪   ",
 		}
 	case PoseAbacus:
+		if flap%2 == 1 {
+			return []string{
+				"  ∩∩   ",
+				" (•ᴗ•) ",
+				" /|≡≡\\ ",
+				"  ∪∪   ",
+			}
+		}
 		return []string{
 			"  ∩∩   ",
 			" (•ᴗ•) ",
@@ -174,6 +198,14 @@ func unicodeFrame(pose int) []string {
 			"  ∪∪   ",
 		}
 	case PoseToss:
+		if flap%2 == 1 {
+			return []string{
+				"  ∩*∩  ",
+				" (•ᴗ•) ",
+				" /|  \\ ",
+				"  ∪∪   ",
+			}
+		}
 		return []string{
 			"  ∩∩*  ",
 			" (•ᴗ•) ",
@@ -181,6 +213,14 @@ func unicodeFrame(pose int) []string {
 			"  ∪∪   ",
 		}
 	case PoseFire:
+		if flap%2 == 1 {
+			return []string{
+				"  ∩*∩  ",
+				" (✧ᴗ✧) ",
+				" /|∩|\\ ",
+				"  ∪∪   ",
+			}
+		}
 		return []string{
 			"  ∩∩   ",
 			" (✧ᴗ✧) ",
@@ -195,6 +235,14 @@ func unicodeFrame(pose int) []string {
 			"  ∪∪   ",
 		}
 	default: // grin
+		if flap%2 == 1 {
+			return []string{
+				"  ∩∩   ",
+				" (✧ᴗ✧) ",
+				" /|~|\\ ",
+				"  ∪∪   ",
+			}
+		}
 		return []string{
 			"  ∩∩   ",
 			" (✧ᴗ✧) ",
@@ -204,9 +252,17 @@ func unicodeFrame(pose int) []string {
 	}
 }
 
-func asciiFrame(pose int) []string {
+func asciiFrame(pose, flap int) []string {
 	switch pose {
 	case PoseScratch:
+		if flap%2 == 1 {
+			return []string{
+				"  ~/\\  ",
+				" (o_o) ",
+				" /~| \\ ",
+				"  \\_/  ",
+			}
+		}
 		return []string{
 			"  /~\\~ ",
 			" (o_o) ",
@@ -214,6 +270,14 @@ func asciiFrame(pose int) []string {
 			"  \\_/  ",
 		}
 	case PoseAbacus:
+		if flap%2 == 1 {
+			return []string{
+				"  /~\\  ",
+				" (o_o) ",
+				" /|##\\ ",
+				"  \\_/  ",
+			}
+		}
 		return []string{
 			"  /~\\  ",
 			" (o_o) ",
@@ -221,6 +285,14 @@ func asciiFrame(pose int) []string {
 			"  \\_/  ",
 		}
 	case PoseToss:
+		if flap%2 == 1 {
+			return []string{
+				"  /*\\  ",
+				" (o_o) ",
+				" /|  \\ ",
+				"  \\_/  ",
+			}
+		}
 		return []string{
 			"  /~\\* ",
 			" (o_o) ",
@@ -228,6 +300,14 @@ func asciiFrame(pose int) []string {
 			"  \\_/  ",
 		}
 	case PoseFire:
+		if flap%2 == 1 {
+			return []string{
+				"  /*\\  ",
+				" (^_^) ",
+				" /|n|\\ ",
+				"  \\_/  ",
+			}
+		}
 		return []string{
 			"  /~\\  ",
 			" (^_^) ",
@@ -242,6 +322,14 @@ func asciiFrame(pose int) []string {
 			"  \\_/  ",
 		}
 	default:
+		if flap%2 == 1 {
+			return []string{
+				"  /~\\  ",
+				" (^_^) ",
+				" /|~|\\ ",
+				"  \\_/  ",
+			}
+		}
 		return []string{
 			"  /~\\  ",
 			" (^_^) ",
