@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+## 0.2.0 — 2026-08-18
+
+The first-run character table. Same code as 0.1.2 plus a one-line install next-command.
+
+- After `curl | bash`, the only next command is the installed path (`~/.local/bin/wheretoken`)
+- KPI total is bold, hit rate is green/yellow/red, and the title uses kiln orange (TTY only; `NO_COLOR` still wins)
+- `install.sh` writes `~/.local/bin` into `~/.zshrc` so the next terminal finds `wheretoken`
+
 ## 0.1.2 — 2026-08-18
 
-Colored CLI table, first-run copy, and install PATH.
+Colored CLI table, first-run copy, and install PATH. Superseded the same day by 0.2.0.
 
 - KPI total is bold, hit rate is green/yellow/red, and the title uses kiln orange (TTY only; `NO_COLOR` still wins)
 - `install.sh` writes `~/.local/bin` into `~/.zshrc` so the next terminal finds `wheretoken`
