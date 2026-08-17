@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Claude Code JSONL without a top-level `requestId` still counts, keyed by `message.id` (current CLI logs). Rows with only a per-line `uuid` stay skipped so stream placeholders do not sum
 - Scan HUD is a 4-line kiln kid (tuft + face + pot) that fidgets on its own clock: scratch / abacus / toss / fire / blink / grin
 - Caption stays lemon, the mood (`挠头` / `拨算盘` / `投煤` / `煅烧`) is dim — not one flat wash
 - The HUD also draws a lemon charge bar and rotates a short kiln tip

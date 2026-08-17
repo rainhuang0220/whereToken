@@ -53,6 +53,7 @@ type claudeLine struct {
 	UUID      string `json:"uuid"`
 	Timestamp string `json:"timestamp"`
 	Message   struct {
+		ID      string          `json:"id"`
 		Model   string          `json:"model"`
 		Role    string          `json:"role"`
 		Content json.RawMessage `json:"content"`
@@ -91,7 +92,7 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 			if rec.Message.Usage == nil {
 				continue
 			}
-			req := rec.RequestID
+			req := claudeRequestID(rec)
 			if req == "" {
 				// uuid is unique per JSONL line; using it as RequestID
 				// would defeat mergeByRequest and sum stream placeholders.
@@ -119,6 +120,13 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 		}
 	}
 	return sc.Err()
+}
+
+func claudeRequestID(rec claudeLine) string {
+	if rec.RequestID != "" {
+		return rec.RequestID
+	}
+	return rec.Message.ID
 }
 
 func isUserTurn(content json.RawMessage) bool {

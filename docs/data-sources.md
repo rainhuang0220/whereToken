@@ -65,7 +65,7 @@
 | cache_create | `cache_creation_input_tokens` |
 | cache_read | `cache_read_input_tokens` |
 | output | `output_tokens`（已知可能偏小，见质量） |
-| requests | 按 `requestId` 去重后的 assistant 条数；无 requestId 则退回 `uuid` |
+| requests | 按 `requestId` 去重后的 assistant 条数；无 `requestId` 则用 `message.id`。不用每行唯一的 `uuid`（会把流式占位加成多次请求） |
 | user_turns | `type=user` 且 content **不是** `tool_result` |
 
 **本机原始求和（未按 requestId 去重，仅作量级）：**

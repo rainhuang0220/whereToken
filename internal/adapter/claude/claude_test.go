@@ -87,6 +87,38 @@ func TestNeverReadsSettingsJSON(t *testing.T) {
 	}
 }
 
+func TestParseUsesMessageIDWhenRequestIDMissing(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, "projects", "x")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Current Claude Code JSONL: no top-level requestId. Stream chunks share message.id.
+	body := `{"type":"assistant","uuid":"u1","message":{"id":"msg_1","model":"claude-opus-4.6","usage":{"input_tokens":0,"output_tokens":1,"cache_read_input_tokens":9000,"cache_creation_input_tokens":0}}}
+{"type":"assistant","uuid":"u2","message":{"id":"msg_1","model":"claude-opus-4.6","usage":{"input_tokens":10,"output_tokens":4,"cache_read_input_tokens":9000,"cache_creation_input_tokens":0}}}
+{"type":"assistant","uuid":"u3","message":{"id":"msg_2","model":"MiniMax-M3","usage":{"input_tokens":20,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}
+`
+	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 3 {
+		t.Fatalf("events=%d", len(evs))
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Requests != 2 {
+		t.Fatalf("requests=%d want 2 (merge by message.id)", sum.All.Requests)
+	}
+	if sum.All.Miss != 30 || sum.All.Output != 9 || sum.All.CacheRead != 9000 {
+		t.Fatalf("must take max per message.id, not sum stream rows: %+v", sum.All)
+	}
+}
+
 func TestParseSkipsAssistantRowsWithoutRequestID(t *testing.T) {
 	dir := t.TempDir()
 	proj := filepath.Join(dir, "projects", "x")
