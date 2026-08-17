@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.2 — 2026-08-18
+
+Colored CLI table, first-run copy, and install PATH.
+
 - KPI total is bold, hit rate is green/yellow/red, and the title uses kiln orange (TTY only; `NO_COLOR` still wins)
 - `install.sh` writes `~/.local/bin` into `~/.zshrc` so the next terminal finds `wheretoken`
 - Trae account fetch overlaps session requests (8 at a time) and gives up after 30s instead of walking 500 × 20s
