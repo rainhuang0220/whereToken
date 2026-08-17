@@ -88,7 +88,7 @@ func PaintHit(text string, color bool) string {
 	case pct >= 70:
 		return "\x1b[32m" + text + "\x1b[0m"
 	case pct >= 40:
-		return "\x1b[33m" + text + "\x1b[0m"
+		return Lemon(text, true)
 	default:
 		return "\x1b[31m" + text + "\x1b[0m"
 	}

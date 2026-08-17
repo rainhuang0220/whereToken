@@ -4,6 +4,7 @@
 
 - Scan progress draws a 2-line kiln kid (scratch / abacus / toss) in lemon yellow; `--ascii` uses `(o_o)`
 - Title color is lemon `228`, not Claude-orange `208`
+- An empty home puts the kid above the zero table: 窑里还是冷的
 
 ## 0.2.0 — 2026-08-18
 

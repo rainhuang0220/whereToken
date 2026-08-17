@@ -28,6 +28,9 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteString(spark)
 		b.WriteByte('\n')
 	}
+	if isColdKiln(snap) {
+		b.WriteString(table.SpriteBlock(4, "窑里还是冷的", opt.ASCII, opt.Color))
+	}
 	b.WriteByte('\n')
 	b.WriteString(table.FitKPIBox(kpiCells(snap, opt.Color), style, opt.Width))
 	leg := legend(opt.Width)
@@ -137,7 +140,7 @@ func sparkLine(snap Snapshot, ascii, color bool) string {
 	if ascii {
 		label = "7d  "
 	}
-	return table.Dim(label, color) + bar
+	return table.Dim(label, color) + table.Lemon(bar, color)
 }
 
 func legend(width int) string {
@@ -182,6 +185,18 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		out += fmt.Sprintf("+ %d 行\n", len(rows)-capN)
 	}
 	return out
+}
+
+func isColdKiln(snap Snapshot) bool {
+	if snap.Total != 0 || snap.Requests != 0 || snap.UserTurns != 0 {
+		return false
+	}
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "本机没有找到账本") {
+			return true
+		}
+	}
+	return len(snap.Tools) == 0 && len(snap.Vendors) == 0
 }
 
 func anyPositiveTotal(rows []Row) bool {

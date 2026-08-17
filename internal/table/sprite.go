@@ -57,12 +57,12 @@ func spriteFrame(tick int, ascii bool) []string {
 	}
 	// kiln kid: scratch, abacus, toss-in-kiln, grin
 	frames := [][]string{
-		{" (•ᴗ•) ", " /|~|\\ "},
-		{" (•ᴗ•) ", " /|≡|\\ "},
-		{" (•ᴗ•) ", " /|*|\\ "},
-		{" (•ω•) ", " /|≡|\\ "},
-		{" (•ᴗ•) ", " /|~|\\ "},
-		{" (✧ᴗ✧) ", " /| |\\ "},
+		{" (•ᴗ•) ", " /|~|\\ "}, // scratch
+		{" (•ᴗ•) ", " /|≡|\\ "}, // abacus
+		{" (•ᴗ•) ", " /|*|\\ "}, // coal in
+		{" (•ᴗ•) ", " /|∩|\\ "}, // kiln mouth
+		{" (•-•) ", " /|~|\\ "},
+		{" (✧ᴗ✧) ", " /| |\\ "}, // grin
 	}
 	return frames[mod(tick, len(frames))]
 }

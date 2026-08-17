@@ -186,6 +186,9 @@ func TestRenderZeroData(t *testing.T) {
 	if !strings.Contains(out, "本机没有找到账本") {
 		t.Fatalf("empty home should explain itself:\n%s", out)
 	}
+	if !strings.Contains(out, "窑里还是冷的") {
+		t.Fatalf("empty home should show the cold-kiln kid:\n%s", out)
+	}
 }
 
 func TestRenderEmptyHomeFitsNarrowWidth(t *testing.T) {
