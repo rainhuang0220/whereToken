@@ -107,9 +107,8 @@ finish() {
   echo "wheretoken: installed ${BIN_DIR}/wheretoken" >&2
   if ! path_has "$BIN_DIR"; then
     remember_path "$BIN_DIR"
-    echo "export PATH=\"${BIN_DIR}:\$PATH\"" >&2
   fi
-  echo "next: wheretoken" >&2
+  echo "${BIN_DIR}/wheretoken" >&2
   "${BIN_DIR}/wheretoken" --version >&2 || true
 }
 

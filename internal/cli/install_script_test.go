@@ -38,7 +38,7 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		"export PATH=",
 		"$HOME/.local/bin",
 		"/usr/local/bin",
-		"next: wheretoken",
+		"${BIN_DIR}/wheretoken",
 		".zshrc",
 	} {
 		if !strings.Contains(s, want) {
@@ -457,14 +457,11 @@ func TestInstallShDownloadsVerifiedRelease(t *testing.T) {
 	if st.Mode()&0o111 == 0 {
 		t.Fatalf("binary not executable: %v", st.Mode())
 	}
-	if !strings.Contains(got, "export PATH=") {
-		t.Fatalf("expected one PATH line when prefix/bin is not on PATH:\n%s", got)
+	if !strings.Contains(got, bin) {
+		t.Fatalf("should print the one command that runs the binary:\n%s", got)
 	}
-	if strings.Count(got, "export PATH=") > 1 {
-		t.Fatalf("PATH hint should be one line:\n%s", got)
-	}
-	if !strings.Contains(got, "next: wheretoken") {
-		t.Fatalf("should tell the user to run wheretoken next:\n%s", got)
+	if strings.Contains(got, "next: wheretoken") {
+		t.Fatalf("do not ask for a second PATH step:\n%s", got)
 	}
 	rc, err := os.ReadFile(filepath.Join(home, ".zshrc"))
 	if err != nil {
