@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatCount } from '../format'
+import { formatCount, hitBand } from '../format'
 import type { SliceView } from '../types'
 
 defineProps<{ all: SliceView }>()
@@ -11,7 +11,7 @@ defineProps<{ all: SliceView }>()
       <span class="read-k">合计</span>
       <strong>{{ all.total_m }}</strong>
     </div>
-    <div class="read-cell">
+    <div class="read-cell" :data-hit="hitBand(all.hit_rate_text)">
       <span class="read-k">命中率</span>
       <strong>{{ all.hit_rate_text }}</strong>
     </div>

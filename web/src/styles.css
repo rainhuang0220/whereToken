@@ -67,6 +67,20 @@ body {
   padding: 1.6rem 1.4rem 4.5rem;
 }
 
+.forge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    color-mix(in srgb, var(--ash) 18%, var(--void)) 4px
+  );
+}
+
 .rail {
   display: flex;
   justify-content: space-between;
@@ -81,6 +95,31 @@ body {
   align-items: flex-end;
   gap: 0.55rem;
   min-width: 0;
+}
+
+.rail-name {
+  min-width: 0;
+}
+
+.whisper {
+  margin: 0.28rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.status-line {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.status-dot {
+  margin: 0 0.35rem;
+  color: var(--copper);
 }
 
 .rail-brand .kiln-kid {
@@ -114,7 +153,8 @@ h1 {
   gap: 0.4rem;
 }
 
-.when {
+.when,
+.status-line {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -168,6 +208,57 @@ h1 {
 .err {
   color: var(--warn);
   font-size: 0.88rem;
+}
+
+.cold-kiln {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
+  margin: 1.1rem 0 0.35rem;
+  padding: 0.35rem 0 1.1rem;
+  border-bottom: 1px solid var(--copper);
+}
+
+.cold-kicker {
+  margin: 0 0 0.28rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ember-4);
+}
+
+.cold-copy {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--bone);
+  line-height: 1.45;
+}
+
+.kiln-mouth {
+  margin: 0.85rem 0 0;
+}
+
+.kiln-mouth summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ash);
+  list-style: none;
+}
+
+.kiln-mouth summary::-webkit-details-marker {
+  display: none;
+}
+
+.kiln-mouth[open] summary {
+  color: var(--ember-4);
+}
+
+.kiln-mouth .note {
+  margin: 0.45rem 0 0;
 }
 
 .damper {
@@ -245,9 +336,25 @@ h1 {
   position: relative;
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.85rem 1.1rem;
+  padding: 0.7rem 0.75rem 1.1rem;
+}
+
+.firing-words {
+  flex: 1 1 12rem;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
-  gap: 0.28rem;
-  padding: 0.7rem 0.75rem 1.7rem;
+  gap: 0.22rem;
+}
+
+.firing-tip {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
 }
 
 .firing-kicker {
@@ -664,6 +771,30 @@ h1 {
 .read-lead strong {
   font-size: 2rem;
   color: var(--ember-4);
+}
+
+.read-cell[data-hit='hi'] strong {
+  color: var(--ember-4);
+}
+
+.read-cell[data-hit='mid'] strong {
+  color: var(--copper);
+}
+
+.read-cell[data-hit='lo'] strong {
+  color: var(--warn);
+}
+
+td[data-hit='hi'] {
+  color: var(--ember-4);
+}
+
+td[data-hit='mid'] {
+  color: var(--copper);
+}
+
+td[data-hit='lo'] {
+  color: var(--warn);
 }
 
 .split {

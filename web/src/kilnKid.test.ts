@@ -5,6 +5,8 @@ import {
   kilnKidMood,
   kilnKidPose,
   kilnKidPoses,
+  kilnTipAt,
+  kilnTips,
 } from './kilnKid'
 
 describe('kilnKid', () => {
@@ -28,6 +30,12 @@ describe('kilnKid', () => {
     expect(kilnKidMood(1)).toBe('拨算盘')
     expect(kilnKidMood(2)).toBe('投煤')
     expect(kilnKidMood(3)).toBe('煅烧')
+  })
+
+  it('rotates kiln tips', () => {
+    expect(kilnTipAt(0)).toBe(kilnTips[0])
+    expect(kilnTipAt(kilnTips.length)).toBe(kilnTips[0])
+    expect(kilnTipAt(1)).not.toBe(kilnTipAt(0))
   })
 
   it('keeps a tuft and a pot on every frame', () => {

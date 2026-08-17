@@ -10,6 +10,7 @@ import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
 import { formatCount } from '../format'
 import {
+  collectKilnMouth,
   observatoryCursorWindowHint,
   observatoryDegradedLines,
   observatoryEmptyHint,
@@ -83,6 +84,25 @@ const summaryText = computed(() => {
   return `过去 53 周有 ${litDays.value} 天烧过 token，峰值 ${s.peak_date || '—'} ${s.peak_total_m}，当前连烧 ${s.current_streak} 天，最长 ${s.longest_streak} 天。`
 })
 
+const mouthLines = computed(() =>
+  collectKilnMouth({
+    offlineBanner: offlineBanner.value,
+    cursorWindowHint: cursorWindowHint.value,
+    claudeDegraded: claudeDegraded.value,
+    cursorAbsent: cursorAbsent.value,
+    traeAbsent: traeAbsent.value,
+    degradedLines: degradedLines.value,
+    loginHint: loginHint.value,
+  }),
+)
+
+const statusKind = computed(() => {
+  if (emptyHint.value) return '空窑'
+  if (!payload.value) return '未煅烧'
+  if (payload.value.offline) return 'offline'
+  return '本机账本'
+})
+
 onMounted(() => {
   void store.hydrate()
 })
@@ -93,10 +113,17 @@ onMounted(() => {
     <header class="rail">
       <div class="rail-brand">
         <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
-        <h1>whereToken</h1>
+        <div class="rail-name">
+          <h1>whereToken</h1>
+          <p class="whisper">本机 token 窑</p>
+        </div>
       </div>
       <div class="rail-meta">
-        <p class="when">{{ store.scannedAt || '尚未扫描' }}</p>
+        <p class="status-line">
+          <span>{{ store.scannedAt || '尚未扫描' }}</span>
+          <span class="status-dot" aria-hidden="true">·</span>
+          <span>{{ statusKind }}</span>
+        </p>
         <div class="rail-actions">
           <router-link class="lever" to="/themes">主题</router-link>
           <button
@@ -115,14 +142,19 @@ onMounted(() => {
 
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
-    <p v-if="offlineBanner" class="note">{{ offlineBanner }}</p>
-    <p v-if="emptyHint" class="note">{{ emptyHint }}</p>
-    <p v-if="cursorWindowHint" class="note">{{ cursorWindowHint }}</p>
-    <p v-if="claudeDegraded" class="note">Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。</p>
-    <p v-if="cursorAbsent" class="note">检测到 Cursor 目录，但没有可读的 state.vscdb 账本。</p>
-    <p v-if="traeAbsent" class="note">检测到 Trae 目录，但没有可读的用量账本。</p>
-    <p v-for="line in degradedLines" :key="line" class="note">{{ line }}</p>
-    <p v-if="loginHint" class="note">{{ loginHint }}</p>
+
+    <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
+      <KilnKid pose="blink" size="md" />
+      <div>
+        <p class="cold-kicker">窑里还是冷的</p>
+        <p class="cold-copy">{{ emptyHint }}</p>
+      </div>
+    </section>
+
+    <details v-if="mouthLines.length" class="kiln-mouth">
+      <summary>窑口 · {{ mouthLines.length }}</summary>
+      <p v-for="line in mouthLines" :key="line" class="note">{{ line }}</p>
+    </details>
 
     <AxisDamper
       v-if="payload"

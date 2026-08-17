@@ -13,6 +13,16 @@ export function formatCount(n: number): string {
   return neg ? `-${grouped}` : grouped
 }
 
+export function hitBand(text: string): 'hi' | 'mid' | 'lo' | 'none' {
+  const raw = text.trim()
+  if (!raw || raw === '—') return 'none'
+  const pct = Number.parseFloat(raw)
+  if (!Number.isFinite(pct)) return 'none'
+  if (pct >= 70) return 'hi'
+  if (pct >= 40) return 'mid'
+  return 'lo'
+}
+
 export function columnsFrom(view: SliceView): string[] {
   return [
     view.miss_m,

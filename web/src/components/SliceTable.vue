@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom, formatCount } from '../format'
+import { columnsFrom, formatCount, hitBand } from '../format'
 import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
 import type { SliceView } from '../types'
 
@@ -57,7 +57,14 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
               降级<span v-if="row.error"> · {{ row.error }}</span>
             </span>
           </td>
-          <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
+          <td
+            v-for="(cell, i) in columnsFrom(row)"
+            :key="i"
+            class="num"
+            :data-hit="i === 5 ? hitBand(row.hit_rate_text) : undefined"
+          >
+            {{ cell }}
+          </td>
           <td class="num">{{ formatCount(row.requests) }}</td>
           <td v-if="props.showTurns" class="num">{{ formatCount(row.user_turns) }}</td>
         </tr>

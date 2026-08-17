@@ -42,6 +42,30 @@ export function observatoryEmptyHint(
   return '本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。'
 }
 
+export function collectKilnMouth(input: {
+  offlineBanner?: string
+  cursorWindowHint?: string
+  claudeDegraded?: boolean
+  cursorAbsent?: boolean
+  traeAbsent?: boolean
+  degradedLines?: string[]
+  loginHint?: string
+}): string[] {
+  const out: string[] = []
+  if (input.offlineBanner) out.push(input.offlineBanner)
+  if (input.cursorWindowHint) out.push(input.cursorWindowHint)
+  if (input.claudeDegraded) {
+    out.push('Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。')
+  }
+  if (input.cursorAbsent) out.push('检测到 Cursor 目录，但没有可读的 state.vscdb 账本。')
+  if (input.traeAbsent) out.push('检测到 Trae 目录，但没有可读的用量账本。')
+  for (const line of input.degradedLines ?? []) {
+    if (line) out.push(line)
+  }
+  if (input.loginHint) out.push(input.loginHint)
+  return out
+}
+
 export function observatoryDegradedLines(
   payload: Pick<SummaryPayload, 'by_source' | 'by_vendor'>,
 ): string[] {

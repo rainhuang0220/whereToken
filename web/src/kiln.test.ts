@@ -107,11 +107,16 @@ describe('firing observatory', () => {
     expect(home).toMatch(/<KilnWall/)
     expect(home).toMatch(/KilnKid/)
     expect(home).toMatch(/rail-brand/)
+    expect(home).toMatch(/status-line/)
+    expect(home).toMatch(/whisper/)
+    expect(home).toMatch(/cold-kiln/)
+    expect(home).toMatch(/kiln-mouth/)
     const veil = readFileSync(join(SRC, 'components/FiringVeil.vue'), 'utf8')
     expect(veil).toMatch(/aria-live="polite"/)
     expect(veil).toMatch(/class="firing-veil"/)
     expect(veil).toMatch(/KilnKid/)
     expect(veil).toMatch(/firing-mood/)
+    expect(veil).toMatch(/firing-tip/)
   })
 
   it('keeps the kiln in the hearth and charges with theme embers, static under reduced motion', () => {

@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { chargeAmount, type ScanProgress } from '../firing'
 import { tweenCharge, tweenVeil } from '../firingMotion'
-import { kilnKidMood, kilnKidPose, type KilnKidPose } from '../kilnKid'
+import { kilnKidMood, kilnKidPose, kilnTipAt, type KilnKidPose } from '../kilnKid'
 import { prefersReducedMotion } from '../themes/galleryMotion'
 import KilnKid from './KilnKid.vue'
 
@@ -16,6 +16,7 @@ const bar = ref<HTMLElement | null>(null)
 const pose = ref<KilnKidPose>(kilnKidPose(0))
 const mood = ref(kilnKidMood(0))
 const flap = ref<0 | 1>(0)
+const tip = ref(kilnTipAt(0))
 let ctx: gsap.Context | undefined
 let kidTimer: number | undefined
 let kidTick = 0
@@ -41,6 +42,7 @@ onMounted(() => {
       pose.value = kilnKidPose(Math.floor(kidTick / 2))
       mood.value = kilnKidMood(Math.floor(kidTick / 2))
       flap.value = (kidTick % 2) as 0 | 1
+      tip.value = kilnTipAt(Math.floor(kidTick / 22))
     }, 90)
   }
 })
@@ -71,10 +73,13 @@ onUnmounted(() => {
         <KilnKid :pose="pose" :flap="flap" size="md" />
         <p class="firing-mood">{{ mood }}</p>
       </div>
-      <p class="firing-kicker">煅烧</p>
-      <p class="firing-step">{{ progress?.label || '正在读本机账本…' }}</p>
-      <div class="firing-track" aria-hidden="true">
-        <i ref="bar" class="firing-charge" />
+      <div class="firing-words">
+        <p class="firing-kicker">煅烧</p>
+        <p class="firing-step">{{ progress?.label || '正在读本机账本…' }}</p>
+        <p class="firing-tip">{{ tip }}</p>
+        <div class="firing-track" aria-hidden="true">
+          <i ref="bar" class="firing-charge" />
+        </div>
       </div>
     </div>
   </div>

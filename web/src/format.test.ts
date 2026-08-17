@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, formatCount } from './format'
+import { columnsFrom, formatCount, hitBand } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -31,6 +31,16 @@ describe('columnsFrom', () => {
       '0.0012 M',
       '85.1%',
     ])
+  })
+})
+
+describe('hitBand', () => {
+  it('matches the CLI green / lemon / red bands', () => {
+    expect(hitBand('—')).toBe('none')
+    expect(hitBand('89.9%')).toBe('hi')
+    expect(hitBand('70.0%')).toBe('hi')
+    expect(hitBand('50.0%')).toBe('mid')
+    expect(hitBand('10.0%')).toBe('lo')
   })
 })
 

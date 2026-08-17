@@ -32,3 +32,16 @@ export function kilnKidFrame(tick: number): string {
 export function kilnKidMood(tick: number): string {
   return kilnKidMoods[kilnKidPose(tick)]
 }
+
+export const kilnTips = [
+  '煤要一块一块加',
+  '算盘拨一下，账就清一点',
+  '空窑也要守着',
+  '命中率不含输出',
+  'Cursor / Trae 的云账要等一会儿',
+] as const
+
+export function kilnTipAt(tick: number): string {
+  const n = kilnTips.length
+  return kilnTips[((tick % n) + n) % n]
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  collectKilnMouth,
   observatoryCursorWindowHint,
   observatoryDegradedLines,
   observatoryEmptyHint,
@@ -123,6 +124,26 @@ describe('observatoryHasDrill', () => {
   it('hides empty drill ledgers', () => {
     expect(observatoryHasDrill({ models: [], workspaces: [], sessions: [] })).toBe(false)
     expect(observatoryHasDrill({ models: [row({ id: 'k3', label: 'k3' })], workspaces: [], sessions: [] })).toBe(true)
+  })
+})
+
+describe('collectKilnMouth', () => {
+  it('keeps footnotes out of the hero and in one list', () => {
+    expect(
+      collectKilnMouth({
+        offlineBanner: 'offline · 只用本机账本，没有请求 Cursor/Trae 云端',
+        claudeDegraded: true,
+        loginHint: 'Trae 需要 IDE 已登录。登录后点「刷新」重新煅烧本机账本；浏览器重载只会显示上次结果。',
+      }),
+    ).toEqual([
+      'offline · 只用本机账本，没有请求 Cursor/Trae 云端',
+      'Claude Code 日志为降级质量：同一请求取最大值，输入/输出可能偏低。',
+      'Trae 需要 IDE 已登录。登录后点「刷新」重新煅烧本机账本；浏览器重载只会显示上次结果。',
+    ])
+  })
+
+  it('drops empty slots', () => {
+    expect(collectKilnMouth({})).toEqual([])
   })
 })
 
