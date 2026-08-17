@@ -90,24 +90,51 @@ func SpriteLines(tick int, caption string, ascii bool) []string {
 }
 
 func SpriteBlock(tick int, caption string, ascii, color bool) string {
-	body := spriteFrame(tick, ascii)
+	return composeSprite(spriteFrame(tick, ascii), extrasFor(tick, caption, "", ascii), color)
+}
+
+// SpriteHUD is the live scan scene: caption, charge bar, mood.
+func SpriteHUD(tick int, caption string, index, total int, ascii, color bool) string {
+	return composeSprite(spriteFrame(tick, ascii), extrasFor(tick, caption, ChargeBar(index, total, ascii), ascii), color)
+}
+
+func ChargeBar(index, total int, ascii bool) string {
+	const w = 8
+	if total <= 0 {
+		return ""
+	}
+	n := index * w / total
+	if n < 0 {
+		n = 0
+	}
+	if n > w {
+		n = w
+	}
+	if ascii {
+		return "[" + strings.Repeat("=", n) + strings.Repeat("-", w-n) + "]"
+	}
+	return strings.Repeat("▰", n) + strings.Repeat("▱", w-n)
+}
+
+func extrasFor(tick int, caption, bar string, ascii bool) []string {
 	mood := SpriteMood(tick, ascii)
+	return []string{caption, bar, "", mood}
+}
+
+func composeSprite(body []string, extras []string, color bool) string {
 	var b strings.Builder
 	for i, row := range body {
 		extra := ""
+		if i < len(extras) && extras[i] != "" {
+			extra = spriteGap + extras[i]
+		}
 		paint := Lemon
-		if i == 0 && caption != "" {
-			extra = spriteGap + caption
-			if color {
+		if color {
+			if i == 0 {
 				paint = Ember
-			}
-		} else if i == len(body)-1 && mood != "" {
-			extra = spriteGap + mood
-			if color {
+			} else {
 				paint = Dim
 			}
-		}
-		if color {
 			b.WriteString(Lemon(row, true))
 			if extra != "" {
 				b.WriteString(paint(extra, true))

@@ -180,6 +180,11 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		}
 		body = append(body, line)
 	}
+	if color {
+		for i, h := range headers {
+			headers[i] = table.Lemon(h, true)
+		}
+	}
 	out := table.FitRankedTable(headers, body, align, style, maxWidth)
 	if len(rows) > capN {
 		out += fmt.Sprintf("+ %d 行\n", len(rows)-capN)

@@ -105,3 +105,37 @@ func TestSpritePoseWraps(t *testing.T) {
 		t.Fatal(SpritePose(-1))
 	}
 }
+
+func TestChargeBarFills(t *testing.T) {
+	if ChargeBar(0, 0, false) != "" {
+		t.Fatal("empty total")
+	}
+	got := ChargeBar(3, 6, false)
+	if DisplayWidth(got) != 8 {
+		t.Fatalf("width %d %q", DisplayWidth(got), got)
+	}
+	if strings.Count(got, "▰") != 4 || strings.Count(got, "▱") != 4 {
+		t.Fatalf("%q", got)
+	}
+	ascii := ChargeBar(2, 8, true)
+	if ascii != "[==------]" {
+		t.Fatal(ascii)
+	}
+}
+
+func TestSpriteHUDPutsBarOnSecondLine(t *testing.T) {
+	block := SpriteHUD(PoseAbacus, "正在读 Codex…  2/6", 2, 6, false, false)
+	lines := strings.Split(strings.TrimSuffix(block, "\n"), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("%#v", lines)
+	}
+	if !strings.Contains(lines[0], "正在读 Codex") {
+		t.Fatalf("caption: %q", lines[0])
+	}
+	if !strings.Contains(lines[1], "▰") {
+		t.Fatalf("bar: %q", lines[1])
+	}
+	if !strings.Contains(lines[3], "拨算盘") {
+		t.Fatalf("mood: %q", lines[3])
+	}
+}

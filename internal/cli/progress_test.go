@@ -105,6 +105,30 @@ func TestScanHUDTickerAdvancesPose(t *testing.T) {
 	h.Clear()
 }
 
+func TestKilnTipRotates(t *testing.T) {
+	a := kilnTip(0, false)
+	b := kilnTip(2*time.Second, false)
+	if a == "" || a == b {
+		t.Fatalf("tips should rotate: %q %q", a, b)
+	}
+	if kilnTip(0, true) == a {
+		t.Fatal("ascii tips should differ")
+	}
+}
+
+func TestScanHUDShowsChargeBar(t *testing.T) {
+	var buf bytes.Buffer
+	h := &scanHUD{w: &buf, now: func() time.Time { return time.Unix(0, 0) }}
+	h.Show(scan.Progress{Label: "正在读 Codex…", Index: 3, Total: 6, Status: scan.ProgressReading})
+	if !strings.Contains(buf.String(), "▰") {
+		t.Fatalf("missing bar:\n%s", buf.String())
+	}
+	if !strings.Contains(buf.String(), "煤要一块一块加") {
+		t.Fatalf("missing tip:\n%s", buf.String())
+	}
+	h.Clear()
+}
+
 func TestScanHUDClearIsIdempotent(t *testing.T) {
 	var buf bytes.Buffer
 	h := &scanHUD{w: &buf}

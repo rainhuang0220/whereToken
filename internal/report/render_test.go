@@ -234,6 +234,12 @@ func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
 	if strings.Count(color, "\x1b") < 3 {
 		t.Fatalf("expected title + values painted:\n%s", color)
 	}
+	if !strings.Contains(color, "38;5;228") {
+		t.Fatalf("headers/title should be lemon 228:\n%s", color)
+	}
+	if strings.Contains(color, "38;5;208") {
+		t.Fatal("must not use Claude orange 208")
+	}
 }
 
 func TestRenderDimsNotesOnlyWhenColor(t *testing.T) {

@@ -4,6 +4,8 @@
 
 - Scan HUD is a 4-line kiln kid (tuft + face + pot) that fidgets on its own clock: scratch / abacus / toss / fire / blink / grin
 - Caption stays lemon, the mood (`挠头` / `拨算盘` / `投煤` / `煅烧`) is dim — not one flat wash
+- The HUD also draws a lemon charge bar and rotates a short kiln tip
+- Ranked table headers use lemon `228`
 - `--ascii` keeps `(o_o)` / `(^_^)` and English moods
 - Title color is lemon `228`, not Claude-orange `208`
 - An empty home puts the blinking kid above the zero table: 窑里还是冷的
