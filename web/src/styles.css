@@ -76,6 +76,18 @@ body {
   padding-bottom: 0.85rem;
 }
 
+.rail-brand {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.rail-brand .kiln-kid {
+  flex: 0 0 auto;
+  margin-bottom: 0.15rem;
+}
+
 h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -274,6 +286,162 @@ h1 {
   transform: scaleX(0);
   transform-origin: left center;
   will-change: transform;
+}
+
+.firing-mascot {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  margin-bottom: 0.15rem;
+}
+
+.firing-mood {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.kiln-kid {
+  display: block;
+  overflow: visible;
+  color: var(--ember-4);
+}
+
+.kiln-kid.is-sm {
+  width: 2.6rem;
+  height: 3.15rem;
+}
+
+.kiln-kid.is-md {
+  width: 4.4rem;
+  height: 5.35rem;
+}
+
+.kiln-kid .kid-glow ellipse {
+  fill: var(--ember-3);
+  opacity: 0.28;
+}
+
+.kiln-kid .kid-pot {
+  fill: color-mix(in srgb, var(--ember-3) 55%, var(--void));
+  stroke: var(--ember-4);
+  stroke-width: 1.6;
+}
+
+.kiln-kid .kid-rim {
+  fill: none;
+  stroke: var(--ember-4);
+  stroke-width: 1.4;
+  opacity: 0.55;
+}
+
+.kiln-kid .kid-face {
+  fill: color-mix(in srgb, var(--ember-4) 88%, var(--hi));
+  stroke: var(--ember-3);
+  stroke-width: 1.2;
+}
+
+.kiln-kid .kid-tuft path {
+  fill: none;
+  stroke: var(--ember-4);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.kiln-kid .kid-eye {
+  fill: var(--lo);
+}
+
+.kiln-kid .kid-mouth {
+  fill: none;
+  stroke: var(--lo);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.kiln-kid .kid-arm {
+  fill: none;
+  stroke: var(--ember-4);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform-origin: 32px 42px;
+}
+
+.kiln-kid .kid-abacus {
+  fill: color-mix(in srgb, var(--ember-4) 35%, var(--void));
+  stroke: var(--ember-4);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+.kiln-kid .kid-abacus circle {
+  fill: var(--ember-4);
+  stroke: none;
+}
+
+.kiln-kid .kid-coal {
+  fill: var(--ember-3);
+  opacity: 0;
+}
+
+.kiln-kid.pose-scratch .kid-arm.r {
+  transform: rotate(-48deg) translate(2px, -8px);
+}
+
+.kiln-kid.pose-abacus .kid-abacus {
+  opacity: 1;
+}
+
+.kiln-kid.pose-abacus .kid-arm.l {
+  transform: rotate(18deg);
+}
+
+.kiln-kid.pose-abacus .kid-arm.r {
+  transform: rotate(-18deg);
+}
+
+.kiln-kid.pose-toss .kid-coal {
+  opacity: 1;
+  transform: translate(2px, -6px);
+}
+
+.kiln-kid.pose-toss .kid-arm.r {
+  transform: rotate(-70deg) translate(4px, -10px);
+}
+
+.kiln-kid.pose-fire .kid-pot {
+  fill: color-mix(in srgb, var(--ember-3) 72%, var(--ember-4));
+}
+
+.kiln-kid.pose-fire .kid-glow ellipse {
+  opacity: 0.55;
+}
+
+.kiln-kid.pose-fire .kid-mouth {
+  d: path('M25 34q7 8 14 0');
+}
+
+.kiln-kid.pose-blink .kid-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0.18);
+}
+
+.kiln-kid.pose-grin .kid-mouth {
+  d: path('M25 34q7 8 14 0');
+}
+
+.firing-veil .kiln-kid .kid-body {
+  transform-origin: 32px 70px;
+  animation: kid-bob 0.72s ease-in-out infinite;
+}
+
+.rail-brand .kiln-kid .kid-body {
+  transform-origin: 32px 70px;
+  animation: kid-idle 2.4s ease-in-out infinite;
 }
 
 .lever.busy {
@@ -1045,6 +1213,29 @@ body:has(.glaze-hall.is-open) {
   }
 }
 
+@keyframes kid-bob {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(0, -3px);
+  }
+}
+
+@keyframes kid-idle {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  40% {
+    transform: translate(0, -2px) rotate(-2deg);
+  }
+  70% {
+    transform: translate(0, 1px) rotate(2deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .firing-charge {
     transition: none;
@@ -1060,5 +1251,10 @@ body:has(.glaze-hall.is-open) {
 
   .glaze-slab:hover:not(.hero):not(.gone) {
     transform: none;
+  }
+
+  .firing-veil .kiln-kid .kid-body,
+  .rail-brand .kiln-kid .kid-body {
+    animation: none;
   }
 }

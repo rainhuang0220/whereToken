@@ -3,7 +3,9 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { chargeAmount, type ScanProgress } from '../firing'
 import { tweenCharge, tweenVeil } from '../firingMotion'
+import { kilnKidMood, kilnKidPose, type KilnKidPose } from '../kilnKid'
 import { prefersReducedMotion } from '../themes/galleryMotion'
+import KilnKid from './KilnKid.vue'
 
 const props = defineProps<{
   progress: ScanProgress | null
@@ -11,7 +13,11 @@ const props = defineProps<{
 
 const root = ref<HTMLElement | null>(null)
 const bar = ref<HTMLElement | null>(null)
+const pose = ref<KilnKidPose>(kilnKidPose(0))
+const mood = ref(kilnKidMood(0))
 let ctx: gsap.Context | undefined
+let kidTimer: number | undefined
+let kidTick = 0
 
 function reduced() {
   return prefersReducedMotion()
@@ -28,6 +34,13 @@ onMounted(() => {
     if (root.value) tweenVeil(root.value, true, reduced())
     paintCharge()
   }, root.value)
+  if (!reduced()) {
+    kidTimer = window.setInterval(() => {
+      kidTick += 1
+      pose.value = kilnKidPose(kidTick)
+      mood.value = kilnKidMood(kidTick)
+    }, 180)
+  }
 })
 
 watch(
@@ -37,6 +50,7 @@ watch(
 )
 
 onUnmounted(() => {
+  if (kidTimer !== undefined) window.clearInterval(kidTimer)
   ctx?.revert()
 })
 </script>
@@ -51,6 +65,10 @@ onUnmounted(() => {
   >
     <div class="firing-shade" aria-hidden="true" />
     <div class="firing-copy">
+      <div class="firing-mascot">
+        <KilnKid :pose="pose" size="md" />
+        <p class="firing-mood">{{ mood }}</p>
+      </div>
       <p class="firing-kicker">煅烧</p>
       <p class="firing-step">{{ progress?.label || '正在读本机账本…' }}</p>
       <div class="firing-track" aria-hidden="true">

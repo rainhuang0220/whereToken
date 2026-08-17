@@ -4,6 +4,7 @@ import AxisDamper from '../components/AxisDamper.vue'
 import DrillPanel from '../components/DrillPanel.vue'
 import FiringVeil from '../components/FiringVeil.vue'
 import FoundryMarks from '../components/FoundryMarks.vue'
+import KilnKid from '../components/KilnKid.vue'
 import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
@@ -90,7 +91,10 @@ onMounted(() => {
 <template>
   <div class="forge">
     <header class="rail">
-      <h1>whereToken</h1>
+      <div class="rail-brand">
+        <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
+        <h1>whereToken</h1>
+      </div>
       <div class="rail-meta">
         <p class="when">{{ store.scannedAt || '尚未扫描' }}</p>
         <div class="rail-actions">

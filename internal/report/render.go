@@ -29,7 +29,7 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteByte('\n')
 	}
 	if isColdKiln(snap) {
-		b.WriteString(table.SpriteBlock(4, "窑里还是冷的", opt.ASCII, opt.Color))
+		b.WriteString(table.SpriteBlock(table.PoseBlink, "窑里还是冷的", opt.ASCII, opt.Color))
 	}
 	b.WriteByte('\n')
 	b.WriteString(table.FitKPIBox(kpiCells(snap, opt.Color), style, opt.Width))
