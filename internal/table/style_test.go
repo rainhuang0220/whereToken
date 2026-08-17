@@ -66,6 +66,33 @@ func TestUseColorFORCE_COLOR(t *testing.T) {
 	}
 }
 
+func TestPaintHitBands(t *testing.T) {
+	if PaintHit("—", false) != "—" {
+		t.Fatal("plain dash")
+	}
+	if PaintHit("—", true) == "—" || !containsESC(PaintHit("—", true)) {
+		t.Fatal("dash should dim")
+	}
+	hi := PaintHit("89.9%", true)
+	mid := PaintHit("50.0%", true)
+	lo := PaintHit("10.0%", true)
+	if hi == mid || mid == lo || !containsESC(hi) {
+		t.Fatalf("hit bands must differ: %q %q %q", hi, mid, lo)
+	}
+	if PaintHit("89.9%", false) != "89.9%" {
+		t.Fatal("no color")
+	}
+}
+
+func TestBoldNoColor(t *testing.T) {
+	if Bold("x", false) != "x" {
+		t.Fatal(Bold("x", false))
+	}
+	if Bold("x", true) == "x" || !containsESC(Bold("x", true)) {
+		t.Fatal(Bold("x", true))
+	}
+}
+
 func TestDimEmptyWhenNoColor(t *testing.T) {
 	if Dim("x", false) != "x" {
 		t.Fatal(Dim("x", false))

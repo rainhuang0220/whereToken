@@ -35,6 +35,17 @@ func TestDisplayWidthCJKVsASCII(t *testing.T) {
 	}
 }
 
+func TestDisplayWidthIgnoresANSI(t *testing.T) {
+	plain := "70.2%"
+	painted := "\x1b[32m70.2%\x1b[0m"
+	if DisplayWidth(painted) != DisplayWidth(plain) {
+		t.Fatalf("ansi width=%d plain=%d", DisplayWidth(painted), DisplayWidth(plain))
+	}
+	if DisplayWidth("\x1b[1;38;5;208mwhereToken\x1b[0m") != DisplayWidth("whereToken") {
+		t.Fatal("title width must ignore kiln color")
+	}
+}
+
 func TestPadRightUsesDisplayWidth(t *testing.T) {
 	got := PadRight("合计", 10)
 	if DisplayWidth(got) != 10 {

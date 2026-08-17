@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- KPI total is bold, hit rate is green/yellow/red, and the title uses kiln orange (TTY only; `NO_COLOR` still wins)
+- `install.sh` writes `~/.local/bin` into `~/.zshrc` so the next terminal finds `wheretoken`
 - Trae account fetch overlaps session requests (8 at a time) and gives up after 30s instead of walking 500 × 20s
 - Hitting Trae’s 500-session cap still keeps those 500 rows; the error is a footnote, not a zeroed Trae
 - GET `/api/summary` marks `"scanning": true` while a 刷新 is running; a 409 刷新 waits for that scan instead of leaving a dead kiln

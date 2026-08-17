@@ -209,6 +209,30 @@ func TestRenderEmptyHomeFitsNarrowWidth(t *testing.T) {
 	}
 }
 
+func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := Render(snap, Options{})
+	color := Render(snap, Options{Color: true})
+	if strings.Contains(plain, "\x1b") {
+		t.Fatal("plain table must stay raw")
+	}
+	if !strings.Contains(color, "\x1b") {
+		t.Fatal("color table must use ANSI")
+	}
+	if !strings.Contains(color, snap.HitRateText) && !strings.Contains(color, "\x1b[") {
+		t.Fatal("expected painted hit rate")
+	}
+	if strings.Count(color, "\x1b") < 3 {
+		t.Fatalf("expected title + values painted:\n%s", color)
+	}
+}
+
 func TestRenderDimsNotesOnlyWhenColor(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

@@ -8,10 +8,36 @@ import (
 
 func DisplayWidth(s string) int {
 	n := 0
-	for _, r := range s {
+	for _, r := range stripANSI(s) {
 		n += runeWidth(r)
 	}
 	return n
+}
+
+func stripANSI(s string) string {
+	if !strings.ContainsRune(s, 0x1b) {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) {
+				c := s[j]
+				j++
+				if c >= '@' && c <= '~' {
+					break
+				}
+			}
+			i = j
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		b.WriteRune(r)
+		i += size
+	}
+	return b.String()
 }
 
 func PadRight(s string, width int) string {

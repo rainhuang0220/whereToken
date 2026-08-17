@@ -87,9 +87,26 @@ fi
 url="${base}/${asset}"
 sums_url="${base}/checksums.txt"
 
+remember_path() {
+  local dir="$1"
+  [ -n "${HOME:-}" ] || return 0
+  local line="export PATH=\"${dir}:\$PATH\""
+  local rc="${HOME}/.zshrc"
+  if [ -n "${ZDOTDIR:-}" ]; then
+    rc="${ZDOTDIR}/.zshrc"
+  fi
+  if { [ -f "$rc" ] && grep -F "$dir" "$rc" >/dev/null 2>&1; } ||
+    { [ -f "${HOME}/.zprofile" ] && grep -F "$dir" "${HOME}/.zprofile" >/dev/null 2>&1; }; then
+    return 0
+  fi
+  printf '\n# whereToken\n%s\n' "$line" >>"$rc"
+  echo "wheretoken: added ${dir} to PATH in ${rc} (new terminals)" >&2
+}
+
 finish() {
   echo "wheretoken: installed ${BIN_DIR}/wheretoken" >&2
   if ! path_has "$BIN_DIR"; then
+    remember_path "$BIN_DIR"
     echo "export PATH=\"${BIN_DIR}:\$PATH\"" >&2
   fi
   echo "next: wheretoken" >&2

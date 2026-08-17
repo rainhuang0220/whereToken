@@ -39,6 +39,7 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 		"$HOME/.local/bin",
 		"/usr/local/bin",
 		"next: wheretoken",
+		".zshrc",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.sh missing %q", want)
@@ -432,9 +433,11 @@ func TestInstallShDownloadsVerifiedRelease(t *testing.T) {
 	}
 	script := filepath.Join(filepath.Dir(file), "..", "..", "scripts", "install.sh")
 	prefix := t.TempDir()
+	home := t.TempDir()
 	cmd := exec.Command("bash", script)
 	cmd.Env = append(os.Environ(),
 		"PREFIX="+prefix,
+		"HOME="+home,
 		"WHERETOKEN_RELEASE_URL="+srv.URL,
 		"PATH=/usr/bin:/bin:/usr/sbin:/sbin",
 	)
@@ -462,6 +465,13 @@ func TestInstallShDownloadsVerifiedRelease(t *testing.T) {
 	}
 	if !strings.Contains(got, "next: wheretoken") {
 		t.Fatalf("should tell the user to run wheretoken next:\n%s", got)
+	}
+	rc, err := os.ReadFile(filepath.Join(home, ".zshrc"))
+	if err != nil {
+		t.Fatalf("expected PATH written to fake HOME/.zshrc: %v\n%s", err, got)
+	}
+	if !strings.Contains(string(rc), filepath.Join(prefix, "bin")) {
+		t.Fatalf("zshrc missing bindir:\n%s", rc)
 	}
 }
 

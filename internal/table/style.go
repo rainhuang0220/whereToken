@@ -1,6 +1,7 @@
 package table
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -55,4 +56,40 @@ func Dim(s string, color bool) string {
 		return s
 	}
 	return "\x1b[2m" + s + "\x1b[0m"
+}
+
+func Bold(s string, color bool) string {
+	if !color || s == "" {
+		return s
+	}
+	return "\x1b[1m" + s + "\x1b[0m"
+}
+
+func Ember(s string, color bool) string {
+	if !color || s == "" {
+		return s
+	}
+	return "\x1b[1;38;5;208m" + s + "\x1b[0m"
+}
+
+func PaintHit(text string, color bool) string {
+	if !color || text == "" {
+		return text
+	}
+	if text == "—" {
+		return Dim(text, true)
+	}
+	num := strings.TrimSuffix(strings.TrimSpace(text), "%")
+	var pct float64
+	if _, err := fmt.Sscanf(num, "%f", &pct); err != nil {
+		return text
+	}
+	switch {
+	case pct >= 70:
+		return "\x1b[32m" + text + "\x1b[0m"
+	case pct >= 40:
+		return "\x1b[33m" + text + "\x1b[0m"
+	default:
+		return "\x1b[31m" + text + "\x1b[0m"
+	}
 }

@@ -20,32 +20,36 @@ func Render(snap Snapshot, opt Options) string {
 		style = table.BoxASCII
 	}
 	var b strings.Builder
-	writeWrapped(&b, title(snap), opt.Width)
+	writeWrapped(&b, table.Ember(title(snap), opt.Color), opt.Width)
 	if banner := offlineBanner(snap); banner != "" {
-		writeWrapped(&b, banner, opt.Width)
+		writeWrapped(&b, table.Dim(banner, opt.Color), opt.Width)
 	}
-	if spark := sparkLine(snap, opt.ASCII); spark != "" {
+	if spark := sparkLine(snap, opt.ASCII, opt.Color); spark != "" {
 		b.WriteString(spark)
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
-	b.WriteString(table.FitKPIBox(kpiCells(snap), style, opt.Width))
-	b.WriteString(legend(opt.Width))
+	b.WriteString(table.FitKPIBox(kpiCells(snap, opt.Color), style, opt.Width))
+	leg := legend(opt.Width)
+	if opt.Color {
+		leg = table.Dim(strings.TrimRight(leg, "\n"), true) + "\n"
+	}
+	b.WriteString(leg)
 	if len(snap.Tools) > 0 && snap.Scope == "" {
 		b.WriteByte('\n')
-		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
+		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width, opt.Color))
 	}
 	if len(snap.Vendors) > 0 {
 		b.WriteByte('\n')
-		b.WriteString(ranked("厂家", snap.Vendors, false, style, opt.Width))
+		b.WriteString(ranked("厂家", snap.Vendors, false, style, opt.Width, opt.Color))
 	}
 	if (snap.Scope != "" || !snap.ShowStreaks) && anyPositiveTotal(snap.Models) {
 		b.WriteByte('\n')
-		b.WriteString(ranked("模型", snap.Models, false, style, opt.Width))
+		b.WriteString(ranked("模型", snap.Models, false, style, opt.Width, opt.Color))
 	}
 	if snap.Scope != "" && len(snap.Tools) > 0 && !allSameTool(snap) {
 		b.WriteByte('\n')
-		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width))
+		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width, opt.Color))
 	}
 	footnoteNotes := footnotes(snap)
 	if len(footnoteNotes) > 0 {
@@ -80,12 +84,14 @@ func turnKPI(snap Snapshot) string {
 	return metric.FormatCount(snap.UserTurns)
 }
 
-func kpiCells(snap Snapshot) [2][3]table.KPI {
+func kpiCells(snap Snapshot, color bool) [2][3]table.KPI {
+	hit := table.PaintHit(snap.HitRateText, color)
+	total := table.Bold(snap.TotalM, color)
 	if snap.ShowStreaks {
 		return [2][3]table.KPI{
 			{
-				{Label: "总用量", Value: snap.TotalM},
-				{Label: "命中率", Value: snap.HitRateText},
+				{Label: "总用量", Value: total},
+				{Label: "命中率", Value: hit},
 				{Label: "最长连烧", Value: days(snap.MaxStreak)},
 			},
 			{
@@ -97,8 +103,8 @@ func kpiCells(snap Snapshot) [2][3]table.KPI {
 	}
 	return [2][3]table.KPI{
 		{
-			{Label: "总用量", Value: snap.TotalM},
-			{Label: "命中率", Value: snap.HitRateText},
+			{Label: "总用量", Value: total},
+			{Label: "命中率", Value: hit},
 			{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 		},
 		{
@@ -113,7 +119,7 @@ func days(n int) string {
 	return fmt.Sprintf("%s 天", metric.FormatCount(int64(n)))
 }
 
-func sparkLine(snap Snapshot, ascii bool) string {
+func sparkLine(snap Snapshot, ascii, color bool) string {
 	if !snap.ShowStreaks || len(snap.Last7) == 0 {
 		return ""
 	}
@@ -127,10 +133,11 @@ func sparkLine(snap Snapshot, ascii bool) string {
 		return ""
 	}
 	bar := table.Spark(snap.Last7, ascii)
+	label := "近7日  "
 	if ascii {
-		return "7d  " + bar
+		label = "7d  "
 	}
-	return "近7日  " + bar
+	return table.Dim(label, color) + bar
 }
 
 func legend(width int) string {
@@ -141,7 +148,7 @@ func legend(width int) string {
 	return "  合计=未命中+缓存读+缓存写+输出。\n  命中率不含输出。\n"
 }
 
-func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWidth int) string {
+func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWidth int, color bool) string {
 	headers := []string{kind, "合计", "占比", "命中率", "请求"}
 	align := []table.Align{table.AlignLeft, table.AlignRight, table.AlignRight, table.AlignRight, table.AlignRight}
 	if withTurns {
@@ -164,7 +171,7 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		if share == "" {
 			share = "—"
 		}
-		line := []string{label, r.TotalM, share, r.HitRateText, r.RequestsText}
+		line := []string{label, r.TotalM, share, table.PaintHit(r.HitRateText, color), r.RequestsText}
 		if withTurns {
 			line = append(line, r.TurnsText)
 		}
