@@ -344,6 +344,11 @@ h1 {
   stroke-width: 1.2;
 }
 
+.kiln-kid .kid-blush {
+  fill: color-mix(in srgb, var(--warn) 42%, var(--ember-4));
+  opacity: 0.45;
+}
+
 .kiln-kid .kid-tuft path {
   fill: none;
   stroke: var(--ember-4);
@@ -365,9 +370,9 @@ h1 {
 .kiln-kid .kid-arm {
   fill: none;
   stroke: var(--ember-4);
-  stroke-width: 2;
+  stroke-width: 2.2;
   stroke-linecap: round;
-  transform-origin: 32px 42px;
+  transform-origin: 36px 46px;
 }
 
 .kiln-kid .kid-abacus {
@@ -447,12 +452,12 @@ h1 {
 }
 
 .firing-veil .kiln-kid .kid-body {
-  transform-origin: 32px 70px;
+  transform-origin: 36px 80px;
   animation: kid-bob 0.72s ease-in-out infinite;
 }
 
 .rail-brand .kiln-kid .kid-body {
-  transform-origin: 32px 70px;
+  transform-origin: 36px 80px;
   animation: kid-idle 2.4s ease-in-out infinite;
 }
 
