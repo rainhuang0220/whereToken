@@ -123,25 +123,23 @@ func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result 
 	if quiet || !a.StderrTTY {
 		res = scan.Run(home, ads)
 	} else {
-		width := 0
+		asciiHUD := ascii || table.UseASCII(false, a.GOOS, a.LookupEnv)
+		hud := scanHUD{
+			w:     a.Stderr,
+			ascii: asciiHUD,
+			color: table.UseColor(false, a.StderrTTY, a.LookupEnv),
+			now:   a.Now,
+		}
 		res = scan.RunWithProgress(home, ads, func(p scan.Progress) {
-			if p.Status != scan.ProgressReading {
-				if p.Index >= p.Total && width > 0 {
-					fmt.Fprintf(a.Stderr, "\r%s\r", strings.Repeat(" ", width))
-					width = 0
-				}
+			if p.Status == scan.ProgressReading {
+				hud.Show(p)
 				return
 			}
-			line := p.DisplayLabel(ascii || table.UseASCII(false, a.GOOS, a.LookupEnv))
-			pad := width - table.DisplayWidth(line)
-			if pad < 0 {
-				pad = 0
-			}
-			fmt.Fprintf(a.Stderr, "\r%s%s", line, strings.Repeat(" ", pad))
-			if w := table.DisplayWidth(line); w > width {
-				width = w
+			if p.Index >= p.Total {
+				hud.Clear()
 			}
 		})
+		hud.Clear()
 	}
 	res.Offline = offline
 	return res

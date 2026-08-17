@@ -42,7 +42,7 @@ func TestDisplayWidthIgnoresANSI(t *testing.T) {
 		t.Fatalf("ansi width=%d plain=%d", DisplayWidth(painted), DisplayWidth(plain))
 	}
 	if DisplayWidth("\x1b[1;38;5;208mwhereToken\x1b[0m") != DisplayWidth("whereToken") {
-		t.Fatal("title width must ignore kiln color")
+		t.Fatal("title width must ignore lemon color")
 	}
 }
 

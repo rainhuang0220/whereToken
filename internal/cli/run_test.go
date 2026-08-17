@@ -573,11 +573,31 @@ func TestRunProgressOnStderrWhenTTY(t *testing.T) {
 	if !strings.Contains(errb.String(), "正在读") {
 		t.Fatalf("stderr=%s", errb.String())
 	}
+	if !strings.Contains(errb.String(), "(•ᴗ•)") && !strings.Contains(errb.String(), "(o_o)") {
+		t.Fatalf("expected kiln kid on stderr:\n%s", errb.String())
+	}
 	if !strings.Contains(errb.String(), "\r") {
-		t.Fatal("progress should reuse one stderr line")
+		t.Fatal("progress should redraw in place")
 	}
 	if strings.Contains(out.String(), "正在读") {
 		t.Fatal("progress leaked to stdout")
+	}
+}
+
+func TestRunASCIIMascotOnProgress(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	app, _, errb := testApp([]string{"--ascii"})
+	app.Scan = nil
+	app.Home = testhome.New(t.TempDir())
+	app.StderrTTY = true
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(errb.String(), "(o_o)") {
+		t.Fatalf("ascii mascot:\n%s", errb.String())
+	}
+	if strings.ContainsAny(errb.String(), "•ᴗ") {
+		t.Fatal("ascii mascot leaked unicode face")
 	}
 }
 
