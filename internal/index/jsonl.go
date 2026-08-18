@@ -9,9 +9,16 @@ import (
 
 const maxJSONLLine = 10 * 1024 * 1024
 
-// ScanJSONL calls fn for each newline-terminated line. A trailing fragment
-// without a newline is left unconsumed so the next incremental scan can
-// reread it after the writer finishes the record.
+// ScanJSONL calls fn for each newline-terminated line and returns the absolute
+// file offset of the first unconsumed byte.
+//
+// Invariant: a complete line (ends with \n, including a malformed JSON line)
+// is consumed even if fn ignores it. Only a trailing fragment with no newline
+// is left unconsumed. The next incremental scan seeks there and rereads it
+// after the writer finishes the record.
+//
+// This is one pass to the EOF this reader observes. Bytes appended after that
+// EOF are the next scan's job.
 func ScanJSONL(f *os.File, fn func(line []byte, at int64) error) (consumed int64, err error) {
 	start, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {

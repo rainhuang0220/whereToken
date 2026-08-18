@@ -124,7 +124,7 @@ func TestFormatDeltas(t *testing.T) {
 	}
 }
 
-func TestCompareWindowsSkipsUnbounded(t *testing.T) {
+func TestCompareWindowsMatrix(t *testing.T) {
 	loc := time.UTC
 	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)
 	r := Result{
@@ -133,26 +133,34 @@ func TestCompareWindowsSkipsUnbounded(t *testing.T) {
 			{Source: "kimi", RequestID: "new", Miss: 4, Timestamp: now.Add(-time.Hour)},
 		},
 	}
-	fromOnly, err := metric.ParseWindow(false, "", "2026-08-01", "", now, loc)
-	if err != nil {
-		t.Fatal(err)
+	must := func(w metric.Window, err error) metric.Window {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return w
 	}
-	if CompareWindows(r, fromOnly, loc) != nil {
-		t.Fatal("--from only must not compare against all-time")
+	cases := []struct {
+		name    string
+		win     metric.Window
+		compare bool
+	}{
+		{"all", must(metric.ParseWindow(false, "", "", "", now, loc)), false},
+		{"today", must(metric.ParseWindow(true, "", "", "", now, loc)), true},
+		{"since-7d", must(metric.ParseWindow(false, "7d", "", "", now, loc)), true},
+		{"since-30d", must(metric.ParseWindow(false, "30d", "", "", now, loc)), true},
+		{"from-only", must(metric.ParseWindow(false, "", "2026-08-01", "", now, loc)), false},
+		{"to-only", must(metric.ParseWindow(false, "", "", "2026-08-19", now, loc)), false},
+		{"from-to", must(metric.ParseWindow(false, "", "2026-08-01", "2026-08-19", now, loc)), true},
 	}
-	toOnly, err := metric.ParseWindow(false, "", "", "2026-08-19", now, loc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if CompareWindows(r, toOnly, loc) != nil {
-		t.Fatal("--to only must not compare against all-time")
-	}
-	week, err := metric.ParseWindow(false, "7d", "", "", now, loc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if CompareWindows(r, week, loc) == nil {
-		t.Fatal("bounded window should compare")
+	for _, c := range cases {
+		got := CompareWindows(r, c.win, loc)
+		if c.compare && got == nil {
+			t.Fatalf("%s: want compare", c.name)
+		}
+		if !c.compare && got != nil {
+			t.Fatalf("%s: compare must be nil", c.name)
+		}
 	}
 }
 
