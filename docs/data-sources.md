@@ -231,6 +231,8 @@ Vendor comes from `model_name` via `vendor.Lookup` (DeepSeek / Doubao / …), no
 
 Quality `authoritative` when the API returns tokens; `degraded` when sessions exist but login is missing or encrypted.
 
+Trae API events currently have **no timestamp**. They appear in all-time totals and are **dropped** by `--today` / `--since` / `--from` / `--to`. That is a known limitation, not priced-as-zero.
+
 ### Limitations
 
 Needs the user **signed in**. whereToken does not accept a pasted JWT.
