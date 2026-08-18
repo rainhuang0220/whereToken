@@ -19,6 +19,8 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q 'curl -fsSL'
 "$dir/wheretoken" --help | grep -q 刷新
 "$dir/wheretoken" --help | grep -q rebuild
+"$dir/wheretoken" --help | grep -q update
+"$dir/wheretoken" --help | grep -q uninstall
 "$dir/wheretoken" --help | grep -q -- '--since'
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2

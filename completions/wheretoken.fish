@@ -1,5 +1,5 @@
 complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall completion help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json

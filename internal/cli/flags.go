@@ -19,6 +19,8 @@ const (
 	CommandSources    = "sources"
 	CommandDoctor     = "doctor"
 	CommandRebuild    = "rebuild"
+	CommandUpdate     = "update"
+	CommandUninstall  = "uninstall"
 	CommandCompletion = "completion"
 )
 
@@ -82,6 +84,10 @@ func Parse(args []string) (Flags, error) {
 			f.Command = CommandDoctor
 		case "rebuild":
 			f.Command = CommandRebuild
+		case "update", "upgrade":
+			f.Command = CommandUpdate
+		case "uninstall":
+			f.Command = CommandUninstall
 		case "completion":
 			f.Command = CommandCompletion
 		default:
@@ -331,6 +337,12 @@ func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
 		return rest, nil
 	case "rebuild":
 		f.Command = CommandRebuild
+		return rest, nil
+	case "update", "upgrade":
+		f.Command = CommandUpdate
+		return rest, nil
+	case "uninstall":
+		f.Command = CommandUninstall
 		return rest, nil
 	case "completion":
 		f.Command = CommandCompletion

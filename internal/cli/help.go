@@ -9,6 +9,8 @@ USAGE
   wheretoken [flags] sources
   wheretoken [flags] doctor
   wheretoken [flags] rebuild     wipe the local scan index and rescan
+  wheretoken [flags] update      replace this binary with the latest GitHub Release
+  wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -75,6 +77,8 @@ EXAMPLES
   wheretoken --since 7d
   wheretoken --from 2026-08-01 --to 2026-08-19
   wheretoken rebuild
+  wheretoken update
+  wheretoken uninstall
   wheretoken --cursor
   wheretoken --today --cursor
   wheretoken --today --kimi

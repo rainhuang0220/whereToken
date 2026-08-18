@@ -28,7 +28,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -38,8 +38,10 @@ _wheretoken() {
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --width --help" ;;
+    update|upgrade) opts="--quiet -q --help" ;;
+    uninstall) opts="--quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources doctor rebuild completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -51,7 +53,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -102,6 +104,11 @@ _wheretoken() {
         '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
         '--home[fake home]:dir:_files -/'
       ;;
+    update|upgrade|uninstall)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]'
+      ;;
     completion)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -134,7 +141,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall completion help version)'
       ;;
   esac
 }
@@ -142,7 +149,7 @@ _wheretoken "$@"
 `
 
 const fishCompletion = `complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall completion help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
@@ -175,6 +182,9 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
       'sources' { $cmd = $t }
       'doctor' { $cmd = $t }
       'rebuild' { $cmd = $t }
+      'update' { $cmd = $t }
+      'upgrade' { $cmd = $t }
+      'uninstall' { $cmd = $t }
       'completion' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
@@ -186,8 +196,11 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--home','--width','--help') }
+    'update' { @('--quiet','--help') }
+    'upgrade' { @('--quiet','--help') }
+    'uninstall' { @('--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

@@ -22,19 +22,23 @@ import (
 )
 
 type App struct {
-	Args      []string
-	Stdout    io.Writer
-	Stderr    io.Writer
-	Version   string
-	Now       func() time.Time
-	Loc       *time.Location
-	LookupEnv func(string) string
-	Scan      func(adapter.Home) scan.Result
-	Home      adapter.Home
-	Serve     func(addr string, home adapter.Home, offline bool) error
-	GOOS      string
-	StdoutTTY bool
-	StderrTTY bool
+	Args       []string
+	Stdout     io.Writer
+	Stderr     io.Writer
+	Version    string
+	Now        func() time.Time
+	Loc        *time.Location
+	LookupEnv  func(string) string
+	Scan       func(adapter.Home) scan.Result
+	Home       adapter.Home
+	Serve      func(addr string, home adapter.Home, offline bool) error
+	Executable func() (string, error)
+	HTTPGet    func(url string) ([]byte, error)
+	RunCmd     func(name string, args ...string) error
+	GOOS       string
+	GOARCH     string
+	StdoutTTY  bool
+	StderrTTY  bool
 }
 
 func (a *App) Run() int {
@@ -55,6 +59,9 @@ func (a *App) Run() int {
 	}
 	if a.GOOS == "" {
 		a.GOOS = runtime.GOOS
+	}
+	if a.GOARCH == "" {
+		a.GOARCH = runtime.GOARCH
 	}
 	if a.Version == "" {
 		a.Version = ResolveVersion("dev")
@@ -87,6 +94,10 @@ func (a *App) Run() int {
 		return a.runDoctor(home, flags.Quiet, flags.Offline)
 	case CommandRebuild:
 		return a.runRebuild(flags, home)
+	case CommandUpdate:
+		return a.runUpdate(flags.Quiet)
+	case CommandUninstall:
+		return a.runUninstall(flags.Quiet)
 	case CommandCompletion:
 		script, err := Completion(flags.CompletionShell)
 		if err != nil {

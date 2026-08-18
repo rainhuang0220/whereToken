@@ -125,6 +125,8 @@ wheretoken --json
 wheretoken serve
 wheretoken doctor
 wheretoken rebuild
+wheretoken update
+wheretoken uninstall
 ```
 
 `wheretoken doctor` 说明哪些 agent 被发现、用量是否完整。`wheretoken rebuild` 删除本机扫描缓存并重新读取 agent 数据。完整命令见 `wheretoken --help`。

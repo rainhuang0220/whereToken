@@ -28,6 +28,14 @@ wheretoken \- local coding-agent token usage as a character table
 .br
 .B wheretoken
 [\fIflags\fR]
+.B update
+.br
+.B wheretoken
+[\fIflags\fR]
+.B uninstall
+.br
+.B wheretoken
+[\fIflags\fR]
 .B completion
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
 .SH DESCRIPTION
@@ -209,6 +217,14 @@ Last seven local calendar days.
 .TP
 .B wheretoken rebuild
 Delete the local scan index and read agent data again.
+.TP
+.B wheretoken update
+Replace this install with the latest GitHub Release. Homebrew installs run
+.B brew upgrade wheretoken .
+.TP
+.B wheretoken uninstall
+Remove this install. Homebrew installs run
+.B brew uninstall wheretoken .
 .TP
 .B wheretoken --model=k3 --json
 Schema 1 JSON for that model.

@@ -9,6 +9,9 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
       'sources' { $cmd = $t }
       'doctor' { $cmd = $t }
       'rebuild' { $cmd = $t }
+      'update' { $cmd = $t }
+      'upgrade' { $cmd = $t }
+      'uninstall' { $cmd = $t }
       'completion' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
@@ -20,8 +23,11 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--home','--width','--help') }
+    'update' { @('--quiet','--help') }
+    'upgrade' { @('--quiet','--help') }
+    'uninstall' { @('--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

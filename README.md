@@ -125,6 +125,8 @@ wheretoken --json
 wheretoken serve
 wheretoken doctor
 wheretoken rebuild
+wheretoken update
+wheretoken uninstall
 ```
 
 `wheretoken doctor` explains which agents were found and whether their usage data is complete. `wheretoken rebuild` deletes the local scan cache and reads agent data again. Run `wheretoken --help` for the complete command reference.

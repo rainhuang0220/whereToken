@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -54,6 +54,11 @@ _wheretoken() {
         '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
         '--home[fake home]:dir:_files -/'
       ;;
+    update|upgrade|uninstall)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]'
+      ;;
     completion)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -86,7 +91,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall completion help version)'
       ;;
   esac
 }

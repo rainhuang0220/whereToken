@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `wheretoken update` replaces this binary with the latest GitHub Release (`brew upgrade` when Homebrew owns it)
+- `wheretoken uninstall` removes this binary (`brew uninstall` when Homebrew owns it)
 - Incremental JSONL stores the last consumed newline offset, so an unfinished last line is reread when the writer finishes it
 - Incremental JSONL scan (path / size / mtime / inode / offset). Truncation or a replaced file is a full rescan of that source
 - `wheretoken rebuild` deletes `~/.cache/wheretoken/index.v1.db` and reads agent data again
