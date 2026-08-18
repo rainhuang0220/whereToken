@@ -5,7 +5,12 @@
 <h1 align="center">whereToken</h1>
 
 <p align="center">
-  See where your coding-agent tokens went.
+  <b>Local-first token usage analytics for coding agents.</b>
+</p>
+
+<p align="center">
+  Track token usage across Claude Code, Codex, Kimi Code,<br>
+  Cursor, OpenCode, Grok CLI, and Trae.
 </p>
 
 <p align="center">
@@ -22,50 +27,67 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/dash-newspaper.jpg" alt="whereToken dashboard" width="900">
+  <img src="docs/media/dash-newspaper.jpg" alt="whereToken dashboard home" width="900">
 </p>
-
-whereToken is a **local-first** CLI (and optional dashboard) for token usage across coding agents. It reads data already on your machine.
-
-**Claude Code · Kimi Code · Codex · Cursor · OpenCode · Grok CLI · Trae**
-
-Your usage data stays on your machine. No cloud sync. No telemetry.
 
 <p align="center">
-  <img src="docs/media/cli-kpi.png" alt="whereToken CLI" width="720">
+  <sub>Dashboard home — <b>墨</b>, a monochrome newspaper-inspired theme.</sub>
 </p>
+
+Your coding-agent usage, aggregated locally from data already stored on your machine. No cloud sync. No telemetry.
 
 ## Features
 
-- Total usage across every agent that already has a ledger on disk
-- Breakdown by **tool**, **vendor**, and **model**
-- Today, streaks, and cache hit rate
-- JSON for scripts
-- Optional local dashboard
-- Token counts only — it does not estimate USD, because subscriptions and provider prices do not map cleanly onto a local ledger
+### Unified usage overview
 
-## Install
+See token usage from every supported agent that already has a ledger on this computer.
+
+### Agent and provider breakdown
+
+Separate usage by coding agent, model provider, and model.
+
+### Historical usage
+
+Daily totals, streaks, and cache hit rate.
+
+### Local dashboard
+
+A browser UI that runs entirely on your machine.
+
+### CLI
+
+Query usage from the terminal, or export it as JSON.
+
+whereToken reports **token counts**, not dollar estimates. Subscription plans and provider prices do not map cleanly onto a local ledger.
+
+## Installation
+
+### Homebrew
 
 ```bash
 brew tap rainhuang0220/wheretoken
 brew install wheretoken
 ```
 
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
+
+### Windows
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-curl / irm prints the path it installed (usually `~/.local/bin/wheretoken`). Run that line. Open a new terminal if the command is not on `PATH` yet.
+The script prints the installed path (usually `~/.local/bin/wheretoken`). Run that line. Open a new terminal if the command is not on `PATH` yet.
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
-The dashboard is in GitHub Release binaries and `brew tap`. `go install` / `brew --HEAD` embed a stub — from a clone: `cd web && npm run build`, then `WHERETOKEN_WEB=web/dist wheretoken serve`.
+The dashboard is included in GitHub Release binaries and `brew tap`. `go install` and `brew --HEAD` embed a stub. From a clone: `cd web && npm run build`, then `WHERETOKEN_WEB=web/dist wheretoken serve`.
 
 The `npm/` wrapper is **not on the npm registry** yet.
 
@@ -75,120 +97,112 @@ The `npm/` wrapper is **not on the npm registry** yet.
 wheretoken
 ```
 
+<p align="center">
+  <img src="docs/media/cli-kpi.png" alt="whereToken CLI summary" width="720">
+</p>
+
 <table>
   <tr>
-    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="Usage by tool"></td>
-    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="Usage by vendor"></td>
+    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="Usage by agent"></td>
+    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="Usage by provider"></td>
   </tr>
   <tr>
-    <td align="center"><sub>By tool</sub></td>
-    <td align="center"><sub>By vendor</sub></td>
+    <td align="center"><sub>By agent</sub></td>
+    <td align="center"><sub>By provider</sub></td>
   </tr>
 </table>
 
 ```bash
 wheretoken --today
-wheretoken --cursor          # also --claude --kimi --grok --codex --opencode --trae
-wheretoken --vendor=xai
-wheretoken --model=k3
-wheretoken --json
-wheretoken --offline         # skip Cursor / Trae APIs
+wheretoken --cursor
+wheretoken --vendor=anthropic
 wheretoken serve
 ```
 
-Then open [http://127.0.0.1:8787](http://127.0.0.1:8787) on this computer. **刷新** rescans. Reloading the tab does not.
+The dashboard is at [http://127.0.0.1:8787](http://127.0.0.1:8787) on this computer. **刷新** rescans. Reloading the tab does not.
 
-`wheretoken --help` has the rest. Units are **M** (million tokens).
+See [`docs/wheretoken.1`](docs/wheretoken.1) for the full CLI reference.
 
 ## Dashboard
 
-The page above is **墨** — black and white, like a newspaper. It is the author's favorite.
+whereToken includes a local web dashboard for exploring usage across supported agents. The UI is currently Chinese-first.
 
-**窑** is where the name comes from. Tokens burn fast, like a kiln. The mascot is that little gold furnace.
+**窑** is the project mascot: a small furnace, for tokens consumed over time.
 
 <p align="center">
-  <img src="docs/media/dash-kiln.png" alt="窑 theme — the little kiln the mascot comes from" width="900">
+  <img src="docs/media/dash-kiln.png" alt="窑, the whereToken mascot" width="900">
 </p>
 
-## Supported tools
+## Supported coding agents
 
-Only tools that already have a ledger on disk. Field mapping: [`docs/data-sources.md`](docs/data-sources.md).
+whereToken reads usage information already stored by your coding agents. It does not invent numbers when the source data is missing.
 
-| Tool | Token data | Login required? |
-|------|------------|-----------------|
-| Claude Code | Yes | No |
-| Kimi Code | Yes | No |
-| Grok CLI | Yes | No |
-| Codex | Yes | No |
-| OpenCode | Yes | No |
-| Cursor | Partial — local bubbles still count requests / turns | **Yes**, for token columns. App must be **signed in** |
-| Trae / Trae CN / TRAE SOLO | Partial | **Yes**. Encrypted `storage.json` is reported, not decrypted |
+| Agent | Usage data | Sign-in |
+|-------|------------|---------|
+| Claude Code | Full | Not required |
+| Kimi Code | Full | Not required |
+| Codex | Full | Not required |
+| OpenCode | Full | Not required |
+| Grok CLI | Full | Not required |
+| Cursor | Partial | Required for token columns. The app must be **signed in** |
+| Trae / Trae CN / TRAE SOLO | Partial | Required. Encrypted `storage.json` is reported, not decrypted |
 
-Not in this release: Windsurf, Copilot, Cline, Lingma, and similar.
+See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read.
 
-## Tool vs. vendor
+Not currently supported: Windsurf, GitHub Copilot, Cline, and Lingma. These tools do not currently expose token usage through a local data source that whereToken can reliably read.
 
-whereToken separates the **app you typed in** from the **model provider** behind it.
+## Agent and provider
 
-A request through Claude Code that used a MiniMax model is:
+whereToken distinguishes the **coding agent** you use from the **provider** that served the model.
 
-- **Tool:** Claude Code
-- **Vendor:** MiniMax
+A request made through Claude Code using a MiniMax model is attributed as:
 
-So you can see both where you asked and who actually served it.
+- **Agent:** Claude Code
+- **Provider:** MiniMax
 
-## Privacy
+Some agents expose token data only when the application is signed in. whereToken does not treat unavailable data as zero.
 
-whereToken is local-first.
+## Privacy & Security
 
-It reads usage data from files already on this computer. It does not upload those files, does not sync them to a whereToken server, and does not phone home.
+whereToken is designed to run locally.
 
-It never asks you for an API key. It does not send your credentials to whereToken.
+### Data collection
 
-Most sources are files only. Cursor and Trae may use login state those apps already stored locally, to fill token columns the ledger does not have. That traffic goes to **their** hosts, not to whereToken.
+whereToken does not collect or upload your usage data, session history, or credentials to a whereToken server. There is no telemetry and no cloud sync.
 
-The optional dashboard also runs on this computer. It is not exposed to other devices on your network.
+### Local data
 
-## Security
+It reads usage information from files already stored on this computer by supported coding agents.
 
-The CLI never prints JWTs, access tokens, API keys, or cookies. Do not paste secrets into issues. [`SECURITY.md`](SECURITY.md) has the rest.
+### Network access
+
+The dashboard is served locally and does not require a remote whereToken service. It is not exposed to other devices on your network. The address is [http://127.0.0.1:8787](http://127.0.0.1:8787).
+
+Most agents are files only. Cursor and Trae may contact **their** hosts using login state those apps already stored locally, to fill token columns the local ledger does not have.
+
+### Credentials
+
+whereToken does not ask you for API keys. When an integration needs authentication, it uses data or credentials already managed by that application.
+
+### Reporting issues
+
+Do not include API keys, session tokens, JWTs, cookies, or other secrets in bug reports. The CLI never prints those values to stdout. See [`SECURITY.md`](SECURITY.md).
 
 ## Limitations
 
-**v0.3.0 is an Alpha.** It works on a real machine. Some integrations are still evolving. The UI is Chinese for now.
+whereToken is currently in **alpha** (v0.3.0). It is usable; some integrations are still evolving.
 
+- Cursor and Trae token support is currently limited
 - macOS GitHub binaries are currently **unsigned** ([`docs/macos-signing.md`](docs/macos-signing.md))
-- There is **no npm package**
-- Cursor / Trae token columns need those apps **signed in** on this machine. Claude / Kimi / Grok / Codex / OpenCode do not
+- npm distribution is **not on the npm registry** yet
+- The dashboard UI is currently Chinese-first
 
-<details>
-<summary>Flags, env, exit codes</summary>
+## Documentation
 
-```bash
-wheretoken --ascii
-wheretoken --width 40
-wheretoken --quiet
-wheretoken sources
-wheretoken scan --json       # dashboard 刷新 dump; not schema 1; no --today / --tool
-wheretoken completion zsh    # also bash, fish, powershell
-```
-
-Completions: [`completions/`](completions/). Man page: [`docs/wheretoken.1`](docs/wheretoken.1). JSON: [`docs/cli-json.schema.json`](docs/cli-json.schema.json).
-
-| Env | |
-|-----|--|
-| `NO_COLOR` / `FORCE_COLOR` | color (`NO_COLOR` wins) |
-| `WHERETOKEN_ASCII=1` / `NO_UTF8` | ASCII boxes |
-| `WHERETOKEN_OFFLINE=1` | same as `--offline` |
-| `WHERETOKEN_HOME` / `--home` | fake home (tests) |
-| `WHERETOKEN_EXTRA_ROOTS` | extra homes (`:` / `;` / commas) |
-| `WHERETOKEN_WEB` | `web/dist` for `serve` |
-| `CODEX_HOME` | Codex also reads this |
-| `COLUMNS` | same as `--width` |
-
-Exit: `0` ok (including empty or a degraded login), `1` fail, `2` usage.
-
-</details>
+- CLI reference: [`docs/wheretoken.1`](docs/wheretoken.1)
+- Data sources: [`docs/data-sources.md`](docs/data-sources.md)
+- JSON schema: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
+- Completions: [`completions/`](completions/)
 
 ## Development
 
@@ -201,7 +215,7 @@ cd web && npm install && npm test && npm run build
 go run ./cmd/wheretoken serve
 ```
 
-Toolchain is **Go 1.25.13** from `go.mod`. CI: Ubuntu / macOS / Windows ([`ci/github-workflows/`](ci/github-workflows/)).
+Toolchain is **Go 1.25.13** from `go.mod`. CI runs on Ubuntu, macOS, and Windows ([`ci/github-workflows/`](ci/github-workflows/)).
 
 ## License
 
