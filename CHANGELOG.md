@@ -8,7 +8,6 @@
 - OpenClaw session JSONL (`~/.openclaw/agents/*/sessions/*.jsonl`; not trajectories)
 - MiniMax M2.1 / M2.5 / M2.7 pay-as-you-go list prices; M3 stays unavailable (context-tiered)
 - OpenClaw top-level numeric timestamps still count; MiniMax NULL model rows no longer abort the ledger
-- MiniMax M2.1 / M2.1-highspeed API list prices; M3 stays unavailable (context tiers)
 - Deterministic usage insights on the observatory payload and dashboard
 - Dashboard period clicks ignore stale `/api/summary` replies
 
