@@ -31,7 +31,9 @@
       "share": "91.2%",
       "hit_rate_text": "85.7%",
       "requests": 2,
-      "user_turns": 2
+      "user_turns": 2,
+      "cost_status": "partial",
+      "cost_usd": "$12.0000"
     },
     {
       "id": "kimi",
@@ -41,7 +43,8 @@
       "share": "8.8%",
       "hit_rate_text": "80.0%",
       "requests": 1,
-      "user_turns": 1
+      "user_turns": 1,
+      "cost_status": "unavailable"
     }
   ],
   "vendors": [
@@ -52,7 +55,9 @@
       "total_m": "10.10 M",
       "share": "86.5%",
       "hit_rate_text": "90.0%",
-      "requests": 1
+      "requests": 1,
+      "cost_status": "complete",
+      "cost_usd": "$12.0000"
     },
     {
       "id": "moonshot",
@@ -61,7 +66,8 @@
       "total_m": "1.03 M",
       "share": "8.8%",
       "hit_rate_text": "80.0%",
-      "requests": 1
+      "requests": 1,
+      "cost_status": "unavailable"
     },
     {
       "id": "minimax",
@@ -70,8 +76,13 @@
       "total_m": "0.55 M",
       "share": "4.7%",
       "hit_rate_text": "0.0%",
-      "requests": 1
+      "requests": 1,
+      "cost_status": "unavailable"
     }
   ],
-  "notes": []
+  "notes": [
+    "估价 $12.0000 · 部分模型没有标价，未计入；不是订阅账单"
+  ],
+  "cost_status": "partial",
+  "cost_usd": "$12.0000"
 }

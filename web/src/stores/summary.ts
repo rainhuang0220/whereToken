@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { fetchSummary, rescan } from '../api'
 import { formatScannedAt, type ScanProgress } from '../firing'
+import { acceptPeriod } from '../periodSeq'
 import type { PeriodId, SummaryPayload } from '../types'
 
 export const useSummaryStore = defineStore('summary', {
@@ -11,18 +12,24 @@ export const useSummaryStore = defineStore('summary', {
     scannedAt: '',
     progress: null as ScanProgress | null,
     period: 'all' as PeriodId,
+    periodSeq: 0,
   }),
   actions: {
     async hydrate() {
+      const n = ++this.periodSeq
+      const want = this.period
       try {
-        const last = await fetchSummary(this.period)
+        const last = await fetchSummary(want)
+        if (!acceptPeriod(this.periodSeq, n)) return
         if (last.scanned_at) {
           this.payload = last
           this.scannedAt = formatScannedAt(last.scanned_at)
         }
       } catch (err) {
+        if (!acceptPeriod(this.periodSeq, n)) return
         this.error = err instanceof Error ? err.message : String(err)
       }
+      if (!acceptPeriod(this.periodSeq, n)) return
       if (!this.payload?.scanned_at) {
         await this.refresh()
       }
@@ -30,10 +37,15 @@ export const useSummaryStore = defineStore('summary', {
     async setPeriod(period: PeriodId) {
       if (this.period === period && this.payload) return
       this.period = period
+      const n = ++this.periodSeq
       if (!this.payload?.scanned_at) return
       try {
-        this.payload = await fetchSummary(period)
+        const next = await fetchSummary(period)
+        if (!acceptPeriod(this.periodSeq, n)) return
+        this.payload = next
+        this.error = ''
       } catch (err) {
+        if (!acceptPeriod(this.periodSeq, n)) return
         this.error = err instanceof Error ? err.message : String(err)
       }
     },
@@ -41,6 +53,7 @@ export const useSummaryStore = defineStore('summary', {
       if (this.loading) return
       this.loading = true
       this.error = ''
+      const n = ++this.periodSeq
       this.progress = {
         source: '',
         label: '正在读本机账本…',
@@ -52,9 +65,17 @@ export const useSummaryStore = defineStore('summary', {
         const next = await rescan((p) => {
           this.progress = p
         })
+        if (!acceptPeriod(this.periodSeq, n)) return
         this.scannedAt = formatScannedAt(next.scanned_at) || new Date().toLocaleString('zh-CN')
-        this.payload = this.period === 'all' ? next : await fetchSummary(this.period)
+        if (this.period === 'all') {
+          this.payload = next
+        } else {
+          const windowed = await fetchSummary(this.period)
+          if (!acceptPeriod(this.periodSeq, n)) return
+          this.payload = windowed
+        }
       } catch (err) {
+        if (!acceptPeriod(this.periodSeq, n)) return
         this.error = err instanceof Error ? err.message : String(err)
       } finally {
         this.loading = false

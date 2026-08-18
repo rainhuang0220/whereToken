@@ -44,7 +44,9 @@
     "tools": { "type": "array", "items": { "$ref": "#/$defs/row" } },
     "vendors": { "type": "array", "items": { "$ref": "#/$defs/row" } },
     "models": { "type": "array", "items": { "$ref": "#/$defs/row" } },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "cost_status": { "type": "string", "enum": ["complete", "partial", "unavailable"] },
+    "cost_usd": { "type": "string" }
   },
   "$defs": {
     "row": {
@@ -59,7 +61,9 @@
         "share": { "type": "string" },
         "hit_rate_text": { "type": "string" },
         "requests": { "type": "integer", "minimum": 0 },
-        "user_turns": { "type": "integer", "minimum": 0 }
+        "user_turns": { "type": "integer", "minimum": 0 },
+        "cost_status": { "type": "string", "enum": ["complete", "partial", "unavailable"] },
+        "cost_usd": { "type": "string" }
       }
     }
   }

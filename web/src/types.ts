@@ -19,6 +19,9 @@ export type SliceView = {
   derivation?: string
   quality: string
   error?: string
+  cost_status?: string
+  cost_usd?: string
+  unpriced_tokens?: number
 }
 
 export type WhyRow = {
@@ -80,6 +83,7 @@ export type SummaryPayload = {
   drill?: Drill
   why?: WhyRow[]
   compare?: CompareView
+  insights?: { kind: string; text: string }[]
   by_model?: SliceView[]
   by_workspace?: SliceView[]
   by_session?: SessionView[]

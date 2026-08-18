@@ -37,5 +37,12 @@ defineProps<{
       <strong>{{ formatCount(all.user_turns) }}</strong>
     </div>
     <p v-if="compareText" class="read-compare">{{ compareText }}</p>
+    <p v-if="all.cost_usd" class="read-compare">
+      估价 {{ all.cost_usd }}<template v-if="all.cost_status === 'partial'"> · 部分无标价</template>
+      · 不是账单
+    </p>
+    <p v-else-if="all.cost_status === 'unavailable' && all.total > 0" class="read-compare">
+      估价不可用 · 不会写成 $0
+    </p>
   </section>
 </template>

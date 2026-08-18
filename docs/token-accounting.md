@@ -117,6 +117,12 @@ identity is path + size + mtime + inode, not a content hash. `wheretoken rebuild
 deletes it. Incremental JSONL stores the last **consumed** byte offset, which
 stays behind EOF while the last line is still being written.
 
+## Cost
+
+Token totals never become USD by a single global price. See [`cost.md`](cost.md).
+Estimated API-equivalent cost is optional, never a bill, and never `$0` when
+the price is unknown.
+
 ## What Total is not
 
 Total is not USD, not a provider invoice, and not “context window used”.

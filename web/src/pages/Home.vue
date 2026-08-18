@@ -235,6 +235,11 @@ onMounted(() => {
 
       <DrillPanel v-if="showDrill" :pack="drill" />
 
+      <details v-if="payload.insights?.length" class="why">
+        <summary>用量说明</summary>
+        <p v-for="line in payload.insights" :key="line.kind + line.text" class="note">{{ line.text }}</p>
+      </details>
+
       <details v-if="payload.why?.length" class="why">
         <summary>这个数字怎么来的</summary>
         <table>

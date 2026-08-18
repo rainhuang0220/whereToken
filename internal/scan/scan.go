@@ -18,6 +18,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/index"
+	"github.com/rainhuang0220/whereToken/internal/insight"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/report"
 )
@@ -354,6 +355,7 @@ type summaryJSON struct {
 	Scan           []scanDeltaJSON    `json:"scan,omitempty"`
 	Why            []whyJSON          `json:"why,omitempty"`
 	Compare        *metric.Compare    `json:"compare,omitempty"`
+	Insights       []insight.Line     `json:"insights,omitempty"`
 }
 
 type scanDeltaJSON struct {
@@ -413,6 +415,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 		Offline:  r.Offline,
 		Scanning: r.Scanning,
 		Compare:  r.Compare,
+		Insights: insight.Lines(r.Summary),
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

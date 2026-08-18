@@ -233,6 +233,7 @@ whereToken is currently in **alpha**.
 - CLI reference: [`docs/wheretoken.1`](docs/wheretoken.1)
 - Data sources: [`docs/data-sources.md`](docs/data-sources.md)
 - Token accounting: [`docs/token-accounting.md`](docs/token-accounting.md)
+- Cost estimate: [`docs/cost.md`](docs/cost.md)
 - Adding an adapter: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)

@@ -102,6 +102,45 @@ func TestAggregateRecordsAndDerivation(t *testing.T) {
 	}
 }
 
+func TestAggregateCostKnownModel(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Miss: 1_000_000, Output: 1_000_000, Quality: event.QualityDegraded},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.CostStatus != "complete" || sum.All.CostMicro != 30_000_000 {
+		t.Fatalf("cost %+v", sum.All)
+	}
+	v := View(sum.All)
+	if v.CostUSD != "$30.0000" || v.CostStatus != "complete" {
+		t.Fatalf("view %+v", v)
+	}
+}
+
+func TestAggregateUnknownCostNotZeroUSD(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "a", Miss: 100, Output: 10, Quality: event.QualityAuthoritative},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.CostStatus != "unavailable" || sum.All.CostMicro != 0 {
+		t.Fatalf("%+v", sum.All)
+	}
+	v := View(sum.All)
+	if v.CostUSD != "" || v.CostStatus != "unavailable" {
+		t.Fatalf("must omit $0: %+v", v)
+	}
+}
+
+func TestAggregatePartialCost(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Miss: 1_000_000},
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "b", Miss: 1_000_000},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.CostStatus != "partial" || sum.All.CostMicro != 5_000_000 || sum.All.UnpricedTokens != 1_000_000 {
+		t.Fatalf("%+v", sum.All)
+	}
+}
+
 func TestAggregateSkipRequestKeepsTokenTotals(t *testing.T) {
 	events := []event.UsageEvent{
 		{Source: "cursor", Vendor: "anthropic", RequestID: "bubble", Quality: event.QualityDegraded},

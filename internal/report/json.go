@@ -14,6 +14,8 @@ type jsonRow struct {
 	HitRateText string `json:"hit_rate_text"`
 	Requests    int64  `json:"requests"`
 	UserTurns   int64  `json:"user_turns,omitempty"`
+	CostStatus  string `json:"cost_status,omitempty"`
+	CostUSD     string `json:"cost_usd,omitempty"`
 }
 
 type jsonSnap struct {
@@ -38,6 +40,8 @@ type jsonSnap struct {
 	Vendors           []jsonRow `json:"vendors"`
 	Models            []jsonRow `json:"models,omitempty"`
 	Notes             []string  `json:"notes"`
+	CostStatus        string    `json:"cost_status,omitempty"`
+	CostUSD           string    `json:"cost_usd,omitempty"`
 }
 
 func WriteJSON(w io.Writer, snap Snapshot) error {
@@ -55,6 +59,8 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		Tools:       jsonRows(snap.Tools, true),
 		Vendors:     jsonRows(snap.Vendors, false),
 		Notes:       snap.Notes,
+		CostStatus:  snap.CostStatus,
+		CostUSD:     snap.CostUSD,
 	}
 	if snap.ShowStreaks {
 		max := snap.MaxStreak
@@ -92,6 +98,8 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			Share:       r.ShareText,
 			HitRateText: r.HitRateText,
 			Requests:    r.Requests,
+			CostStatus:  r.CostStatus,
+			CostUSD:     r.CostUSD,
 		}
 		if turns {
 			item.UserTurns = r.UserTurns

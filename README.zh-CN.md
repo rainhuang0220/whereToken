@@ -233,6 +233,7 @@ whereToken 目前处于 **alpha**。
 - 命令行参考：[`docs/wheretoken.1`](docs/wheretoken.1)
 - 数据源：[`docs/data-sources.md`](docs/data-sources.md)
 - Token 账本：[`docs/token-accounting.md`](docs/token-accounting.md)
+- 估价：[`docs/cost.md`](docs/cost.md)
 - 增加适配器：[`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON 输出格式：[`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - 补全：[`completions/`](completions/)

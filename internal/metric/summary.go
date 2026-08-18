@@ -7,16 +7,22 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/price"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
 type Slice struct {
-	ID, Label                            string
-	Miss, CacheRead, CacheCreate, Output int64
-	Requests, UserTurns                  int64
-	Records                              int64
-	Derivation                           string
-	Quality                              event.Quality
+	ID, Label                             string
+	Miss, CacheRead, CacheCreate, Output  int64
+	Requests, UserTurns                   int64
+	Records                               int64
+	Derivation                            string
+	Quality                               event.Quality
+	CostMicro                             int64
+	MissCostMicro, CacheReadCostMicro     int64
+	CacheCreateCostMicro, OutputCostMicro int64
+	PricedTokens, UnpricedTokens          int64
+	CostStatus                            string
 }
 
 func (s Slice) Total() int64 {
@@ -45,26 +51,33 @@ type Summary struct {
 }
 
 type SliceView struct {
-	ID           string   `json:"id"`
-	Label        string   `json:"label"`
-	Miss         int64    `json:"miss"`
-	CacheRead    int64    `json:"cache_read"`
-	CacheCreate  int64    `json:"cache_create"`
-	Output       int64    `json:"output"`
-	Total        int64    `json:"total"`
-	MissM        string   `json:"miss_m"`
-	CacheReadM   string   `json:"cache_read_m"`
-	CacheCreateM string   `json:"cache_create_m"`
-	OutputM      string   `json:"output_m"`
-	TotalM       string   `json:"total_m"`
-	HitRate      *float64 `json:"hit_rate"`
-	HitRateText  string   `json:"hit_rate_text"`
-	Requests     int64    `json:"requests"`
-	UserTurns    int64    `json:"user_turns"`
-	Records      int64    `json:"records,omitempty"`
-	Derivation   string   `json:"derivation,omitempty"`
-	Quality      string   `json:"quality"`
-	Error        string   `json:"error,omitempty"`
+	ID                 string   `json:"id"`
+	Label              string   `json:"label"`
+	Miss               int64    `json:"miss"`
+	CacheRead          int64    `json:"cache_read"`
+	CacheCreate        int64    `json:"cache_create"`
+	Output             int64    `json:"output"`
+	Total              int64    `json:"total"`
+	MissM              string   `json:"miss_m"`
+	CacheReadM         string   `json:"cache_read_m"`
+	CacheCreateM       string   `json:"cache_create_m"`
+	OutputM            string   `json:"output_m"`
+	TotalM             string   `json:"total_m"`
+	HitRate            *float64 `json:"hit_rate"`
+	HitRateText        string   `json:"hit_rate_text"`
+	Requests           int64    `json:"requests"`
+	UserTurns          int64    `json:"user_turns"`
+	Records            int64    `json:"records,omitempty"`
+	Derivation         string   `json:"derivation,omitempty"`
+	Quality            string   `json:"quality"`
+	Error              string   `json:"error,omitempty"`
+	CostStatus         string   `json:"cost_status,omitempty"`
+	CostUSD            string   `json:"cost_usd,omitempty"`
+	MissCostUSD        string   `json:"miss_cost_usd,omitempty"`
+	CacheReadCostUSD   string   `json:"cache_read_cost_usd,omitempty"`
+	CacheCreateCostUSD string   `json:"cache_create_cost_usd,omitempty"`
+	OutputCostUSD      string   `json:"output_cost_usd,omitempty"`
+	UnpricedTokens     int64    `json:"unpriced_tokens,omitempty"`
 }
 
 func View(s Slice) SliceView {
@@ -88,6 +101,19 @@ func View(s Slice) SliceView {
 		Derivation:   s.Derivation,
 		Quality:      string(s.Quality),
 	}
+	st := s.CostStatus
+	if st == "" {
+		st = price.Status(s.PricedTokens, s.UnpricedTokens)
+	}
+	v.CostStatus = st
+	if st == price.StatusComplete || st == price.StatusPartial {
+		v.CostUSD = price.FormatUSD(s.CostMicro)
+		v.MissCostUSD = price.FormatUSD(s.MissCostMicro)
+		v.CacheReadCostUSD = price.FormatUSD(s.CacheReadCostMicro)
+		v.CacheCreateCostUSD = price.FormatUSD(s.CacheCreateCostMicro)
+		v.OutputCostUSD = price.FormatUSD(s.OutputCostMicro)
+	}
+	v.UnpricedTokens = s.UnpricedTokens
 	if pct, ok := HitRate(s.Miss, s.CacheRead, s.CacheCreate); ok {
 		v.HitRate = &pct
 		v.HitRateText = fmt.Sprintf("%.1f%%", pct)
@@ -147,12 +173,15 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 
 	all.Records = int64(len(merged))
 	all.Derivation = joinKeys(allDerive)
+	finishCost(&all)
 	sum := Summary{All: all}
 	for _, s := range bySource {
 		s.Derivation = joinKeys(srcDerive[s.ID])
+		finishCost(s)
 		sum.BySource = append(sum.BySource, *s)
 	}
 	for _, s := range byVendor {
+		finishCost(s)
 		sum.ByVendor = append(sum.ByVendor, *s)
 	}
 	for _, s := range byCross {
@@ -231,6 +260,24 @@ func addSlice(s *Slice, e event.UsageEvent) {
 	if qualityRank(e.Quality) > qualityRank(s.Quality) {
 		s.Quality = e.Quality
 	}
+	toks := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	ch := price.Event(e)
+	if ch.OK {
+		s.CostMicro += ch.Micro
+		s.MissCostMicro += ch.Miss
+		s.CacheReadCostMicro += ch.CacheRead
+		s.CacheCreateCostMicro += ch.CacheCreate
+		s.OutputCostMicro += ch.Output
+		s.PricedTokens += toks
+		return
+	}
+	if toks > 0 {
+		s.UnpricedTokens += toks
+	}
+}
+
+func finishCost(s *Slice) {
+	s.CostStatus = price.Status(s.PricedTokens, s.UnpricedTokens)
 }
 
 func getSlice(m map[string]*Slice, id, label string) *Slice {

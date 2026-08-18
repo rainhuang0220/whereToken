@@ -32,6 +32,8 @@ type Row struct {
 	RequestsText string
 	TurnsText    string
 	Quality      event.Quality
+	CostStatus   string
+	CostUSD      string
 }
 
 type Snapshot struct {
@@ -56,6 +58,8 @@ type Snapshot struct {
 	Models        []Row
 	Notes         []string
 	Quality       event.Quality
+	CostStatus    string
+	CostUSD       string
 }
 
 type usageErr struct{ msg string }
@@ -132,6 +136,8 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		ShowStreaks:   !windowed(f),
 		HideTurns:     f.Model != "",
 		Quality:       sum.All.Quality,
+		CostStatus:    view.CostStatus,
+		CostUSD:       view.CostUSD,
 	}
 
 	for _, s := range sum.BySource {
@@ -184,6 +190,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	if snap.Total == 0 && snap.Requests > 0 {
 		snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
 	}
+	snap.Notes = appendCostNotes(snap.Notes, view)
 	snap.Notes = appendEmptyViewNotes(snap.Notes, snap, f)
 	return snap, nil
 }
@@ -329,6 +336,22 @@ func tokenlessModels(rows []Row) bool {
 	return false
 }
 
+func appendCostNotes(notes []string, view metric.SliceView) []string {
+	switch view.CostStatus {
+	case "complete":
+		return appendUniqueNote(notes, "估价 "+view.CostUSD+" · API 标价等价，不是订阅账单")
+	case "partial":
+		return appendUniqueNote(notes, "估价 "+view.CostUSD+" · 部分模型没有标价，未计入；不是订阅账单")
+	case "unavailable":
+		if view.Total == 0 {
+			return notes
+		}
+		return appendUniqueNote(notes, "估价不可用 · 账本模型没有 API 标价，不会写成 $0")
+	default:
+		return notes
+	}
+}
+
 func rowFrom(s metric.Slice) Row {
 	v := metric.View(s)
 	return Row{
@@ -342,6 +365,8 @@ func rowFrom(s metric.Slice) Row {
 		RequestsText: metric.FormatCount(s.Requests),
 		TurnsText:    metric.FormatCount(s.UserTurns),
 		Quality:      s.Quality,
+		CostStatus:   v.CostStatus,
+		CostUSD:      v.CostUSD,
 	}
 }
 

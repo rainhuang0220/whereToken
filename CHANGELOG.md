@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Estimated API-equivalent cost (`docs/cost.md`): unknown prices stay unavailable, never `$0`
+- Deterministic usage insights on the observatory payload and dashboard
+- Dashboard period clicks ignore stale `/api/summary` replies
+
 ## 0.4.0 — 2026-08-19 (Alpha)
 
 - `wheretoken update` replaces this binary with the latest GitHub Release (`brew upgrade` when Homebrew owns it)
