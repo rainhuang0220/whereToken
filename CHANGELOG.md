@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- README follows a product-tool layout: hero, features, install, start, agents, privacy, limitations, docs
+- README is a product-tool page: no loopback addresses, no author notes, flags live in docs
 - `verify-cli.sh` looks for the `--offline` banner in the whole table. The 3-line slab is no longer the first two lines
 
 ## 0.3.0 — 2026-08-18 (Alpha)
