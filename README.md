@@ -34,34 +34,52 @@
   <sub><b>墨</b> is the monochrome, newspaper-style theme.</sub>
 </p>
 
-whereToken reads usage data from sources already stored on your machine and is designed to operate locally. Feedback and bug reports are welcome.
+Modern developers often use several coding agents at once. Each tool stores usage differently, so there is no single place to see where tokens went. whereToken discovers the data those agents already keep, normalizes it, and presents one view in the CLI, a local dashboard, and JSON.
+
+It is designed to operate locally. Feedback and bug reports are welcome.
 
 ## Features
 
-- Aggregate token usage across supported coding agents
-- Break usage down by agent, provider, and model
-- View daily totals, streaks, and cache hit rate
-- Export usage as JSON
-- Explore the same data in a local dashboard
+### Unified usage overview
+
+View token usage from every supported coding agent that has data on this machine.
+
+### Agent, provider, and model breakdown
+
+See which application issued the request, which provider served the model, and which model was used.
+
+### Historical usage
+
+Inspect daily totals, streaks, and cache hit rate.
+
+### Local dashboard
+
+Explore the same data in a browser interface that runs on your machine.
+
+### CLI and JSON
+
+Query usage from the terminal, or export a normalized JSON report for scripts.
 
 whereToken reports token counts. It does not estimate monetary cost.
 
 ## Installation
 
-### Homebrew
+### Recommended: Homebrew
 
 ```bash
 brew tap rainhuang0220/wheretoken
 brew install wheretoken
 ```
 
-### macOS / Linux
+### Prebuilt binaries
+
+macOS and Linux:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
-### Windows
+Windows:
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
@@ -69,13 +87,13 @@ irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/inst
 
 The script prints the installed path (usually `~/.local/bin/wheretoken`). Run that line. Open a new terminal if the command is not on `PATH` yet.
 
-### From source
+### Build from source
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
-Release binaries and `brew tap` include the dashboard. `go install` and `brew --HEAD` build the CLI only. To serve the dashboard from a clone, build the web UI first (`cd web && npm run build`) and set `WHERETOKEN_WEB` to `web/dist`.
+Release binaries and `brew tap` include the dashboard. `go install` and `brew --HEAD` build the CLI only. To serve the dashboard from a clone, build the web UI (`cd web && npm run build`) and set `WHERETOKEN_WEB` to `web/dist`.
 
 The `npm/` wrapper is **not on the npm registry** yet.
 
@@ -102,11 +120,8 @@ wheretoken
 
 ```bash
 wheretoken --today
-wheretoken --cursor
-wheretoken --vendor=xai
-wheretoken --model=k3
 wheretoken --json
-wheretoken --offline
+wheretoken serve
 ```
 
 Run `wheretoken --help` for the complete command reference.
@@ -121,7 +136,7 @@ wheretoken serve
 
 The dashboard runs locally on your machine. It provides a visual overview of token usage across supported coding agents, providers, and models. Use the refresh control in the page to rescan; reloading the browser tab does not.
 
-**窑** is whereToken's furnace mascot, representing the idea of tokens being consumed over time.
+**窑** is whereToken's furnace mascot.
 
 <p align="center">
   <img src="docs/media/dash-kiln.png" alt="窑, the whereToken mascot" width="900">
@@ -129,56 +144,72 @@ The dashboard runs locally on your machine. It provides a visual overview of tok
 
 ## Supported coding agents
 
-whereToken reads usage information from data made available by supported coding agents. Availability varies by tool and may depend on whether the application is signed in.
+whereToken reads usage information from data made available by supported coding agents. Completeness varies by tool and may depend on whether the application is signed in.
 
-| Coding agent | Token data | Authentication |
+| Coding agent | Usage data | Authentication |
 |--------------|------------|----------------|
 | Claude Code | Full | Not required |
 | Kimi Code | Full | Not required |
-| Grok CLI | Full | Not required |
 | Codex | Full | Not required |
 | OpenCode | Full | Not required |
+| Grok CLI | Full | Not required |
 | Cursor | Partial | Required for token columns |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 
-Cursor and Trae need those applications **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted. Unavailable data is not treated as zero.
+Cursor and Trae must be **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted.
+
+When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero.
 
 See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read.
 
 ### Not currently supported
 
-Windsurf, GitHub Copilot, Cline, and Lingma are not currently supported because whereToken does not yet have a reliable local usage source for these tools.
+Windsurf, GitHub Copilot, Cline, and Lingma are not currently supported because whereToken does not yet have a reliable usage source for these tools.
 
 ## How it works
 
-whereToken distinguishes between the coding agent you use and the provider serving the model.
+```text
+Coding agents
+      ↓
+Local files and, for some agents, their own usage APIs
+      ↓
+Source-specific adapters
+      ↓
+Normalized usage data
+      ↓
+CLI / Dashboard / JSON
+```
 
-For example, a request made through Claude Code using a MiniMax model is attributed to:
+whereToken discovers usage information from supported coding agents, normalizes source-specific records into a common representation, and exposes the result through the CLI, dashboard, and JSON output.
+
+It distinguishes the **coding agent** you use from the **provider** that served the model.
+
+A request made through Claude Code using a MiniMax model is reported as:
 
 - **Agent:** Claude Code
 - **Provider:** MiniMax
 
 ## Privacy & Security
 
+### Local-first
+
+whereToken is designed to operate locally and does not require a whereToken cloud service.
+
 ### Data collection
 
-whereToken does not collect or upload usage data, session history, or credentials to a whereToken service. There is no telemetry.
+whereToken does not upload usage data, session history, or credentials to a whereToken server. There is no telemetry.
 
-### Local data
+### Data sources
 
-whereToken reads usage information from data already stored on your computer by supported coding agents.
+Usage information is read from data made available by supported coding agents. Most sources are local application data.
 
-### Network access
-
-The optional dashboard runs locally on your machine and does not require a remote whereToken service. It is not exposed to other devices on your network.
-
-Most agents are read from local files only. Cursor and Trae may contact those applications' own hosts using login state they already stored locally, to obtain token columns that are not available from the local files alone.
+Cursor and Trae may access those applications' own APIs using credentials already stored by the corresponding application, to obtain token columns that are not present in the local files.
 
 ### Credentials
 
-whereToken does not ask users to provide API keys directly. When an integration requires authentication, it uses local data or credentials already managed by the corresponding application.
+whereToken does not ask users to paste API keys into the application. When an integration requires authentication, it uses local data or credentials already managed by that application.
 
-### Security
+### Security policy
 
 For security issues and the project's security policy, see [`SECURITY.md`](SECURITY.md). Do not include API keys, session tokens, or other secrets in bug reports.
 
@@ -186,9 +217,10 @@ For security issues and the project's security policy, see [`SECURITY.md`](SECUR
 
 whereToken is currently in **alpha**.
 
-- GitHub release binaries are currently **unsigned** ([`docs/macos-signing.md`](docs/macos-signing.md))
+- Release binaries are currently **unsigned** ([`docs/macos-signing.md`](docs/macos-signing.md))
 - An npm package is not currently published
-- Cursor and Trae token data requires those applications to be signed in
+- Some agents expose only partial usage information
+- Some integrations require the corresponding application to be signed in
 - The dashboard UI is currently Chinese-first
 
 ## Documentation
@@ -197,6 +229,8 @@ whereToken is currently in **alpha**.
 - Data sources: [`docs/data-sources.md`](docs/data-sources.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)
+- Security policy: [`SECURITY.md`](SECURITY.md)
+- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
 For the complete CLI reference, environment variables, exit codes, and JSON output format, see the project documentation.
 

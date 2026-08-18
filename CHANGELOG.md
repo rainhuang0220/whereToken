@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- README is a product-tool page: no loopback addresses, no author notes, flags live in docs
+- README frames whereToken as local-first usage observability: why it exists, how agents are normalized, missing data is not zero
 - `verify-cli.sh` looks for the `--offline` banner in the whole table. The 3-line slab is no longer the first two lines
 
 ## 0.3.0 — 2026-08-18 (Alpha)
