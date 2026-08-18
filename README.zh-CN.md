@@ -1,12 +1,11 @@
 <p align="center">
-  <img src="docs/media/logo.png" width="96" alt="whereToken 窑崽">
+  <img src="docs/media/logo.png" width="96" alt="whereToken">
 </p>
 
 <h1 align="center">whereToken</h1>
 
 <p align="center">
-  本机 coding agent 的 token，烧到哪去了。<br>
-  一行命令，一张表。想看墙，就 <code>serve</code>。
+  本机 coding agent 的 token，花到哪去了。
 </p>
 
 <p align="center">
@@ -23,30 +22,33 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/cli-kpi.png" alt="wheretoken — 有账本以来的八格" width="720">
+  <img src="docs/media/dash-newspaper.jpg" alt="whereToken 仪表盘" width="900">
 </p>
 
-> **v0.3.0 Alpha。** 对着自己的账本跑。[不对就开 issue](https://github.com/rainhuang0220/whereToken/issues)，也欢迎 PR。
+whereToken 是一个 **local-first** 的命令行（可选网页）用量工具。它读的是已经躺在这台电脑上的账本。
 
-只读本机已经有的账本。不连云，不标美元，不做遥测。
+**Claude Code · Kimi Code · Codex · Cursor · OpenCode · Grok CLI · Trae**
 
-**工具 ≠ 厂家** —— Claude Code 跑 MiniMax，仍是 Claude Code / MiniMax。Cursor 没登录写在注里，不当成假零。
+用量数据留在本机。没有云同步，没有遥测。
 
-<table>
-  <tr>
-    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="按工具排行"></td>
-    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="按厂家排行"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>按工具</sub></td>
-    <td align="center"><sub>按厂家</sub></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/media/cli-kpi.png" alt="whereToken 命令行" width="720">
+</p>
+
+## 功能
+
+- 把本机已有账本的 agent 加总
+- 按**工具**、**厂家**、**模型**切开
+- 今天、连烧、缓存命中率
+- 给脚本的 JSON
+- 可选的本机仪表盘
+- 只报 token，不估美元 —— 订阅和各家定价对不上本机账本
 
 ## 安装
 
 ```bash
-brew tap rainhuang0220/wheretoken && brew install wheretoken
+brew tap rainhuang0220/wheretoken
+brew install wheretoken
 ```
 
 ```bash
@@ -57,44 +59,50 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-curl / irm 会印出路径（一般是 `~/.local/bin/wheretoken`）。跑那一行。当前终端找不到命令的话，新开一个。
+curl / irm 会印出装好的路径（一般是 `~/.local/bin/wheretoken`）。跑那一行。当前终端找不到命令，就新开一个。
 
 ```bash
-go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest   # Go 1.25+
+go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 ```
 
-窑墙在 GitHub Release 和 `brew tap` 里。`go install` / `brew --HEAD` 只有短页 —— 克隆目录：`cd web && npm run build`，再 `WHERETOKEN_WEB=web/dist wheretoken serve`。
+仪表盘在 GitHub Release 和 `brew tap` 里。`go install` / `brew --HEAD` 只有短页 —— 克隆目录：`cd web && npm run build`，再 `WHERETOKEN_WEB=web/dist wheretoken serve`。
 
 `npm/` 包装 **还没上 npm 源**。
 
-## 用法
+## 快速开始
 
 ```bash
-wheretoken                 # 有账本以来
-wheretoken --today         # 本机时区的今天
-wheretoken --cursor        # 还有 --claude --kimi --grok --codex --opencode --trae
+wheretoken
+```
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="按工具"></td>
+    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="按厂家"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>按工具</sub></td>
+    <td align="center"><sub>按厂家</sub></td>
+  </tr>
+</table>
+
+```bash
+wheretoken --today
+wheretoken --cursor          # 还有 --claude --kimi --grok --codex --opencode --trae
 wheretoken --vendor=xai
 wheretoken --model=k3
-wheretoken --json          # schema 1
-wheretoken --offline       # 跳过 Cursor / Trae 云端
-wheretoken serve           # http://127.0.0.1:8787
+wheretoken --json
+wheretoken --offline         # 跳过 Cursor / Trae 云端
+wheretoken serve
 ```
+
+然后在这台电脑打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。**刷新** 才重扫。浏览器重载不会。
 
 其余看 `wheretoken --help`。单位是 **M**（百万 token）。
 
-## 窑墙
+## 仪表盘
 
-```bash
-wheretoken serve           # http://127.0.0.1:8787
-```
-
-**刷新** 才重扫。浏览器重载不会。
-
-**墨** 是报纸那套，作者最喜欢。
-
-<p align="center">
-  <img src="docs/media/dash-newspaper.jpg" alt="首页，报纸釉「墨」" width="900">
-</p>
+上面那张首页是 **墨**：黑白，像报纸。作者最喜欢。
 
 **窑** 是名字的来处。token 烧得快，像窑炉。吉祥物就是那只小窑炉。
 
@@ -102,23 +110,56 @@ wheretoken serve           # http://127.0.0.1:8787
   <img src="docs/media/dash-kiln.png" alt="窑：吉祥物那只小窑炉" width="900">
 </p>
 
-## 账本
+## 支持的工具
 
-只扫磁盘上已经有的。字段对照：[`docs/data-sources.md`](docs/data-sources.md)。
+只扫磁盘上已经有账本的。字段对照：[`docs/data-sources.md`](docs/data-sources.md)。
 
-| 来源 | 不登录也能读 token？ |
-|------|----------------------|
-| Claude Code | 能 |
-| Kimi Code | 能 |
-| Grok CLI | 能 |
-| Codex | 能 |
-| OpenCode | 能 |
-| Cursor | 本地有请求 / 回合。**token 列要应用已登录。** |
-| Trae / Trae CN / TRAE SOLO | **要登录。** 加密的 `storage.json` 只汇报，不解密。 |
+| 工具 | token 数据 | 要登录吗 |
+|------|------------|----------|
+| Claude Code | 有 | 不用 |
+| Kimi Code | 有 | 不用 |
+| Grok CLI | 有 | 不用 |
+| Codex | 有 | 不用 |
+| OpenCode | 有 | 不用 |
+| Cursor | 部分 —— 本地气泡仍计请求 / 回合 | **要。** token 列需要应用 **已登录** |
+| Trae / Trae CN / TRAE SOLO | 部分 | **要。** 加密的 `storage.json` 只汇报，不解密 |
 
-还没有 Windsurf / Copilot / Cline / Lingma —— 等它们留下清楚的本机 token 账本。
+这一版还没有 Windsurf、Copilot、Cline、Lingma 之类。
 
-`wheretoken scan --json` 和页内 **刷新** 是同一份，不是 schema 1，也不吃 `--today` / `--tool`。
+## 工具和厂家
+
+whereToken 把**你敲命令的那个应用**和**背后的模型厂家**分开算。
+
+Claude Code 里跑了一个 MiniMax 模型，记成：
+
+- **工具：** Claude Code
+- **厂家：** MiniMax
+
+这样既能看见你在哪问的，也能看见谁真正接的单。
+
+## 隐私
+
+whereToken 是 local-first。
+
+它读的是这台电脑上已经有的用量文件。不会把这些文件上传，不会同步到 whereToken 的服务器，也不会做遥测。
+
+它不向你要 API key，也不会把你的凭证发给 whereToken。
+
+大多数来源只读本地文件。Cursor 和 Trae 可能用那些应用已经存在本机的登录态，补账本里没有的 token 列。那次请求打的是**它们自己的主机**，不是 whereToken。
+
+可选的仪表盘也跑在这台电脑上，不会暴露给局域网里的其他设备。
+
+## 安全
+
+CLI 从不打印 JWT、access token、API key、Cookie。不要把秘密贴进 issue。其余见 [`SECURITY.md`](SECURITY.md)。
+
+## 当前限制
+
+**v0.3.0 是 Alpha。** 本机已经能用。有些接入还在变。界面目前是中文。
+
+- macOS 的 GitHub 二进制 **还没签名**（[`docs/macos-signing.md`](docs/macos-signing.md)）
+- **没有 npm 包**
+- Cursor / Trae 的 token 列需要那些应用在这台机器上 **已登录**。Claude / Kimi / Grok / Codex / OpenCode 不用
 
 <details>
 <summary>旗标、环境变量、退出码</summary>
@@ -128,7 +169,8 @@ wheretoken --ascii
 wheretoken --width 40
 wheretoken --quiet
 wheretoken sources
-wheretoken completion zsh   # 还有 bash、fish、powershell
+wheretoken scan --json       # 和页内「刷新」同一份；不是 schema 1；不吃 --today / --tool
+wheretoken completion zsh    # 还有 bash、fish、powershell
 ```
 
 补全：[`completions/`](completions/)。手册：[`docs/wheretoken.1`](docs/wheretoken.1)。JSON：[schema 1](docs/cli-json.schema.json)。
@@ -147,16 +189,6 @@ wheretoken completion zsh   # 还有 bash、fish、powershell
 退出码：`0` 正常（没数据、登录残缺也算），`1` 失败，`2` 用法错。
 
 </details>
-
-## 隐私
-
-只读本机。`serve` 绑 `127.0.0.1`。无遥测，不加载第三方字体，stdout 不印 JWT。别把秘密贴进 issue。[`SECURITY.md`](SECURITY.md)。
-
-## 尚未
-
-- GitHub 二进制 **未签名**（[`docs/macos-signing.md`](docs/macos-signing.md)）。
-- **没有 npm 包。**
-- Trae / Cursor 的 **token 列** 需要应用 **已登录**。Claude / Kimi / Grok / Codex / OpenCode 不用。
 
 ## 开发
 

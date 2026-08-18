@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- README is a landing page now: English / [简体中文](README.zh-CN.md). CLI is three short crops. Copy is short. 墨 is the newspaper home; 窑 is the mascot's kiln
+- README is a product page: what it is, screenshots first, then install / sources / tool-vs-vendor / privacy. Implementation notes stay folded
 - `verify-cli.sh` looks for the `--offline` banner in the whole table. The 3-line slab is no longer the first two lines
 
 ## 0.3.0 — 2026-08-18 (Alpha)
