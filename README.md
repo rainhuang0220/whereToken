@@ -1,78 +1,38 @@
 <p align="center">
-  <img src="docs/media/logo.png" width="108" alt="whereToken kiln kid">
+  <img src="docs/media/logo.png" width="96" alt="whereToken kiln kid">
 </p>
 
 <h1 align="center">whereToken</h1>
 
 <p align="center">
-  <b>See where your local coding-agent tokens went.</b><br>
-  One command. A character table. A kiln dashboard if you want one.<br>
-  No cloud account. No USD prices. No telemetry.
+  See where your <b>local</b> coding-agent tokens went.<br>
+  One command. A character table. A kiln dashboard if you want one.
 </p>
 
 <p align="center">
-  <b>English</b> · <a href="./README.zh-CN.md">简体中文</a>
+  <a href="./README.md"><b>English</b></a> ·
+  <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
-  <a href="#what-you-get">What you get</a> ·
-  <a href="#dashboard">Dashboard</a> ·
-  <a href="#what-it-reads">Sources</a> ·
-  <a href="#privacy">Privacy</a>
+  <a href="https://github.com/rainhuang0220/whereToken/releases"><img src="https://img.shields.io/github/v/release/rainhuang0220/whereToken?include_prereleases&style=flat-square&color=FFD700&label=alpha" alt="alpha"></a>
+  <a href="https://github.com/rainhuang0220/whereToken/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rainhuang0220/whereToken/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/rainhuang0220/whereToken?style=flat-square" alt="MIT"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/rainhuang0220/whereToken?style=flat-square" alt="Go"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational?style=flat-square" alt="macOS Linux Windows">
 </p>
 
 <p align="center">
-  <a href="https://github.com/rainhuang0220/whereToken/releases"><img src="https://img.shields.io/github/v/release/rainhuang0220/whereToken?include_prereleases&style=for-the-badge&color=FFD700&label=alpha" alt="alpha release"></a>
-  <a href="https://github.com/rainhuang0220/whereToken/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rainhuang0220/whereToken/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/rainhuang0220/whereToken?style=for-the-badge" alt="MIT"></a>
-  <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/rainhuang0220/whereToken?style=for-the-badge&color=00ADD8" alt="Go"></a>
-  <img src="https://img.shields.io/badge/macOS%20%7C%20Linux%20%7C%20Windows-local%20only-24292f?style=for-the-badge" alt="macOS Linux Windows, local only">
+  <img src="docs/media/cli.png" alt="wheretoken — since records began" width="720">
 </p>
 
-<p align="center">
-  <img src="docs/media/cli.png" alt="whereToken CLI: gold slab mascot, KPI box, tool and vendor rankings" width="820">
-</p>
+> **v0.3.0 is an Alpha.** Run it on your own ledgers. [Open an issue](https://github.com/rainhuang0220/whereToken/issues) when something is wrong, and send pull requests. The table and dashboard speak Chinese today.
 
-<p align="center"><sub>Real machine, 2026-08-18, <code>--offline</code>. Your numbers will differ. The table and dashboard speak Chinese today.</sub></p>
+No cloud account. No USD prices. No telemetry. Claude Code, Cursor, Kimi, Grok, Codex, OpenCode, and Trae each keep a corner of the story — whereToken adds the pile together from files already on this machine.
 
-> **v0.3.0 is an Alpha.** Install it, run it on your own ledgers, [open an issue](https://github.com/rainhuang0220/whereToken/issues) when something is wrong or missing, and send pull requests. Ideas and failing ledgers both help.
-
-## Why
-
-You bounce between Claude Code, Cursor, Kimi, Grok, Codex, OpenCode, Trae. Each one has a corner of the story. Nobody adds the pile together.
-
-whereToken reads the ledgers already on this machine and prints one table: **since records began**, in **millions of tokens (M)**. Cache hit rate, streaks, requests, user turns, then a ranking by **tool** and by **vendor**. Those two are not the same thing — Claude Code running MiniMax is still tool Claude Code, vendor MiniMax.
-
-It does not price anything in USD. It does not phone home.
-
-## What you get
-
-- **Local only** — read-only files under your home. HTTP binds `127.0.0.1`.
-- **A character table** — gold slab, eight KPIs, 7-day spark, rankings.
-- **A kiln dashboard** — 53-week wall, drill-down, eight glazes.
-- **Honest footnotes** — a signed-out Cursor is a note, not a fake `0.00 M` that looks unused.
-- **Scriptable** — `--json` is [schema 1](docs/cli-json.schema.json).
-- **Quiet about secrets** — JWTs, cookies, API keys never hit stdout.
-
-```bash
-wheretoken                 # everything since records began
-wheretoken --today         # local timezone
-wheretoken --cursor        # or --claude --kimi --grok --codex --opencode --trae
-wheretoken --vendor=xai
-wheretoken --model=k3
-wheretoken serve           # kiln at http://127.0.0.1:8787
-```
-
-<p align="center">
-  <img src="docs/media/cli-today.png" alt="whereToken --today: one day, one tool, one model" width="720">
-</p>
-
-<p align="center"><sub><code>wheretoken --today</code> — today only, then the model list that the all-time table hides.</sub></p>
+**Tool ≠ vendor.** Claude Code running MiniMax is still tool Claude Code, vendor MiniMax.
 
 ## Install
-
-macOS / Linux:
 
 ```bash
 brew tap rainhuang0220/wheretoken
@@ -83,46 +43,87 @@ brew install wheretoken
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
-Windows (PowerShell):
-
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
 The curl / irm script prints the path it installed (usually `~/.local/bin/wheretoken`). Run that line. This shell will not see `wheretoken` until you open a new terminal. Archives are SHA-256 checked against `checksums.txt`.
 
-Already have **Go 1.25+**?
-
 ```bash
-go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest   # Go 1.25+
+brew install --HEAD ./Formula/wheretoken.rb                            # from a clone, needs Go
 ```
 
-From a clone, Homebrew can still build from source (needs Go):
-
-```bash
-brew install --HEAD ./Formula/wheretoken.rb
-```
-
-The kiln dashboard is embedded in **GitHub Release** binaries and `brew tap rainhuang0220/wheretoken`. `go install` and `brew --HEAD` embed a short HTML stub — from a clone, `cd web && npm run build`, then `WHERETOKEN_WEB=web/dist wheretoken serve`.
+The kiln dashboard is in **GitHub Release** binaries and `brew tap rainhuang0220/wheretoken`. `go install` and `brew --HEAD` embed a short HTML stub — from a clone, `cd web && npm run build`, then `WHERETOKEN_WEB=web/dist wheretoken serve`.
 
 The `npm/` wrapper is **not on the npm registry** yet.
 
-## Dashboard
+## Usage
+
+```
+$ wheretoken --help
+```
+
+```
+wheretoken — local coding-agent token usage, as a character table.
+
+USAGE
+  wheretoken [flags]
+  wheretoken [flags] serve [--port 8787]
+  wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
+  wheretoken [flags] sources
+  wheretoken [flags] completion bash|zsh|fish|powershell
+
+FLAGS
+  -h, --help           this text
+  -V, --version        print version
+  --today              only today in the local timezone
+  --tool NAME          slice by tool (claude, kimi, grok, codex, opencode, cursor, trae)
+  --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
+  --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
+  --claude --kimi --grok --codex --opencode --cursor --trae
+  --json               JSON on stdout (schema 1)
+  --offline            local ledgers only; skip Cursor/Trae APIs
+  --quiet              no scan-progress lines on stderr
+
+EXAMPLES
+  wheretoken
+  wheretoken --today
+  wheretoken --cursor
+  wheretoken --today --kimi
+  wheretoken --vendor=xai
+  wheretoken --model=k3
+  wheretoken --tool=claude --json
+  wheretoken --offline --quiet
+  wheretoken serve
+```
+
+`wheretoken` with no flags is everything since records began, in **M** (million tokens). `--today` is just today — same table, local timezone, plus the model list. `--cursor` / `--claude` / `--kimi` / `--grok` / `--codex` / `--opencode` / `--trae` slice by tool. `wheretoken serve` opens the kiln at [http://127.0.0.1:8787](http://127.0.0.1:8787) — **刷新** rescans, reloading the tab does not.
+
+<p align="center">
+  <img src="docs/media/cli-today.png" alt="wheretoken --today" width="720">
+</p>
+
+Hit rate is cache-read on the input side only. A signed-out Cursor is a footnote, not a fake `0.00 M` that looks unused.
+
+## Kiln
 
 ```bash
 wheretoken serve
 ```
 
-Opens [http://127.0.0.1:8787](http://127.0.0.1:8787). **刷新** rescans disk (and signed-in Cursor / Trae). Reloading the tab does not.
+53-week wall, peak / streaks, then the same numbers as a readout. Eight glazes under **主题**. The dashboard does not load Google Fonts or any other third-party asset.
 
 <p align="center">
-  <img src="docs/media/dashboard.png" alt="whereToken kiln dashboard: 53-week wall, KPIs, tool and vendor tables" width="900">
+  <img src="docs/media/dash-wall.png" alt="Kiln wall, 53 weeks" width="900">
 </p>
 
-Eight glazes. Open **主题** and pick one. The dashboard does not load Google Fonts or any other third-party asset.
+<p align="center">
+  <img src="docs/media/dash-kpi.png" alt="Dashboard KPI readout" width="900">
+</p>
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="Eight kiln glazes: 窑 苔 瓷 绛 昼 墨 漫 端" width="900">
+  <img src="docs/media/themes.png" alt="Eight kiln glazes" width="900">
 </p>
 
 ## What it reads
@@ -139,7 +140,7 @@ Default scan only covers tools that already have a ledger on disk. macOS and Lin
 | Cursor | Requests / turns from local bubbles. **Token columns need the app signed in.** |
 | Trae / Trae CN / TRAE SOLO | **Yes, sign-in.** Encrypted `storage.json` is reported, not decrypted. |
 
-Field mapping lives in [`docs/data-sources.md`](docs/data-sources.md). Not in this release: Windsurf, Copilot, Cline, Lingma, and similar, until there is a clear local token ledger.
+Field mapping: [`docs/data-sources.md`](docs/data-sources.md). Not in this release: Windsurf, Copilot, Cline, Lingma, and similar, until there is a clear local token ledger.
 
 `wheretoken scan --json` is the same payload the dashboard **刷新** uses. It is **not** schema 1, and it does not take `--today` / `--tool`.
 
@@ -147,13 +148,9 @@ Field mapping lives in [`docs/data-sources.md`](docs/data-sources.md). Not in th
 <summary>More flags, env, exit codes</summary>
 
 ```bash
-wheretoken --today --cursor
-wheretoken --tool=claude
-wheretoken --json              # schema 1 — docs/cli-json.schema.json
 wheretoken --ascii             # old Windows consoles
 wheretoken --width 40          # ranking drops 回合/请求 before names become C...
-wheretoken --quiet             # no “正在读 …” on stderr
-wheretoken --offline           # local ledgers only; skip Cursor/Trae APIs
+wheretoken --json              # schema 1 — docs/cli-json.schema.json
 wheretoken sources
 wheretoken completion zsh      # also bash, fish, powershell
 ```
@@ -187,8 +184,6 @@ Exit codes: `0` ok (including zero data or a degraded login), `1` runtime failur
 Read-only local ledgers. `serve` binds `127.0.0.1` only and refuses a foreign `Host` / `Origin` / `Referer`. No telemetry. The dashboard does not load third-party fonts. The CLI never prints JWTs, access tokens, API keys, or cookies. Do not paste secrets into issues. See [`SECURITY.md`](SECURITY.md).
 
 ## Not yet
-
-Short list, not a roadmap:
 
 - GitHub Release binaries are **unsigned** until Apple signing secrets are set ([`docs/macos-signing.md`](docs/macos-signing.md)).
 - There is **no npm package**.
