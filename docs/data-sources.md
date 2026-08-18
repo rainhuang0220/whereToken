@@ -4,7 +4,7 @@
 
 扫描原则：只读；跳过 `auth.json` / `credentials` / Keychain；不把 prompt 正文写入 whereToken 自己的库（v1）。Cursor / Trae 用量接口是用户授权的例外：只使用它们本机已写入的登录态，只打它们自己的主机，永不打印或提交 token。发现路径一律经 `Home`（`os.UserHomeDir()`、XDG、Application Support、`%APPDATA%`），缺目录静默跳过。额外家目录：`WHERETOKEN_EXTRA_ROOTS`。
 
-工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。Cursor 里的 `grok-*` 走厂家 `xai`（标签 xAI），不是未知厂家，也不是单独适配器。
+工具和厂家不是同一件事。本机 Claude Code 的 assistant 模型分布含 `claude-opus-4.6`、`claude-haiku-4.5`、`MiniMax-M3`、`claude-opus-5`：前两者/后者是 Anthropic，`MiniMax-M3` 必须进厂家 MiniMax、工具仍是 Claude Code。Cursor 里的 `grok-*` 走厂家 `xai`（标签 xAI），不是未知厂家。Grok CLI（`~/.grok/sessions`）是单独的**工具**适配器，厂家仍是 xAI。
 
 ---
 
@@ -19,6 +19,7 @@
 | `~/.claude/` | Claude Code | **是**（projects JSONL） | P0 |
 | `~/.codex/` | Codex CLI | **是**（sessions rollout JSONL） | P0 |
 | `~/.kimi-code/` | Kimi Code | **是**（`usage.record`） | P0 |
+| `~/.grok/sessions/` | Grok CLI | **是**（`updates.jsonl` `turn_completed.usage`） | P0 |
 | `~/.local/share/opencode/` | OpenCode | **是**（`opencode.db` session/message tokens） | P0 |
 | `~/.opencode/` | OpenCode 安装目录 | 否（只有 npm 包装） | 忽略 |
 | `~/.config/opencode/` | OpenCode 配置 | 否（无用量） | 忽略 |
@@ -142,6 +143,29 @@
 这是 v1 **第一个黄金夹具**：字段完整、无流式占位、总量可复算。
 
 **不要用：** `telemetry/*.jsonl`（本机 309 个文件，几乎无 token 字段，且含工具名/策略）。`state.json` 无用量。`config.toml` / `credentials/` 禁止读。
+
+---
+
+## P0-Grok CLI
+
+**根：** `~/.grok/sessions/<url-encoded workspace>/<sessionId>/updates.jsonl`
+
+**权威事件：** `params.update.sessionUpdate=turn_completed` 且带 `usage` 与 `prompt_id`。`chat_history.jsonl` / `events.jsonl` / `summary.json` / `auth.json` 不读。永不映射 `costUsdTicks`。
+
+**映射：**
+
+| whereToken | Grok 字段 |
+|------------|-----------|
+| miss | `inputTokens - cachedReadTokens - cacheCreationTokens`（小于 0 记 0；`inputTokens` 含缓存） |
+| cache_read | `cachedReadTokens` |
+| cache_create | `cacheCreationTokens` |
+| output | `outputTokens` |
+| reasoning | `reasoningTokens`（不进合计） |
+| requests | 有 `prompt_id` 的 `turn_completed`；`modelUsage` 多于一个模型时按 `prompt_id:model` 拆 |
+| user_turns | `user_message_chunk` 且正文非空、不是 `<system-reminder>` |
+| 时间 | `_meta.agentTimestampMs`，否则 `timestamp` 秒 |
+
+**不要用：** `~/.grok/auth.json`、会话里的 `terminal/` 日志、compaction 正文。
 
 ---
 

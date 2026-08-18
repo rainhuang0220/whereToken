@@ -2,22 +2,17 @@
 
 ## Unreleased
 
-- After `curl | bash`, the only next line is the installed path; it no longer prints `next: wheretoken` or an `export PATH` for this shell
-- Accent gold is `#FFD700` (truecolor), not pale 228 / 227
-- Mascot is a Claude-style filled slab with two vertical eye slots; scan still says `挠头中` / `搬煤中`
-- All-time KPI box adds a fourth column: 当日用量 / 单日最高
-- Dashboard home follows Kimi-style chrome: a muted status line, footnotes folded into 窑口, an empty-kiln stage with the mark, and hit-rate bands on the KPI
-- Claude Code JSONL without a top-level `requestId` still counts, keyed by `message.id` (current CLI logs). Rows with only a per-line `uuid` stay skipped so stream placeholders do not sum
-- Scan HUD is a 4-line kiln kid (tuft + face + pot) that fidgets on its own clock: scratch / abacus / toss / fire / blink / grin
-- Caption stays lemon, the mood (`挠头` / `拨算盘` / `投煤` / `煅烧`) is dim — not one flat wash
-- The HUD also draws a lemon charge bar and rotates a short kiln tip
-- Each pose has a 90ms flap (hand / beads / coal) so the kid does not freeze between sources
-- Ranked table headers use lemon `228`
-- A TTY table underlines the title with a short lemon rule (plain / `--no-color` stays unchanged)
-- `--ascii` keeps `(o_o)` / `(^_^)` and English moods
-- Title color is lemon `228`, not Claude-orange `208`
-- An empty home puts the blinking kid above the zero table: 窑里还是冷的
-- Dashboard firing veil draws the same kid as an SVG; the title rail keeps a small idle one
+## 0.3.0 — 2026-08-18 (Alpha)
+
+This is an **Alpha**. Please try it, open issues when something is wrong, and send pull requests. macOS GitHub binaries are still unsigned.
+
+- Grok CLI is a tool (`--grok` / `--tool=grok`). Reads `~/.grok/sessions/**/updates.jsonl` `turn_completed.usage`. Vendor stays xAI. Scan is a snapshot — rerun `wheretoken` or 刷新 to refresh today
+- Claude Code JSONL without a top-level `requestId` still counts, keyed by `message.id`. Rows with only a per-line `uuid` stay skipped
+- After `curl | bash`, the only next line is the installed path
+- Accent gold is `#FFD700`. The scan mark is a filled slab with two vertical eye slots; captions stay `挠头中` / `搬煤中` (`--ascii` keeps `(o_o)` / `(^_^)`)
+- All-time KPI box adds 当日用量 / 单日最高
+- Dashboard home: muted status line, footnotes in 窑口, empty-kiln stage, hit-rate bands on the KPI
+- An empty home puts the mark above the zero table: 窑里还是冷的
 
 ## 0.2.0 — 2026-08-18
 

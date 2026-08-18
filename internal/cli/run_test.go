@@ -494,7 +494,7 @@ func TestHelpTextMentionsPrivacyAndInstall(t *testing.T) {
 	if strings.Contains(h, "消耗") {
 		t.Fatal("help must not watermark 消耗")
 	}
-	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "--today --kimi", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb", "unsigned", "brew tap rainhuang0220/wheretoken", "刷新", "xai", "CLI table", "observatory JSON", "not schema 1", "brew --HEAD", "scan is a different dump"} {
+	for _, want := range []string{"go install", "curl -fsSL", "install.sh", "install.ps1", "JWT", "127.0.0.1", "EXIT CODES", "--tool", "--today", "EXAMPLES", "NO_COLOR", "WHERETOKEN_HOME", "--quiet", "--width", "truncating names", "--offline", "FORCE_COLOR", "--today --cursor", "--today --kimi", "--today --grok", "schema 1", "per-tool", "--model=k3", "cli-json.schema.json", "[flags] sources", "--version", "--port", "./Formula/wheretoken.rb", "unsigned", "brew tap rainhuang0220/wheretoken", "刷新", "xai", "CLI table", "observatory JSON", "not schema 1", "brew --HEAD", "scan is a different dump"} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing %q", want)
 		}

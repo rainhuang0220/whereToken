@@ -11,6 +11,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/claude"
 	"github.com/rainhuang0220/whereToken/internal/adapter/codex"
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
+	"github.com/rainhuang0220/whereToken/internal/adapter/grok"
 	"github.com/rainhuang0220/whereToken/internal/adapter/kimi"
 	"github.com/rainhuang0220/whereToken/internal/adapter/opencode"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
@@ -64,6 +65,7 @@ func Adapters(offline bool) []adapter.Adapter {
 	return []adapter.Adapter{
 		claude.Adapter{},
 		kimi.Adapter{},
+		grok.Adapter{},
 		opencode.Adapter{},
 		codex.Adapter{},
 		cursor.Adapter{Offline: offline},

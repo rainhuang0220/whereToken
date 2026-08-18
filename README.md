@@ -2,6 +2,8 @@
 
 See where your **local** coding-agent tokens went. One command, a character table. No cloud, no USD prices, no telemetry.
 
+**v0.3.0 is an Alpha.** Please install it, try it on your machine, [open an issue](https://github.com/rainhuang0220/whereToken/issues) when something is wrong or missing, and send pull requests. Ideas and failing ledgers both help.
+
 ```bash
 brew tap rainhuang0220/wheretoken
 brew install wheretoken
@@ -35,7 +37,7 @@ Short list, not a roadmap:
 
 - GitHub Release binaries are **unsigned** until Apple signing secrets are set ([`docs/macos-signing.md`](docs/macos-signing.md)).
 - There is **no npm package**.
-- Trae and Cursor **token columns** need those apps **signed in** on this machine. Local Claude / Kimi / Codex / OpenCode ledgers do not.
+- Trae and Cursor **token columns** need those apps **signed in** on this machine. Local Claude / Kimi / Grok / Codex / OpenCode ledgers do not.
 
 ## What you see
 
@@ -67,7 +69,7 @@ Your numbers will differ. Trae/Cursor token columns need that app signed in; the
 
 ```bash
 wheretoken --today              # local timezone; weeks start Monday
-wheretoken --cursor             # also --claude --kimi --codex --opencode --trae
+wheretoken --cursor             # also --claude --kimi --grok --codex --opencode --trae
 wheretoken --tool=claude
 wheretoken --vendor=anthropic
 wheretoken --model=k3

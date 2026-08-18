@@ -419,7 +419,7 @@ func notes(errs []string, discovered []metric.Slice) []string {
 		id, rest, ok := strings.Cut(msg, ": ")
 		label := id
 		if ok {
-			if l := metric.SourceLabel(id); l != id || id == "claude" || id == "kimi" || id == "trae" || id == "cursor" || id == "codex" || id == "opencode" {
+			if l := metric.SourceLabel(id); l != id || id == "claude" || id == "kimi" || id == "grok" || id == "trae" || id == "cursor" || id == "codex" || id == "opencode" {
 				label = metric.SourceLabel(id)
 			}
 			msg = label + " · " + rest

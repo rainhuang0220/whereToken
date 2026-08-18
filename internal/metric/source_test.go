@@ -18,6 +18,8 @@ func TestLookupSourceAcceptsIDsAndLabels(t *testing.T) {
 		{"cursor", "cursor"},
 		{"trae", "trae"},
 		{"TRAE", "trae"},
+		{"grok", "grok"},
+		{"Grok", "grok"},
 	}
 	for _, c := range cases {
 		got, ok := LookupSource(c.in)

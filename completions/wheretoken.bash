@@ -13,7 +13,7 @@ _wheretoken() {
     serve) opts="--port --offline --quiet -q --home --help --ascii --no-color" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources completion help version --help --version --json --today --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources completion help version --help --version --json --today --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }

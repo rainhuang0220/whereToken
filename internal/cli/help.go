@@ -28,10 +28,10 @@ FLAGS
   -h, --help           this text
   -V, --version        print version
   --today              only today in the local timezone
-  --tool NAME          slice by tool (claude, kimi, codex, opencode, cursor, trae)
+  --tool NAME          slice by tool (claude, kimi, grok, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
-  --claude --kimi --codex --opencode --cursor --trae
+  --claude --kimi --grok --codex --opencode --cursor --trae
                        same as --tool=that-id
   --json               JSON on stdout (schema 1; docs/cli-json.schema.json). scan is a different dump
   --ascii              ASCII box drawing (also auto on old Windows consoles)
@@ -68,6 +68,7 @@ EXAMPLES
   wheretoken --cursor
   wheretoken --today --cursor
   wheretoken --today --kimi
+  wheretoken --today --grok
   wheretoken --tool=claude --json
   wheretoken --model=k3
   wheretoken sources
