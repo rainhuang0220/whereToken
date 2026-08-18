@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
 const secret = "sk-leak-fixture-SECRETVALUE99"
@@ -170,6 +172,66 @@ func TestSameTurnRowsStayDistinctRequests(t *testing.T) {
 	}
 }
 
+func TestSameTurnRowsAggregateBySumNotMax(t *testing.T) {
+	dir := t.TempDir()
+	writeLedger(t, dir, "")
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "minimax", Path: filepath.Join(dir, ".minimax")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(tr event.TurnEvent) { turns = append(turns, tr) }); err != nil {
+		t.Fatal(err)
+	}
+	sum := metric.Aggregate(evs, turns)
+	if sum.All.Requests != 3 {
+		t.Fatalf("requests=%d want 3 distinct rows", sum.All.Requests)
+	}
+	if sum.All.Miss != 100+20+7 || sum.All.Output != 10+8+3 {
+		t.Fatalf("same-turn rows must add, not max-merge: %+v", sum.All)
+	}
+	if sum.All.Total() != (100+50+5+10)+(20+80+8)+(7+1+3) {
+		t.Fatalf("total=%d", sum.All.Total())
+	}
+	if sum.All.UserTurns != 2 {
+		t.Fatalf("turns=%d", sum.All.UserTurns)
+	}
+}
+
+func TestTimestampsSurviveSinceWindow(t *testing.T) {
+	dir := t.TempDir()
+	writeLedger(t, dir, "")
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "minimax", Path: filepath.Join(dir, ".minimax")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	loc := time.UTC
+	inside := metric.Window{
+		From: time.Date(2026, 8, 9, 0, 0, 0, 0, loc),
+		To:   time.Date(2026, 8, 10, 0, 0, 0, 0, loc),
+	}
+	before := metric.Window{
+		From: time.Date(2026, 8, 1, 0, 0, 0, 0, loc),
+		To:   time.Date(2026, 8, 8, 0, 0, 0, 0, loc),
+	}
+	var keep, early int
+	for _, e := range evs {
+		if e.Timestamp.IsZero() {
+			t.Fatalf("usage rows must be dated: %+v", e)
+		}
+		if inside.Contains(e.Timestamp, loc) {
+			keep++
+		}
+		if before.Contains(e.Timestamp, loc) {
+			early++
+		}
+	}
+	if keep != 3 || early != 0 {
+		t.Fatalf("keep=%d early=%d", keep, early)
+	}
+}
+
 func TestNegativeTokensClampedAndZeroSkipped(t *testing.T) {
 	dir := t.TempDir()
 	writeLedger(t, dir, `
@@ -197,6 +259,39 @@ VALUES
 	}
 	if got == nil || got.Miss != 0 || got.Output != 1 {
 		t.Fatalf("clamp %+v", got)
+	}
+}
+
+func TestNullModelDoesNotAbortLaterRows(t *testing.T) {
+	dir := t.TempDir()
+	writeLedger(t, dir, `
+INSERT INTO local_runtime_token_usage
+  (id, session_id, agent_name, framework_type, turn_id, model, ts,
+   input_tokens, output_tokens, reasoning_tokens, cache_read_tokens, cache_write_tokens)
+VALUES
+  (20, 's1', 'mavis', 'pi-agent', 't', NULL, 1786267148269, 9, 1, 0, 0, 0),
+  (21, 's1', 'mavis', 'pi-agent', 't', 'minimax/MiniMax-M3', 1786267148269, 3, 1, 0, 0, 0);
+`)
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "minimax", Path: filepath.Join(dir, ".minimax")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	var nullRow, later *event.UsageEvent
+	for i := range evs {
+		switch evs[i].RequestID {
+		case "20":
+			nullRow = &evs[i]
+		case "21":
+			later = &evs[i]
+		}
+	}
+	if nullRow == nil || nullRow.Miss != 9 {
+		t.Fatalf("null model row must still emit tokens: %+v", evs)
+	}
+	if later == nil || later.Miss != 3 {
+		t.Fatalf("later row dropped after null model: %+v", evs)
 	}
 }
 

@@ -92,6 +92,31 @@ func TestOpus4RetiredCardNotCurrentOpus(t *testing.T) {
 	}
 }
 
+func TestMiniMaxM21ListPrice(t *testing.T) {
+	c := Event(event.UsageEvent{
+		Vendor: "minimax", Model: "MiniMax-M2.1",
+		Miss: 1_000_000, CacheRead: 1_000_000, CacheCreate: 1_000_000, Output: 1_000_000,
+	})
+	if !c.OK || c.Micro != 1_905_000 { // 0.30+0.03+0.375+1.20
+		t.Fatalf("m2.1 %+v", c)
+	}
+	fast := Event(event.UsageEvent{Vendor: "minimax", Model: "MiniMax-M2.1-highspeed", Miss: 1_000_000})
+	if !fast.OK || fast.Micro != 600_000 {
+		t.Fatalf("highspeed must not inherit the cheap card %+v", fast)
+	}
+	m27 := Event(event.UsageEvent{Vendor: "minimax", Model: "MiniMax-M2.7", CacheRead: 1_000_000})
+	if !m27.OK || m27.Micro != 60_000 {
+		t.Fatalf("m2.7 cache read is $0.06 %+v", m27)
+	}
+}
+
+func TestMiniMaxM3StaysUnavailable(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "minimax", Model: "minimax/MiniMax-M3", Miss: 1_000_000, Output: 1_000_000})
+	if c.OK {
+		t.Fatal("M3 context-tiered list must not invent one rate")
+	}
+}
+
 func TestGPT56CacheWriteIsPriced(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "openai", Model: "gpt-5.6-sol", CacheCreate: 1_000_000})
 	if !c.OK || c.Micro != 6_250_000 {

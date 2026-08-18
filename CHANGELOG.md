@@ -6,6 +6,9 @@
 - Price card matches public 2026-08-19 list pages (retired Opus 4 / 4.1, GPT-5.6 cache writes, xAI short-context only)
 - MiniMax Agent local ledger (`~/.minimax/v2/sqlite/runtime-state.sqlite` `local_runtime_token_usage`)
 - OpenClaw session JSONL (`~/.openclaw/agents/*/sessions/*.jsonl`; not trajectories)
+- MiniMax M2.1 / M2.5 / M2.7 pay-as-you-go list prices; M3 stays unavailable (context-tiered)
+- OpenClaw top-level numeric timestamps still count; MiniMax NULL model rows no longer abort the ledger
+- MiniMax M2.1 / M2.1-highspeed API list prices; M3 stays unavailable (context tiers)
 - Deterministic usage insights on the observatory payload and dashboard
 - Dashboard period clicks ignore stale `/api/summary` replies
 

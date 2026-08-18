@@ -51,6 +51,17 @@ var table = []Rate{
 	oai("o4-mini", 0.55, 0.28, 0, 2.20),
 	oai("o3-mini", 1.10, 0.55, 0, 4.40),
 	oai("o3", 2.00, 0.50, 0, 8),
+
+	// MiniMax — platform.minimax.io/docs/guides/pricing-paygo (2026-08-19)
+	// International API list. Token Plan subscriptions are not this card.
+	// M3 is not listed here: the public page splits ≤512k / >512k and prints
+	// strikethrough promo pairs. Guessing one rate would be a billed fiction.
+	mm("minimax-m2.7-highspeed", 0.60, 0.06, 0.375, 2.40),
+	mm("minimax-m2.7", 0.30, 0.06, 0.375, 1.20),
+	mm("minimax-m2.5-highspeed", 0.60, 0.03, 0.375, 2.40),
+	mm("minimax-m2.5", 0.30, 0.03, 0.375, 1.20),
+	mm("minimax-m2.1-highspeed", 0.60, 0.03, 0.375, 2.40),
+	mm("minimax-m2.1", 0.30, 0.03, 0.375, 1.20),
 }
 
 func anth(model string, miss, cacheRead, cacheCreate, output float64) Rate {
@@ -77,5 +88,14 @@ func oai(model string, miss, cacheRead, cacheCreate, output float64) Rate {
 		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
 		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Source: "openai_api_list", Version: CardVersion,
+	}
+}
+
+func mm(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return Rate{
+		Vendor: "minimax", Model: model,
+		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		Source: "minimax_api_list", Version: CardVersion,
 	}
 }

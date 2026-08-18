@@ -44,9 +44,14 @@ whether a write was 5 minutes or 1 hour.
 xAI uses the **short-context** tier. Long-context rates (≥200k prompt) are not
 applied: the ledger does not store prompt length.
 
+MiniMax **M2.1** / **M2.5** / **M2.7** (and their highspeed ids) use the
+international pay-as-you-go list (not Token Plan credits). MiniMax **M3** stays
+unpriced: the public page splits ≤512k / >512k and prints strikethrough promo
+pairs.
+
 ## What is not priced
 
-Moonshot / Kimi Code, MiniMax, DeepSeek, Doubao, Zhipu, Alibaba, and any
+Moonshot / Kimi Code, MiniMax-M3, DeepSeek, Doubao, Zhipu, Alibaba, and any
 unknown model stay `unavailable` until a verifiable public API list price is
 added. Coding-agent subscriptions are not treated as API list prices.
 
@@ -55,3 +60,4 @@ added. Coding-agent subscriptions are not treated as API list prices.
 - Anthropic: https://platform.claude.com/docs/en/about-claude/pricing
 - xAI short-context tier: https://docs.x.ai/developers/pricing
 - OpenAI: https://developers.openai.com/api/docs/pricing
+- MiniMax pay-as-you-go: https://platform.minimax.io/docs/guides/pricing-paygo

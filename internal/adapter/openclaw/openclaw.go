@@ -56,7 +56,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 type line struct {
 	Type      string          `json:"type"`
 	ID        string          `json:"id"`
-	Timestamp string          `json:"timestamp"`
+	Timestamp json.RawMessage `json:"timestamp"`
 	Cwd       string          `json:"cwd"`
 	Message   json.RawMessage `json:"message"`
 }
@@ -116,7 +116,7 @@ func parseFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageE
 			if json.Unmarshal(rec.Message, &m) != nil {
 				return nil
 			}
-			ts := parseTS(rec.Timestamp)
+			ts := parseTSRaw(rec.Timestamp)
 			if m.Role == "user" {
 				turns = append(turns, event.TurnEvent{
 					Source:    "openclaw",
@@ -166,6 +166,24 @@ func parseFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageE
 func sessionID(path string) string {
 	base := filepath.Base(path)
 	return strings.TrimSuffix(base, ".jsonl")
+}
+
+func parseTSRaw(raw json.RawMessage) time.Time {
+	if len(raw) == 0 {
+		return time.Time{}
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return parseTS(s)
+	}
+	var n int64
+	if json.Unmarshal(raw, &n) == nil && n > 0 {
+		if n > 1e12 {
+			return time.UnixMilli(n).UTC()
+		}
+		return time.Unix(n, 0).UTC()
+	}
+	return time.Time{}
 }
 
 func parseTS(s string) time.Time {

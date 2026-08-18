@@ -145,7 +145,7 @@ func emitUsage(db *sql.DB, root adapter.SourceRoot, ws map[string]string, emit f
 	for rows.Next() {
 		var (
 			id                            int64
-			sessionID, model              string
+			sessionID, model              sql.NullString
 			ts, miss, out, reason, cr, cw int64
 		)
 		if err := rows.Scan(&id, &sessionID, &model, &ts, &miss, &out, &reason, &cr, &cw); err != nil {
@@ -165,12 +165,12 @@ func emitUsage(db *sql.DB, root adapter.SourceRoot, ws map[string]string, emit f
 		}
 		emit(event.UsageEvent{
 			Source:      "minimax",
-			Vendor:      vendor.Lookup(model, ""),
+			Vendor:      vendor.Lookup(model.String, ""),
 			SourceRoot:  root.Path,
 			RequestID:   strconv.FormatInt(id, 10),
-			SessionID:   sessionID,
-			Model:       model,
-			Workspace:   ws[sessionID],
+			SessionID:   sessionID.String,
+			Model:       model.String,
+			Workspace:   ws[sessionID.String],
 			Timestamp:   stamp,
 			Miss:        miss,
 			CacheRead:   cr,

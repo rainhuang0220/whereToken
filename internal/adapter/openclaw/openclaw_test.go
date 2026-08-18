@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 )
 
 const secret = "sk-leak-fixture-SECRETVALUE99"
@@ -91,6 +93,50 @@ func TestDiscoverAndParseUsage(t *testing.T) {
 	}
 }
 
+func TestIncompleteTailIsNotConsumed(t *testing.T) {
+	dir := t.TempDir()
+	store, err := index.Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	defer index.Use(store)()
+
+	complete := `{"type":"message","timestamp":"2026-07-26T11:03:33Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"a","usage":{"input":4,"output":1}}}` + "\n"
+	tail := `{"type":"message","timestamp":"2026-07-26T11:03:34Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"b","usage":{"input":8,"output":2}}}`
+	writeSession(t, dir, "t.jsonl", complete+tail)
+	root := adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(root, func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "a" {
+		t.Fatalf("unterminated tail must not be parsed: %+v", evs)
+	}
+
+	path := filepath.Join(dir, ".openclaw", "agents", "main", "sessions", "t.jsonl")
+	if err := os.WriteFile(path, []byte(complete+tail+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(path, later, later)
+
+	evs = nil
+	if err := (Adapter{}).Parse(root, func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 {
+		t.Fatalf("completed tail must appear on the next scan: %+v", evs)
+	}
+	got := map[string]int64{}
+	for _, e := range evs {
+		got[e.RequestID] = e.Miss
+	}
+	if got["a"] != 4 || got["b"] != 8 {
+		t.Fatalf("ids=%v", got)
+	}
+}
+
 func TestMalformedDoesNotDropLaterRows(t *testing.T) {
 	dir := t.TempDir()
 	writeSession(t, dir, "s.jsonl", "{nope\n"+`{"type":"message","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"r","usage":{"input":2,"output":1}}}`+"\n")
@@ -113,6 +159,23 @@ func TestParseCheckedInFixture(t *testing.T) {
 	}
 	if len(evs) != 1 || evs[0].Miss != 100 || evs[0].RequestID != "resp-1" {
 		t.Fatalf("%+v", evs)
+	}
+}
+
+func TestNumericTopLevelTimestampStillCounts(t *testing.T) {
+	dir := t.TempDir()
+	writeSession(t, dir, "n2.jsonl", `{"type":"message","id":"line-uuid","timestamp":1785323044000,"message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"r2","usage":{"input":6,"output":2}}}`+"\n")
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Miss != 6 || evs[0].Timestamp.IsZero() {
+		t.Fatalf("numeric top-level timestamp must not drop the row: %+v", evs)
+	}
+	if evs[0].RequestID == "line-uuid" {
+		t.Fatal("must not use per-line uuid")
 	}
 }
 
