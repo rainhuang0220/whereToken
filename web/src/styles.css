@@ -399,24 +399,27 @@ h1 {
 }
 
 .kiln-kid.is-sm {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2.4rem;
+  height: 1.4rem;
 }
 
 .kiln-kid.is-md {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 3.6rem;
+  height: 2.1rem;
 }
 
-.firing-veil .kiln-kid.pose-fire,
-.rail-brand .kiln-kid.pose-fire {
-  animation: moon-spin 0.96s steps(8) infinite;
+.kiln-kid .kid-body {
+  fill: var(--ember-4);
 }
 
-@keyframes moon-spin {
-  to {
-    transform: rotate(1turn);
-  }
+.kiln-kid .kid-eye {
+  fill: var(--void);
+}
+
+.kiln-kid.pose-blink .kid-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0.22);
 }
 
 .lever.busy {

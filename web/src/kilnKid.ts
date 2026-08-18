@@ -11,15 +11,14 @@ export const kilnKidMoods: Record<KilnKidPose, string> = {
   grin: '出窑中',
 }
 
-/** Copied from MoonshotAI/kimi-code welcome.ts */
-export const kimiLogo = ['▐█▛█▛█▌', '▐█████▌'] as const
-
-/** Copied from MoonshotAI/kimi-code rendering.ts MOON_SPINNER_FRAMES */
-export const moonGlyphs = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'] as const
-
-export function moonGlyph(tick: number): string {
-  const n = moonGlyphs.length
-  return moonGlyphs[((tick % n) + n) % n]
+/** Claude-style slab with two vertical eye bars. */
+export const kilnKidFrames: Record<KilnKidPose, readonly [string, string, string]> = {
+  scratch: ['▄██████▄', '█ ▌  ~ █', '▀██████▀'],
+  abacus: ['▄██████▄', '█ ▌  ▌ █', '▀██████▀'],
+  toss: ['▄██████▄', '█ ▌  ▌*█', '▀██████▀'],
+  fire: ['▄██^^██▄', '█ ▌  ▌ █', '▀██████▀'],
+  blink: ['▄██████▄', '█ ▂  ▂ █', '▀██████▀'],
+  grin: ['▄██████▄', '█ ▌  ▌ █', '▀██████▀'],
 }
 
 export function kilnKidPose(tick: number): KilnKidPose {
@@ -28,7 +27,7 @@ export function kilnKidPose(tick: number): KilnKidPose {
 }
 
 export function kilnKidFrame(tick: number): string {
-  return kimiLogo.join('\n')
+  return kilnKidFrames[kilnKidPose(tick)].join('\n')
 }
 
 export function kilnKidMood(tick: number): string {

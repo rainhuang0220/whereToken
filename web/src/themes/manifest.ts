@@ -75,7 +75,7 @@ export const themes: ThemePack[] = [
       'ember-1': '#4a2714',
       'ember-2': '#9a3a0d',
       'ember-3': '#e85a10',
-      'ember-4': '#ffc44a',
+      'ember-4': '#FFD700',
       bone: '#e8dcc8',
       ash: '#8a7a68',
       copper: '#c47a3a',

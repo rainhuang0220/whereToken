@@ -98,7 +98,7 @@ func TestRenderBoxLinesSameWidth(t *testing.T) {
 	out := Render(snap, Options{})
 	var box []string
 	for _, line := range strings.Split(out, "\n") {
-		if strings.HasPrefix(line, "▐") || strings.HasPrefix(line, "|#") || strings.HasPrefix(line, "|#|#|#|") {
+		if strings.HasPrefix(line, "▄") || strings.HasPrefix(line, "▀") || strings.HasPrefix(line, "+-") {
 			continue
 		}
 		if strings.HasPrefix(line, "┌") || strings.HasPrefix(line, "├") || strings.HasPrefix(line, "└") ||
@@ -238,14 +238,14 @@ func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
 	if strings.Count(color, "\x1b") < 3 {
 		t.Fatalf("expected title + values painted:\n%s", color)
 	}
-	if !strings.Contains(color, "38;5;227") {
-		t.Fatalf("headers/title should be lemon 227:\n%s", color)
+	if !strings.Contains(color, "38;2;255;215;0") {
+		t.Fatalf("headers/title should be #FFD700:\n%s", color)
 	}
 	if strings.Contains(color, "38;5;208") {
 		t.Fatal("must not use Claude orange 208")
 	}
-	if !strings.Contains(plain, "▐█▛█▛█▌") && !strings.Contains(plain, "|#|#|#|") {
-		t.Fatal("table should open with the Kimi mark")
+	if !strings.Contains(plain, "▄██████▄") && !strings.Contains(plain, "+------+") {
+		t.Fatal("table should open with the clawd slab")
 	}
 }
 

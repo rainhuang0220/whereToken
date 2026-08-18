@@ -23,7 +23,7 @@ const PAINT_BITS = [
   '#4a2714',
   '#9a3a0d',
   '#e85a10',
-  '#ffc44a',
+  '#FFD700',
   '#e8dcc8',
   '#8a7a68',
   '#c47a3a',

@@ -6,24 +6,35 @@ import (
 	"time"
 )
 
-func TestKimiLogoIsTwoRowsSameWidth(t *testing.T) {
+func TestClawdFaceIsThreeRowsSameWidth(t *testing.T) {
 	for _, ascii := range []bool{false, true} {
-		body := kimiMark(ascii)
-		if len(body) != 2 {
-			t.Fatalf("ascii=%v lines=%d", ascii, len(body))
-		}
-		if DisplayWidth(body[0]) != spriteW || DisplayWidth(body[1]) != spriteW {
-			t.Fatalf("ascii=%v widths %d %d want %d\n%q\n%q", ascii, DisplayWidth(body[0]), DisplayWidth(body[1]), spriteW, body[0], body[1])
+		for tick := 0; tick < poseCount; tick++ {
+			body := clawdFace(tick, ascii)
+			if len(body) != 3 {
+				t.Fatalf("ascii=%v tick=%d lines=%d", ascii, tick, len(body))
+			}
+			for i, line := range body {
+				if DisplayWidth(line) != spriteW {
+					t.Fatalf("ascii=%v tick=%d line %d width %d want %d %q", ascii, tick, i, DisplayWidth(line), spriteW, line)
+				}
+			}
 		}
 	}
-	if kimiLogo[0] != "▐█▛█▛█▌" || kimiLogo[1] != "▐█████▌" {
-		t.Fatalf("must copy Kimi welcome logo, got %#v", kimiLogo)
+}
+
+func TestClawdHasTwoEyeSlots(t *testing.T) {
+	body := clawdFace(PoseGrin, false)
+	if !strings.Contains(body[1], "▌") {
+		t.Fatalf("eyes: %#v", body)
+	}
+	if strings.Count(body[1], "▌") != 2 {
+		t.Fatalf("want two eye bars: %q", body[1])
 	}
 }
 
 func TestSpriteCaptionSitsOnFirstLineMoodOnSecond(t *testing.T) {
 	lines := SpriteLines(PoseAbacus, "正在读 Codex… 2/6", false)
-	if len(lines) != 2 {
+	if len(lines) != 3 {
 		t.Fatalf("%#v", lines)
 	}
 	if !strings.Contains(lines[0], "正在读 Codex") {
@@ -34,35 +45,29 @@ func TestSpriteCaptionSitsOnFirstLineMoodOnSecond(t *testing.T) {
 	}
 }
 
-func TestSpriteASCIIHasNoKimiBlocks(t *testing.T) {
+func TestSpriteASCIIHasNoBlocks(t *testing.T) {
 	block := SpriteBlock(0, "reading", true, false)
-	if strings.ContainsAny(block, "▐█▛▌🌑") {
+	if strings.ContainsAny(block, "▄█▀▌") {
 		t.Fatalf("ascii leaked: %q", block)
 	}
-	if !strings.Contains(block, "|#|#|#|") {
-		t.Fatalf("ascii lost the mark: %q", block)
+	if !strings.Contains(block, "+------+") {
+		t.Fatalf("ascii lost the slab: %q", block)
 	}
 }
 
-func TestSpriteColorIsLemonNotClaudeOrange(t *testing.T) {
+func TestSpriteColorIsGoldNotClaudeOrange(t *testing.T) {
 	got := SpriteBlock(PoseGrin, "hi", false, true)
-	if !strings.Contains(got, "38;5;227") {
-		t.Fatalf("want lemon 227: %q", got)
+	if !strings.Contains(got, "38;2;255;215;0") {
+		t.Fatalf("want #FFD700: %q", got)
 	}
-	if strings.Contains(got, "38;5;208") || strings.Contains(got, "38;5;228") {
-		t.Fatal("must not use Claude orange 208 or pale 228")
+	if strings.Contains(got, "38;5;208") {
+		t.Fatal("must not use Claude orange 208")
 	}
 }
 
-func TestSpriteTickWalksMoon(t *testing.T) {
+func TestSpriteTickWalks(t *testing.T) {
 	if SpriteTick(0) == SpriteTick(400*time.Millisecond) {
-		t.Fatal("moon should advance")
-	}
-	if MoonGlyph(0, false) != "🌑" {
-		t.Fatal(MoonGlyph(0, false))
-	}
-	if MoonGlyph(4, false) != "🌕" {
-		t.Fatal(MoonGlyph(4, false))
+		t.Fatal("tick should advance")
 	}
 }
 
@@ -73,8 +78,8 @@ func TestLemonNoColor(t *testing.T) {
 }
 
 func TestSpriteMoodGerund(t *testing.T) {
-	if SpriteMood(PoseToss, false) != "搬煤中" {
-		t.Fatal(SpriteMood(PoseToss, false))
+	if SpriteMood(PoseScratch, false) != "挠头中" {
+		t.Fatal(SpriteMood(PoseScratch, false))
 	}
 }
 
@@ -84,13 +89,12 @@ func TestChargeBarFills(t *testing.T) {
 	}
 }
 
-func TestSpriteHUDIsMoonLoaderLine(t *testing.T) {
-	block := SpriteHUD(0, PoseAbacus, "正在读 Codex…  2/6", 2, 6, false, false)
-	lines := strings.Split(strings.TrimSuffix(block, "\n"), "\n")
-	if len(lines) != 1 {
-		t.Fatalf("%#v", lines)
+func TestSpriteHUDKeepsGerund(t *testing.T) {
+	block := SpriteHUD(PoseGrin, PoseScratch, "正在读 Codex…  2/6", 2, 6, false, false)
+	if !strings.Contains(block, "挠头中") || !strings.Contains(block, "正在读 Codex") {
+		t.Fatalf("%q", block)
 	}
-	if !strings.Contains(lines[0], "🌑") || !strings.Contains(lines[0], "拨珠中") || !strings.Contains(lines[0], "正在读 Codex") {
-		t.Fatalf("%q", lines[0])
+	if !strings.Contains(block, "▄██████▄") {
+		t.Fatalf("missing clawd slab:\n%s", block)
 	}
 }

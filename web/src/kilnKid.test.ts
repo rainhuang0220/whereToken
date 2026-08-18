@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { kimiLogo, kilnKidFrame, kilnKidMood, moonGlyph, moonGlyphs } from './kilnKid'
+import { kilnKidFrame, kilnKidFrames, kilnKidMood } from './kilnKid'
 
 describe('kilnKid', () => {
-  it('copies the Kimi welcome mark', () => {
-    expect(kimiLogo).toEqual(['▐█▛█▛█▌', '▐█████▌'])
-    expect(kilnKidFrame(0)).toBe('▐█▛█▛█▌\n▐█████▌')
-  })
-
-  it('copies the Kimi moon spinner', () => {
-    expect(moonGlyphs[0]).toBe('🌑')
-    expect(moonGlyphs[4]).toBe('🌕')
-    expect(moonGlyph(0)).toBe(moonGlyph(moonGlyphs.length))
+  it('is a three-line clawd slab with two eye bars', () => {
+    expect(kilnKidFrames.grin[1]).toContain('▌')
+    expect(kilnKidFrames.grin[1].split('▌')).toHaveLength(3)
+    expect(kilnKidFrame(0).split('\n')).toHaveLength(3)
   })
 
   it('names fidgets as gerunds', () => {
