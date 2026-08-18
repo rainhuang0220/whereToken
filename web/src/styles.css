@@ -394,23 +394,45 @@ h1 {
 .kiln-kid {
   display: block;
   flex: 0 0 auto;
-  width: 1em;
-  height: 1em;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.kiln-kid.is-sm,
+.kiln-kid.is-sm {
+  width: 1.65rem;
+  height: 1.85rem;
+}
+
 .kiln-kid.is-md {
-  width: 1em;
-  height: 1em;
+  width: 2.55rem;
+  height: 2.85rem;
 }
 
-.kiln-kid .kid-brick {
+.kiln-kid .kid-brick,
+.kiln-kid .kid-lid {
   fill: var(--ember-4);
 }
 
-.kiln-kid .kid-eye {
+.kiln-kid .kid-lid {
+  fill: color-mix(in srgb, var(--ember-4) 80%, var(--ember-3));
+}
+
+.kiln-kid .kid-eye,
+.kiln-kid .kid-mouth {
   fill: var(--void);
+}
+
+.kiln-kid.pose-blink .kid-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0.22);
+}
+
+.kiln-kid.pose-fire .kid-lid {
+  fill: var(--ember-3);
+}
+
+.kiln-kid.pose-scratch .kid-eye.r {
+  transform: translate(1px, -1px);
 }
 
 .lever.busy {

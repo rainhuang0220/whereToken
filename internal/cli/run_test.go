@@ -74,8 +74,9 @@ func TestRunOfflineAddsNote(t *testing.T) {
 	if !strings.Contains(s, "offline") || !strings.Contains(s, "本机账本") {
 		t.Fatalf("%s", s)
 	}
-	lines := strings.Split(s, "\n")
-	if len(lines) < 2 || !strings.HasPrefix(lines[1], "offline ·") {
+	title := strings.Index(s, "whereToken")
+	off := strings.Index(s, "offline ·")
+	if title < 0 || off < 0 || off < title {
 		t.Fatalf("offline banner should sit under the title:\n%s", s)
 	}
 }
@@ -573,8 +574,8 @@ func TestRunProgressOnStderrWhenTTY(t *testing.T) {
 	if !strings.Contains(errb.String(), "正在读") {
 		t.Fatalf("stderr=%s", errb.String())
 	}
-	if !strings.ContainsAny(errb.String(), "▛█#[]") {
-		t.Fatalf("expected kiln mark on stderr:\n%s", errb.String())
+	if !strings.ContainsAny(errb.String(), "╭.│|") {
+		t.Fatalf("expected kiln face on stderr:\n%s", errb.String())
 	}
 	if !strings.Contains(errb.String(), "\r") {
 		t.Fatal("progress should redraw in place")
@@ -593,11 +594,11 @@ func TestRunASCIIMascotOnProgress(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
-	if !strings.ContainsAny(errb.String(), "#=[]<>%*+") {
+	if !strings.Contains(errb.String(), ".--.") && !strings.Contains(errb.String(), "|oo|") && !strings.Contains(errb.String(), "|__|") {
 		t.Fatalf("ascii mascot:\n%s", errb.String())
 	}
-	if strings.ContainsAny(errb.String(), "•ᴗ▛█") {
-		t.Fatal("ascii mascot leaked unicode mark")
+	if strings.ContainsAny(errb.String(), "╭╰█•") {
+		t.Fatal("ascii mascot leaked unicode face")
 	}
 }
 

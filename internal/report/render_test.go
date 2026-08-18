@@ -98,7 +98,11 @@ func TestRenderBoxLinesSameWidth(t *testing.T) {
 	out := Render(snap, Options{})
 	var box []string
 	for _, line := range strings.Split(out, "\n") {
-		if strings.HasPrefix(line, "┌") || strings.HasPrefix(line, "│") || strings.HasPrefix(line, "├") || strings.HasPrefix(line, "└") {
+		if strings.Contains(line, "╭") || strings.Contains(line, "╰") {
+			continue
+		}
+		if strings.HasPrefix(line, "┌") || strings.HasPrefix(line, "├") || strings.HasPrefix(line, "└") ||
+			(strings.HasPrefix(line, "│") && strings.Count(line, "│") >= 4) {
 			box = append(box, line)
 		}
 	}
@@ -234,17 +238,14 @@ func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
 	if strings.Count(color, "\x1b") < 3 {
 		t.Fatalf("expected title + values painted:\n%s", color)
 	}
-	if !strings.Contains(color, "38;5;228") {
-		t.Fatalf("headers/title should be lemon 228:\n%s", color)
+	if !strings.Contains(color, "38;5;227") {
+		t.Fatalf("headers/title should be lemon 227:\n%s", color)
 	}
 	if strings.Contains(color, "38;5;208") {
 		t.Fatal("must not use Claude orange 208")
 	}
-	if !strings.Contains(color, "─") && !strings.Contains(color, "-") {
-		t.Fatal("color table should underline the title")
-	}
-	if strings.Contains(plain, "whereToken · 有账本以来\n─") {
-		t.Fatal("plain table must not grow a color-only rule")
+	if !strings.Contains(plain, "╭──╮") && !strings.Contains(plain, ".--.") {
+		t.Fatal("table should open with the kiln face")
 	}
 }
 
@@ -294,15 +295,10 @@ func TestRenderOfflineBannerAfterTitle(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := Render(snap, Options{})
-	lines := strings.Split(out, "\n")
-	if len(lines) < 2 {
-		t.Fatalf("too short:\n%s", out)
-	}
-	if !strings.HasPrefix(lines[0], "whereToken") {
-		t.Fatalf("title: %q", lines[0])
-	}
-	if !strings.HasPrefix(lines[1], "offline ·") {
-		t.Fatalf("banner should sit under the title, got %q\n%s", lines[1], out)
+	title := strings.Index(out, "whereToken")
+	off := strings.Index(out, "offline ·")
+	if title < 0 || off < 0 || off < title {
+		t.Fatalf("banner should sit under the title:\n%s", out)
 	}
 	if strings.Contains(out, "注\n  · offline") {
 		t.Fatalf("offline duplicated in footnotes:\n%s", out)

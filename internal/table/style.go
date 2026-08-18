@@ -69,7 +69,7 @@ func Ember(s string, color bool) string {
 	if !color || s == "" {
 		return s
 	}
-	return "\x1b[1;38;5;228m" + s + "\x1b[0m"
+	return "\x1b[1;38;5;227m" + s + "\x1b[0m"
 }
 
 func PaintHit(text string, color bool) string {

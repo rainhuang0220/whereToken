@@ -43,6 +43,10 @@ type Snapshot struct {
 	ShowStreaks   bool
 	HideTurns     bool
 	Last7         []int64
+	TodayTotal    int64
+	TodayM        string
+	PeakDay       int64
+	PeakDayM      string
 	Tools         []Row
 	Vendors       []Row
 	Models        []Row
@@ -153,7 +157,13 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	applyShares(snap.Models, snap.Total)
 	if snap.ShowStreaks {
 		snap.Last7 = metric.LastNDailyTotals(cal.All.Days, now, 7)
+		if n := len(snap.Last7); n > 0 {
+			snap.TodayTotal = snap.Last7[n-1]
+		}
+		snap.PeakDay = cal.All.Stats.PeakTotal
 	}
+	snap.TodayM = metric.FormatM(snap.TodayTotal)
+	snap.PeakDayM = metric.FormatM(snap.PeakDay)
 	if unknownVendorTotal(snap.Vendors) > 0 {
 		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}

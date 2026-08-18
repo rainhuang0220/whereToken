@@ -6,7 +6,7 @@ import (
 )
 
 func TestKPIBoxUnicodeThreeByTwo(t *testing.T) {
-	cells := [2][3]KPI{
+	cells := [2][]KPI{
 		{{Label: "总用量", Value: "360.11 M"}, {Label: "命中率", Value: "70.2%"}, {Label: "最长连烧", Value: "14 天"}},
 		{{Label: "当前连烧", Value: "3 天"}, {Label: "请求", Value: "12,048"}, {Label: "用户回合", Value: "8,901"}},
 	}
@@ -37,7 +37,7 @@ func TestKPIBoxUnicodeThreeByTwo(t *testing.T) {
 }
 
 func TestKPIBoxASCIIFallback(t *testing.T) {
-	cells := [2][3]KPI{
+	cells := [2][]KPI{
 		{{Label: "total", Value: "1.00 M"}, {Label: "hit", Value: "—"}, {Label: "streak", Value: "0 days"}},
 		{{Label: "current", Value: "0 days"}, {Label: "req", Value: "0"}, {Label: "turns", Value: "0"}},
 	}
@@ -119,7 +119,7 @@ func TestFitRankedTableASCIIEllipsis(t *testing.T) {
 }
 
 func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
-	cells := [2][3]KPI{
+	cells := [2][]KPI{
 		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},
 		{{Label: "当前连烧", Value: "1 天"}, {Label: "请求", Value: "9,223,372"}, {Label: "用户回合", Value: "8"}},
 	}
@@ -137,7 +137,7 @@ func TestKPIBoxHugeGroupedMSameWidth(t *testing.T) {
 }
 
 func TestKPIBoxFitsGivenWidth(t *testing.T) {
-	cells := [2][3]KPI{
+	cells := [2][]KPI{
 		{{Label: "总用量", Value: "1,000,000.00 M"}, {Label: "命中率", Value: "99.9%"}, {Label: "最长连烧", Value: "1,000 天"}},
 		{{Label: "当前连烧", Value: "1 天"}, {Label: "请求", Value: "9,223,372"}, {Label: "用户回合", Value: "8,901"}},
 	}

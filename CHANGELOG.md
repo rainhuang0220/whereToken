@@ -3,7 +3,9 @@
 ## Unreleased
 
 - After `curl | bash`, the only next line is the installed path; it no longer prints `next: wheretoken` or an `export PATH` for this shell
-- Kiln mark is a 2-cell block (empty quadrants as eyes) that phases like Kimi's moon; scan HUD is one line (`挠头中` / `搬煤中`), not a 4-line stick figure
+- Lemon is 256 `227` (deeper than pale `228`, still not Claude `208`)
+- Kiln face is a 3-line brick with hole eyes (Kimi/Claude top mark), not a spark bar; scan text stays `挠头中` / `搬煤中`
+- All-time KPI box adds a fourth column: 当日用量 / 单日最高
 - Dashboard home follows Kimi-style chrome: a muted status line, footnotes folded into 窑口, an empty-kiln stage with the mark, and hit-rate bands on the KPI
 - Claude Code JSONL without a top-level `requestId` still counts, keyed by `message.id` (current CLI logs). Rows with only a per-line `uuid` stay skipped so stream placeholders do not sum
 - Scan HUD is a 4-line kiln kid (tuft + face + pot) that fidgets on its own clock: scratch / abacus / toss / fire / blink / grin

@@ -28,11 +28,11 @@ func TestScanHUDDrawsMarkAndCaption(t *testing.T) {
 	if !strings.Contains(got, "2/6") {
 		t.Fatalf("missing progress:\n%s", got)
 	}
-	if !strings.Contains(got, "▛") && !strings.Contains(got, "█") {
-		t.Fatalf("missing block mark:\n%s", got)
+	if !strings.Contains(got, "╭") && !strings.Contains(got, "│") {
+		t.Fatalf("missing kiln face:\n%s", got)
 	}
-	if strings.Contains(got, "(•ᴗ•)") || strings.Contains(got, "∩∩") {
-		t.Fatalf("old 4-line kid leaked:\n%s", got)
+	if strings.ContainsAny(got, "▁▂▃▄▅▆") {
+		t.Fatalf("face looks like a spark:\n%s", got)
 	}
 	if strings.Count(strings.Trim(got, "\n"), "\n") > 2 {
 		t.Fatalf("HUD should be one status line:\n%s", got)
@@ -51,7 +51,7 @@ func TestScanHUDASCIIKeepsMark(t *testing.T) {
 	h := &scanHUD{w: &buf, ascii: true, now: func() time.Time { return time.Unix(0, 0) }}
 	h.Show(scan.Progress{Label: "reading Codex...", Index: 1, Total: 3, Status: scan.ProgressReading})
 	got := buf.String()
-	if strings.ContainsAny(got, "•ᴗ✧≡∩∪▛▜▙▟█") {
+	if strings.ContainsAny(got, "╭╰█≡•") {
 		t.Fatalf("ascii leaked unicode:\n%s", got)
 	}
 	if !strings.ContainsAny(got, "#=[]<>%*+") {
@@ -65,7 +65,7 @@ func TestScanHUDColorIsLemon(t *testing.T) {
 	h := &scanHUD{w: &buf, color: true, now: func() time.Time { return time.Unix(0, 0) }}
 	h.Show(scan.Progress{Label: "hi", Status: scan.ProgressReading})
 	got := buf.String()
-	if !strings.Contains(got, "38;5;228") {
+	if !strings.Contains(got, "38;5;227") {
 		t.Fatalf("want lemon:\n%q", got)
 	}
 	if strings.Contains(got, "38;5;208") {

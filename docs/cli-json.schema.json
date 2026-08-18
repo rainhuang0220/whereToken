@@ -37,6 +37,10 @@
       "minItems": 7,
       "maxItems": 7
     },
+    "today": { "type": "integer", "minimum": 0 },
+    "today_m": { "type": "string" },
+    "peak_day": { "type": "integer", "minimum": 0 },
+    "peak_day_m": { "type": "string" },
     "tools": { "type": "array", "items": { "$ref": "#/$defs/row" } },
     "vendors": { "type": "array", "items": { "$ref": "#/$defs/row" } },
     "models": { "type": "array", "items": { "$ref": "#/$defs/row" } },

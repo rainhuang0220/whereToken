@@ -614,6 +614,12 @@ func TestSnapshotSharesAndLast7(t *testing.T) {
 	if snap.Last7[5] != 10_100_000 || snap.Last7[6] != 1_580_000 {
 		t.Fatalf("last7=%v", snap.Last7)
 	}
+	if snap.TodayTotal != 1_580_000 {
+		t.Fatalf("today=%d", snap.TodayTotal)
+	}
+	if snap.PeakDay < 10_100_000 {
+		t.Fatalf("peak_day=%d", snap.PeakDay)
+	}
 	if len(snap.Tools) < 2 {
 		t.Fatalf("tools=%v", snap.Tools)
 	}

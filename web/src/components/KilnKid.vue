@@ -1,30 +1,35 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { kilnEyePhase } from '../kilnKid'
+import { kilnKidPose, type KilnKidPose } from '../kilnKid'
 
 const props = withDefaults(
   defineProps<{
+    pose?: KilnKidPose
     phase?: number
     size?: 'sm' | 'md'
   }>(),
-  { phase: 0, size: 'sm' },
+  { size: 'sm' },
 )
 
-const eyes = computed(() => kilnEyePhase(props.phase))
+const pose = computed(() => props.pose ?? kilnKidPose(props.phase ?? 0))
 </script>
 
 <template>
   <svg
     class="kiln-kid"
-    :class="[`is-${size}`]"
-    :data-phase="phase"
-    viewBox="0 0 8 8"
+    :class="[`is-${size}`, `pose-${pose}`]"
+    :data-pose="pose"
+    viewBox="0 0 32 36"
     role="img"
     aria-hidden="true"
   >
-    <title>窑</title>
-    <rect class="kid-brick" x="0" y="0" width="8" height="8" />
-    <rect class="kid-eye" :x="eyes.a[0]" :y="eyes.a[1]" width="2" height="2" />
-    <rect class="kid-eye" :x="eyes.b[0]" :y="eyes.b[1]" width="2" height="2" />
+    <title>窑崽</title>
+    <!-- brick body -->
+    <rect class="kid-brick" x="4" y="8" width="24" height="24" rx="3" />
+    <rect class="kid-lid" x="7" y="4" width="18" height="6" rx="2" />
+    <!-- hole eyes (void) -->
+    <rect class="kid-eye l" x="9" y="16" width="5" height="5" rx="1" />
+    <rect class="kid-eye r" x="18" y="16" width="5" height="5" rx="1" />
+    <rect class="kid-mouth" x="13" y="24" width="6" height="2" rx="1" />
   </svg>
 </template>

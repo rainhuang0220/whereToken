@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { chargeAmount, type ScanProgress } from '../firing'
 import { tweenCharge, tweenVeil } from '../firingMotion'
-import { kilnKidMood } from '../kilnKid'
+import { kilnKidMood, kilnKidPose, type KilnKidPose } from '../kilnKid'
 import { prefersReducedMotion } from '../themes/galleryMotion'
 import KilnKid from './KilnKid.vue'
 
@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const root = ref<HTMLElement | null>(null)
 const bar = ref<HTMLElement | null>(null)
-const phase = ref(0)
+const pose = ref<KilnKidPose>(kilnKidPose(0))
 const mood = ref(kilnKidMood(0))
 let ctx: gsap.Context | undefined
 let kidTimer: number | undefined
@@ -37,8 +37,8 @@ onMounted(() => {
   if (!reduced()) {
     kidTimer = window.setInterval(() => {
       kidTick += 1
-      phase.value = kidTick
-      mood.value = kilnKidMood(Math.floor(kidTick / 3))
+      pose.value = kilnKidPose(Math.floor(kidTick / 2))
+      mood.value = kilnKidMood(Math.floor(kidTick / 2))
     }, 120)
   }
 })
@@ -65,7 +65,7 @@ onUnmounted(() => {
   >
     <div class="firing-shade" aria-hidden="true" />
     <div class="firing-copy">
-      <KilnKid :phase="phase" size="sm" />
+      <KilnKid :pose="pose" size="sm" />
       <p class="firing-mood">{{ mood }}</p>
       <p class="firing-step">{{ progress?.label || '正在读本机账本…' }}</p>
       <div class="firing-track" aria-hidden="true">

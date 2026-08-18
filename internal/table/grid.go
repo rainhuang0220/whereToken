@@ -31,11 +31,19 @@ type KPI struct {
 	Label, Value string
 }
 
-func KPIBox(cells [2][3]KPI, style BoxStyle) string {
-	return FitKPIBox(cells, style, 0)
+func KPIBox(rows [2][]KPI, style BoxStyle) string {
+	return FitKPIBox(rows, style, 0)
 }
 
-func FitKPIBox(cells [2][3]KPI, style BoxStyle, maxWidth int) string {
+func FitKPIBox(rows [2][]KPI, style BoxStyle, maxWidth int) string {
+	cols := len(rows[0])
+	if cols == 0 {
+		return ""
+	}
+	if len(rows[1]) < cols {
+		pad := make([]KPI, cols-len(rows[1]))
+		rows[1] = append(append([]KPI(nil), rows[1]...), pad...)
+	}
 	clip := func(s string, inner int) string {
 		if inner < 1 {
 			inner = 1
@@ -45,11 +53,14 @@ func FitKPIBox(cells [2][3]KPI, style BoxStyle, maxWidth int) string {
 		}
 		return TruncateEllipsis(s, inner, style.Ellipsis)
 	}
-	colW := [3]int{}
-	for c := 0; c < 3; c++ {
+	colW := make([]int, cols)
+	for c := 0; c < cols; c++ {
 		for r := 0; r < 2; r++ {
-			colW[c] = maxInt(colW[c], DisplayWidth(cells[r][c].Label))
-			colW[c] = maxInt(colW[c], DisplayWidth(cells[r][c].Value))
+			if c >= len(rows[r]) {
+				continue
+			}
+			colW[c] = maxInt(colW[c], DisplayWidth(rows[r][c].Label))
+			colW[c] = maxInt(colW[c], DisplayWidth(rows[r][c].Value))
 		}
 		colW[c] += 2
 		if colW[c] < 12 {
@@ -58,12 +69,15 @@ func FitKPIBox(cells [2][3]KPI, style BoxStyle, maxWidth int) string {
 	}
 	if maxWidth > 0 {
 		for {
-			total := colW[0] + colW[1] + colW[2] + 4
+			total := cols + 1
+			for _, w := range colW {
+				total += w
+			}
 			if total <= maxWidth {
 				break
 			}
 			widest := 0
-			for c := 1; c < 3; c++ {
+			for c := 1; c < cols; c++ {
 				if colW[c] > colW[widest] {
 					widest = c
 				}
@@ -81,26 +95,60 @@ func FitKPIBox(cells [2][3]KPI, style BoxStyle, maxWidth int) string {
 		return " " + PadLeft(clip(text, w-2), w-2) + " "
 	}
 	hline := func(left, mid, right string) string {
-		return left + strings.Repeat(style.H, colW[0]) + mid + strings.Repeat(style.H, colW[1]) + mid + strings.Repeat(style.H, colW[2]) + right
+		var b strings.Builder
+		b.WriteString(left)
+		for i, w := range colW {
+			b.WriteString(strings.Repeat(style.H, w))
+			if i+1 < cols {
+				b.WriteString(mid)
+			}
+		}
+		b.WriteString(right)
+		return b.String()
 	}
-	rowLeft := func(a, b, c string) string {
-		return style.V + cellLeft(a, colW[0]) + style.V + cellLeft(b, colW[1]) + style.V + cellLeft(c, colW[2]) + style.V
+	rowOf := func(vals []string, right bool) string {
+		var b strings.Builder
+		b.WriteString(style.V)
+		for i := 0; i < cols; i++ {
+			s := ""
+			if i < len(vals) {
+				s = vals[i]
+			}
+			if right {
+				b.WriteString(cellRight(s, colW[i]))
+			} else {
+				b.WriteString(cellLeft(s, colW[i]))
+			}
+			b.WriteString(style.V)
+		}
+		return b.String()
 	}
-	rowRight := func(a, b, c string) string {
-		return style.V + cellRight(a, colW[0]) + style.V + cellRight(b, colW[1]) + style.V + cellRight(c, colW[2]) + style.V
+	labels := func(r int) []string {
+		out := make([]string, cols)
+		for c := 0; c < cols && c < len(rows[r]); c++ {
+			out[c] = rows[r][c].Label
+		}
+		return out
+	}
+	values := func(r int) []string {
+		out := make([]string, cols)
+		for c := 0; c < cols && c < len(rows[r]); c++ {
+			out[c] = rows[r][c].Value
+		}
+		return out
 	}
 	var b strings.Builder
 	b.WriteString(hline(style.TL, style.TJ, style.TR))
 	b.WriteByte('\n')
-	b.WriteString(rowLeft(cells[0][0].Label, cells[0][1].Label, cells[0][2].Label))
+	b.WriteString(rowOf(labels(0), false))
 	b.WriteByte('\n')
-	b.WriteString(rowRight(cells[0][0].Value, cells[0][1].Value, cells[0][2].Value))
+	b.WriteString(rowOf(values(0), true))
 	b.WriteByte('\n')
 	b.WriteString(hline(style.LJ, style.X, style.RJ))
 	b.WriteByte('\n')
-	b.WriteString(rowLeft(cells[1][0].Label, cells[1][1].Label, cells[1][2].Label))
+	b.WriteString(rowOf(labels(1), false))
 	b.WriteByte('\n')
-	b.WriteString(rowRight(cells[1][0].Value, cells[1][1].Value, cells[1][2].Value))
+	b.WriteString(rowOf(values(1), true))
 	b.WriteByte('\n')
 	b.WriteString(hline(style.BL, style.BJ, style.BR))
 	b.WriteByte('\n')

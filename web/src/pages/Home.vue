@@ -96,6 +96,11 @@ const mouthLines = computed(() =>
   }),
 )
 
+const todayUsageM = computed(() => {
+  const day = series.value.days.find((d) => d.date === todayISO())
+  return day?.total_m || '0.00 M'
+})
+
 const statusKind = computed(() => {
   if (emptyHint.value) return '空窑'
   if (!payload.value) return '未煅烧'
@@ -112,7 +117,7 @@ onMounted(() => {
   <div class="forge">
     <header class="rail">
       <div class="rail-brand">
-        <KilnKid :phase="store.loading ? 2 : emptyHint ? 4 : 0" size="sm" />
+        <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
         <div class="rail-name">
           <h1>whereToken</h1>
           <p class="whisper">本机 token 窑</p>
@@ -144,7 +149,7 @@ onMounted(() => {
     <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
 
     <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
-      <KilnKid :phase="4" size="sm" />
+      <KilnKid pose="blink" size="md" />
       <div>
         <p class="cold-kicker">窑里还是冷的</p>
         <p class="cold-copy">{{ emptyHint }}</p>
@@ -173,7 +178,11 @@ onMounted(() => {
     <p class="sr-only">{{ summaryText }}</p>
 
     <template v-if="payload">
-      <KpiRow :all="payload.all" />
+      <KpiRow
+        :all="payload.all"
+        :today-m="todayUsageM"
+        :peak-m="series.stats.peak_total_m"
+      />
 
       <div v-if="showSlices" class="split">
         <SliceTable

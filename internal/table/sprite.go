@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	lemon     = "\x1b[38;5;228m" // soft lemon, not Claude orange 208
-	spriteW   = 2                // one CJK cell: Kimi moon / Claude asterisk size
+	lemon     = "\x1b[38;5;227m" // deeper lemon than pale 228; not Claude orange 208
+	spriteW   = 4
 	spriteGap = "  "
 )
 
@@ -28,20 +28,18 @@ const (
 	poseCount
 )
 
-// SpriteTick walks the 2-cell kiln mark (Kimi moon cadence: 120ms × 8).
 func SpriteTick(elapsed time.Duration) int {
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	return int(elapsed/(120*time.Millisecond)) % len(unicodeGlyphs)
+	return int(elapsed/(160*time.Millisecond)) % poseCount
 }
 
-// SpriteFlap kept so older HUD call sites compile; the mark itself is the motion.
 func SpriteFlap(elapsed time.Duration) int {
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	return int(elapsed/(120*time.Millisecond)) % 2
+	return int(elapsed/(160*time.Millisecond)) % 2
 }
 
 func SpritePose(tick int) int {
@@ -55,7 +53,6 @@ func SpriteMoodTick(elapsed time.Duration) int {
 	return int(elapsed/(400*time.Millisecond)) % poseCount
 }
 
-// SpriteMood is the gerund next to the mark: 挠头中 / 搬煤中.
 func SpriteMood(tick int, ascii bool) string {
 	if ascii {
 		switch SpritePose(tick) {
@@ -89,29 +86,70 @@ func SpriteMood(tick int, ascii bool) string {
 	}
 }
 
-var unicodeGlyphs = []string{"▛▜", "▜█", "█▟", "▟█", "▙▟", "█▙", "▛█", "█▜"}
-var asciiGlyphs = []string{"##", "[]", "<>", "%%", "**", "++", "==", "oo"}
-
-// KilnGlyph is a 2-cell block mark. Empty quadrants are the eyes; they rotate like a moon.
-func KilnGlyph(tick int, ascii bool) string {
-	if ascii {
-		return asciiGlyphs[mod(tick, len(asciiGlyphs))]
-	}
-	return unicodeGlyphs[mod(tick, len(unicodeGlyphs))]
-}
-
-// SpriteLines is one status line: mark + mood + caption.
+// SpriteLines is a 3-line kiln face. Caption sits on the first line; mood on the second.
 func SpriteLines(tick int, caption string, ascii bool) []string {
-	return []string{plainMark(KilnGlyph(tick, ascii), SpriteMood(tick, ascii), caption, "")}
+	return attach(spriteFrame(tick, 0, ascii), caption, SpriteMood(tick, ascii), "")
 }
 
 func SpriteBlock(tick int, caption string, ascii, color bool) string {
-	return markLine(KilnGlyph(tick, ascii), "", caption, "", color) + "\n"
+	return paintFace(spriteFrame(tick, 0, ascii), caption, "", "", color)
 }
 
-// SpriteHUD is one Kimi/Claude-style activity line.
+func SpriteScene(tick int, line0, line1, line2 string, ascii, color bool) string {
+	return paintFace(spriteFrame(tick, 0, ascii), line0, line1, line2, color)
+}
+
 func SpriteHUD(tick, moodTick int, caption string, index, total int, ascii, color bool) string {
-	return markLine(KilnGlyph(tick, ascii), SpriteMood(moodTick, ascii), caption, ChargeBar(index, total, ascii), color) + "\n"
+	return paintFace(spriteFrame(tick, 0, ascii), caption, SpriteMood(moodTick, ascii), ChargeBar(index, total, ascii), color)
+}
+
+func spriteFrame(tick int, flap int, ascii bool) []string {
+	pose := SpritePose(tick)
+	if ascii {
+		return asciiFace(pose, flap)
+	}
+	return unicodeFace(pose, flap)
+}
+
+func unicodeFace(pose, flap int) []string {
+	// 4-cell kiln brick with hole eyes — a face, not a spark bar.
+	switch pose {
+	case PoseScratch:
+		return []string{"╭──╮", "│•~│", "╰██╯"}
+	case PoseAbacus:
+		return []string{"╭──╮", "│≡≡│", "╰██╯"}
+	case PoseToss:
+		return []string{"╭─*╮", "│••│", "╰██╯"}
+	case PoseFire:
+		return []string{"╭^^╮", "│••│", "╰██╯"}
+	case PoseBlink:
+		return []string{"╭──╮", "│──│", "╰██╯"}
+	default:
+		if flap%2 == 1 {
+			return []string{"╭──╮", "│••│", "╰██╯"}
+		}
+		return []string{"╭──╮", "│··│", "╰██╯"}
+	}
+}
+
+func asciiFace(pose, flap int) []string {
+	switch pose {
+	case PoseScratch:
+		return []string{".--.", "|o~|", "|__|"}
+	case PoseAbacus:
+		return []string{".--.", "|##|", "|__|"}
+	case PoseToss:
+		return []string{".-*.", "|oo|", "|__|"}
+	case PoseFire:
+		return []string{".^^.", "|oo|", "|__|"}
+	case PoseBlink:
+		return []string{".--.", "|--|", "|__|"}
+	default:
+		if flap%2 == 1 {
+			return []string{".--.", "|oo|", "|__|"}
+		}
+		return []string{".--.", "|..|", "|__|"}
+	}
 }
 
 func ChargeBar(index, total int, ascii bool) string {
@@ -132,37 +170,47 @@ func ChargeBar(index, total int, ascii bool) string {
 	return strings.Repeat("▰", n) + strings.Repeat("▱", w-n)
 }
 
-func plainMark(glyph, mood, caption, bar string) string {
-	parts := []string{glyph}
-	if mood != "" {
-		parts = append(parts, mood)
+func attach(body []string, a, b, c string) []string {
+	out := append([]string(nil), body...)
+	if len(out) < 3 {
+		return out
 	}
-	if caption != "" {
-		parts = append(parts, caption)
+	if a != "" {
+		out[0] += spriteGap + a
 	}
-	if bar != "" {
-		parts = append(parts, bar)
+	if b != "" {
+		out[1] += spriteGap + b
 	}
-	return strings.Join(parts, spriteGap)
+	if c != "" {
+		out[2] += spriteGap + c
+	}
+	return out
 }
 
-func markLine(glyph, mood, caption, bar string, color bool) string {
+func paintFace(body []string, a, b, c string, color bool) string {
+	lines := attach(body, a, b, c)
 	if !color {
-		return plainMark(glyph, mood, caption, bar)
+		return strings.Join(lines, "\n") + "\n"
 	}
-	var b strings.Builder
-	b.WriteString(Lemon(glyph, true))
-	writePart := func(s string, paint func(string, bool) string) {
-		if s == "" {
-			return
+	var bld strings.Builder
+	for i, line := range lines {
+		face, extra, ok := strings.Cut(line, spriteGap)
+		if !ok {
+			bld.WriteString(Lemon(line, true))
+			bld.WriteByte('\n')
+			continue
 		}
-		b.WriteString(spriteGap)
-		b.WriteString(paint(s, true))
+		bld.WriteString(Lemon(face, true))
+		bld.WriteString(spriteGap)
+		switch i {
+		case 0:
+			bld.WriteString(Ember(extra, true))
+		default:
+			bld.WriteString(Dim(extra, true))
+		}
+		bld.WriteByte('\n')
 	}
-	writePart(mood, Ember)
-	writePart(caption, Dim)
-	writePart(bar, Dim)
-	return b.String()
+	return bld.String()
 }
 
 func mod(n, m int) int {

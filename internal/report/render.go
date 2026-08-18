@@ -21,34 +21,17 @@ func Render(snap Snapshot, opt Options) string {
 	}
 	var b strings.Builder
 	ttl := title(snap)
-	writeWrapped(&b, table.Ember(ttl, opt.Color), opt.Width)
-	if opt.Color {
-		ruleW := table.DisplayWidth(ttl)
-		if opt.Width > 0 && ruleW > opt.Width {
-			ruleW = opt.Width
-		}
-		if ruleW > 28 {
-			ruleW = 28
-		}
-		if ruleW < 8 {
-			ruleW = 8
-		}
-		ch := "─"
-		if opt.ASCII {
-			ch = "-"
-		}
-		b.WriteString(table.Lemon(strings.Repeat(ch, ruleW), true))
-		b.WriteByte('\n')
+	mid := ""
+	pose := table.PoseGrin
+	if isColdKiln(snap) {
+		pose = table.PoseBlink
+		mid = "窑里还是冷的"
+	} else if spark := sparkLine(snap, opt.ASCII, false); spark != "" {
+		mid = spark
 	}
+	b.WriteString(table.SpriteScene(pose, ttl, mid, "", opt.ASCII, opt.Color))
 	if banner := offlineBanner(snap); banner != "" {
 		writeWrapped(&b, table.Dim(banner, opt.Color), opt.Width)
-	}
-	if spark := sparkLine(snap, opt.ASCII, opt.Color); spark != "" {
-		b.WriteString(spark)
-		b.WriteByte('\n')
-	}
-	if isColdKiln(snap) {
-		b.WriteString(table.SpriteBlock(table.PoseBlink, "窑里还是冷的", opt.ASCII, opt.Color))
 	}
 	b.WriteByte('\n')
 	b.WriteString(table.FitKPIBox(kpiCells(snap, opt.Color), style, opt.Width))
@@ -106,24 +89,26 @@ func turnKPI(snap Snapshot) string {
 	return metric.FormatCount(snap.UserTurns)
 }
 
-func kpiCells(snap Snapshot, color bool) [2][3]table.KPI {
+func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 	hit := table.PaintHit(snap.HitRateText, color)
 	total := table.Bold(snap.TotalM, color)
 	if snap.ShowStreaks {
-		return [2][3]table.KPI{
+		return [2][]table.KPI{
 			{
 				{Label: "总用量", Value: total},
 				{Label: "命中率", Value: hit},
 				{Label: "最长连烧", Value: days(snap.MaxStreak)},
+				{Label: "当日用量", Value: snap.TodayM},
 			},
 			{
 				{Label: "当前连烧", Value: days(snap.CurrentStreak)},
 				{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 				{Label: "用户回合", Value: turnKPI(snap)},
+				{Label: "单日最高", Value: snap.PeakDayM},
 			},
 		}
 	}
-	return [2][3]table.KPI{
+	return [2][]table.KPI{
 		{
 			{Label: "总用量", Value: total},
 			{Label: "命中率", Value: hit},

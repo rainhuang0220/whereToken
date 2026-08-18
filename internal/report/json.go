@@ -30,6 +30,10 @@ type jsonSnap struct {
 	UserTurns         int64     `json:"user_turns"`
 	HideTurns         bool      `json:"hide_turns,omitempty"`
 	Last7             []int64   `json:"last_7d,omitempty"`
+	Today             int64     `json:"today,omitempty"`
+	TodayM            string    `json:"today_m,omitempty"`
+	PeakDay           int64     `json:"peak_day,omitempty"`
+	PeakDayM          string    `json:"peak_day_m,omitempty"`
 	Tools             []jsonRow `json:"tools"`
 	Vendors           []jsonRow `json:"vendors"`
 	Models            []jsonRow `json:"models,omitempty"`
@@ -58,6 +62,10 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		out.MaxStreakDays = &max
 		out.CurrentStreakDays = &cur
 		out.Last7 = snap.Last7
+		out.Today = snap.TodayTotal
+		out.TodayM = snap.TodayM
+		out.PeakDay = snap.PeakDay
+		out.PeakDayM = snap.PeakDayM
 	}
 	if snap.Scope != "" || !snap.ShowStreaks {
 		out.Models = jsonRows(snap.Models, false)

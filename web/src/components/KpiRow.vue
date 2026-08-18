@@ -2,7 +2,11 @@
 import { formatCount, hitBand } from '../format'
 import type { SliceView } from '../types'
 
-defineProps<{ all: SliceView }>()
+defineProps<{
+  all: SliceView
+  todayM?: string
+  peakM?: string
+}>()
 </script>
 
 <template>
@@ -16,12 +20,12 @@ defineProps<{ all: SliceView }>()
       <strong>{{ all.hit_rate_text }}</strong>
     </div>
     <div class="read-cell">
-      <span class="read-k">未命中</span>
-      <strong>{{ all.miss_m }}</strong>
+      <span class="read-k">当日用量</span>
+      <strong>{{ todayM || '0.00 M' }}</strong>
     </div>
     <div class="read-cell">
-      <span class="read-k">输出</span>
-      <strong>{{ all.output_m }}</strong>
+      <span class="read-k">单日最高</span>
+      <strong>{{ peakM || '0.00 M' }}</strong>
     </div>
     <div class="read-cell">
       <span class="read-k">请求</span>
