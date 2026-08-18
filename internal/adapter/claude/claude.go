@@ -1,7 +1,6 @@
 package claude
 
 import (
-	"bufio"
 	"encoding/json"
 	"io/fs"
 	"os"
@@ -68,7 +67,7 @@ type claudeLine struct {
 }
 
 func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	evs, turns, _, err := index.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+	evs, turns, _, err := index.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSONLFile(f, path, root)
 	})
 	if err != nil {
@@ -83,33 +82,29 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 	return nil
 }
 
-func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
+func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	ws, sess := claudeContext(root.Path, path)
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
-	sc := bufio.NewScanner(f)
-	buf := make([]byte, 0, 64*1024)
-	sc.Buffer(buf, 10*1024*1024)
-	for sc.Scan() {
-		b := sc.Bytes()
+	consumed, err := index.ScanJSONL(f, func(b []byte, _ int64) error {
 		if len(b) == 0 {
-			continue
+			return nil
 		}
 		var rec claudeLine
 		if err := json.Unmarshal(b, &rec); err != nil {
-			continue
+			return nil
 		}
 		ts, _ := time.Parse(time.RFC3339, rec.Timestamp)
 		switch rec.Type {
 		case "assistant":
 			if rec.Message.Usage == nil {
-				continue
+				return nil
 			}
 			req := claudeRequestID(rec)
 			if req == "" {
 				// uuid is unique per JSONL line; using it as RequestID
 				// would defeat mergeByRequest and sum stream placeholders.
-				continue
+				return nil
 			}
 			evs = append(evs, event.UsageEvent{
 				Source:      "claude",
@@ -132,8 +127,9 @@ func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.U
 				turns = append(turns, event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
 			}
 		}
-	}
-	return evs, turns, sc.Err()
+		return nil
+	})
+	return evs, turns, consumed, err
 }
 
 func claudeRequestID(rec claudeLine) string {

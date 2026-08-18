@@ -174,15 +174,14 @@ onMounted(() => {
       <p v-for="line in mouthLines" :key="line" class="note">{{ line }}</p>
     </details>
 
-    <div class="period" role="tablist" aria-label="时间范围">
+    <div class="period" role="group" aria-label="时间范围">
       <button
         v-for="p in periods"
         :key="p.id"
         type="button"
         class="lever"
         :class="{ primary: store.period === p.id }"
-        role="tab"
-        :aria-selected="store.period === p.id"
+        :aria-pressed="store.period === p.id"
         @click="store.setPeriod(p.id)"
       >
         {{ p.label }}

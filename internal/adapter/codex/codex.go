@@ -99,7 +99,7 @@ type itemPayload struct {
 }
 
 func parseRollout(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	evs, turns, _, err := index.LoadOrReplay("codex", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+	evs, turns, _, err := index.LoadOrReplay("codex", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseRolloutFile(f, path, root)
 	})
 	if err != nil {
@@ -114,7 +114,7 @@ func parseRollout(path string, root adapter.SourceRoot, emit func(event.UsageEve
 	return nil
 }
 
-func parseRolloutFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
+func parseRolloutFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	r := bufio.NewReaderSize(f, 1<<20)
 	st := &rolloutState{}
 	var evs []event.UsageEvent
@@ -137,10 +137,10 @@ func parseRolloutFile(f *os.File, path string, root adapter.SourceRoot) ([]event
 			}
 		}
 		if err == io.EOF {
-			return evs, turns, nil
+			return evs, turns, 0, nil
 		}
 		if err != nil {
-			return evs, turns, err
+			return evs, turns, 0, err
 		}
 	}
 }

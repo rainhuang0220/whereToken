@@ -74,7 +74,7 @@ func TestParseUpdatesJSONL(t *testing.T) {
 	for _, e := range evs {
 		byID[e.RequestID] = e
 	}
-	p1 := byID["p1"]
+	p1 := byID["s1:p1"]
 	if p1.Source != "grok" || p1.Vendor != "xai" || p1.Model != "grok-4.6-build" {
 		t.Fatalf("p1 axes %+v", p1)
 	}
@@ -90,7 +90,7 @@ func TestParseUpdatesJSONL(t *testing.T) {
 	if !p1.Timestamp.Equal(time.UnixMilli(1700000001500).UTC()) {
 		t.Fatalf("p1 ts=%s", p1.Timestamp)
 	}
-	p2 := byID["p2"]
+	p2 := byID["s1:p2"]
 	if p2.Model != "grok" || p2.Vendor != "xai" {
 		t.Fatalf("p2 axes %+v", p2)
 	}
@@ -120,7 +120,7 @@ func TestParseDoesNotReadAuthJSON(t *testing.T) {
 	}, func(event.TurnEvent) {}); err != nil {
 		t.Fatal(err)
 	}
-	if len(evs) != 1 || evs[0].RequestID != "p" || evs[0].Miss != 10 {
+	if len(evs) != 1 || evs[0].RequestID != "sid:p" || evs[0].Miss != 10 {
 		t.Fatalf("%+v", evs)
 	}
 }
@@ -207,8 +207,33 @@ func TestMultiModelSplitsRequestIDs(t *testing.T) {
 	for _, e := range evs {
 		ids[e.RequestID] = true
 	}
-	if !ids["p:grok-4.6-build"] || !ids["p:other-grok"] {
+	if !ids["sid:p:grok-4.6-build"] || !ids["sid:p:other-grok"] {
 		t.Fatalf("ids=%v", ids)
+	}
+}
+
+func TestSamePromptIDInTwoSessionsStayDistinct(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	line := `{"timestamp":1700000000,"params":{"update":{"sessionUpdate":"turn_completed","prompt_id":"shared","usage":{"inputTokens":10,"outputTokens":1,"cachedReadTokens":0,"cacheCreationTokens":0}}}}` + "\n"
+	for _, sess := range []string{"a", "b"} {
+		p := filepath.Join(dir, "ws", sess)
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(p, "updates.jsonl"), []byte(line), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "grok", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Requests != 2 || sum.All.Miss != 20 {
+		t.Fatalf("shared prompt_id across sessions must not merge: requests=%d miss=%d evs=%+v", sum.All.Requests, sum.All.Miss, evs)
 	}
 }
 

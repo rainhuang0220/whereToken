@@ -124,6 +124,38 @@ func TestFormatDeltas(t *testing.T) {
 	}
 }
 
+func TestCompareWindowsSkipsUnbounded(t *testing.T) {
+	loc := time.UTC
+	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)
+	r := Result{
+		Events: []event.UsageEvent{
+			{Source: "kimi", RequestID: "old", Miss: 10, Timestamp: now.AddDate(0, 0, -20)},
+			{Source: "kimi", RequestID: "new", Miss: 4, Timestamp: now.Add(-time.Hour)},
+		},
+	}
+	fromOnly, err := metric.ParseWindow(false, "", "2026-08-01", "", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if CompareWindows(r, fromOnly, loc) != nil {
+		t.Fatal("--from only must not compare against all-time")
+	}
+	toOnly, err := metric.ParseWindow(false, "", "", "2026-08-19", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if CompareWindows(r, toOnly, loc) != nil {
+		t.Fatal("--to only must not compare against all-time")
+	}
+	week, err := metric.ParseWindow(false, "7d", "", "", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if CompareWindows(r, week, loc) == nil {
+		t.Fatal("bounded window should compare")
+	}
+}
+
 func TestApplyWindowFiltersEvents(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)

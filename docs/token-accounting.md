@@ -110,6 +110,13 @@ overwrite a sibling row’s miss.
 Adapters must not invent a request id from a per-line uuid. That would defeat
 the merge and double-count stream placeholders.
 
+## Local scan index
+
+The SQLite file under `~/.cache/wheretoken/` is a performance cache. File
+identity is path + size + mtime + inode, not a content hash. `wheretoken rebuild`
+deletes it. Incremental JSONL stores the last **consumed** byte offset, which
+stays behind EOF while the last line is still being written.
+
 ## What Total is not
 
 Total is not USD, not a provider invoice, and not “context window used”.

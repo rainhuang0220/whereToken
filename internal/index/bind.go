@@ -31,26 +31,26 @@ func Active() *Store {
 	return s
 }
 
-func LoadOrParse(source, path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func LoadOrParse(source, path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	if s := Active(); s != nil {
 		return s.LoadOrParse(source, path, parse)
 	}
 	return parseFull(path, parse)
 }
 
-func LoadOrReplay(source, path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func LoadOrReplay(source, path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	if s := Active(); s != nil {
 		return s.LoadOrReplay(source, path, parse)
 	}
 	return parseFull(path, parse)
 }
 
-func parseFull(path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func parseFull(path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, ModeFull, err
 	}
-	evs, turns, err := parse(f)
+	evs, turns, _, err := parse(f)
 	f.Close()
 	return evs, turns, ModeFull, err
 }

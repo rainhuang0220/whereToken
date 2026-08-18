@@ -50,7 +50,7 @@ func dbFile(path string) (string, bool) {
 }
 
 func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	evs, turns, _, err := index.LoadOrReplay("opencode", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+	evs, turns, _, err := index.LoadOrReplay("opencode", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseDBPath(f.Name(), root)
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 	return nil
 }
 
-func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
+func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
 	err := parseDBOpen(path, root, func(e event.UsageEvent) {
@@ -73,7 +73,7 @@ func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []ev
 	}, func(t event.TurnEvent) {
 		turns = append(turns, t)
 	})
-	return evs, turns, err
+	return evs, turns, 0, err
 }
 
 func parseDBOpen(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {

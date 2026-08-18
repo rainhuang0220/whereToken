@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -23,6 +24,13 @@ func TestParseWindowSinceSevenDays(t *testing.T) {
 	}
 	if w.Contains(time.Date(2026, 8, 12, 23, 0, 0, 0, loc), loc) {
 		t.Fatal("day before window")
+	}
+}
+
+func TestParseSinceErrorMentionsNd(t *testing.T) {
+	_, err := ParseSince("nope")
+	if err == nil || !strings.Contains(err.Error(), "Nd") {
+		t.Fatalf("err=%v", err)
 	}
 }
 

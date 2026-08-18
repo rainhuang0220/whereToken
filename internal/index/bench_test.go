@@ -26,21 +26,25 @@ func BenchmarkFullThenUnchanged(b *testing.B) {
 	}
 	f.Close()
 
-	parse := func(_ *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+	parse := func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		evs := make([]event.UsageEvent, 8000)
 		for i := range evs {
 			evs[i] = event.UsageEvent{Source: "claude", RequestID: fmt.Sprintf("r%d", i), Miss: 1}
 		}
-		return evs, nil, nil
+		st, err := f.Stat()
+		if err != nil {
+			return evs, nil, 0, err
+		}
+		return evs, nil, st.Size(), nil
 	}
 	if _, _, _, err := store.LoadOrParse("claude", path, parse); err != nil {
 		b.Fatal(err)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		evs, _, mode, err := store.LoadOrParse("claude", path, func(_ *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+		evs, _, mode, err := store.LoadOrParse("claude", path, func(_ *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 			b.Fatal("unchanged file must not reparse")
-			return nil, nil, nil
+			return nil, nil, 0, nil
 		})
 		if err != nil || mode != ModeUnchanged || len(evs) != 8000 {
 			b.Fatalf("mode=%s n=%d err=%v", mode, len(evs), err)

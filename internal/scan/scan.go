@@ -266,11 +266,12 @@ func ApplyWindow(r Result, w metric.Window, loc *time.Location) Result {
 }
 
 func CompareWindows(full Result, w metric.Window, loc *time.Location) *metric.Compare {
-	if w.IsAll() {
+	prevWin := w.Previous()
+	if !w.Bounded() || !prevWin.Bounded() {
 		return nil
 	}
 	cur := ApplyWindow(full, w, loc)
-	prev := ApplyWindow(full, w.Previous(), loc)
+	prev := ApplyWindow(full, prevWin, loc)
 	c := metric.NewCompare(cur.Summary, prev.Summary)
 	return &c
 }
@@ -363,16 +364,16 @@ type scanDeltaJSON struct {
 }
 
 type whyJSON struct {
-	Source     string `json:"source"`
-	Label      string `json:"label"`
-	Records    int64  `json:"records"`
-	Miss       int64  `json:"miss"`
-	CacheRead  int64  `json:"cache_read"`
-	CacheCreate int64 `json:"cache_create"`
-	Output     int64  `json:"output"`
-	Total      int64  `json:"total"`
-	Quality    string `json:"quality"`
-	Derivation string `json:"derivation"`
+	Source      string `json:"source"`
+	Label       string `json:"label"`
+	Records     int64  `json:"records"`
+	Miss        int64  `json:"miss"`
+	CacheRead   int64  `json:"cache_read"`
+	CacheCreate int64  `json:"cache_create"`
+	Output      int64  `json:"output"`
+	Total       int64  `json:"total"`
+	Quality     string `json:"quality"`
+	Derivation  string `json:"derivation"`
 }
 
 func viewWithError(s metric.Slice, errs []string) metric.SliceView {

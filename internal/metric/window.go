@@ -21,6 +21,10 @@ func (w Window) IsAll() bool {
 	return !w.Today && w.Days == 0 && w.From.IsZero() && w.To.IsZero()
 }
 
+func (w Window) Bounded() bool {
+	return !w.From.IsZero() && !w.To.IsZero()
+}
+
 func (w Window) Contains(ts time.Time, loc *time.Location) bool {
 	if w.IsAll() {
 		return true
@@ -52,17 +56,17 @@ func (w Window) Previous() Window {
 func ParseSince(s string) (int, error) {
 	s = strings.ToLower(strings.TrimSpace(s))
 	if s == "" {
-		return 0, fmt.Errorf("invalid --since (use 7d or 30d)")
+		return 0, fmt.Errorf("invalid --since (use Nd such as 7d)")
 	}
 	if s == "today" {
 		return 1, nil
 	}
 	if !strings.HasSuffix(s, "d") {
-		return 0, fmt.Errorf("invalid --since %q (use 7d or 30d)", s)
+		return 0, fmt.Errorf("invalid --since %q (use Nd such as 7d)", s)
 	}
 	n, err := strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(s, "d")))
 	if err != nil || n <= 0 {
-		return 0, fmt.Errorf("invalid --since %q (use 7d or 30d)", s)
+		return 0, fmt.Errorf("invalid --since %q (use Nd such as 7d)", s)
 	}
 	return n, nil
 }
@@ -197,12 +201,12 @@ type Compare struct {
 }
 
 type CompareSlice struct {
-	ID         string   `json:"id"`
-	Label      string   `json:"label"`
-	Total      int64    `json:"total"`
-	Previous   int64    `json:"previous"`
-	DeltaPct   *float64 `json:"delta_pct"`
-	DeltaText  string   `json:"delta_text"`
+	ID        string   `json:"id"`
+	Label     string   `json:"label"`
+	Total     int64    `json:"total"`
+	Previous  int64    `json:"previous"`
+	DeltaPct  *float64 `json:"delta_pct"`
+	DeltaText string   `json:"delta_text"`
 }
 
 func NewCompare(cur, prev Summary) Compare {

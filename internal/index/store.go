@@ -5,10 +5,17 @@
 // scan can skip bytes that have not changed. It is not a second adapter and
 // does not implement token accounting.
 //
+// File identity (path, size, mtime, inode) is a best-effort cache key, not a
+// cryptographic content hash. A same-size in-place rewrite that restores the
+// old mtime can replay stale blobs until rebuild.
+//
+// Incremental JSONL stores the last consumed byte offset, which may be behind
+// Size when the file ends on an incomplete line. The next scan resumes there.
+//
 // Tables:
 //
 //	meta        schema version
-//	files       path, size, mtime, inode, offset (parse progress)
+//	files       path, size, mtime, inode, offset (bytes consumed, not EOF)
 //	blobs       gob-encoded normalized events and turns
 //
 // Wipe (wheretoken rebuild) deletes the database. The next scan reads agents
@@ -36,6 +43,8 @@ const (
 	ModeUnchanged   = "unchanged"
 	schemaVersion   = 1
 )
+
+type ParseFunc func(*os.File) (evs []event.UsageEvent, turns []event.TurnEvent, consumed int64, err error)
 
 type Store struct {
 	db *sql.DB
@@ -119,7 +128,7 @@ CREATE TABLE IF NOT EXISTS blobs (
 // LoadOrParse replays cached events when the file is unchanged, parses only
 // newly appended bytes when the file grew, and fully reparses on truncate or
 // replacement (size shrink or inode change).
-func (s *Store) LoadOrParse(source, path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func (s *Store) LoadOrParse(source, path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.load(source, path, parse, true)
@@ -127,14 +136,14 @@ func (s *Store) LoadOrParse(source, path string, parse func(*os.File) ([]event.U
 
 // LoadOrReplay is for parsers that cannot resume from a byte offset (cumulative
 // Codex rollouts, SQLite). Unchanged files replay the cache; any change is a
-// full parse.
-func (s *Store) LoadOrReplay(source, path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+// full parse. Replay stores Size as the offset because the whole file is the unit.
+func (s *Store) LoadOrReplay(source, path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.load(source, path, parse, false)
 }
 
-func (s *Store) load(source, path string, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error), incremental bool) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func (s *Store) load(source, path string, parse ParseFunc, incremental bool) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	st, err := os.Stat(path)
 	if err != nil {
 		return nil, nil, ModeFull, err
@@ -152,14 +161,14 @@ func (s *Store) load(source, path string, parse func(*os.File) ([]event.UsageEve
 	case ModeUnchanged:
 		evs, turns, err := s.getBlobs(path)
 		if err != nil {
-			return s.full(source, path, cur, parse)
+			return s.full(source, path, cur, parse, !incremental)
 		}
 		note(source, ModeUnchanged, 0)
 		return evs, turns, ModeUnchanged, nil
 	case ModeIncremental:
 		oldE, oldT, err := s.getBlobs(path)
 		if err != nil {
-			return s.full(source, path, cur, parse)
+			return s.full(source, path, cur, parse, false)
 		}
 		f, err := os.Open(path)
 		if err != nil {
@@ -167,36 +176,40 @@ func (s *Store) load(source, path string, parse func(*os.File) ([]event.UsageEve
 		}
 		if _, err := f.Seek(prev.Offset, 0); err != nil {
 			f.Close()
-			return s.full(source, path, cur, parse)
+			return s.full(source, path, cur, parse, false)
 		}
-		newE, newT, err := parse(f)
+		newE, newT, consumed, err := parse(f)
 		f.Close()
 		if err != nil {
 			return nil, nil, ModeIncremental, err
 		}
 		allE := append(append([]event.UsageEvent(nil), oldE...), newE...)
 		allT := append(append([]event.TurnEvent(nil), oldT...), newT...)
-		if err := s.put(path, cur, allE, allT); err != nil {
+		if err := s.put(path, cur, consumed, allE, allT); err != nil {
 			return allE, allT, ModeIncremental, err
 		}
 		note(source, ModeIncremental, len(newE)+len(newT))
 		return allE, allT, ModeIncremental, nil
 	default:
-		return s.full(source, path, cur, parse)
+		return s.full(source, path, cur, parse, !incremental)
 	}
 }
 
-func (s *Store) full(source, path string, cur fileRow, parse func(*os.File) ([]event.UsageEvent, []event.TurnEvent, error)) ([]event.UsageEvent, []event.TurnEvent, string, error) {
+func (s *Store) full(source, path string, cur fileRow, parse ParseFunc, replay bool) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, ModeFull, err
 	}
-	evs, turns, err := parse(f)
+	evs, turns, consumed, err := parse(f)
 	f.Close()
 	if err != nil {
 		return evs, turns, ModeFull, err
 	}
-	if err := s.put(path, cur, evs, turns); err != nil {
+	offset := consumed
+	if replay {
+		offset = cur.Size
+	}
+	if err := s.put(path, cur, offset, evs, turns); err != nil {
 		return evs, turns, ModeFull, err
 	}
 	note(source, ModeFull, len(evs)+len(turns))
@@ -252,7 +265,20 @@ func (s *Store) getBlobs(path string) ([]event.UsageEvent, []event.TurnEvent, er
 	return evs, turns, nil
 }
 
-func (s *Store) put(path string, cur fileRow, evs []event.UsageEvent, turns []event.TurnEvent) error {
+func (s *Store) Offset(path string) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r, ok, err := s.getFile(path)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, sql.ErrNoRows
+	}
+	return r.Offset, nil
+}
+
+func (s *Store) put(path string, cur fileRow, offset int64, evs []event.UsageEvent, turns []event.TurnEvent) error {
 	if evs == nil {
 		evs = []event.UsageEvent{}
 	}
@@ -271,8 +297,11 @@ func (s *Store) put(path string, cur fileRow, evs []event.UsageEvent, turns []ev
 		return err
 	}
 	defer tx.Rollback()
+	if offset < 0 || offset > cur.Size {
+		offset = cur.Size
+	}
 	if _, err := tx.Exec(`INSERT OR REPLACE INTO files(path,size,mtime,inode,offset) VALUES(?,?,?,?,?)`,
-		path, cur.Size, cur.Mtime, cur.Inode, cur.Size); err != nil {
+		path, cur.Size, cur.Mtime, cur.Inode, offset); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(`INSERT OR REPLACE INTO blobs(path,events,turns) VALUES(?,?,?)`,

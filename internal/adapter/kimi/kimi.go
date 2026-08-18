@@ -1,7 +1,6 @@
 package kimi
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -80,7 +79,7 @@ type wireLine struct {
 }
 
 func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	evs, turns, _, err := index.LoadOrParse("kimi", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+	evs, turns, _, err := index.LoadOrParse("kimi", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseWireFile(f, path, root)
 	})
 	if err != nil {
@@ -95,25 +94,17 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 	return nil
 }
 
-func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
-	start, _ := f.Seek(0, 1)
-	sc := bufio.NewScanner(f)
-	buf := make([]byte, 0, 64*1024)
-	sc.Buffer(buf, 10*1024*1024)
+func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
-	var nbytes int64
 	seq := 0
-	for sc.Scan() {
-		line := sc.Bytes()
-		off := start + nbytes
-		nbytes += int64(len(line)) + 1
+	consumed, err := index.ScanJSONL(f, func(line []byte, at int64) error {
 		if len(line) == 0 {
-			continue
+			return nil
 		}
 		var rec wireLine
 		if err := json.Unmarshal(line, &rec); err != nil {
-			continue
+			return nil
 		}
 		switch rec.Type {
 		case "usage.record":
@@ -123,7 +114,7 @@ func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.Us
 				Source:      "kimi",
 				Vendor:      vendor.Lookup(rec.Model, ""),
 				SourceRoot:  root.Path,
-				RequestID:   fmt.Sprintf("%s:%d:%d:%d", path, rec.Time, seq, off),
+				RequestID:   fmt.Sprintf("%s:%d:%d:%d", path, rec.Time, seq, at),
 				SessionID:   sess,
 				Workspace:   ws,
 				Model:       rec.Model,
@@ -146,8 +137,9 @@ func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.Us
 				})
 			}
 		}
-	}
-	return evs, turns, sc.Err()
+		return nil
+	})
+	return evs, turns, consumed, err
 }
 
 func kimiContext(rootPath, file string) (workspace, session string) {
