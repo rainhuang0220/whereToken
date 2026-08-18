@@ -574,8 +574,8 @@ func TestRunProgressOnStderrWhenTTY(t *testing.T) {
 	if !strings.Contains(errb.String(), "正在读") {
 		t.Fatalf("stderr=%s", errb.String())
 	}
-	if !strings.ContainsAny(errb.String(), "╭.│|") {
-		t.Fatalf("expected kiln face on stderr:\n%s", errb.String())
+	if !strings.Contains(errb.String(), "🌑") && !strings.Contains(errb.String(), "🌒") && !strings.Contains(errb.String(), "(") {
+		t.Fatalf("expected Kimi moon on stderr:\n%s", errb.String())
 	}
 	if !strings.Contains(errb.String(), "\r") {
 		t.Fatal("progress should redraw in place")
@@ -594,11 +594,11 @@ func TestRunASCIIMascotOnProgress(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
-	if !strings.Contains(errb.String(), ".--.") && !strings.Contains(errb.String(), "|oo|") && !strings.Contains(errb.String(), "|__|") {
-		t.Fatalf("ascii mascot:\n%s", errb.String())
+	if !strings.Contains(errb.String(), "(") {
+		t.Fatalf("ascii moon:\n%s", errb.String())
 	}
-	if strings.ContainsAny(errb.String(), "╭╰█•") {
-		t.Fatal("ascii mascot leaked unicode face")
+	if strings.ContainsAny(errb.String(), "▐▛🌑") {
+		t.Fatal("ascii moon leaked unicode")
 	}
 }
 

@@ -11,14 +11,15 @@ export const kilnKidMoods: Record<KilnKidPose, string> = {
   grin: '出窑中',
 }
 
-/** 3-line kiln brick face. Hole eyes, not a spark bar. */
-export const kilnKidFrames: Record<KilnKidPose, readonly [string, string, string]> = {
-  scratch: ['╭──╮', '│•~│', '╰██╯'],
-  abacus: ['╭──╮', '│≡≡│', '╰██╯'],
-  toss: ['╭─*╮', '│••│', '╰██╯'],
-  fire: ['╭^^╮', '│••│', '╰██╯'],
-  blink: ['╭──╮', '│──│', '╰██╯'],
-  grin: ['╭──╮', '│··│', '╰██╯'],
+/** Copied from MoonshotAI/kimi-code welcome.ts */
+export const kimiLogo = ['▐█▛█▛█▌', '▐█████▌'] as const
+
+/** Copied from MoonshotAI/kimi-code rendering.ts MOON_SPINNER_FRAMES */
+export const moonGlyphs = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'] as const
+
+export function moonGlyph(tick: number): string {
+  const n = moonGlyphs.length
+  return moonGlyphs[((tick % n) + n) % n]
 }
 
 export function kilnKidPose(tick: number): KilnKidPose {
@@ -27,7 +28,7 @@ export function kilnKidPose(tick: number): KilnKidPose {
 }
 
 export function kilnKidFrame(tick: number): string {
-  return kilnKidFrames[kilnKidPose(tick)].join('\n')
+  return kimiLogo.join('\n')
 }
 
 export function kilnKidMood(tick: number): string {

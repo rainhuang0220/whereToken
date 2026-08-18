@@ -98,7 +98,7 @@ func TestRenderBoxLinesSameWidth(t *testing.T) {
 	out := Render(snap, Options{})
 	var box []string
 	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "╭") || strings.Contains(line, "╰") {
+		if strings.HasPrefix(line, "▐") || strings.HasPrefix(line, "|#") || strings.HasPrefix(line, "|#|#|#|") {
 			continue
 		}
 		if strings.HasPrefix(line, "┌") || strings.HasPrefix(line, "├") || strings.HasPrefix(line, "└") ||
@@ -244,8 +244,8 @@ func TestRenderColorPaintsTitleAndHitRate(t *testing.T) {
 	if strings.Contains(color, "38;5;208") {
 		t.Fatal("must not use Claude orange 208")
 	}
-	if !strings.Contains(plain, "╭──╮") && !strings.Contains(plain, ".--.") {
-		t.Fatal("table should open with the kiln face")
+	if !strings.Contains(plain, "▐█▛█▛█▌") && !strings.Contains(plain, "|#|#|#|") {
+		t.Fatal("table should open with the Kimi mark")
 	}
 }
 

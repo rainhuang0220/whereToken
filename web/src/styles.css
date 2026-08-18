@@ -395,44 +395,28 @@ h1 {
   display: block;
   flex: 0 0 auto;
   overflow: visible;
+  color: var(--ember-4);
 }
 
 .kiln-kid.is-sm {
-  width: 1.65rem;
+  width: 1.85rem;
   height: 1.85rem;
 }
 
 .kiln-kid.is-md {
-  width: 2.55rem;
-  height: 2.85rem;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
-.kiln-kid .kid-brick,
-.kiln-kid .kid-lid {
-  fill: var(--ember-4);
+.firing-veil .kiln-kid.pose-fire,
+.rail-brand .kiln-kid.pose-fire {
+  animation: moon-spin 0.96s steps(8) infinite;
 }
 
-.kiln-kid .kid-lid {
-  fill: color-mix(in srgb, var(--ember-4) 80%, var(--ember-3));
-}
-
-.kiln-kid .kid-eye,
-.kiln-kid .kid-mouth {
-  fill: var(--void);
-}
-
-.kiln-kid.pose-blink .kid-eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0.22);
-}
-
-.kiln-kid.pose-fire .kid-lid {
-  fill: var(--ember-3);
-}
-
-.kiln-kid.pose-scratch .kid-eye.r {
-  transform: translate(1px, -1px);
+@keyframes moon-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 .lever.busy {
@@ -1247,5 +1231,6 @@ body:has(.glaze-hall.is-open) {
 
   .kiln-kid {
     transition: none;
+    animation: none;
   }
 }

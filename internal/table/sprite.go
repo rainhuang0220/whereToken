@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	lemon     = "\x1b[38;5;227m" // deeper lemon than pale 228; not Claude orange 208
-	spriteW   = 4
+	lemon     = "\x1b[38;5;227m" // lemon, not Claude orange 208
+	spriteW   = 7                // Kimi welcome logo width
 	spriteGap = "  "
 )
 
@@ -28,18 +28,23 @@ const (
 	poseCount
 )
 
+// Copied from MoonshotAI/kimi-code welcome.ts — the 2-line block mark at the top.
+var kimiLogo = []string{"▐█▛█▛█▌", "▐█████▌"}
+var kimiLogoASCII = []string{"|#|#|#|", "|#####|"}
+
+// Copied from MoonshotAI/kimi-code rendering.ts MOON_SPINNER_FRAMES (120ms).
+var moonGlyphs = []string{"🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"}
+var moonGlyphsASCII = []string{"( )", "(@)", "(:)", "(o)", "(O)", "(o)", "(:)", "(@)"}
+
 func SpriteTick(elapsed time.Duration) int {
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	return int(elapsed/(160*time.Millisecond)) % poseCount
+	return int(elapsed/(120*time.Millisecond)) % len(moonGlyphs)
 }
 
 func SpriteFlap(elapsed time.Duration) int {
-	if elapsed < 0 {
-		elapsed = 0
-	}
-	return int(elapsed/(160*time.Millisecond)) % 2
+	return SpriteTick(elapsed) % 2
 }
 
 func SpritePose(tick int) int {
@@ -86,70 +91,64 @@ func SpriteMood(tick int, ascii bool) string {
 	}
 }
 
-// SpriteLines is a 3-line kiln face. Caption sits on the first line; mood on the second.
+func kimiMark(ascii bool) []string {
+	if ascii {
+		return append([]string(nil), kimiLogoASCII...)
+	}
+	return append([]string(nil), kimiLogo...)
+}
+
+func MoonGlyph(tick int, ascii bool) string {
+	if ascii {
+		return moonGlyphsASCII[mod(tick, len(moonGlyphsASCII))]
+	}
+	return moonGlyphs[mod(tick, len(moonGlyphs))]
+}
+
 func SpriteLines(tick int, caption string, ascii bool) []string {
-	return attach(spriteFrame(tick, 0, ascii), caption, SpriteMood(tick, ascii), "")
+	return attach(kimiMark(ascii), caption, SpriteMood(tick, ascii))
 }
 
 func SpriteBlock(tick int, caption string, ascii, color bool) string {
-	return paintFace(spriteFrame(tick, 0, ascii), caption, "", "", color)
+	return paintFace(kimiMark(ascii), caption, "", color)
 }
 
 func SpriteScene(tick int, line0, line1, line2 string, ascii, color bool) string {
-	return paintFace(spriteFrame(tick, 0, ascii), line0, line1, line2, color)
+	_ = tick
+	_ = line2
+	return paintFace(kimiMark(ascii), line0, line1, color)
 }
 
+// SpriteHUD is Kimi's moon-loader: one spinning moon + label.
 func SpriteHUD(tick, moodTick int, caption string, index, total int, ascii, color bool) string {
-	return paintFace(spriteFrame(tick, 0, ascii), caption, SpriteMood(moodTick, ascii), ChargeBar(index, total, ascii), color)
-}
-
-func spriteFrame(tick int, flap int, ascii bool) []string {
-	pose := SpritePose(tick)
-	if ascii {
-		return asciiFace(pose, flap)
+	moon := MoonGlyph(tick, ascii)
+	mood := SpriteMood(moodTick, ascii)
+	bar := ChargeBar(index, total, ascii)
+	parts := []string{moon, mood}
+	if caption != "" {
+		parts = append(parts, caption)
 	}
-	return unicodeFace(pose, flap)
-}
-
-func unicodeFace(pose, flap int) []string {
-	// 4-cell kiln brick with hole eyes — a face, not a spark bar.
-	switch pose {
-	case PoseScratch:
-		return []string{"╭──╮", "│•~│", "╰██╯"}
-	case PoseAbacus:
-		return []string{"╭──╮", "│≡≡│", "╰██╯"}
-	case PoseToss:
-		return []string{"╭─*╮", "│••│", "╰██╯"}
-	case PoseFire:
-		return []string{"╭^^╮", "│••│", "╰██╯"}
-	case PoseBlink:
-		return []string{"╭──╮", "│──│", "╰██╯"}
-	default:
-		if flap%2 == 1 {
-			return []string{"╭──╮", "│••│", "╰██╯"}
-		}
-		return []string{"╭──╮", "│··│", "╰██╯"}
+	if bar != "" {
+		parts = append(parts, bar)
 	}
-}
-
-func asciiFace(pose, flap int) []string {
-	switch pose {
-	case PoseScratch:
-		return []string{".--.", "|o~|", "|__|"}
-	case PoseAbacus:
-		return []string{".--.", "|##|", "|__|"}
-	case PoseToss:
-		return []string{".-*.", "|oo|", "|__|"}
-	case PoseFire:
-		return []string{".^^.", "|oo|", "|__|"}
-	case PoseBlink:
-		return []string{".--.", "|--|", "|__|"}
-	default:
-		if flap%2 == 1 {
-			return []string{".--.", "|oo|", "|__|"}
-		}
-		return []string{".--.", "|..|", "|__|"}
+	line := strings.Join(parts, spriteGap)
+	if !color {
+		return line + "\n"
 	}
+	var b strings.Builder
+	b.WriteString(Lemon(moon, true))
+	b.WriteString(spriteGap)
+	b.WriteString(Ember(mood, true))
+	if caption != "" {
+		b.WriteString(spriteGap)
+		b.WriteString(Dim(caption, true))
+	}
+	if bar != "" {
+		b.WriteString(spriteGap)
+		b.WriteString(Dim(bar, true))
+	}
+	b.WriteByte('\n')
+	return b.String()
 }
 
 func ChargeBar(index, total int, ascii bool) string {
@@ -170,25 +169,22 @@ func ChargeBar(index, total int, ascii bool) string {
 	return strings.Repeat("▰", n) + strings.Repeat("▱", w-n)
 }
 
-func attach(body []string, a, b, c string) []string {
+func attach(body []string, a, b string) []string {
 	out := append([]string(nil), body...)
-	if len(out) < 3 {
+	if len(out) == 0 {
 		return out
 	}
 	if a != "" {
 		out[0] += spriteGap + a
 	}
-	if b != "" {
+	if b != "" && len(out) > 1 {
 		out[1] += spriteGap + b
-	}
-	if c != "" {
-		out[2] += spriteGap + c
 	}
 	return out
 }
 
-func paintFace(body []string, a, b, c string, color bool) string {
-	lines := attach(body, a, b, c)
+func paintFace(body []string, a, b string, color bool) string {
+	lines := attach(body, a, b)
 	if !color {
 		return strings.Join(lines, "\n") + "\n"
 	}
@@ -202,10 +198,9 @@ func paintFace(body []string, a, b, c string, color bool) string {
 		}
 		bld.WriteString(Lemon(face, true))
 		bld.WriteString(spriteGap)
-		switch i {
-		case 0:
+		if i == 0 {
 			bld.WriteString(Ember(extra, true))
-		default:
+		} else {
 			bld.WriteString(Dim(extra, true))
 		}
 		bld.WriteByte('\n')
