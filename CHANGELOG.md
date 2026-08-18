@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- README is a landing page now: English / [简体中文](README.zh-CN.md), with a real `wheretoken` / `--today` terminal shot and cropped kiln frames
+- README is a landing page now: English / [简体中文](README.zh-CN.md), with the author's `wheretoken` / `--today` terminal shots, 墨 as the newspaper home, and 窑 as the mascot's kiln
 - `verify-cli.sh` looks for the `--offline` banner in the whole table. The 3-line slab is no longer the first two lines
 
 ## 0.3.0 — 2026-08-18 (Alpha)

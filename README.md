@@ -106,24 +106,24 @@ EXAMPLES
 
 Hit rate is cache-read on the input side only. A signed-out Cursor is a footnote, not a fake `0.00 M` that looks unused.
 
-## Kiln
+## Dashboard
 
 ```bash
 wheretoken serve
 ```
 
-53-week wall, peak / streaks, then the same numbers as a readout. Eight glazes under **主题**. The dashboard does not load Google Fonts or any other third-party asset.
+Opens [http://127.0.0.1:8787](http://127.0.0.1:8787). **刷新** rescans disk (and signed-in Cursor / Trae). Reloading the tab does not. The page does not load Google Fonts or any other third-party asset.
+
+The shot below is **墨** — black and white, like a newspaper. It is the author's favorite glaze.
 
 <p align="center">
-  <img src="docs/media/dash-wall.png" alt="Kiln wall, 53 weeks" width="900">
+  <img src="docs/media/dash-newspaper.jpg" alt="Dashboard home in 墨, the newspaper glaze" width="900">
 </p>
 
-<p align="center">
-  <img src="docs/media/dash-kpi.png" alt="Dashboard KPI readout" width="900">
-</p>
+**窑** is not a theme store. Token usage burns fast, like a kiln — that is where the name and the mascot come from. The gold slab with two eye slots is a little kiln.
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="Eight kiln glazes" width="900">
+  <img src="docs/media/dash-kiln.png" alt="窑 glaze — the little kiln the mascot comes from" width="900">
 </p>
 
 ## What it reads

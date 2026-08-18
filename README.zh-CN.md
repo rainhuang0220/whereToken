@@ -112,18 +112,18 @@ EXAMPLES
 wheretoken serve
 ```
 
-53 周砖墙、峰值 / 连烧，再是同一组数字的读出。**主题**里八种釉。观察台不加载 Google Fonts，也不加载别的第三方资源。
+打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。页内 **刷新** 才重新扫描本机（以及已登录的 Cursor / Trae）。浏览器重载只会显示上次结果。观察台不加载 Google Fonts，也不加载别的第三方资源。
+
+下面这张是首页，釉叫 **墨**：黑白，印成报纸也长这样。作者最喜欢的配色。
 
 <p align="center">
-  <img src="docs/media/dash-wall.png" alt="53 周窑墙" width="900">
+  <img src="docs/media/dash-newspaper.jpg" alt="窑墙首页，报纸釉「墨」" width="900">
 </p>
 
-<p align="center">
-  <img src="docs/media/dash-kpi.png" alt="窑墙 KPI" width="900">
-</p>
+**窑** 不是主题市场。token 烧得快，像窑炉 —— 名字和吉祥物都从这儿来。那块金色、两只竖眼的板，就是一只小窑炉。
 
 <p align="center">
-  <img src="docs/media/themes.png" alt="八种釉" width="900">
+  <img src="docs/media/dash-kiln.png" alt="窑釉：吉祥物那只小窑炉" width="900">
 </p>
 
 ## 读哪些账本
