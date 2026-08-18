@@ -120,12 +120,14 @@ wheretoken
 
 ```bash
 wheretoken --today
+wheretoken --since 7d
 wheretoken --json
 wheretoken serve
 wheretoken doctor
+wheretoken rebuild
 ```
 
-`wheretoken doctor` 说明哪些 agent 被发现、用量是否完整。完整命令见 `wheretoken --help`。
+`wheretoken doctor` 说明哪些 agent 被发现、用量是否完整。`wheretoken rebuild` 删除本机扫描缓存并重新读取 agent 数据。完整命令见 `wheretoken --help`。
 
 ## 仪表盘
 
@@ -161,7 +163,7 @@ Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密�
 
 当某个 coding agent 没有提供可靠的用量信息时，whereToken 会标为不可用，而不是记成零。
 
-各 agent 的读取方式见 [`docs/data-sources.md`](docs/data-sources.md)。
+各 agent 的读取方式见 [`docs/data-sources.md`](docs/data-sources.md)，归一化字段见 [`docs/token-accounting.md`](docs/token-accounting.md)。
 
 ### 目前不支持
 
@@ -181,7 +183,7 @@ Coding agents
 命令行 / 仪表盘 / JSON
 ```
 
-whereToken 发现各 coding agent 的用量信息，把来源各异的记录归一成同一套表示，再通过命令行、仪表盘和 JSON 输出。
+whereToken 发现各 coding agent 的用量信息，把来源各异的记录归一成同一套表示，再通过命令行、仪表盘和 JSON 输出。再次扫描时只会把本机文件索引当缓存；`wheretoken rebuild` 会删掉该索引并重新读取各 agent。
 
 它区分你使用的 **coding agent** 和实际提供模型的 **厂家**。
 
@@ -228,6 +230,8 @@ whereToken 目前处于 **alpha**。
 
 - 命令行参考：[`docs/wheretoken.1`](docs/wheretoken.1)
 - 数据源：[`docs/data-sources.md`](docs/data-sources.md)
+- Token 账本：[`docs/token-accounting.md`](docs/token-accounting.md)
+- 增加适配器：[`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON 输出格式：[`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - 补全：[`completions/`](completions/)
 - 安全策略：[`SECURITY.md`](SECURITY.md)

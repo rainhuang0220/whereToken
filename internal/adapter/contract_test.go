@@ -45,6 +45,15 @@ func TestAdaptersHaveIDsAndSafeEmptyDiscover(t *testing.T) {
 	}
 }
 
+func TestAdaptersParseEmptyDirWithoutPanic(t *testing.T) {
+	root := adapter.SourceRoot{ID: "x", Path: t.TempDir()}
+	for _, a := range allAdapters() {
+		if err := a.Parse(root, func(event.UsageEvent) {}, func(event.TurnEvent) {}); err != nil && strings.Contains(err.Error(), "sk-") {
+			t.Fatalf("%s: %v", a.ID(), err)
+		}
+	}
+}
+
 func TestAdaptersParseMalformedWithoutPanicOrSecrets(t *testing.T) {
 	const secret = "sk-leak-fixture-SECRETVALUE99"
 	dir := t.TempDir()

@@ -179,6 +179,55 @@ func TestMalformedJSONLDoesNotAbortGoodRows(t *testing.T) {
 	}
 }
 
+func TestComplementaryRecordsMergePerField(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, "projects", "x")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"type":"assistant","requestId":"r","message":{"model":"claude-opus-4.6","usage":{"input_tokens":100,"output_tokens":0,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}
+{"type":"assistant","requestId":"r","message":{"model":"claude-opus-4.6","usage":{"input_tokens":0,"output_tokens":500,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}
+`
+	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Requests != 1 || sum.All.Miss != 100 || sum.All.Output != 500 {
+		t.Fatalf("missing field must not wipe the other: %+v evs=%+v", sum.All, evs)
+	}
+}
+
+func TestOutOfOrderPartialAndStreamingMerge(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, "projects", "x")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"type":"assistant","requestId":"r","message":{"id":"msg","model":"claude-opus-4.6","usage":{"output_tokens":4,"cache_read_input_tokens":9000}}}
+{"type":"assistant","requestId":"r","message":{"id":"msg","model":"claude-opus-4.6","usage":{"input_tokens":10,"cache_read_input_tokens":9000}}}
+{"type":"assistant","requestId":"r","message":{"id":"msg","model":"claude-opus-4.6","usage":{"input_tokens":0,"output_tokens":1,"cache_read_input_tokens":9000}}}
+`
+	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Requests != 1 || sum.All.Miss != 10 || sum.All.Output != 4 || sum.All.CacheRead != 9000 {
+		t.Fatalf("out-of-order/partial/stream merge %+v", sum.All)
+	}
+}
+
 func TestDiscoverXDGConfigClaude(t *testing.T) {
 	dir := t.TempDir()
 	proj := filepath.Join(dir, ".config", "claude", "projects")

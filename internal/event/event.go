@@ -11,6 +11,14 @@ const (
 	QualityAbsent        Quality = "absent"
 )
 
+const (
+	DeriveRaw          = "raw"
+	DeriveProviderAPI  = "provider_api"
+	DeriveDerived      = "derived"
+	DeriveDeduplicated = "deduplicated"
+	DeriveEstimated    = "estimated"
+)
+
 type UsageEvent struct {
 	Source, Vendor, SourceRoot                      string
 	SessionID, RequestID                            string
@@ -18,7 +26,8 @@ type UsageEvent struct {
 	Timestamp                                       time.Time
 	Miss, CacheRead, CacheCreate, Output, Reasoning int64
 	Quality                                         Quality
-	SkipRequest                                     bool // token-only rows (Cursor account API) must not inflate request counts
+	Derivation                                      string // raw, provider_api, derived, deduplicated, estimated
+	SkipRequest                                     bool   // token-only rows (Cursor account API) must not inflate request counts
 }
 
 type TurnEvent struct {

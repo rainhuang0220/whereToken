@@ -120,12 +120,14 @@ wheretoken
 
 ```bash
 wheretoken --today
+wheretoken --since 7d
 wheretoken --json
 wheretoken serve
 wheretoken doctor
+wheretoken rebuild
 ```
 
-`wheretoken doctor` explains which agents were found and whether their usage data is complete. Run `wheretoken --help` for the complete command reference.
+`wheretoken doctor` explains which agents were found and whether their usage data is complete. `wheretoken rebuild` deletes the local scan cache and reads agent data again. Run `wheretoken --help` for the complete command reference.
 
 ## Dashboard
 
@@ -161,7 +163,7 @@ Cursor and Trae must be **signed in** on this machine for token columns. Encrypt
 
 When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero. The dashboard labels each agent authoritative, degraded, estimated, or unavailable.
 
-See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read.
+See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read and [`docs/token-accounting.md`](docs/token-accounting.md) for the normalized token model.
 
 ### Not currently supported
 
@@ -181,7 +183,7 @@ Normalized usage data
 CLI / Dashboard / JSON
 ```
 
-whereToken discovers usage information from supported coding agents, normalizes source-specific records into a common representation, and exposes the result through the CLI, dashboard, and JSON output.
+whereToken discovers usage information from supported coding agents, normalizes source-specific records into a common representation, and exposes the result through the CLI, dashboard, and JSON output. Later scans reuse a local file index as a cache only; `wheretoken rebuild` deletes that index and reads the agents again.
 
 It distinguishes the **coding agent** you use from the **provider** that served the model.
 
@@ -228,6 +230,8 @@ whereToken is currently in **alpha**.
 
 - CLI reference: [`docs/wheretoken.1`](docs/wheretoken.1)
 - Data sources: [`docs/data-sources.md`](docs/data-sources.md)
+- Token accounting: [`docs/token-accounting.md`](docs/token-accounting.md)
+- Adding an adapter: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)
 - Security policy: [`SECURITY.md`](SECURITY.md)

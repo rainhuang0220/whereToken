@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -39,6 +39,21 @@ _wheretoken() {
         '--offline[skip Cursor/Trae account APIs]' \
         '--home[fake home]:dir:_files -/'
       ;;
+    rebuild)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--json[JSON on stdout]' \
+        '--today[only today]' \
+        '--since[last N days]:since:(7d 30d)' \
+        '--from[start date]:from:' \
+        '--to[end date]:to:' \
+        '--ascii[ASCII box drawing]' \
+        '--no-color[disable ANSI]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--home[fake home]:dir:_files -/'
+      ;;
     completion)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -51,6 +66,9 @@ _wheretoken() {
         '(-V --version)'{-V,--version}'[version]' \
         '--json[JSON on stdout]' \
         '--today[only today]' \
+        '--since[last N days]:since:(7d 30d)' \
+        '--from[start date]:from:' \
+        '--to[end date]:to:' \
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
@@ -68,7 +86,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor completion help version)'
+        '1:command:(serve scan sources doctor rebuild completion help version)'
       ;;
   esac
 }

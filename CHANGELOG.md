@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Incremental JSONL stores the last consumed newline offset, so an unfinished last line is reread when the writer finishes it
+- Incremental JSONL scan (path / size / mtime / inode / offset). Truncation or a replaced file is a full rescan of that source
+- `wheretoken rebuild` deletes `~/.cache/wheretoken/index.v1.db` and reads agent data again
+- Scan stderr names each source `full` / `incremental` / `unchanged`
+- `--since 7d`, `--from`, `--to` (local timezone). Dashboard: 今日 / 7 天 / 30 天 / 全部, plus 较上期
+- Token accounting and adapter map: `docs/token-accounting.md`. Events carry `derivation`. Observatory JSON has `why`
+- `docs/data-sources.md` is the adapter contract; machine snapshots moved to `docs/data-sources/fixtures.md`
+- `docs/adding-an-adapter.md` and complementary Claude merge tests (missing fields cannot wipe a sibling column)
 - `wheretoken doctor` and `sources` report detect / usage / quality from the same scan
 - Dashboard shows 完整 / 降级 / 估算 / 数据不可用 and does not present absent usage as 0.00 M
 - README frames whereToken as local-first usage observability: why it exists, how agents are normalized, missing data is not zero

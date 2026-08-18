@@ -15,8 +15,38 @@ export type SliceView = {
   hit_rate_text: string
   requests: number
   user_turns: number
+  records?: number
+  derivation?: string
   quality: string
   error?: string
+}
+
+export type WhyRow = {
+  source: string
+  label: string
+  records: number
+  miss: number
+  cache_read: number
+  cache_create: number
+  output: number
+  total: number
+  quality: string
+  derivation: string
+}
+
+export type CompareSlice = {
+  id: string
+  label: string
+  total: number
+  previous: number
+  delta_pct: number | null
+  delta_text: string
+}
+
+export type CompareView = {
+  previous_total: number
+  delta_pct: number | null
+  by_source: CompareSlice[]
 }
 
 export type SourceVendorView = {
@@ -48,10 +78,14 @@ export type SummaryPayload = {
   calendar?: Calendar
   errors: string[]
   drill?: Drill
+  why?: WhyRow[]
+  compare?: CompareView
   by_model?: SliceView[]
   by_workspace?: SliceView[]
   by_session?: SessionView[]
 }
+
+export type PeriodId = 'all' | 'today' | '7d' | '30d'
 
 export type SessionView = SliceView & {
   source: string

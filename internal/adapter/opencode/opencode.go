@@ -12,6 +12,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -49,6 +50,33 @@ func dbFile(path string) (string, bool) {
 }
 
 func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+	evs, turns, _, err := index.LoadOrReplay("opencode", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return parseDBPath(f.Name(), root)
+	})
+	if err != nil {
+		return err
+	}
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
+
+func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	err := parseDBOpen(path, root, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(t event.TurnEvent) {
+		turns = append(turns, t)
+	})
+	return evs, turns, 0, err
+}
+
+func parseDBOpen(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	db, err := openRO(path)
 	if err != nil {
 		return err
@@ -125,5 +153,6 @@ func handleRow(raw, sessionID, path string, seq int, root adapter.SourceRoot, em
 		Output:      out,
 		Reasoning:   m.Tokens.Reasoning,
 		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveDerived,
 	})
 }

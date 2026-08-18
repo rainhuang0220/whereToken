@@ -1,7 +1,6 @@
 package claude
 
 import (
-	"bufio"
 	"encoding/json"
 	"io/fs"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -67,38 +67,46 @@ type claudeLine struct {
 }
 
 func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	ws, sess := claudeContext(root.Path, path)
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return parseJSONLFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
-	sc := bufio.NewScanner(f)
-	buf := make([]byte, 0, 64*1024)
-	sc.Buffer(buf, 10*1024*1024)
-	for sc.Scan() {
-		b := sc.Bytes()
+func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+	ws, sess := claudeContext(root.Path, path)
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	consumed, err := index.ScanJSONL(f, func(b []byte, _ int64) error {
 		if len(b) == 0 {
-			continue
+			return nil
 		}
 		var rec claudeLine
 		if err := json.Unmarshal(b, &rec); err != nil {
-			continue
+			return nil
 		}
 		ts, _ := time.Parse(time.RFC3339, rec.Timestamp)
 		switch rec.Type {
 		case "assistant":
 			if rec.Message.Usage == nil {
-				continue
+				return nil
 			}
 			req := claudeRequestID(rec)
 			if req == "" {
 				// uuid is unique per JSONL line; using it as RequestID
 				// would defeat mergeByRequest and sum stream placeholders.
-				continue
+				return nil
 			}
-			emit(event.UsageEvent{
+			evs = append(evs, event.UsageEvent{
 				Source:      "claude",
 				Vendor:      vendor.Lookup(rec.Message.Model, ""),
 				SourceRoot:  root.Path,
@@ -112,14 +120,16 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 				CacheCreate: rec.Message.Usage.CacheCreationInputTokens,
 				Output:      rec.Message.Usage.OutputTokens,
 				Quality:     event.QualityDegraded,
+				Derivation:  event.DeriveDeduplicated,
 			})
 		case "user":
 			if isUserTurn(rec.Message.Content) {
-				emitTurn(event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
+				turns = append(turns, event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
 			}
 		}
-	}
-	return sc.Err()
+		return nil
+	})
+	return evs, turns, consumed, err
 }
 
 func claudeRequestID(rec claudeLine) string {

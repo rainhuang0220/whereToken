@@ -8,6 +8,7 @@ USAGE
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
   wheretoken [flags] doctor
+  wheretoken [flags] rebuild     wipe the local scan index and rescan
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -29,6 +30,9 @@ FLAGS
   -h, --help           this text
   -V, --version        print version
   --today              only today in the local timezone
+  --since 7d           last N local calendar days including today (7d, 30d)
+  --from DATE          inclusive start (YYYY-MM-DD or RFC3339, local timezone)
+  --to DATE            inclusive end date (YYYY-MM-DD or RFC3339, local timezone)
   --tool NAME          slice by tool (claude, kimi, grok, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
@@ -48,6 +52,8 @@ ENV
   WHERETOKEN_ASCII=1   ASCII box drawing
   WHERETOKEN_HOME      override home (same idea as --home)
   WHERETOKEN_OFFLINE=1 same as --offline
+  WHERETOKEN_INDEX     path to the local scan cache (default ~/.cache/wheretoken/index.v1.db)
+  WHERETOKEN_NO_INDEX=1  skip the scan cache
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
   NO_UTF8              ASCII box drawing
   TERM=dumb            disable color
@@ -66,6 +72,9 @@ PRIVACY
 EXAMPLES
   wheretoken
   wheretoken --today
+  wheretoken --since 7d
+  wheretoken --from 2026-08-01 --to 2026-08-19
+  wheretoken rebuild
   wheretoken --cursor
   wheretoken --today --cursor
   wheretoken --today --kimi

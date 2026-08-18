@@ -312,6 +312,7 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 		CacheCreate: cw,
 		Output:      out,
 		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveProviderAPI,
 		SkipRequest: true,
 	}
 }

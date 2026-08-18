@@ -13,6 +13,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -98,14 +99,26 @@ type itemPayload struct {
 }
 
 func parseRollout(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrReplay("codex", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return parseRolloutFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
+func parseRolloutFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	r := bufio.NewReaderSize(f, 1<<20)
 	st := &rolloutState{}
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
 	for {
 		b, err := r.ReadBytes('\n')
 		if len(b) > 0 {
@@ -116,14 +129,18 @@ func parseRollout(path string, root adapter.SourceRoot, emit func(event.UsageEve
 				b = b[:len(b)-1]
 			}
 			if len(b) > 0 {
-				handleRolloutLine(b, path, root, st, emit, emitTurn)
+				handleRolloutLine(b, path, root, st, func(e event.UsageEvent) {
+					evs = append(evs, e)
+				}, func(t event.TurnEvent) {
+					turns = append(turns, t)
+				})
 			}
 		}
 		if err == io.EOF {
-			return nil
+			return evs, turns, 0, nil
 		}
 		if err != nil {
-			return err
+			return evs, turns, 0, err
 		}
 	}
 }
@@ -231,5 +248,6 @@ func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time,
 		Output:     outDelta + reasonDelta,
 		Reasoning:  reasonDelta,
 		Quality:    event.QualityAuthoritative,
+		Derivation: event.DeriveDerived,
 	})
 }

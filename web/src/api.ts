@@ -28,8 +28,9 @@ export async function waitWhileScanning(opts?: {
   throw new Error('煅烧进行中')
 }
 
-export async function fetchSummary(): Promise<SummaryPayload> {
-  const res = await fetch('/api/summary', { cache: 'no-store' })
+export async function fetchSummary(since?: string): Promise<SummaryPayload> {
+  const q = since && since !== 'all' ? `?since=${encodeURIComponent(since)}` : ''
+  const res = await fetch(`/api/summary${q}`, { cache: 'no-store' })
   if (!res.ok) {
     throw new Error(`summary ${res.status}`)
   }

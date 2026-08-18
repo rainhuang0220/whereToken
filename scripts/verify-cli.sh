@@ -18,6 +18,8 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q 'EXIT CODES'
 "$dir/wheretoken" --help | grep -q 'curl -fsSL'
 "$dir/wheretoken" --help | grep -q 刷新
+"$dir/wheretoken" --help | grep -q rebuild
+"$dir/wheretoken" --help | grep -q -- '--since'
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2
   exit 1
@@ -51,6 +53,12 @@ fi
 vendor="$("$dir/wheretoken" --home "$dir" --vendor=moonshot --ascii --quiet)"
 echo "$vendor" | grep -q 'Moonshot'
 echo "$vendor" | grep -q '0.0012 M'
+
+since_json="$("$dir/wheretoken" --home "$dir" --since 7d --json --quiet)"
+echo "$since_json" | grep -q '"schema": 1'
+echo "$since_json" | grep -q '近 7 天'
+
+"$dir/wheretoken" --home "$dir" rebuild --quiet >/dev/null
 
 today_json="$("$dir/wheretoken" --home "$dir" --today --json --quiet)"
 if echo "$today_json" | grep -q '"last_7d"'; then

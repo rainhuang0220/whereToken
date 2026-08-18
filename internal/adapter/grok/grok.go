@@ -1,7 +1,6 @@
 package grok
 
 import (
-	"bufio"
 	"encoding/json"
 	"io/fs"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -77,24 +77,32 @@ type updateLine struct {
 }
 
 func parseUpdates(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrParse("grok", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return parseUpdatesFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
+func parseUpdatesFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	ws, sess := grokContext(root.Path, path)
-	sc := bufio.NewScanner(f)
-	buf := make([]byte, 0, 64*1024)
-	sc.Buffer(buf, 10*1024*1024)
-	for sc.Scan() {
-		line := sc.Bytes()
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	consumed, err := index.ScanJSONL(f, func(line []byte, _ int64) error {
 		if len(line) == 0 {
-			continue
+			return nil
 		}
 		var rec updateLine
 		if err := json.Unmarshal(line, &rec); err != nil {
-			continue
+			return nil
 		}
 		ts := grokTime(rec)
 		if rec.Params.SessionID != "" {
@@ -103,44 +111,57 @@ func parseUpdates(path string, root adapter.SourceRoot, emit func(event.UsageEve
 		switch rec.Params.Update.SessionUpdate {
 		case "user_message_chunk":
 			if !isUserTurn(rec.Params.Update.Content.Text) {
-				continue
+				return nil
 			}
-			emitTurn(event.TurnEvent{
+			turns = append(turns, event.TurnEvent{
 				Source:    "grok",
 				SessionID: sess,
 				Workspace: ws,
 				Timestamp: ts,
 			})
 		case "turn_completed":
-			emitCompleted(rec, root, ws, sess, ts, emit)
+			evs = append(evs, completedEvents(rec, root, ws, sess, ts)...)
 		}
-	}
-	return sc.Err()
+		return nil
+	})
+	return evs, turns, consumed, err
 }
 
-func emitCompleted(rec updateLine, root adapter.SourceRoot, ws, sess string, ts time.Time, emit func(event.UsageEvent)) {
+func grokRequestID(sess, prompt, model string, split bool) string {
+	id := prompt
+	if sess != "" {
+		id = sess + ":" + prompt
+	}
+	if split && model != "" {
+		id += ":" + model
+	}
+	return id
+}
+
+func completedEvents(rec updateLine, root adapter.SourceRoot, ws, sess string, ts time.Time) []event.UsageEvent {
 	u := rec.Params.Update.Usage
 	if u == nil {
-		return
+		return nil
 	}
-	req := strings.TrimSpace(rec.Params.Update.PromptID)
-	if req == "" {
+	prompt := strings.TrimSpace(rec.Params.Update.PromptID)
+	if prompt == "" {
 		// eventId is unique per JSONL line; using it would defeat mergeByRequest.
-		return
+		return nil
 	}
 	if len(u.ModelUsage) == 0 {
-		emit(usageEvent(root, ws, sess, req, "grok", ts, *u))
-		return
+		return []event.UsageEvent{usageEvent(root, ws, sess, grokRequestID(sess, prompt, "", false), "grok", ts, *u)}
 	}
+	var out []event.UsageEvent
 	if len(u.ModelUsage) == 1 {
 		for model, part := range u.ModelUsage {
-			emit(usageEvent(root, ws, sess, req, model, ts, part))
+			out = append(out, usageEvent(root, ws, sess, grokRequestID(sess, prompt, model, false), model, ts, part))
 		}
-		return
+		return out
 	}
 	for model, part := range u.ModelUsage {
-		emit(usageEvent(root, ws, sess, req+":"+model, model, ts, part))
+		out = append(out, usageEvent(root, ws, sess, grokRequestID(sess, prompt, model, true), model, ts, part))
 	}
+	return out
 }
 
 func usageEvent(root adapter.SourceRoot, ws, sess, req, model string, ts time.Time, u grokUsage) event.UsageEvent {
@@ -159,6 +180,7 @@ func usageEvent(root adapter.SourceRoot, ws, sess, req, model string, ts time.Ti
 		Output:      u.OutputTokens,
 		Reasoning:   u.ReasoningTokens,
 		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveDerived,
 	}
 }
 

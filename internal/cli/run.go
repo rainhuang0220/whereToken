@@ -14,6 +14,8 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
+	"github.com/rainhuang0220/whereToken/internal/index"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/report"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/table"
@@ -83,6 +85,8 @@ func (a *App) Run() int {
 		return a.runSources(home, flags.Quiet, flags.Offline)
 	case CommandDoctor:
 		return a.runDoctor(home, flags.Quiet, flags.Offline)
+	case CommandRebuild:
+		return a.runRebuild(flags, home)
 	case CommandCompletion:
 		script, err := Completion(flags.CompletionShell)
 		if err != nil {
@@ -144,13 +148,38 @@ func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result 
 		hud.Clear()
 	}
 	res.Offline = offline
+	if !quiet && a.StderrTTY {
+		if msg := scan.FormatDeltas(res.Deltas); msg != "" {
+			fmt.Fprint(a.Stderr, msg)
+		}
+	}
 	return res
+}
+
+func (a *App) runRebuild(flags Flags, home adapter.Home) int {
+	if err := index.Wipe(index.PathFor(home)); err != nil {
+		fmt.Fprintln(a.Stderr, err.Error())
+		return ExitFail
+	}
+	if !flags.Quiet {
+		fmt.Fprintln(a.Stderr, "rebuilt local index")
+	}
+	return a.runReport(flags, home)
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
 	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	win, err := metric.ParseWindow(flags.Today, flags.Since, flags.From, flags.To, a.Now(), a.Loc)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, err.Error())
+		return ExitUsage
+	}
 	fil := report.Filter{
 		Today:      flags.Today,
+		Days:       win.Days,
+		From:       win.From,
+		To:         win.To,
+		Period:     win.Label,
 		Tool:       flags.Tool,
 		Vendor:     flags.Vendor,
 		Model:      flags.Model,

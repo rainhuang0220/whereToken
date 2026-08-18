@@ -17,6 +17,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/report"
 )
@@ -30,6 +31,8 @@ type Result struct {
 	ScannedAt time.Time
 	Offline   bool
 	Scanning  bool
+	Deltas    []index.Delta
+	Compare   *metric.Compare
 }
 
 const (
@@ -113,6 +116,13 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 }
 
 func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(Progress)) Result {
+	index.ResetDeltas()
+	if os.Getenv("WHERETOKEN_NO_INDEX") != "1" {
+		if st, err := index.Open(index.PathFor(home)); err == nil {
+			defer st.Close()
+			defer index.Use(st)()
+		}
+	}
 	var events []event.UsageEvent
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
@@ -182,6 +192,19 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		errs = []string{}
 	}
 	sum := metric.Aggregate(events, turns)
+	fillMissingSources(&sum, roots, errs, events)
+	return Result{
+		Summary:   sum,
+		Roots:     roots,
+		Errors:    errs,
+		Events:    events,
+		Turns:     turns,
+		ScannedAt: time.Now(),
+		Deltas:    index.Deltas(),
+	}
+}
+
+func fillMissingSources(sum *metric.Summary, roots []adapter.SourceRoot, errs []string, events []event.UsageEvent) {
 	seen := map[string]struct{}{}
 	for _, e := range events {
 		seen[e.Source] = struct{}{}
@@ -213,14 +236,84 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 			Quality: q,
 		})
 	}
-	return Result{
-		Summary:   sum,
-		Roots:     roots,
-		Errors:    errs,
-		Events:    events,
-		Turns:     turns,
-		ScannedAt: time.Now(),
+}
+
+// ApplyWindow returns a copy of r whose events, turns, and summary are limited
+// to w. The original scan (and index) is not re-run.
+func ApplyWindow(r Result, w metric.Window, loc *time.Location) Result {
+	if w.IsAll() {
+		return r
 	}
+	var evs []event.UsageEvent
+	for _, e := range r.Events {
+		if w.Contains(e.Timestamp, loc) {
+			evs = append(evs, e)
+		}
+	}
+	var turns []event.TurnEvent
+	for _, t := range r.Turns {
+		if w.Contains(t.Timestamp, loc) {
+			turns = append(turns, t)
+		}
+	}
+	out := r
+	out.Events = evs
+	out.Turns = turns
+	sum := metric.Aggregate(evs, turns)
+	fillMissingSources(&sum, r.Roots, r.Errors, evs)
+	out.Summary = sum
+	return out
+}
+
+func CompareWindows(full Result, w metric.Window, loc *time.Location) *metric.Compare {
+	prevWin := w.Previous()
+	if !w.Bounded() || !prevWin.Bounded() {
+		return nil
+	}
+	cur := ApplyWindow(full, w, loc)
+	prev := ApplyWindow(full, prevWin, loc)
+	c := metric.NewCompare(cur.Summary, prev.Summary)
+	return &c
+}
+
+func FormatDeltas(ds []index.Delta) string {
+	if len(ds) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Scanning usage data...\n\n")
+	for _, d := range ds {
+		extra := ""
+		if d.Mode != index.ModeUnchanged && d.Added > 0 {
+			extra = "+" + itoa(d.Added)
+		}
+		b.WriteString(pad(metric.SourceLabel(d.Source), 16))
+		b.WriteString(pad(d.Mode, 14))
+		b.WriteString(extra)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func pad(s string, n int) string {
+	if len(s) >= n {
+		return s + " "
+	}
+	return s + strings.Repeat(" ", n-len(s))
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [16]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
 }
 
 type sourceVendorView struct {
@@ -258,6 +351,29 @@ type summaryJSON struct {
 	Errors         []string           `json:"errors"`
 	Offline        bool               `json:"offline,omitempty"`
 	Scanning       bool               `json:"scanning,omitempty"`
+	Scan           []scanDeltaJSON    `json:"scan,omitempty"`
+	Why            []whyJSON          `json:"why,omitempty"`
+	Compare        *metric.Compare    `json:"compare,omitempty"`
+}
+
+type scanDeltaJSON struct {
+	Source string `json:"source"`
+	Label  string `json:"label"`
+	Mode   string `json:"mode"`
+	Added  int    `json:"added"`
+}
+
+type whyJSON struct {
+	Source      string `json:"source"`
+	Label       string `json:"label"`
+	Records     int64  `json:"records"`
+	Miss        int64  `json:"miss"`
+	CacheRead   int64  `json:"cache_read"`
+	CacheCreate int64  `json:"cache_create"`
+	Output      int64  `json:"output"`
+	Total       int64  `json:"total"`
+	Quality     string `json:"quality"`
+	Derivation  string `json:"derivation"`
 }
 
 func viewWithError(s metric.Slice, errs []string) metric.SliceView {
@@ -296,6 +412,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 		Errors:   redactErrors(r.Errors),
 		Offline:  r.Offline,
 		Scanning: r.Scanning,
+		Compare:  r.Compare,
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)
@@ -342,6 +459,28 @@ func buildSummaryJSON(r Result) summaryJSON {
 	}
 	for id, pack := range r.Summary.DrillByVendor {
 		out.Drill.ByVendor[id] = metric.ViewDrill(pack)
+	}
+	for _, d := range r.Deltas {
+		out.Scan = append(out.Scan, scanDeltaJSON{
+			Source: d.Source,
+			Label:  metric.SourceLabel(d.Source),
+			Mode:   d.Mode,
+			Added:  d.Added,
+		})
+	}
+	for _, s := range r.Summary.BySource {
+		out.Why = append(out.Why, whyJSON{
+			Source:      s.ID,
+			Label:       s.Label,
+			Records:     s.Records,
+			Miss:        s.Miss,
+			CacheRead:   s.CacheRead,
+			CacheCreate: s.CacheCreate,
+			Output:      s.Output,
+			Total:       s.Total(),
+			Quality:     string(s.Quality),
+			Derivation:  s.Derivation,
+		})
 	}
 	return out
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, formatCount, hitBand, qualityCaption, tokenCell } from './format'
+import { columnsFrom, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -50,6 +50,13 @@ describe('qualityCaption', () => {
     expect(qualityCaption('degraded')).toBe('降级')
     expect(qualityCaption('estimated')).toBe('估算')
     expect(qualityCaption('absent')).toBe('数据不可用')
+  })
+})
+
+describe('derivationCaption', () => {
+  it('names how a number was produced', () => {
+    expect(derivationCaption('deduplicated')).toBe('按请求去重')
+    expect(derivationCaption('raw,derived')).toBe('原始字段 · 推导值')
   })
 })
 

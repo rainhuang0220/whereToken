@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { fetchSummary, rescan } from '../api'
 import { formatScannedAt, type ScanProgress } from '../firing'
-import type { SummaryPayload } from '../types'
+import type { PeriodId, SummaryPayload } from '../types'
 
 export const useSummaryStore = defineStore('summary', {
   state: () => ({
@@ -10,11 +10,12 @@ export const useSummaryStore = defineStore('summary', {
     loading: false,
     scannedAt: '',
     progress: null as ScanProgress | null,
+    period: 'all' as PeriodId,
   }),
   actions: {
     async hydrate() {
       try {
-        const last = await fetchSummary()
+        const last = await fetchSummary(this.period)
         if (last.scanned_at) {
           this.payload = last
           this.scannedAt = formatScannedAt(last.scanned_at)
@@ -24,6 +25,16 @@ export const useSummaryStore = defineStore('summary', {
       }
       if (!this.payload?.scanned_at) {
         await this.refresh()
+      }
+    },
+    async setPeriod(period: PeriodId) {
+      if (this.period === period && this.payload) return
+      this.period = period
+      if (!this.payload?.scanned_at) return
+      try {
+        this.payload = await fetchSummary(period)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
       }
     },
     async refresh() {
@@ -41,8 +52,8 @@ export const useSummaryStore = defineStore('summary', {
         const next = await rescan((p) => {
           this.progress = p
         })
-        this.payload = next
         this.scannedAt = formatScannedAt(next.scanned_at) || new Date().toLocaleString('zh-CN')
+        this.payload = this.period === 'all' ? next : await fetchSummary(this.period)
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
       } finally {

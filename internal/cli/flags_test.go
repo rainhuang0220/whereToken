@@ -190,6 +190,35 @@ func TestParseVendorXAI(t *testing.T) {
 	}
 }
 
+func TestParseRebuild(t *testing.T) {
+	f, err := Parse([]string{"rebuild", "--quiet"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandRebuild || !f.Quiet {
+		t.Fatalf("%+v", f)
+	}
+}
+
+func TestParseSinceAndFromTo(t *testing.T) {
+	f, err := Parse([]string{"--since", "7d"})
+	if err != nil || f.Since != "7d" {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"--from", "2026-08-01", "--to", "2026-08-19"})
+	if err != nil || f.From != "2026-08-01" || f.To != "2026-08-19" {
+		t.Fatalf("%+v %v", f, err)
+	}
+	_, err = Parse([]string{"--today", "--since", "7d"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("conflict err=%v", err)
+	}
+	_, err = Parse([]string{"--since", "nope"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("bad since err=%v", err)
+	}
+}
+
 func TestParseTodayJSONVendorModel(t *testing.T) {
 	f, err := Parse([]string{"--today", "--json", "--vendor=MiniMax", "--model=k3", "--ascii"})
 	if err != nil {
