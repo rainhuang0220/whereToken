@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 — 2026-08-19 (Alpha)
+
 - `wheretoken update` replaces this binary with the latest GitHub Release (`brew upgrade` when Homebrew owns it)
 - `wheretoken uninstall` removes this binary (`brew uninstall` when Homebrew owns it)
 - Incremental JSONL stores the last consumed newline offset, so an unfinished last line is reread when the writer finishes it
