@@ -40,7 +40,7 @@ wheretoken \- local coding-agent token usage as a character table
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
-Codex, OpenCode, Cursor, Trae) and prints six figures since records began: total tokens
+OpenClaw, Codex, OpenCode, Cursor, Trae) and prints six figures since records began: total tokens
 in millions (M), cache hit rate, max consecutive-use streak, current streak,
 request count, and user-turn count. Then rankings by tool and vendor.
 .PP
@@ -109,7 +109,7 @@ or RFC3339, local timezone.
 .TP
 .B --tool \fINAME\fR
 Slice by tool. Also
-.BR --claude ", " --kimi ", " --grok ", " --minimax ", " --codex ", " --opencode ", " --cursor ", " --trae .
+.BR --claude ", " --kimi ", " --grok ", " --minimax ", " --openclaw ", " --codex ", " --opencode ", " --cursor ", " --trae .
 .TP
 .B --vendor \fINAME\fR
 Slice by vendor (anthropic, moonshot, openai, xai, \.\.\.).

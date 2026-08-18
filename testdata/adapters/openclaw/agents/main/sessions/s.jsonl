@@ -1,0 +1,2 @@
+{"type":"session","id":"sess-1","timestamp":"2026-07-26T11:03:31.353Z","cwd":"/tmp/demo"}
+{"type":"message","id":"ignored-line-uuid","timestamp":"2026-07-26T11:03:33Z","message":{"role":"assistant","provider":"minimax-portal","model":"MiniMax-M2.1","responseId":"resp-1","usage":{"input":100,"output":10,"cacheRead":50,"cacheWrite":5},"timestamp":"2026-07-26T11:03:33Z"}}

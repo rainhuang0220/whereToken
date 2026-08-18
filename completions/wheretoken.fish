@@ -11,10 +11,10 @@ complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l tool -r -a "claude kimi grok minimax codex opencode cursor trae"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l tool -r -a "claude kimi grok minimax openclaw codex opencode cursor trae"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l model -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l claude -l kimi -l grok -l minimax -l codex -l opencode -l cursor -l trae
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l claude -l kimi -l grok -l minimax -l openclaw -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r -F
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor completion" -l port -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r

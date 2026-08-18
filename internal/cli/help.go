@@ -35,10 +35,10 @@ FLAGS
   --since 7d           last N local calendar days including today (7d, 30d)
   --from DATE          inclusive start (YYYY-MM-DD or RFC3339, local timezone)
   --to DATE            inclusive end date (YYYY-MM-DD or RFC3339, local timezone)
-  --tool NAME          slice by tool (claude, kimi, grok, minimax, codex, opencode, cursor, trae)
+  --tool NAME          slice by tool (claude, kimi, grok, minimax, openclaw, codex, opencode, cursor, trae)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
-  --claude --kimi --grok --minimax --codex --opencode --cursor --trae
+  --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae
                        same as --tool=that-id
   --json               JSON on stdout (schema 1; docs/cli-json.schema.json). scan is a different dump
   --ascii              ASCII box drawing (also auto on old Windows consoles)

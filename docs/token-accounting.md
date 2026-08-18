@@ -86,6 +86,11 @@ guarantee for every row.
 | MiniMax Agent | `cache_write_tokens` | Cache Create | raw | authoritative | |
 | MiniMax Agent | `output_tokens` | Output | raw | authoritative | Reasoning is not folded in. |
 | MiniMax Agent | `reasoning_tokens` | Reasoning | raw | authoritative | Not added into Total. |
+| OpenClaw | `message.usage.input` | Miss | raw | authoritative | Session JSONL only; not `*.trajectory.jsonl`. |
+| OpenClaw | `message.usage.cacheRead` | Cache Read | raw | authoritative | |
+| OpenClaw | `message.usage.cacheWrite` | Cache Create | raw | authoritative | |
+| OpenClaw | `message.usage.output` | Output | raw | authoritative | `usage.cost` is ignored. |
+| OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. |
 | Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
 | Codex | — | Cache Create | — | — | Not exposed. |

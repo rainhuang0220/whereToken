@@ -159,6 +159,7 @@ whereToken reads usage information from data made available by supported coding 
 | OpenCode | Full | Not required |
 | Grok CLI | Full | Not required |
 | MiniMax Agent | Full | Not required |
+| OpenClaw | Full | Not required |
 | Cursor | Partial | Required for token columns |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 

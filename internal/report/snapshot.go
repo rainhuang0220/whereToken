@@ -202,7 +202,7 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 	if windowed(f) {
 		unscoped := f.Tool == "" && f.Vendor == "" && f.Model == ""
 		if unscoped && len(snap.Tools) == 0 && !discoveredHasUsage(f.Discovered, "", true) {
-			return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax 有本地记录才会出数；Cursor / Trae 需要已登录。")
+			return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。")
 		}
 		msg := emptyWindowNote(f)
 		if discoveredHasUsage(f.Discovered, f.Tool, unscoped) {
@@ -224,7 +224,7 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 		return appendUniqueNote(notes, "本机账本里没有模型 "+f.Model+"。")
 	}
 	if f.Tool == "" && f.Vendor == "" && f.Model == "" && len(snap.Tools) == 0 && len(notes) == 0 {
-		return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax 有本地记录才会出数；Cursor / Trae 需要已登录。")
+		return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。")
 	}
 	return notes
 }

@@ -165,6 +165,46 @@ read, not a single context window.
 
 ---
 
+## OpenClaw
+
+### Location
+
+`~/.openclaw/agents/<agent>/sessions/<session>.jsonl`.
+
+Do not read `*.trajectory.jsonl`, `skills-prompts/`, `credentials/`,
+`identity/`, `openclaw.json`, or workspace trees. Never map `usage.cost`.
+
+### Parser
+
+`internal/adapter/openclaw`. Walks session JSONL. `type=message` with
+`role=assistant` and `message.usage` becomes a usage event. `role=user` is a
+user turn. `toolResult` rows are skipped even if they carry usage.
+`type=session` supplies `cwd` and session id.
+
+Request id is `message.responseId`. Per-line `id` is ignored.
+
+Malformed JSON lines are skipped; later lines still parse.
+
+### Token mapping
+
+| whereToken | OpenClaw field | Kind |
+| ---------- | -------------- | ---- |
+| Miss | `message.usage.input` | raw |
+| Cache Read | `message.usage.cacheRead` | raw |
+| Cache Create | `message.usage.cacheWrite` | raw |
+| Output | `message.usage.output` | raw |
+
+Quality `authoritative`. Derivation `raw`. Timestamp is `message.timestamp`
+(RFC3339).
+
+Vendor comes from `message.model` / `message.provider` via `vendor.Lookup`.
+
+### Limitations
+
+Trajectory files look like usage but also hold prompts. They are skipped.
+
+---
+
 ## OpenCode
 
 ### Location
@@ -286,7 +326,7 @@ Needs the user **signed in**. whereToken does not accept a pasted JWT.
 
 ## Incremental index
 
-JSONL adapters (Claude, Kimi, Grok) cache normalized events by path / size / mtime / inode / offset. Appends parse only the new tail. Truncation or a new inode is a full rescan of that file.
+JSONL adapters (Claude, Kimi, Grok, OpenClaw) cache normalized events by path / size / mtime / inode / offset. Appends parse only the new tail. Truncation or a new inode is a full rescan of that file.
 
 Codex, OpenCode, and MiniMax Agent replay an unchanged file and fully reparse on any change.
 

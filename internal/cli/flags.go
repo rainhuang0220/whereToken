@@ -97,8 +97,8 @@ func Parse(args []string) (Flags, error) {
 	}
 
 	var toolFlag, vendorFlag, modelFlag string
-	var claude, kimi, grok, minimax, codex, opencode, trae, cursor bool
-	fs := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &codex, &opencode, &trae, &cursor)
+	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
+	fs := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
 	if err := parseFlagSet(fs, &f, rest); err != nil {
 		return Flags{}, err
 	}
@@ -127,7 +127,7 @@ func Parse(args []string) (Flags, error) {
 			return f, nil
 		}
 		if len(leftover) > 0 {
-			fs2 := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &codex, &opencode, &trae, &cursor)
+			fs2 := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
 			if err := parseFlagSet(fs2, &f, leftover); err != nil {
 				return Flags{}, err
 			}
@@ -159,6 +159,9 @@ func Parse(args []string) (Flags, error) {
 	}
 	if minimax {
 		add("minimax")
+	}
+	if openclaw {
+		add("openclaw")
 	}
 	if codex {
 		add("codex")
@@ -222,7 +225,7 @@ func Parse(args []string) (Flags, error) {
 	return f, nil
 }
 
-func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi, grok, minimax, codex, opencode, trae, cursor *bool) *flag.FlagSet {
+func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor *bool) *flag.FlagSet {
 	fs := flag.NewFlagSet("wheretoken", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&f.Help, "h", f.Help, "")
@@ -249,6 +252,7 @@ func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi,
 	fs.BoolVar(kimi, "kimi", *kimi, "")
 	fs.BoolVar(grok, "grok", *grok, "")
 	fs.BoolVar(minimax, "minimax", *minimax, "")
+	fs.BoolVar(openclaw, "openclaw", *openclaw, "")
 	fs.BoolVar(codex, "codex", *codex, "")
 	fs.BoolVar(opencode, "opencode", *opencode, "")
 	fs.BoolVar(trae, "trae", *trae, "")
@@ -306,8 +310,8 @@ func parseCompletionTail(f *Flags, args []string) error {
 		return nil
 	}
 	var toolFlag, vendorFlag, modelFlag string
-	var claude, kimi, grok, minimax, codex, opencode, trae, cursor bool
-	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &codex, &opencode, &trae, &cursor)
+	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
+	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
 	if err := parseFlagSet(fs, f, args); err != nil {
 		return err
 	}

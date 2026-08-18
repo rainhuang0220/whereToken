@@ -5,6 +5,7 @@
 - Estimated API-equivalent cost (`docs/cost.md`): unknown prices stay unavailable, never `$0`
 - Price card matches public 2026-08-19 list pages (retired Opus 4 / 4.1, GPT-5.6 cache writes, xAI short-context only)
 - MiniMax Agent local ledger (`~/.minimax/v2/sqlite/runtime-state.sqlite` `local_runtime_token_usage`)
+- OpenClaw session JSONL (`~/.openclaw/agents/*/sessions/*.jsonl`; not trajectories)
 - Deterministic usage insights on the observatory payload and dashboard
 - Dashboard period clicks ignore stale `/api/summary` replies
 
