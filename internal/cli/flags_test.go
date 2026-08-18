@@ -291,6 +291,7 @@ func TestParseBrandFlags(t *testing.T) {
 		{"--opencode", "opencode"},
 		{"--trae", "trae"},
 		{"--grok", "grok"},
+		{"--minimax", "minimax"},
 	} {
 		f, err := Parse([]string{c.flag})
 		if err != nil {

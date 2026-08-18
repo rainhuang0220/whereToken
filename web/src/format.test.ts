@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -64,6 +64,15 @@ describe('tokenCell', () => {
   it('does not present absent usage as zero', () => {
     expect(tokenCell('0.00 M', 'absent')).toBe('不可用')
     expect(tokenCell('1.20 M', 'authoritative')).toBe('1.20 M')
+  })
+})
+
+describe('costCaption', () => {
+  it('prints backend cost_usd and never invents $0', () => {
+    expect(costCaption({ cost_usd: '$12.0000', cost_status: 'complete', total: 10 })).toBe('$12.0000')
+    expect(costCaption({ cost_usd: '$1.0000', cost_status: 'partial', total: 10 })).toBe('$1.0000 · 部分')
+    expect(costCaption({ cost_status: 'unavailable', total: 10 })).toBe('—')
+    expect(costCaption({ cost_status: 'unavailable', total: 0 })).toBe('')
   })
 })
 

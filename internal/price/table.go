@@ -10,32 +10,41 @@ import "time"
 // A later card with a closed To would leave older events on this one.
 var table = []Rate{
 	// Anthropic — platform.claude.com/docs/en/about-claude/pricing (2026-08-19)
+	// Cache write = 5-minute cache write. 1-hour writes are not in the ledger.
+	anth("fable-5", 10, 1.00, 12.50, 50),
+	anth("mythos-5", 10, 1.00, 12.50, 50),
 	anth("opus-4.8", 5, 0.50, 6.25, 25),
 	anth("opus-4.7", 5, 0.50, 6.25, 25),
 	anth("opus-4.6", 5, 0.50, 6.25, 25),
+	anth("opus-4.5", 5, 0.50, 6.25, 25),
 	anth("opus-5", 5, 0.50, 6.25, 25),
-	anth("opus-4", 5, 0.50, 6.25, 25),
+	anth("opus-4.1", 15, 1.50, 18.75, 75),
+	anth("opus-4", 15, 1.50, 18.75, 75),
 	anth("sonnet-4.6", 3, 0.30, 3.75, 15),
+	anth("sonnet-4.5", 3, 0.30, 3.75, 15),
 	anth("sonnet-5", 2, 0.20, 2.50, 10),
 	anth("sonnet-4", 3, 0.30, 3.75, 15),
 	anth("haiku-4.5", 1, 0.10, 1.25, 5),
 	anth("haiku-4", 1, 0.10, 1.25, 5),
-	anth("fable-5", 10, 1.00, 12.50, 50),
 
-	// xAI — docs.x.ai/developers/pricing short-context tier (2026-08-19)
+	// xAI — docs.x.ai/developers/pricing short-context tier (2026-08-19).
+	// Long-context rates (≥200k prompt) are not applied; that would need
+	// per-request prompt length, which the ledger does not store.
 	xai("grok-4.6", 2, 0.50, 0, 6),
 	xai("grok-4.5", 2, 0.30, 0, 6),
+	xai("grok-4.3", 1.25, 0.20, 0, 2.50),
 	xai("grok-build", 1, 0.20, 0, 2),
 	xai("grok-4", 2, 0.50, 0, 6),
 
-	// OpenAI — developers.openai.com/api/docs/pricing + long-standing 4o card
+	// OpenAI — developers.openai.com/api/docs/pricing short-context + long-standing 4o card
 	oai("gpt-4o-mini", 0.15, 0.075, 0, 0.60),
 	oai("gpt-4o", 2.50, 1.25, 0, 10),
 	oai("gpt-4.1-mini", 0.40, 0.10, 0, 1.60),
 	oai("gpt-4.1", 2.00, 0.50, 0, 8),
-	oai("gpt-5.6-sol", 5.00, 0.50, 0, 30),
-	oai("gpt-5.6-terra", 2.00, 0.20, 0, 12),
-	oai("gpt-5.6-luna", 0.20, 0.02, 0, 1.20),
+	oai("gpt-5.6-sol", 5.00, 0.50, 6.25, 30),
+	oai("gpt-5.6-terra", 2.00, 0.20, 2.50, 12),
+	oai("gpt-5.6-luna", 0.20, 0.02, 0.25, 1.20),
+	oai("gpt-5.3-codex", 1.75, 0.175, 0, 14),
 	oai("gpt-5-mini", 0.25, 0.025, 0, 2),
 	oai("gpt-5-nano", 0.05, 0.005, 0, 0.40),
 	oai("gpt-5", 1.25, 0.125, 0, 10),

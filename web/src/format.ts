@@ -79,3 +79,13 @@ export function columnsFrom(view: SliceView): string[] {
     view.quality === 'absent' ? '—' : view.hit_rate_text,
   ]
 }
+
+export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
+  if (view.cost_usd) {
+    return view.cost_status === 'partial' ? `${view.cost_usd} · 部分` : view.cost_usd
+  }
+  if (view.cost_status === 'unavailable' && view.total > 0) {
+    return '—'
+  }
+  return ''
+}

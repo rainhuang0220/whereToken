@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom, derivationCaption, formatCount, hitBand, qualityCaption } from '../format'
+import { columnsFrom, costCaption, derivationCaption, formatCount, hitBand, qualityCaption } from '../format'
 import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
 import type { SliceView } from '../types'
 
@@ -38,6 +38,7 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
           <th v-for="h in heads" :key="h" class="num">{{ h }}</th>
           <th class="num">请求</th>
           <th v-if="props.showTurns" class="num">回合</th>
+          <th class="num">估价</th>
         </tr>
       </thead>
       <tbody>
@@ -66,6 +67,7 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
           </td>
           <td class="num">{{ formatCount(row.requests) }}</td>
           <td v-if="props.showTurns" class="num">{{ formatCount(row.user_turns) }}</td>
+          <td class="num">{{ costCaption(row) || '—' }}</td>
         </tr>
       </tbody>
     </table>

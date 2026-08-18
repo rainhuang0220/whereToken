@@ -39,7 +39,7 @@ export function observatoryEmptyHint(
   if (!all) return ''
   if (all.total !== 0 || all.requests !== 0 || all.user_turns !== 0) return ''
   if ((payload.by_source ?? []).length > 0) return ''
-  return '本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。'
+  return '本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax 有本地记录才会出数；Cursor / Trae 需要已登录。'
 }
 
 export function collectKilnMouth(input: {

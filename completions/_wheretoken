@@ -51,7 +51,7 @@ _wheretoken() {
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '--offline[skip Cursor/Trae account APIs]' \
-        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax codex opencode cursor trae)' \
         '--home[fake home]:dir:_files -/'
       ;;
     update|upgrade|uninstall)
@@ -78,12 +78,13 @@ _wheretoken() {
         '--no-color[disable ANSI]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--offline[skip Cursor/Trae account APIs]' \
-        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax codex opencode cursor trae)' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
         '--model[model id]:model:' \
         '--claude[slice Claude Code]' \
         '--kimi[slice Kimi Code]' \
         '--grok[slice Grok]' \
+        '--minimax[slice MiniMax Agent]' \
         '--codex[slice Codex]' \
         '--opencode[slice OpenCode]' \
         '--cursor[slice Cursor]' \

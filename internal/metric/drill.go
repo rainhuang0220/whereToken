@@ -204,12 +204,15 @@ func bumpSessionTurns(m map[string]*SessionSlice, id string) {
 func flattenPack(models, workspaces map[string]*Slice, sessions map[string]*SessionSlice) DrillPack {
 	p := DrillPack{}
 	for _, s := range models {
+		finishCost(s)
 		p.Models = append(p.Models, *s)
 	}
 	for _, s := range workspaces {
+		finishCost(s)
 		p.Workspaces = append(p.Workspaces, *s)
 	}
 	for _, s := range sessions {
+		finishCost(&s.Slice)
 		p.Sessions = append(p.Sessions, *s)
 	}
 	sort.Slice(p.Models, func(i, j int) bool { return p.Models[i].Total() > p.Models[j].Total() })

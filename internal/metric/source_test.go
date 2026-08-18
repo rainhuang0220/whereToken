@@ -20,6 +20,8 @@ func TestLookupSourceAcceptsIDsAndLabels(t *testing.T) {
 		{"TRAE", "trae"},
 		{"grok", "grok"},
 		{"Grok", "grok"},
+		{"minimax", "minimax"},
+		{"MiniMax Agent", "minimax"},
 	}
 	for _, c := range cases {
 		got, ok := LookupSource(c.in)

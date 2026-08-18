@@ -120,6 +120,51 @@ Quality `authoritative`. Derivation `derived`. Time prefers `_meta.agentTimestam
 
 ---
 
+## MiniMax Agent
+
+### Location
+
+`~/.minimax/v2/sqlite/runtime-state.sqlite`.
+
+Do not read `local-runtime.auth.json`, `sqlite.db` (agent process table),
+`context-snapshots/`, `context-replacements/`, Application Support cookies,
+or message bodies. Never map `cost_usd`.
+
+### Parser
+
+`internal/adapter/minimax`. Open SQLite read-only. Usage is
+`local_runtime_token_usage`. Each row is one model request. Same `turn_id`
+stays distinct (an agent turn can contain many requests). Request id is the
+table `id`, not a per-line uuid.
+
+User turns: `local_runtime_message_rows` where `role=user`. Workspace comes
+from `local_runtime_sessions.record_json.workspaceDir` only.
+
+The file is replay-cached by size/mtime/inode, not byte-offset.
+
+### Token mapping
+
+| whereToken | MiniMax field | Kind |
+| ---------- | ------------- | ---- |
+| Miss | `input_tokens` | raw |
+| Cache Read | `cache_read_tokens` | raw |
+| Cache Create | `cache_write_tokens` | raw |
+| Output | `output_tokens` | raw |
+| Reasoning | `reasoning_tokens` | raw (not in Total) |
+
+Quality `authoritative`. Derivation `raw`. Timestamp is `ts` (unix ms).
+
+Vendor comes from `model` via `vendor.Lookup` (MiniMax / DeepSeek / …), not
+from the tool id.
+
+### Limitations
+
+No `token_usage` table (older install) is empty, not an error. Cache-read
+values are per-request hits; summing them is the billed-equivalent cache
+read, not a single context window.
+
+---
+
 ## OpenCode
 
 ### Location
@@ -243,7 +288,7 @@ Needs the user **signed in**. whereToken does not accept a pasted JWT.
 
 JSONL adapters (Claude, Kimi, Grok) cache normalized events by path / size / mtime / inode / offset. Appends parse only the new tail. Truncation or a new inode is a full rescan of that file.
 
-Codex and OpenCode replay an unchanged file and fully reparse on any change.
+Codex, OpenCode, and MiniMax Agent replay an unchanged file and fully reparse on any change.
 
 `wheretoken rebuild` deletes `~/.cache/wheretoken/index.v1.db` (or `WHERETOKEN_INDEX`). The next scan reads agents again. The index is not a source of truth.
 

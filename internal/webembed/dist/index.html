@@ -1,18 +1,24 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>whereToken</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font: 16px/1.45 ui-sans-serif, system-ui, sans-serif; margin: 2.5rem auto; max-width: 36rem; padding: 0 1rem; color: #111; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-  </style>
-</head>
-<body>
-  <h1>whereToken</h1>
-  <p>This binary has the CLI table. The kiln-wall dashboard is built from <code>web/</code>.</p>
-  <p>From a clone: <code>cd web && npm install &amp;&amp; npm run build</code>, then <code>wheretoken serve</code>.</p>
-  <p>GitHub Release builds embed the full UI. Bind is <code>127.0.0.1</code> only.</p>
-</body>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>whereToken</title>
+    <script>
+      (function () {
+        var allowed = ['kiln', 'moss', 'porcelain', 'jiang', 'day', 'ink', 'cartoon', 'ledger']
+        var id = 'kiln'
+        try {
+          var raw = localStorage.getItem('wheretoken.theme')
+          if (allowed.indexOf(raw) !== -1) id = raw
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', id)
+      })()
+    </script>
+    <script type="module" crossorigin src="/assets/index-BUd3jcQD.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DJ_V28XD.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
 </html>

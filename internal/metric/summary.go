@@ -295,6 +295,8 @@ func sourceLabel(id string) string {
 		return "Claude Code"
 	case "kimi":
 		return "Kimi Code"
+	case "minimax":
+		return "MiniMax Agent"
 	case "opencode":
 		return "OpenCode"
 	case "codex":
@@ -313,7 +315,7 @@ func sourceLabel(id string) string {
 func SourceLabel(id string) string { return sourceLabel(id) }
 
 func KnownSourceIDs() []string {
-	return []string{"claude", "kimi", "grok", "opencode", "codex", "cursor", "trae"}
+	return []string{"claude", "kimi", "grok", "minimax", "opencode", "codex", "cursor", "trae"}
 }
 
 func LookupSource(name string) (string, bool) {

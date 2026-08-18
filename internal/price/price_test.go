@@ -81,6 +81,28 @@ func TestGrokShortContextCard(t *testing.T) {
 	}
 }
 
+func TestOpus4RetiredCardNotCurrentOpus(t *testing.T) {
+	old := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4", Miss: 1_000_000, Output: 1_000_000})
+	cur := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1_000_000, Output: 1_000_000})
+	if !old.OK || old.Micro != 90_000_000 { // $15 + $75
+		t.Fatalf("opus-4 retired %+v", old)
+	}
+	if !cur.OK || cur.Micro != 30_000_000 { // $5 + $25
+		t.Fatalf("opus-4.6 must not inherit opus-4 rates %+v", cur)
+	}
+}
+
+func TestGPT56CacheWriteIsPriced(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "openai", Model: "gpt-5.6-sol", CacheCreate: 1_000_000})
+	if !c.OK || c.Micro != 6_250_000 {
+		t.Fatalf("sol cache write %+v", c)
+	}
+	terra := Event(event.UsageEvent{Vendor: "openai", Model: "gpt-5.6-terra", CacheCreate: 1_000_000})
+	if !terra.OK || terra.Micro != 2_500_000 {
+		t.Fatalf("terra cache write %+v", terra)
+	}
+}
+
 func TestHistoricalWindow(t *testing.T) {
 	old := Rate{
 		Vendor: "anthropic", Model: "hist-only",

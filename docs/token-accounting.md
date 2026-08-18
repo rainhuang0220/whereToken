@@ -81,6 +81,11 @@ guarantee for every row.
 | Grok CLI | `cacheCreationTokens` | Cache Create | raw | authoritative | |
 | Grok CLI | `outputTokens` | Output | raw | authoritative | |
 | Grok CLI | `reasoningTokens` | Reasoning | raw | authoritative | Not added into Total. |
+| MiniMax Agent | `input_tokens` | Miss | raw | authoritative | `local_runtime_token_usage` only. Each row is one request; same `turn_id` stays distinct. |
+| MiniMax Agent | `cache_read_tokens` | Cache Read | raw | authoritative | Per-request cache hit, not a running total. |
+| MiniMax Agent | `cache_write_tokens` | Cache Create | raw | authoritative | |
+| MiniMax Agent | `output_tokens` | Output | raw | authoritative | Reasoning is not folded in. |
+| MiniMax Agent | `reasoning_tokens` | Reasoning | raw | authoritative | Not added into Total. |
 | Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
 | Codex | — | Cache Create | — | — | Not exposed. |
@@ -126,4 +131,5 @@ the price is unknown.
 ## What Total is not
 
 Total is not USD, not a provider invoice, and not “context window used”.
-whereToken does not estimate cost.
+Optional API-equivalent USD is a separate field (`docs/cost.md`), never folded
+into Total, and never written as `$0` when the price is unknown.

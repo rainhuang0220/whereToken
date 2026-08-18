@@ -34,7 +34,15 @@ open-ended current card.
 
 **Limitation:** this repository does not keep a full historical archive of
 every vendor price change. Re-scanning last year's Claude usage with only the
-2026-08-19 card applies that card, not the 2025 invoice.
+2026-08-19 card applies that card, not the 2025 invoice. Retired Claude Opus 4
+/ 4.1 rates on this card are the current list for those model ids, not what
+they cost in 2025.
+
+Anthropic cache writes use the **5-minute** list rate. The ledger does not say
+whether a write was 5 minutes or 1 hour.
+
+xAI uses the **short-context** tier. Long-context rates (≥200k prompt) are not
+applied: the ledger does not store prompt length.
 
 ## What is not priced
 

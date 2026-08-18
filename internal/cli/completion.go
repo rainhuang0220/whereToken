@@ -37,11 +37,11 @@ _wheretoken() {
     serve) opts="--port --offline --quiet -q --home --help --ascii --no-color" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
-    rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --width --help" ;;
+    rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --minimax --codex --opencode --cursor --trae --home --width --help" ;;
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --minimax --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -101,7 +101,7 @@ _wheretoken() {
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '--offline[skip Cursor/Trae account APIs]' \
-        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax codex opencode cursor trae)' \
         '--home[fake home]:dir:_files -/'
       ;;
     update|upgrade|uninstall)
@@ -128,12 +128,13 @@ _wheretoken() {
         '--no-color[disable ANSI]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--offline[skip Cursor/Trae account APIs]' \
-        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax codex opencode cursor trae)' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
         '--model[model id]:model:' \
         '--claude[slice Claude Code]' \
         '--kimi[slice Kimi Code]' \
         '--grok[slice Grok]' \
+        '--minimax[slice MiniMax Agent]' \
         '--codex[slice Codex]' \
         '--opencode[slice OpenCode]' \
         '--cursor[slice Cursor]' \
@@ -161,10 +162,10 @@ complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l tool -r -a "claude kimi grok codex opencode cursor trae"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l tool -r -a "claude kimi grok minimax codex opencode cursor trae"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l model -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l claude -l kimi -l grok -l codex -l opencode -l cursor -l trae
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l claude -l kimi -l grok -l minimax -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r -F
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor completion" -l port -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r
@@ -200,7 +201,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

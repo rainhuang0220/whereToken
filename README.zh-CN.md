@@ -158,6 +158,7 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Codex | 完整 | 不需要 |
 | OpenCode | 完整 | 不需要 |
 | Grok CLI | 完整 | 不需要 |
+| MiniMax Agent | 完整 | 不需要 |
 | Cursor | 部分 | token 列需要 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
