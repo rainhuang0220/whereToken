@@ -7,6 +7,7 @@
 - MiniMax Agent local ledger (`~/.minimax/v2/sqlite/runtime-state.sqlite` `local_runtime_token_usage`)
 - OpenClaw session JSONL (`~/.openclaw/agents/*/sessions/*.jsonl`; not trajectories)
 - MiniMax M2.1 / M2.5 / M2.7 pay-as-you-go list prices; M3 stays unavailable (context-tiered)
+- Vendor-axis session drill keeps user turns; model drill prints server cost_usd
 - OpenClaw top-level numeric timestamps still count; MiniMax NULL model rows no longer abort the ledger
 - Deterministic usage insights on the observatory payload and dashboard
 - Dashboard period clicks ignore stale `/api/summary` replies

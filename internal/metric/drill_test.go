@@ -57,6 +57,17 @@ func TestAggregateDrillConservesAcrossModelWorkspaceSession(t *testing.T) {
 	}
 }
 
+func TestVendorDrillSessionsKeepUserTurns(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "opus", SessionID: "s1", RequestID: "1", Miss: 10},
+	}
+	sum := Aggregate(events, []event.TurnEvent{{Source: "claude", SessionID: "s1"}})
+	pack := sum.DrillByVendor["anthropic"]
+	if len(pack.Sessions) != 1 || pack.Sessions[0].UserTurns != 1 {
+		t.Fatalf("vendor session turns %+v", pack.Sessions)
+	}
+}
+
 func sliceSum(rows []Slice) int64 {
 	var n int64
 	for _, s := range rows {

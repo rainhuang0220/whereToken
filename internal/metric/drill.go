@@ -99,6 +99,9 @@ func buildDrill(events []event.UsageEvent, turns []event.TurnEvent) (DrillPack, 
 		if t.SessionID != "" {
 			bumpSessionTurns(allSess, t.SessionID)
 			bumpSessionTurns(srcSess[t.Source], t.SessionID)
+			if s := allSess[t.SessionID]; s != nil && s.Vendor != "" {
+				bumpSessionTurns(vendSess[s.Vendor], t.SessionID)
+			}
 		}
 		if t.Workspace != "" {
 			bumpTurns(allWS, t.Workspace)
