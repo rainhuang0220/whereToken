@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-Then run `wheretoken`. Archives are SHA-256 checked against `checksums.txt`. If you already have Go 1.25+:
+Then run the path the script prints (usually `~/.local/bin/wheretoken`). This shell will not see `wheretoken` until you open a new terminal. Archives are SHA-256 checked against `checksums.txt`. If you already have Go 1.25+:
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
@@ -164,6 +164,6 @@ curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scrip
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-然后输入 `wheretoken`：有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）；页内「刷新」才重新扫描，浏览器重载不是。不写美元价，不做遥测，不加载第三方字体，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。
+然后跑脚本印出来的那一行（一般是 `~/.local/bin/wheretoken`）。当前这个终端还没有 `~/.local/bin`，新开一个才会直接打 `wheretoken`。表是有账本以来的总用量（M）、命中率、最长/当前连烧、请求、用户回合，再按工具和厂家排。`~/.local/bin/wheretoken serve` 仍是窑墙观察台（`127.0.0.1`）；页内「刷新」才重新扫描，浏览器重载不是。不写美元价，不做遥测，不加载第三方字体，不打印 JWT。工具 ≠ 厂家。已有 Go 时也可以 `go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest`。
 
 尚未：GitHub 二进制未签名、没有 npm；Trae / Cursor 的 token 列需要在那些应用里已登录。

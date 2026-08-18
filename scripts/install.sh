@@ -104,12 +104,16 @@ remember_path() {
 }
 
 finish() {
-  echo "wheretoken: installed ${BIN_DIR}/wheretoken" >&2
   if ! path_has "$BIN_DIR"; then
     remember_path "$BIN_DIR"
   fi
+  ver=$("${BIN_DIR}/wheretoken" --version 2>/dev/null || true)
+  if [ -n "$ver" ]; then
+    echo "wheretoken: installed ${ver}" >&2
+  else
+    echo "wheretoken: installed" >&2
+  fi
   echo "${BIN_DIR}/wheretoken" >&2
-  "${BIN_DIR}/wheretoken" --version >&2 || true
 }
 
 go_fallback() {

@@ -41,10 +41,17 @@ function Add-UserPath([string]$dir) {
 
 function Show-Next {
   $exe = Join-Path $binDir 'wheretoken.exe'
-  Write-Host "wheretoken: installed $exe"
   Add-UserPath $binDir
-  Write-Host 'next: wheretoken'
-  if (Test-Path $exe) { & $exe --version }
+  $ver = ''
+  if (Test-Path $exe) {
+    $ver = & $exe --version 2>$null
+  }
+  if ($ver) {
+    Write-Host "wheretoken: installed $ver"
+  } else {
+    Write-Host 'wheretoken: installed'
+  }
+  Write-Host $exe
 }
 
 function Install-WithGo {

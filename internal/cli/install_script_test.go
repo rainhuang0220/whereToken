@@ -51,6 +51,9 @@ func TestInstallScriptMentionsReleaseAssets(t *testing.T) {
 	if strings.Contains(s, "eyJ") {
 		t.Fatal("install.sh must not contain JWT material")
 	}
+	if strings.Contains(s, "next: wheretoken") {
+		t.Fatal("install.sh must not tell this shell to type a bare wheretoken")
+	}
 }
 
 func TestInstallPS1MentionsWindowsZip(t *testing.T) {
@@ -72,7 +75,7 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 		"SHA256",
 		"releases/latest/download",
 		"SetEnvironmentVariable",
-		"next: wheretoken",
+		"wheretoken.exe",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.ps1 missing %q", want)
