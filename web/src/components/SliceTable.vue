@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom, formatCount, hitBand } from '../format'
+import { columnsFrom, formatCount, hitBand, qualityCaption } from '../format'
 import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
 import type { SliceView } from '../types'
 
@@ -52,9 +52,8 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
         >
           <td class="name">
             {{ row.label }}
-            <span v-if="row.quality === 'absent'" class="qual">已发现，无用量</span>
-            <span v-else-if="row.quality === 'degraded'" class="qual">
-              降级<span v-if="row.error"> · {{ row.error }}</span>
+            <span v-if="qualityCaption(row.quality)" class="qual">
+              {{ qualityCaption(row.quality) }}<template v-if="row.error"> · {{ row.error }}</template>
             </span>
           </td>
           <td

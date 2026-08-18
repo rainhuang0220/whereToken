@@ -16,6 +16,7 @@ const (
 	CommandServe      = "serve"
 	CommandScan       = "scan"
 	CommandSources    = "sources"
+	CommandDoctor     = "doctor"
 	CommandCompletion = "completion"
 )
 
@@ -74,6 +75,8 @@ func Parse(args []string) (Flags, error) {
 			f.JSON = true
 		case "sources":
 			f.Command = CommandSources
+		case "doctor":
+			f.Command = CommandDoctor
 		case "completion":
 			f.Command = CommandCompletion
 		default:
@@ -293,6 +296,9 @@ func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
 		return rest, nil
 	case "sources":
 		f.Command = CommandSources
+		return rest, nil
+	case "doctor":
+		f.Command = CommandDoctor
 		return rest, nil
 	case "completion":
 		f.Command = CommandCompletion

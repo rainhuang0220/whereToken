@@ -122,9 +122,10 @@ wheretoken
 wheretoken --today
 wheretoken --json
 wheretoken serve
+wheretoken doctor
 ```
 
-Run `wheretoken --help` for the complete command reference.
+`wheretoken doctor` explains which agents were found and whether their usage data is complete. Run `wheretoken --help` for the complete command reference.
 
 ## Dashboard
 
@@ -158,7 +159,7 @@ whereToken reads usage information from data made available by supported coding 
 
 Cursor and Trae must be **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted.
 
-When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero.
+When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero. The dashboard labels each agent authoritative, degraded, estimated, or unavailable.
 
 See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read.
 

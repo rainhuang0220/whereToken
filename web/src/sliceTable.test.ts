@@ -18,6 +18,7 @@ describe('slice table activation', () => {
     const vue = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'components', 'SliceTable.vue'), 'utf8')
     expect(vue).toContain('rowIsSelectable')
     expect(vue).toContain('isRowActivateKey')
+    expect(vue).toContain('qualityCaption')
     expect(vue).toContain('tabindex')
   })
 })

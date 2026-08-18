@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -26,6 +26,13 @@ _wheretoken() {
         '--port[serve port]:port:'
       ;;
     sources)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--home[fake home]:dir:_files -/'
+      ;;
+    doctor)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
@@ -61,7 +68,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources completion help version)'
+        '1:command:(serve scan sources doctor completion help version)'
       ;;
   esac
 }

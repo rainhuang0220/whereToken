@@ -81,6 +81,8 @@ func (a *App) Run() int {
 		return a.runScanJSON(home, flags.Quiet, flags.Offline)
 	case CommandSources:
 		return a.runSources(home, flags.Quiet, flags.Offline)
+	case CommandDoctor:
+		return a.runDoctor(home, flags.Quiet, flags.Offline)
 	case CommandCompletion:
 		script, err := Completion(flags.CompletionShell)
 		if err != nil {
@@ -204,10 +206,56 @@ func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
 		fmt.Fprintln(a.Stderr, "没有找到本机账本")
 		return ExitOK
 	}
-	for _, root := range res.Roots {
-		fmt.Fprintf(a.Stdout, "%s\t%s\n", root.ID, root.Path)
+	fmt.Fprintf(a.Stdout, "agent\tdetected\tusage\tquality\tpath\n")
+	for _, st := range scan.Diagnose(res) {
+		if !st.Detected {
+			continue
+		}
+		fmt.Fprintf(a.Stdout, "%s\t%s\t%s\t%s\t%s\n",
+			st.ID, yn(st.Detected), yn(st.Usage), string(st.Quality), st.Path)
 	}
 	return ExitOK
+}
+
+func (a *App) runDoctor(home adapter.Home, quiet, offline bool) int {
+	res := a.doScan(home, quiet, offline, false)
+	fmt.Fprint(a.Stdout, FormatDoctor(scan.Diagnose(res)))
+	return ExitOK
+}
+
+func yn(v bool) string {
+	if v {
+		return "yes"
+	}
+	return "no"
+}
+
+func FormatDoctor(rows []scan.AgentStatus) string {
+	var b strings.Builder
+	for _, st := range rows {
+		fmt.Fprintf(&b, "%s\n", st.Label)
+		if st.Detected {
+			fmt.Fprintf(&b, "  ✓ Source detected\n")
+			if st.Path != "" {
+				fmt.Fprintf(&b, "    %s\n", st.Path)
+			}
+		} else {
+			fmt.Fprintf(&b, "  · Source not found on this machine\n")
+		}
+		if st.Usage {
+			fmt.Fprintf(&b, "  ✓ Usage data available\n")
+		} else if st.Detected {
+			fmt.Fprintf(&b, "  ⚠ Usage data unavailable\n")
+		}
+		if st.Quality != "" {
+			fmt.Fprintf(&b, "  · Quality: %s\n", st.Quality)
+		}
+		if st.Error != "" {
+			fmt.Fprintf(&b, "    %s\n", st.Error)
+		}
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func (a *App) runServe(flags Flags, home adapter.Home) int {

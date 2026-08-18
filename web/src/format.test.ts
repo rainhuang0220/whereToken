@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, formatCount, hitBand } from './format'
+import { columnsFrom, formatCount, hitBand, qualityCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -41,6 +41,22 @@ describe('hitBand', () => {
     expect(hitBand('70.0%')).toBe('hi')
     expect(hitBand('50.0%')).toBe('mid')
     expect(hitBand('10.0%')).toBe('lo')
+  })
+})
+
+describe('qualityCaption', () => {
+  it('names the four quality states in product language', () => {
+    expect(qualityCaption('authoritative')).toBe('完整')
+    expect(qualityCaption('degraded')).toBe('降级')
+    expect(qualityCaption('estimated')).toBe('估算')
+    expect(qualityCaption('absent')).toBe('数据不可用')
+  })
+})
+
+describe('tokenCell', () => {
+  it('does not present absent usage as zero', () => {
+    expect(tokenCell('0.00 M', 'absent')).toBe('不可用')
+    expect(tokenCell('1.20 M', 'authoritative')).toBe('1.20 M')
   })
 })
 

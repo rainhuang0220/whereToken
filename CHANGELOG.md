@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `wheretoken doctor` and `sources` report detect / usage / quality from the same scan
+- Dashboard shows 完整 / 降级 / 估算 / 数据不可用 and does not present absent usage as 0.00 M
 - README frames whereToken as local-first usage observability: why it exists, how agents are normalized, missing data is not zero
 - `verify-cli.sh` looks for the `--offline` banner in the whole table. The 3-line slab is no longer the first two lines
 

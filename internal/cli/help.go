@@ -7,6 +7,7 @@ USAGE
   wheretoken [flags] serve [--port 8787]
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
+  wheretoken [flags] doctor
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -72,6 +73,7 @@ EXAMPLES
   wheretoken --tool=claude --json
   wheretoken --model=k3
   wheretoken sources
+  wheretoken doctor
   wheretoken --offline --quiet
   wheretoken serve
   wheretoken completion zsh

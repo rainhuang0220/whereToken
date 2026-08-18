@@ -147,6 +147,38 @@ func TestParseSkipsAssistantRowsWithoutRequestID(t *testing.T) {
 	}
 }
 
+func TestDuplicateRequestIDTakesMaxNotSum(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	root := filepath.Join(filepath.Dir(file), "..", "..", "..", "testdata", "adapters", "claude_dup")
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: root}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Requests != 1 {
+		t.Fatalf("requests=%d want 1", sum.All.Requests)
+	}
+	if sum.All.Miss != 1000 || sum.All.Output != 500 {
+		t.Fatalf("placeholder must not be summed: %+v", sum.All)
+	}
+}
+
+func TestMalformedJSONLDoesNotAbortGoodRows(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	root := filepath.Join(filepath.Dir(file), "..", "..", "..", "testdata", "adapters", "claude_malformed")
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: root}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "ok" || evs[0].Miss != 3 {
+		t.Fatalf("%+v", evs)
+	}
+}
+
 func TestDiscoverXDGConfigClaude(t *testing.T) {
 	dir := t.TempDir()
 	proj := filepath.Join(dir, ".config", "claude", "projects")

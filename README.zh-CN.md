@@ -122,9 +122,10 @@ wheretoken
 wheretoken --today
 wheretoken --json
 wheretoken serve
+wheretoken doctor
 ```
 
-完整命令见 `wheretoken --help`。
+`wheretoken doctor` 说明哪些 agent 被发现、用量是否完整。完整命令见 `wheretoken --help`。
 
 ## 仪表盘
 
