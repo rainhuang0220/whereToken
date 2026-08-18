@@ -94,6 +94,22 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	cur := *last
 	cur.Scanning = scanning
+	win, err := metric.ParseSinceQuery(r.URL.Query().Get("since"), time.Now(), time.Local)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if from, to := r.URL.Query().Get("from"), r.URL.Query().Get("to"); from != "" || to != "" {
+		win, err = metric.ParseWindow(false, "", from, to, time.Now(), time.Local)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if !win.IsAll() {
+		cur = scan.ApplyWindow(cur, win, time.Local)
+		cur.Compare = scan.CompareWindows(*last, win, time.Local)
+	}
 	if err := scan.EncodeSummary(w, cur); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

@@ -146,6 +146,35 @@ h1 {
   gap: 0.35rem;
 }
 
+.period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0.2rem;
+}
+
+.period-delta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.2rem;
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.read-compare {
+  grid-column: 1 / -1;
+  margin: 0.2rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.why {
+  margin-top: 1.4rem;
+}
+
 .rail-actions {
   display: flex;
   flex-wrap: wrap;

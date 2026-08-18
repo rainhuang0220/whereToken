@@ -2,6 +2,7 @@ package report
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,9 @@ import (
 
 type Filter struct {
 	Today        bool
+	Days         int
+	From, To     time.Time
+	Period       string
 	Tool, Vendor string
 	Model        string
 	Discovered   []metric.Slice
@@ -125,7 +129,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		CurrentStreak: cal.All.Stats.CurrentStreak,
 		Requests:      sum.All.Requests,
 		UserTurns:     sum.All.UserTurns,
-		ShowStreaks:   !f.Today,
+		ShowStreaks:   !windowed(f),
 		HideTurns:     f.Model != "",
 		Quality:       sum.All.Quality,
 	}
@@ -150,7 +154,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	}
 
 	snap.Notes = notes(errs, f.Discovered)
-	snap.Tools = mergeDiscovered(snap.Tools, f.Discovered, f.Tool, f.Today)
+	snap.Tools = mergeDiscovered(snap.Tools, f.Discovered, f.Tool, windowed(f))
 	snap.Vendors = rankVendors(snap.Vendors)
 	applyShares(snap.Tools, snap.Total)
 	applyShares(snap.Vendors, snap.Total)
@@ -188,14 +192,18 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 	if snap.Total != 0 || snap.Requests != 0 || snap.UserTurns != 0 {
 		return notes
 	}
-	if f.Today {
+	if windowed(f) {
 		unscoped := f.Tool == "" && f.Vendor == "" && f.Model == ""
 		if unscoped && len(snap.Tools) == 0 && !discoveredHasUsage(f.Discovered, "", true) {
 			return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode 有本地记录才会出数；Cursor / Trae 需要已登录。")
 		}
-		msg := "今天还没有用量。"
+		msg := emptyWindowNote(f)
 		if discoveredHasUsage(f.Discovered, f.Tool, unscoped) {
-			msg = "今天还没有用量。有账本以来请去掉 --today。"
+			if f.Today {
+				msg += "有账本以来请去掉 --today。"
+			} else {
+				msg += "有账本以来请去掉时间范围。"
+			}
 		}
 		return appendUniqueNote(notes, msg)
 	}
@@ -238,8 +246,22 @@ func appendUniqueNote(notes []string, msg string) []string {
 	return append(notes, msg)
 }
 
+func windowed(f Filter) bool {
+	return f.Today || f.Days > 0 || !f.From.IsZero() || !f.To.IsZero()
+}
+
+func emptyWindowNote(f Filter) string {
+	if f.Today {
+		return "今天还没有用量。"
+	}
+	if f.Days > 0 {
+		return "这段时间还没有用量。"
+	}
+	return "这段时间还没有用量。"
+}
+
 func pruneNotes(notes []string, f Filter, tools []Row) []string {
-	if !f.Today && f.Tool == "" && f.Vendor == "" && f.Model == "" {
+	if !windowed(f) && f.Tool == "" && f.Vendor == "" && f.Model == "" {
 		return notes
 	}
 	keep := map[string]struct{}{}
@@ -281,7 +303,7 @@ func pruneNotes(notes []string, f Filter, tools []Row) []string {
 				}
 				continue
 			}
-			if f.Today && len(tools) == 0 {
+			if windowed(f) && len(tools) == 0 {
 				out = append(out, n)
 			}
 			continue
@@ -330,8 +352,23 @@ func applyShares(rows []Row, total int64) {
 }
 
 func period(f Filter, now time.Time) string {
+	if f.Period != "" {
+		return f.Period
+	}
 	if f.Today {
 		return "今天 " + now.Format("2006-01-02")
+	}
+	if f.Days > 0 {
+		return "近 " + strconv.Itoa(f.Days) + " 天"
+	}
+	if !f.From.IsZero() && !f.To.IsZero() {
+		return f.From.Format("2006-01-02") + " … " + f.To.Add(-time.Nanosecond).Format("2006-01-02")
+	}
+	if !f.From.IsZero() {
+		return f.From.Format("2006-01-02") + " 起"
+	}
+	if !f.To.IsZero() {
+		return "至 " + f.To.Add(-time.Nanosecond).Format("2006-01-02")
 	}
 	return "有账本以来"
 }
@@ -360,11 +397,23 @@ func keepEvent(e event.UsageEvent, f Filter, now time.Time, loc *time.Location) 
 	if f.Model != "" && !modelMatch(e.Model, f.Model) {
 		return false
 	}
+	return inTime(e.Timestamp, f, now, loc)
+}
+
+func inTime(ts time.Time, f Filter, now time.Time, loc *time.Location) bool {
 	if f.Today {
-		if e.Timestamp.IsZero() {
+		if ts.IsZero() {
 			return false
 		}
-		if e.Timestamp.In(loc).Format("2006-01-02") != now.Format("2006-01-02") {
+		return ts.In(loc).Format("2006-01-02") == now.Format("2006-01-02")
+	}
+	if !f.From.IsZero() {
+		if ts.IsZero() || ts.In(loc).Before(f.From) {
+			return false
+		}
+	}
+	if !f.To.IsZero() {
+		if ts.IsZero() || !ts.In(loc).Before(f.To) {
 			return false
 		}
 	}
@@ -375,13 +424,8 @@ func keepTurn(t event.TurnEvent, f Filter, now time.Time, loc *time.Location, sr
 	if f.Tool != "" && t.Source != f.Tool {
 		return false
 	}
-	if f.Today {
-		if t.Timestamp.IsZero() {
-			return false
-		}
-		if t.Timestamp.In(loc).Format("2006-01-02") != now.Format("2006-01-02") {
-			return false
-		}
+	if !inTime(t.Timestamp, f, now, loc) {
+		return false
 	}
 	if f.Model != "" {
 		return false
@@ -466,8 +510,8 @@ func notes(errs []string, discovered []metric.Slice) []string {
 	return out
 }
 
-func mergeDiscovered(tools []Row, discovered []metric.Slice, toolFilter string, today bool) []Row {
-	if today {
+func mergeDiscovered(tools []Row, discovered []metric.Slice, toolFilter string, skip bool) []Row {
+	if skip {
 		return tools
 	}
 	have := map[string]struct{}{}

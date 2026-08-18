@@ -130,6 +130,26 @@ func TestSnapshotTodayEmptyDoesNotLookBroken(t *testing.T) {
 	}
 }
 
+func TestSnapshotSinceSevenDays(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	win, err := metric.ParseWindow(false, "7d", "", "", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := Build(events, turns, nil, Filter{Days: win.Days, From: win.From, To: win.To, Period: win.Label}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.Period != "近 7 天" {
+		t.Fatalf("period=%q", snap.Period)
+	}
+	if snap.ShowStreaks {
+		t.Fatal("ranged view hides all-time streaks")
+	}
+}
+
 func TestSnapshotTodayEmptyHomeUsesLedgerSentence(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

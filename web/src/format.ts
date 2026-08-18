@@ -23,6 +23,30 @@ export function hitBand(text: string): 'hi' | 'mid' | 'lo' | 'none' {
   return 'lo'
 }
 
+export function derivationCaption(derivation: string): string {
+  const parts = derivation
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((d) => {
+      switch (d) {
+        case 'raw':
+          return '原始字段'
+        case 'provider_api':
+          return '账号接口'
+        case 'derived':
+          return '推导值'
+        case 'deduplicated':
+          return '按请求去重'
+        case 'estimated':
+          return '估算'
+        default:
+          return d
+      }
+    })
+  return parts.join(' · ')
+}
+
 export function qualityCaption(quality: string): string {
   switch (quality) {
     case 'authoritative':

@@ -200,6 +200,7 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 		CacheCreate: cacheCreate,
 		Output:      output,
 		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveDerived,
 	}, true
 }
 

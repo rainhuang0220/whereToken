@@ -11,6 +11,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -67,13 +68,25 @@ type claudeLine struct {
 }
 
 func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	ws, sess := claudeContext(root.Path, path)
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+		return parseJSONLFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
+func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
+	ws, sess := claudeContext(root.Path, path)
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
 	sc := bufio.NewScanner(f)
 	buf := make([]byte, 0, 64*1024)
 	sc.Buffer(buf, 10*1024*1024)
@@ -98,7 +111,7 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 				// would defeat mergeByRequest and sum stream placeholders.
 				continue
 			}
-			emit(event.UsageEvent{
+			evs = append(evs, event.UsageEvent{
 				Source:      "claude",
 				Vendor:      vendor.Lookup(rec.Message.Model, ""),
 				SourceRoot:  root.Path,
@@ -112,14 +125,15 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 				CacheCreate: rec.Message.Usage.CacheCreationInputTokens,
 				Output:      rec.Message.Usage.OutputTokens,
 				Quality:     event.QualityDegraded,
+				Derivation:  event.DeriveDeduplicated,
 			})
 		case "user":
 			if isUserTurn(rec.Message.Content) {
-				emitTurn(event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
+				turns = append(turns, event.TurnEvent{Source: "claude", SessionID: sess, Workspace: ws, Timestamp: ts})
 			}
 		}
 	}
-	return sc.Err()
+	return evs, turns, sc.Err()
 }
 
 func claudeRequestID(rec claudeLine) string {

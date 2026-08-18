@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { columnsFrom, formatCount, hitBand, qualityCaption } from '../format'
+import { columnsFrom, derivationCaption, formatCount, hitBand, qualityCaption } from '../format'
 import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
 import type { SliceView } from '../types'
 
@@ -52,8 +52,8 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
         >
           <td class="name">
             {{ row.label }}
-            <span v-if="qualityCaption(row.quality)" class="qual">
-              {{ qualityCaption(row.quality) }}<template v-if="row.error"> · {{ row.error }}</template>
+            <span v-if="qualityCaption(row.quality) || derivationCaption(row.derivation || '')" class="qual">
+              {{ [qualityCaption(row.quality), derivationCaption(row.derivation || ''), row.error].filter(Boolean).join(' · ') }}
             </span>
           </td>
           <td

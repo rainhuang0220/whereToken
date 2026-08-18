@@ -28,7 +28,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -37,8 +37,9 @@ _wheretoken() {
     serve) opts="--port --offline --quiet -q --home --help --ascii --no-color" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
+    rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --width --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources doctor completion help version --help --version --json --today --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -50,7 +51,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -86,6 +87,21 @@ _wheretoken() {
         '--offline[skip Cursor/Trae account APIs]' \
         '--home[fake home]:dir:_files -/'
       ;;
+    rebuild)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--json[JSON on stdout]' \
+        '--today[only today]' \
+        '--since[last N days]:since:(7d 30d)' \
+        '--from[start date]:from:' \
+        '--to[end date]:to:' \
+        '--ascii[ASCII box drawing]' \
+        '--no-color[disable ANSI]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--tool[tool id]:tool:(claude kimi grok codex opencode cursor trae)' \
+        '--home[fake home]:dir:_files -/'
+      ;;
     completion)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -98,6 +114,9 @@ _wheretoken() {
         '(-V --version)'{-V,--version}'[version]' \
         '--json[JSON on stdout]' \
         '--today[only today]' \
+        '--since[last N days]:since:(7d 30d)' \
+        '--from[start date]:from:' \
+        '--to[end date]:to:' \
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
@@ -115,7 +134,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor completion help version)'
+        '1:command:(serve scan sources doctor rebuild completion help version)'
       ;;
   esac
 }
@@ -123,11 +142,14 @@ _wheretoken "$@"
 `
 
 const fishCompletion = `complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild completion help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l today
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l since -r -a "7d 30d"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l from -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l to -r
 complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
@@ -152,6 +174,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
       'scan' { $cmd = $t }
       'sources' { $cmd = $t }
       'doctor' { $cmd = $t }
+      'rebuild' { $cmd = $t }
       'completion' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
@@ -162,8 +185,9 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'serve' { @('--port','--offline','--quiet','--home','--help','--ascii','--no-color') }
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
+    'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--home','--width','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
-    default { @('serve','scan','sources','doctor','completion','help','version','--help','--version','--json','--today','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

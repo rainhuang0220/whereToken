@@ -548,6 +548,31 @@ func TestRunSourcesEmptyHintsOnStderr(t *testing.T) {
 	}
 }
 
+func TestRunSinceJSONUsesLocalWindow(t *testing.T) {
+	app, out, errb := testApp([]string{"--since", "1d", "--json"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, `"period": "今天 2026-08-16"`) && !strings.Contains(s, `"period": "近 1 天"`) {
+		t.Fatalf("period:\n%s", s)
+	}
+	if !strings.Contains(s, `"total": 1580000`) {
+		t.Fatalf("1d should keep 16 Aug only:\n%s", s)
+	}
+}
+
+func TestRunRebuildWipesThenReports(t *testing.T) {
+	dir := t.TempDir()
+	app, out, errb := testApp([]string{"rebuild", "--home", dir, "--quiet"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "whereToken") {
+		t.Fatalf("rebuild should print the table:\n%s", out.String())
+	}
+}
+
 func TestRunQuietSuppressesProgress(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	app, _, errb := testApp([]string{"--quiet"})

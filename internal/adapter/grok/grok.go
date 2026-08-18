@@ -12,6 +12,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -77,16 +78,28 @@ type updateLine struct {
 }
 
 func parseUpdates(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrParse("grok", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+		return parseUpdatesFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
+func parseUpdatesFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
 	ws, sess := grokContext(root.Path, path)
 	sc := bufio.NewScanner(f)
 	buf := make([]byte, 0, 64*1024)
 	sc.Buffer(buf, 10*1024*1024)
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
 	for sc.Scan() {
 		line := sc.Bytes()
 		if len(line) == 0 {
@@ -105,42 +118,43 @@ func parseUpdates(path string, root adapter.SourceRoot, emit func(event.UsageEve
 			if !isUserTurn(rec.Params.Update.Content.Text) {
 				continue
 			}
-			emitTurn(event.TurnEvent{
+			turns = append(turns, event.TurnEvent{
 				Source:    "grok",
 				SessionID: sess,
 				Workspace: ws,
 				Timestamp: ts,
 			})
 		case "turn_completed":
-			emitCompleted(rec, root, ws, sess, ts, emit)
+			evs = append(evs, completedEvents(rec, root, ws, sess, ts)...)
 		}
 	}
-	return sc.Err()
+	return evs, turns, sc.Err()
 }
 
-func emitCompleted(rec updateLine, root adapter.SourceRoot, ws, sess string, ts time.Time, emit func(event.UsageEvent)) {
+func completedEvents(rec updateLine, root adapter.SourceRoot, ws, sess string, ts time.Time) []event.UsageEvent {
 	u := rec.Params.Update.Usage
 	if u == nil {
-		return
+		return nil
 	}
 	req := strings.TrimSpace(rec.Params.Update.PromptID)
 	if req == "" {
 		// eventId is unique per JSONL line; using it would defeat mergeByRequest.
-		return
+		return nil
 	}
 	if len(u.ModelUsage) == 0 {
-		emit(usageEvent(root, ws, sess, req, "grok", ts, *u))
-		return
+		return []event.UsageEvent{usageEvent(root, ws, sess, req, "grok", ts, *u)}
 	}
+	var out []event.UsageEvent
 	if len(u.ModelUsage) == 1 {
 		for model, part := range u.ModelUsage {
-			emit(usageEvent(root, ws, sess, req, model, ts, part))
+			out = append(out, usageEvent(root, ws, sess, req, model, ts, part))
 		}
-		return
+		return out
 	}
 	for model, part := range u.ModelUsage {
-		emit(usageEvent(root, ws, sess, req+":"+model, model, ts, part))
+		out = append(out, usageEvent(root, ws, sess, req+":"+model, model, ts, part))
 	}
+	return out
 }
 
 func usageEvent(root adapter.SourceRoot, ws, sess, req, model string, ts time.Time, u grokUsage) event.UsageEvent {
@@ -159,6 +173,7 @@ func usageEvent(root adapter.SourceRoot, ws, sess, req, model string, ts time.Ti
 		Output:      u.OutputTokens,
 		Reasoning:   u.ReasoningTokens,
 		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveDerived,
 	}
 }
 

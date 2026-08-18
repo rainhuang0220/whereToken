@@ -119,6 +119,13 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 	return apiErr
 }
 
+func localDerivation(q event.Quality, stripTokens bool) string {
+	if stripTokens || q == "" {
+		return ""
+	}
+	return event.DeriveRaw
+}
+
 func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent), stripTokens bool) {
 	bySess := map[string][]bubbleRow{}
 	for _, b := range bubbles {
@@ -180,6 +187,7 @@ func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root ada
 				CacheCreate: cacheCreate,
 				Output:      out,
 				Quality:     q,
+				Derivation:  localDerivation(q, stripTokens),
 			})
 		}
 	}

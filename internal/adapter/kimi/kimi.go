@@ -12,6 +12,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -79,18 +80,34 @@ type wireLine struct {
 }
 
 func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	f, err := os.Open(path)
+	evs, turns, _, err := index.LoadOrParse("kimi", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, error) {
+		return parseWireFile(f, path, root)
+	})
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	for _, e := range evs {
+		emit(e)
+	}
+	for _, t := range turns {
+		emitTurn(t)
+	}
+	return nil
+}
 
+func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, error) {
+	start, _ := f.Seek(0, 1)
 	sc := bufio.NewScanner(f)
 	buf := make([]byte, 0, 64*1024)
 	sc.Buffer(buf, 10*1024*1024)
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	var nbytes int64
 	seq := 0
 	for sc.Scan() {
 		line := sc.Bytes()
+		off := start + nbytes
+		nbytes += int64(len(line)) + 1
 		if len(line) == 0 {
 			continue
 		}
@@ -102,11 +119,11 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 		case "usage.record":
 			seq++
 			ws, sess := kimiContext(root.Path, path)
-			emit(event.UsageEvent{
+			evs = append(evs, event.UsageEvent{
 				Source:      "kimi",
 				Vendor:      vendor.Lookup(rec.Model, ""),
 				SourceRoot:  root.Path,
-				RequestID:   fmt.Sprintf("%s:%d:%d", path, rec.Time, seq),
+				RequestID:   fmt.Sprintf("%s:%d:%d:%d", path, rec.Time, seq, off),
 				SessionID:   sess,
 				Workspace:   ws,
 				Model:       rec.Model,
@@ -116,11 +133,12 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 				CacheCreate: rec.Usage.InputCacheCreation,
 				Output:      rec.Usage.Output,
 				Quality:     event.QualityAuthoritative,
+				Derivation:  event.DeriveRaw,
 			})
 		case "turn.prompt":
 			if rec.Origin.Kind == "user" {
 				ws, sess := kimiContext(root.Path, path)
-				emitTurn(event.TurnEvent{
+				turns = append(turns, event.TurnEvent{
 					Source:    "kimi",
 					SessionID: sess,
 					Workspace: ws,
@@ -129,7 +147,7 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 			}
 		}
 	}
-	return sc.Err()
+	return evs, turns, sc.Err()
 }
 
 func kimiContext(rootPath, file string) (workspace, session string) {

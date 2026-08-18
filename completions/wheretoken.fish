@@ -1,9 +1,12 @@
 complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild completion help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l today
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l since -r -a "7d 30d"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l from -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l to -r
 complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q

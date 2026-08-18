@@ -56,6 +56,52 @@ func TestAggregateDedupesRequestID(t *testing.T) {
 	}
 }
 
+func TestMergeComplementaryFieldsKeepsBoth(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", RequestID: "r", Miss: 100, Output: 0},
+		{Source: "claude", RequestID: "r", Miss: 0, Output: 500},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.Requests != 1 {
+		t.Fatalf("requests=%d", sum.All.Requests)
+	}
+	if sum.All.Miss != 100 || sum.All.Output != 500 {
+		t.Fatalf("complementary merge must keep both fields: %+v", sum.All)
+	}
+}
+
+func TestMergeOutOfOrderAndMissingFields(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", RequestID: "r", Output: 4, CacheRead: 9000},
+		{Source: "claude", RequestID: "r", Miss: 10, CacheRead: 9000},
+		{Source: "claude", RequestID: "r", Miss: 0, Output: 1, CacheRead: 9000},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.Miss != 10 || sum.All.Output != 4 || sum.All.CacheRead != 9000 {
+		t.Fatalf("max per field %+v", sum.All)
+	}
+}
+
+func TestAggregateRecordsAndDerivation(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", RequestID: "a", Miss: 1, Quality: event.QualityDegraded, Derivation: event.DeriveDeduplicated},
+		{Source: "claude", RequestID: "a", Miss: 2, Quality: event.QualityDegraded, Derivation: event.DeriveDeduplicated},
+		{Source: "kimi", RequestID: "b", Miss: 3, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw},
+	}
+	sum := Aggregate(events, nil)
+	if sum.All.Records != 2 {
+		t.Fatalf("records=%d", sum.All.Records)
+	}
+	for _, s := range sum.BySource {
+		if s.ID == "claude" && (s.Records != 1 || s.Derivation != event.DeriveDeduplicated) {
+			t.Fatalf("claude %+v", s)
+		}
+		if s.ID == "kimi" && (s.Records != 1 || s.Derivation != event.DeriveRaw) {
+			t.Fatalf("kimi %+v", s)
+		}
+	}
+}
+
 func TestAggregateSkipRequestKeepsTokenTotals(t *testing.T) {
 	events := []event.UsageEvent{
 		{Source: "cursor", Vendor: "anthropic", RequestID: "bubble", Quality: event.QualityDegraded},

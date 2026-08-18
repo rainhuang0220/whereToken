@@ -14,6 +14,8 @@ type Slice struct {
 	ID, Label                            string
 	Miss, CacheRead, CacheCreate, Output int64
 	Requests, UserTurns                  int64
+	Records                              int64
+	Derivation                           string
 	Quality                              event.Quality
 }
 
@@ -59,6 +61,8 @@ type SliceView struct {
 	HitRateText  string   `json:"hit_rate_text"`
 	Requests     int64    `json:"requests"`
 	UserTurns    int64    `json:"user_turns"`
+	Records      int64    `json:"records,omitempty"`
+	Derivation   string   `json:"derivation,omitempty"`
 	Quality      string   `json:"quality"`
 	Error        string   `json:"error,omitempty"`
 }
@@ -80,6 +84,8 @@ func View(s Slice) SliceView {
 		HitRateText:  "—",
 		Requests:     s.Requests,
 		UserTurns:    s.UserTurns,
+		Records:      s.Records,
+		Derivation:   s.Derivation,
 		Quality:      string(s.Quality),
 	}
 	if pct, ok := HitRate(s.Miss, s.CacheRead, s.CacheCreate); ok {
@@ -96,11 +102,21 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	bySource := map[string]*Slice{}
 	byVendor := map[string]*Slice{}
 	byCross := map[string]*SourceVendor{}
+	srcDerive := map[string]map[string]struct{}{}
+	allDerive := map[string]struct{}{}
 
 	for _, e := range merged {
 		addSlice(&all, e)
 		src := getSlice(bySource, e.Source, sourceLabel(e.Source))
 		addSlice(src, e)
+		src.Records++
+		if e.Derivation != "" {
+			if srcDerive[e.Source] == nil {
+				srcDerive[e.Source] = map[string]struct{}{}
+			}
+			srcDerive[e.Source][e.Derivation] = struct{}{}
+			allDerive[e.Derivation] = struct{}{}
+		}
 		vend := getSlice(byVendor, e.Vendor, vendor.Label(e.Vendor))
 		addSlice(vend, e)
 		key := e.Source + "\x00" + e.Vendor
@@ -129,8 +145,11 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 		src.UserTurns++
 	}
 
+	all.Records = int64(len(merged))
+	all.Derivation = joinKeys(allDerive)
 	sum := Summary{All: all}
 	for _, s := range bySource {
+		s.Derivation = joinKeys(srcDerive[s.ID])
 		sum.BySource = append(sum.BySource, *s)
 	}
 	for _, s := range byVendor {
@@ -261,6 +280,18 @@ func LookupSource(name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func joinKeys(m map[string]struct{}) string {
+	if len(m) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ",")
 }
 
 func compactName(s string) string {

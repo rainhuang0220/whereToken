@@ -20,6 +20,14 @@ wheretoken \- local coding-agent token usage as a character table
 .br
 .B wheretoken
 [\fIflags\fR]
+.B doctor
+.br
+.B wheretoken
+[\fIflags\fR]
+.B rebuild
+.br
+.B wheretoken
+[\fIflags\fR]
 .B completion
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
 .SH DESCRIPTION
@@ -74,6 +82,22 @@ Print version.
 .TP
 .B --today
 Only today in the local timezone. The kiln wall (not this table) uses weeks that start Monday.
+.TP
+.B --since \fI7d\fR
+Last N local calendar days including today (for example
+.B 7d
+or
+.B 30d ).
+.TP
+.B --from \fIDATE\fR
+Inclusive start.
+.B YYYY-MM-DD
+or RFC3339, local timezone.
+.TP
+.B --to \fIDATE\fR
+Inclusive end date.
+.B YYYY-MM-DD
+or RFC3339, local timezone.
 .TP
 .B --tool \fINAME\fR
 Slice by tool. Also
@@ -147,6 +171,14 @@ Override home (same idea as
 Same as
 .BR --offline .
 .TP
+.B WHERETOKEN_INDEX
+Path to the local scan cache.
+.TP
+.B WHERETOKEN_NO_INDEX
+Set to
+.B 1
+to skip the scan cache.
+.TP
 .B WHERETOKEN_EXTRA_ROOTS
 Extra homes (Unix :, Windows ;, or commas).
 .TP
@@ -171,6 +203,12 @@ Today, Cursor only.
 .TP
 .B wheretoken --today --kimi
 Today, Kimi Code only. Does not mix all-time rows.
+.TP
+.B wheretoken --since 7d
+Last seven local calendar days.
+.TP
+.B wheretoken rebuild
+Delete the local scan index and read agent data again.
 .TP
 .B wheretoken --model=k3 --json
 Schema 1 JSON for that model.

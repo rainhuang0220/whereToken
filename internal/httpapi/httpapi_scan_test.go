@@ -63,6 +63,43 @@ func TestGetSummaryReturnsLastScanUntilPost(t *testing.T) {
 	}
 }
 
+func TestGetSummarySinceFiltersLastScan(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := writeKimiHome(t)
+	srv := httptest.NewServer(NewMux(testhome.New(dir)))
+	t.Cleanup(srv.Close)
+	posted := postScanJSON(t, srv)
+	if posted.All.Total != 1185 {
+		t.Fatalf("POST total=%d", posted.All.Total)
+	}
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/summary?since=1d", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+	var payload struct {
+		All struct {
+			Total int64 `json:"total"`
+		} `json:"all"`
+		Compare *struct {
+			PreviousTotal int64 `json:"previous_total"`
+		} `json:"compare"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Compare == nil {
+		t.Fatal("ranged summary should include compare")
+	}
+}
+
 func TestPostScanStreamsProgressThenComplete(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := writeKimiHome(t)

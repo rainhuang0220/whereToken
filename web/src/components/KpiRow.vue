@@ -6,6 +6,7 @@ defineProps<{
   all: SliceView
   todayM?: string
   peakM?: string
+  compareText?: string
 }>()
 </script>
 
@@ -35,5 +36,6 @@ defineProps<{
       <span class="read-k">用户回合</span>
       <strong>{{ formatCount(all.user_turns) }}</strong>
     </div>
+    <p v-if="compareText" class="read-compare">{{ compareText }}</p>
   </section>
 </template>

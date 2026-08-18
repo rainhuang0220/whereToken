@@ -8,7 +8,7 @@ import KilnKid from '../components/KilnKid.vue'
 import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
-import { formatCount } from '../format'
+import { derivationCaption, formatCount, qualityCaption } from '../format'
 import {
   collectKilnMouth,
   observatoryCursorWindowHint,
@@ -20,10 +20,23 @@ import {
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import { useSummaryStore } from '../stores/summary'
-import type { AxisSel, CalendarSeries, DrillTables } from '../types'
+import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
 const store = useSummaryStore()
 const payload = computed(() => store.payload)
+const periods: { id: PeriodId; label: string }[] = [
+  { id: 'today', label: '今日' },
+  { id: '7d', label: '7 天' },
+  { id: '30d', label: '30 天' },
+  { id: 'all', label: '全部' },
+]
+const compareText = computed(() => {
+  const pct = payload.value?.compare?.delta_pct
+  if (pct == null || store.period === 'all') return ''
+  const sign = pct > 0 ? '+' : ''
+  return `较上期 ${sign}${Math.round(pct)}%`
+})
+const compareSources = computed(() => payload.value?.compare?.by_source ?? [])
 const claudeDegraded = computed(() =>
   payload.value?.by_source?.some((s) => s.id === 'claude' && s.quality === 'degraded'),
 )
@@ -161,6 +174,21 @@ onMounted(() => {
       <p v-for="line in mouthLines" :key="line" class="note">{{ line }}</p>
     </details>
 
+    <div class="period" role="tablist" aria-label="时间范围">
+      <button
+        v-for="p in periods"
+        :key="p.id"
+        type="button"
+        class="lever"
+        :class="{ primary: store.period === p.id }"
+        role="tab"
+        :aria-selected="store.period === p.id"
+        @click="store.setPeriod(p.id)"
+      >
+        {{ p.label }}
+      </button>
+    </div>
+
     <AxisDamper
       v-if="payload"
       v-model="axis"
@@ -182,7 +210,13 @@ onMounted(() => {
         :all="payload.all"
         :today-m="todayUsageM"
         :peak-m="series.stats.peak_total_m"
+        :compare-text="compareText"
       />
+      <p v-if="compareSources.length && store.period !== 'all'" class="period-delta">
+        <span v-for="row in compareSources" :key="row.id">
+          {{ row.label }} {{ row.delta_text }}
+        </span>
+      </p>
 
       <div v-if="showSlices" class="split">
         <SliceTable
@@ -201,6 +235,36 @@ onMounted(() => {
       </div>
 
       <DrillPanel v-if="showDrill" :pack="drill" />
+
+      <details v-if="payload.why?.length" class="why">
+        <summary>这个数字怎么来的</summary>
+        <table>
+          <thead>
+            <tr>
+              <th class="name">来源</th>
+              <th class="num">记录</th>
+              <th class="num">未命中</th>
+              <th class="num">缓存读</th>
+              <th class="num">缓存写</th>
+              <th class="num">输出</th>
+              <th class="name">质量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in payload.why" :key="row.source">
+              <td class="name">{{ row.label }}</td>
+              <td class="num">{{ formatCount(row.records) }}</td>
+              <td class="num">{{ formatCount(row.miss) }}</td>
+              <td class="num">{{ formatCount(row.cache_read) }}</td>
+              <td class="num">{{ formatCount(row.cache_create) }}</td>
+              <td class="num">{{ formatCount(row.output) }}</td>
+              <td class="name">
+                {{ [qualityCaption(row.quality), derivationCaption(row.derivation)].filter(Boolean).join(' · ') }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
 
       <details v-if="payload.by_source_vendor?.length" class="cross">
         <summary>工具 × 厂家</summary>

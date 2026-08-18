@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
@@ -17,6 +18,7 @@ const (
 	CommandScan       = "scan"
 	CommandSources    = "sources"
 	CommandDoctor     = "doctor"
+	CommandRebuild    = "rebuild"
 	CommandCompletion = "completion"
 )
 
@@ -36,6 +38,7 @@ type Flags struct {
 	Offline         bool
 	Tool, Vendor    string
 	Model, Home     string
+	Since, From, To string
 	Port            int
 	Width           int
 	CompletionShell string
@@ -77,6 +80,8 @@ func Parse(args []string) (Flags, error) {
 			f.Command = CommandSources
 		case "doctor":
 			f.Command = CommandDoctor
+		case "rebuild":
+			f.Command = CommandRebuild
 		case "completion":
 			f.Command = CommandCompletion
 		default:
@@ -181,8 +186,29 @@ func Parse(args []string) (Flags, error) {
 		f.Vendor = id
 	}
 	f.Model = strings.TrimSpace(modelFlag)
-	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "") {
+	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
+	}
+	if f.Today && (f.Since != "" || f.From != "" || f.To != "") {
+		return Flags{}, usageError{msg: "use only one of --today, --since, or --from/--to\ntry `wheretoken --help`"}
+	}
+	if f.Since != "" && (f.From != "" || f.To != "") {
+		return Flags{}, usageError{msg: "use only one of --today, --since, or --from/--to\ntry `wheretoken --help`"}
+	}
+	if f.Since != "" {
+		if _, err := metric.ParseSince(f.Since); err != nil {
+			return Flags{}, usageError{msg: err.Error() + "\ntry `wheretoken --help`"}
+		}
+	}
+	if f.From != "" {
+		if _, err := metric.ParseClock(f.From, time.Local, false); err != nil {
+			return Flags{}, usageError{msg: err.Error() + "\ntry `wheretoken --help`"}
+		}
+	}
+	if f.To != "" {
+		if _, err := metric.ParseClock(f.To, time.Local, true); err != nil {
+			return Flags{}, usageError{msg: err.Error() + "\ntry `wheretoken --help`"}
+		}
 	}
 	return f, nil
 }
@@ -196,6 +222,9 @@ func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi,
 	fs.BoolVar(&f.Version, "V", f.Version, "")
 	fs.BoolVar(&f.JSON, "json", f.JSON, "")
 	fs.BoolVar(&f.Today, "today", f.Today, "")
+	fs.StringVar(&f.Since, "since", f.Since, "")
+	fs.StringVar(&f.From, "from", f.From, "")
+	fs.StringVar(&f.To, "to", f.To, "")
 	fs.BoolVar(&f.ASCII, "ascii", f.ASCII, "")
 	fs.BoolVar(&f.NoColor, "no-color", f.NoColor, "")
 	fs.BoolVar(&f.Quiet, "quiet", f.Quiet, "")
@@ -299,6 +328,9 @@ func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
 		return rest, nil
 	case "doctor":
 		f.Command = CommandDoctor
+		return rest, nil
+	case "rebuild":
+		f.Command = CommandRebuild
 		return rest, nil
 	case "completion":
 		f.Command = CommandCompletion
