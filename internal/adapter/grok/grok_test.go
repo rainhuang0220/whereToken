@@ -99,6 +99,32 @@ func TestParseUpdatesJSONL(t *testing.T) {
 	}
 }
 
+func TestParseDoesNotReadAuthJSON(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	sess := filepath.Join(dir, "ws", "sid")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "auth.json"), []byte(`{"prompt_id":"secret","usage":{"inputTokens":999999,"outputTokens":9}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"timestamp":1700000000,"params":{"update":{"sessionUpdate":"turn_completed","prompt_id":"p","usage":{"inputTokens":10,"outputTokens":1,"cachedReadTokens":0,"cacheCreationTokens":0}}}}
+`
+	if err := os.WriteFile(filepath.Join(sess, "updates.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "grok", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "p" || evs[0].Miss != 10 {
+		t.Fatalf("%+v", evs)
+	}
+}
+
 func TestParseIgnoresAuthAndChatHistory(t *testing.T) {
 	t.Parallel()
 	var evs []event.UsageEvent
