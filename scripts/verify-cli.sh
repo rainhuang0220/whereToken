@@ -59,7 +59,13 @@ if echo "$today_json" | grep -q '"last_7d"'; then
 fi
 
 off="$("$dir/wheretoken" --home "$dir" --offline --ascii --quiet)"
-echo "$off" | head -n 2 | grep -q 'offline'
+# SpriteScene is three lines; the offline banner sits under it, before the KPI box.
+echo "$off" | grep -q 'offline · 只用本机账本'
+kpi="${off%%总用量*}"
+if ! echo "$kpi" | grep -q 'offline ·'; then
+  echo "offline banner should sit above the KPI table" >&2
+  exit 1
+fi
 
 set +e
 err="$("$dir/wheretoken" --home "$dir" --vendor=anthropc --quiet 2>&1)"
