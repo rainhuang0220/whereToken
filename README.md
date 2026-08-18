@@ -23,14 +23,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/cli.png" alt="wheretoken — since records began" width="720">
+  <img src="docs/media/cli-kpi.png" alt="wheretoken — eight figures since records began" width="720">
 </p>
 
 > **v0.3.0 is an Alpha.** Run it on your own ledgers. [Open an issue](https://github.com/rainhuang0220/whereToken/issues) when something is wrong, and send pull requests. The table and dashboard speak Chinese today.
 
 No cloud account. No USD prices. No telemetry. Claude Code, Cursor, Kimi, Grok, Codex, OpenCode, and Trae each keep a corner of the story — whereToken adds the pile together from files already on this machine.
 
-**Tool ≠ vendor.** Claude Code running MiniMax is still tool Claude Code, vendor MiniMax.
+**Tool ≠ vendor.** Claude Code running MiniMax is still tool Claude Code, vendor MiniMax. Hit rate is cache-read on the input side only. A signed-out Cursor is a footnote, not a fake `0.00 M` that looks unused.
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="Ranking by tool"></td>
+    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="Ranking by vendor"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>By tool</sub></td>
+    <td align="center"><sub>By vendor</sub></td>
+  </tr>
+</table>
 
 ## Install
 
@@ -98,13 +109,7 @@ EXAMPLES
   wheretoken serve
 ```
 
-`wheretoken` with no flags is everything since records began, in **M** (million tokens). `--today` is just today — same table, local timezone, plus the model list. `--cursor` / `--claude` / `--kimi` / `--grok` / `--codex` / `--opencode` / `--trae` slice by tool. `wheretoken serve` opens the kiln at [http://127.0.0.1:8787](http://127.0.0.1:8787) — **刷新** rescans, reloading the tab does not.
-
-<p align="center">
-  <img src="docs/media/cli-today.png" alt="wheretoken --today" width="720">
-</p>
-
-Hit rate is cache-read on the input side only. A signed-out Cursor is a footnote, not a fake `0.00 M` that looks unused.
+`wheretoken` with no flags is everything since records began, in **M** (million tokens). `--today` is the same table for today only (local timezone, plus models). `--cursor` / `--claude` / `--kimi` / `--grok` / `--codex` / `--opencode` / `--trae` slice by tool. `wheretoken serve` opens the kiln at [http://127.0.0.1:8787](http://127.0.0.1:8787) — **刷新** rescans, reloading the tab does not.
 
 ## Dashboard
 

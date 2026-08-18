@@ -23,14 +23,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/cli.png" alt="wheretoken — 有账本以来" width="720">
+  <img src="docs/media/cli-kpi.png" alt="wheretoken — 有账本以来的八格" width="720">
 </p>
 
 > **v0.3.0 是 Alpha。** 对着自己的账本跑。[不对就开 issue](https://github.com/rainhuang0220/whereToken/issues)，也欢迎 PR。
 
 不连云、不标美元价、不做遥测。Claude Code、Cursor、Kimi、Grok、Codex、OpenCode、Trae 各自有各自的一角，whereToken 把已经躺在这台机器上的账本加起来。
 
-**工具 ≠ 厂家。** Claude Code 跑 MiniMax，工具仍是 Claude Code，厂家是 MiniMax。
+**工具 ≠ 厂家。** Claude Code 跑 MiniMax，工具仍是 Claude Code，厂家是 MiniMax。命中率只算输入侧的缓存读。Cursor 没登录会写在注里，不当成「你没用过」的 `0.00 M`。
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/media/cli-tools.png" alt="按工具排行"></td>
+    <td width="50%" valign="top"><img src="docs/media/cli-vendors.png" alt="按厂家排行"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>按工具</sub></td>
+    <td align="center"><sub>按厂家</sub></td>
+  </tr>
+</table>
 
 ## 安装
 
@@ -98,13 +109,7 @@ EXAMPLES
   wheretoken serve
 ```
 
-不加旗标就是**有账本以来**，单位 **M**（百万 token）。`--today` 只看今天 —— 同一张表，本机时区，并列出模型。`--cursor` / `--claude` / `--kimi` / `--grok` / `--codex` / `--opencode` / `--trae` 按工具切。`wheretoken serve` 打开窑墙 [http://127.0.0.1:8787](http://127.0.0.1:8787) —— 页内 **刷新** 才重扫，浏览器重载不是。
-
-<p align="center">
-  <img src="docs/media/cli-today.png" alt="wheretoken --today" width="720">
-</p>
-
-命中率只算输入侧的缓存读。Cursor 没登录会写在注里，不当成「你没用过」的 `0.00 M`。
+不加旗标就是**有账本以来**，单位 **M**（百万 token）。`--today` 是同一张表，只看今天（本机时区，并列出模型）。`--cursor` / `--claude` / `--kimi` / `--grok` / `--codex` / `--opencode` / `--trae` 按工具切。`wheretoken serve` 打开窑墙 [http://127.0.0.1:8787](http://127.0.0.1:8787) —— 页内 **刷新** 才重扫，浏览器重载不是。
 
 ## 窑墙
 
