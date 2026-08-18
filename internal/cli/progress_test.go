@@ -10,7 +10,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
-func TestScanHUDDrawsKidAndCaption(t *testing.T) {
+func TestScanHUDDrawsMarkAndCaption(t *testing.T) {
 	var buf bytes.Buffer
 	now := time.Date(2026, 8, 18, 2, 0, 0, 0, time.UTC)
 	h := &scanHUD{w: &buf, now: func() time.Time { return now }}
@@ -28,11 +28,14 @@ func TestScanHUDDrawsKidAndCaption(t *testing.T) {
 	if !strings.Contains(got, "2/6") {
 		t.Fatalf("missing progress:\n%s", got)
 	}
-	if !strings.Contains(got, "(•ᴗ•)") && !strings.Contains(got, "(•-•)") && !strings.Contains(got, "(✧ᴗ✧)") {
-		t.Fatalf("missing face:\n%s", got)
+	if !strings.Contains(got, "▛") && !strings.Contains(got, "█") {
+		t.Fatalf("missing block mark:\n%s", got)
 	}
-	if !strings.Contains(got, "∩∩") {
-		t.Fatalf("missing tuft:\n%s", got)
+	if strings.Contains(got, "(•ᴗ•)") || strings.Contains(got, "∩∩") {
+		t.Fatalf("old 4-line kid leaked:\n%s", got)
+	}
+	if strings.Count(strings.Trim(got, "\n"), "\n") > 2 {
+		t.Fatalf("HUD should be one status line:\n%s", got)
 	}
 	h.Clear()
 	if h.lines != 0 {
@@ -43,16 +46,16 @@ func TestScanHUDDrawsKidAndCaption(t *testing.T) {
 	}
 }
 
-func TestScanHUDASCIIKeepsFace(t *testing.T) {
+func TestScanHUDASCIIKeepsMark(t *testing.T) {
 	var buf bytes.Buffer
 	h := &scanHUD{w: &buf, ascii: true, now: func() time.Time { return time.Unix(0, 0) }}
 	h.Show(scan.Progress{Label: "reading Codex...", Index: 1, Total: 3, Status: scan.ProgressReading})
 	got := buf.String()
-	if strings.ContainsAny(got, "•ᴗ✧≡∩∪") {
+	if strings.ContainsAny(got, "•ᴗ✧≡∩∪▛▜▙▟█") {
 		t.Fatalf("ascii leaked unicode:\n%s", got)
 	}
-	if !strings.Contains(got, "(o_o)") && !strings.Contains(got, "(^_^)") {
-		t.Fatalf("ascii lost face:\n%s", got)
+	if !strings.ContainsAny(got, "#=[]<>%*+") {
+		t.Fatalf("ascii lost mark:\n%s", got)
 	}
 	h.Clear()
 }
@@ -80,40 +83,28 @@ func TestScanHUDIgnoresNonReading(t *testing.T) {
 	}
 }
 
-func TestScanHUDTickerAdvancesPose(t *testing.T) {
+func TestScanHUDTickerAdvancesMood(t *testing.T) {
 	var buf bytes.Buffer
 	start := time.Date(2026, 8, 18, 2, 0, 0, 0, time.UTC)
 	clock := start
 	h := &scanHUD{w: &buf, now: func() time.Time { return clock }}
 	h.Show(scan.Progress{Label: "正在读 Kimi…", Index: 1, Total: 6, Status: scan.ProgressReading})
-	first := table.SpriteMood(table.SpriteTick(0), false)
+	first := table.SpriteMood(table.SpriteMoodTick(0), false)
 	if !strings.Contains(buf.String(), first) {
 		t.Fatalf("want mood %q in\n%s", first, buf.String())
 	}
-	// let the real ticker fire, but drive pose via clock
-	clock = start.Add(400 * time.Millisecond)
+	clock = start.Add(500 * time.Millisecond)
 	h.mu.Lock()
 	h.paintLocked()
 	h.mu.Unlock()
-	second := table.SpriteMood(table.SpriteTick(400*time.Millisecond), false)
+	second := table.SpriteMood(table.SpriteMoodTick(500*time.Millisecond), false)
 	if first == second {
-		t.Fatal("clock should change pose")
+		t.Fatal("clock should change mood")
 	}
 	if !strings.Contains(buf.String(), second) {
 		t.Fatalf("want later mood %q in\n%s", second, buf.String())
 	}
 	h.Clear()
-}
-
-func TestKilnTipRotates(t *testing.T) {
-	a := kilnTip(0, false)
-	b := kilnTip(2*time.Second, false)
-	if a == "" || a == b {
-		t.Fatalf("tips should rotate: %q %q", a, b)
-	}
-	if kilnTip(0, true) == a {
-		t.Fatal("ascii tips should differ")
-	}
 }
 
 func TestScanHUDShowsChargeBar(t *testing.T) {
@@ -123,8 +114,8 @@ func TestScanHUDShowsChargeBar(t *testing.T) {
 	if !strings.Contains(buf.String(), "▰") {
 		t.Fatalf("missing bar:\n%s", buf.String())
 	}
-	if !strings.Contains(buf.String(), "煤要一块一块加") {
-		t.Fatalf("missing tip:\n%s", buf.String())
+	if !strings.Contains(buf.String(), "挠头中") {
+		t.Fatalf("missing gerund:\n%s", buf.String())
 	}
 	h.Clear()
 }

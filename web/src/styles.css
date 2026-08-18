@@ -92,8 +92,8 @@ body {
 
 .rail-brand {
   display: flex;
-  align-items: flex-end;
-  gap: 0.55rem;
+  align-items: flex-start;
+  gap: 0.45rem;
   min-width: 0;
 }
 
@@ -124,7 +124,7 @@ body {
 
 .rail-brand .kiln-kid {
   flex: 0 0 auto;
-  margin-bottom: 0.15rem;
+  margin-top: 0.38em;
 }
 
 h1 {
@@ -337,24 +337,9 @@ h1 {
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.85rem 1.1rem;
-  padding: 0.7rem 0.75rem 1.1rem;
-}
-
-.firing-words {
-  flex: 1 1 12rem;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.22rem;
-}
-
-.firing-tip {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--ash);
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  padding: 0.45rem 0.55rem 0.7rem;
 }
 
 .firing-kicker {
@@ -378,8 +363,10 @@ h1 {
 }
 
 .firing-track {
-  height: 3px;
-  margin-top: 0.2rem;
+  flex: 1 1 6rem;
+  min-width: 4rem;
+  height: 2px;
+  margin: 0;
   background: var(--mortar);
   overflow: hidden;
   transform: translateZ(0);
@@ -395,177 +382,35 @@ h1 {
   will-change: transform;
 }
 
-.firing-mascot {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.7rem;
-  margin-bottom: 0.15rem;
-}
-
 .firing-mood {
-  margin: 0 0 0.15rem;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ash);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--ember-4);
+  white-space: nowrap;
 }
 
 .kiln-kid {
   display: block;
-  overflow: visible;
-  color: var(--ember-4);
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
 }
 
-.kiln-kid.is-sm {
-  width: 2.6rem;
-  height: 3.15rem;
-}
-
+.kiln-kid.is-sm,
 .kiln-kid.is-md {
-  width: 4.4rem;
-  height: 5.35rem;
+  width: 1em;
+  height: 1em;
 }
 
-.kiln-kid .kid-glow ellipse {
-  fill: var(--ember-3);
-  opacity: 0.28;
-}
-
-.kiln-kid .kid-pot {
-  fill: color-mix(in srgb, var(--ember-3) 55%, var(--void));
-  stroke: var(--ember-4);
-  stroke-width: 1.6;
-}
-
-.kiln-kid .kid-rim {
-  fill: none;
-  stroke: var(--ember-4);
-  stroke-width: 1.4;
-  opacity: 0.55;
-}
-
-.kiln-kid .kid-face {
-  fill: color-mix(in srgb, var(--ember-4) 88%, var(--hi));
-  stroke: var(--ember-3);
-  stroke-width: 1.2;
-}
-
-.kiln-kid .kid-blush {
-  fill: color-mix(in srgb, var(--warn) 42%, var(--ember-4));
-  opacity: 0.45;
-}
-
-.kiln-kid .kid-tuft path {
-  fill: none;
-  stroke: var(--ember-4);
-  stroke-width: 2.2;
-  stroke-linecap: round;
+.kiln-kid .kid-brick {
+  fill: var(--ember-4);
 }
 
 .kiln-kid .kid-eye {
-  fill: var(--lo);
-}
-
-.kiln-kid .kid-mouth {
-  fill: none;
-  stroke: var(--lo);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-}
-
-.kiln-kid .kid-arm {
-  fill: none;
-  stroke: var(--ember-4);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  transform-origin: 36px 46px;
-}
-
-.kiln-kid .kid-abacus {
-  fill: color-mix(in srgb, var(--ember-4) 35%, var(--void));
-  stroke: var(--ember-4);
-  stroke-width: 1;
-  opacity: 0;
-}
-
-.kiln-kid .kid-abacus circle {
-  fill: var(--ember-4);
-  stroke: none;
-}
-
-.kiln-kid .kid-coal {
-  fill: var(--ember-3);
-  opacity: 0;
-}
-
-.kiln-kid.pose-scratch .kid-arm.r {
-  transform: rotate(-48deg) translate(2px, -8px);
-}
-
-.kiln-kid.pose-abacus .kid-abacus {
-  opacity: 1;
-}
-
-.kiln-kid.pose-abacus .kid-arm.l {
-  transform: rotate(18deg);
-}
-
-.kiln-kid.pose-abacus .kid-arm.r {
-  transform: rotate(-18deg);
-}
-
-.kiln-kid.pose-toss .kid-coal {
-  opacity: 1;
-  transform: translate(2px, -6px);
-}
-
-.kiln-kid.pose-toss.flap-1 .kid-coal {
-  transform: translate(-8px, 6px);
-}
-
-.kiln-kid.pose-abacus.flap-1 .kid-abacus circle:first-of-type {
-  transform: translate(4px, 0);
-}
-
-.kiln-kid.pose-scratch.flap-1 .kid-arm.r {
-  transform: rotate(-28deg) translate(-2px, -4px);
-}
-
-.kiln-kid.pose-toss .kid-arm.r {
-  transform: rotate(-70deg) translate(4px, -10px);
-}
-
-.kiln-kid.pose-fire .kid-pot {
-  fill: color-mix(in srgb, var(--ember-3) 72%, var(--ember-4));
-}
-
-.kiln-kid.pose-fire .kid-glow ellipse {
-  opacity: 0.55;
-}
-
-.kiln-kid.pose-fire .kid-mouth {
-  d: path('M25 34q7 8 14 0');
-}
-
-.kiln-kid.pose-blink .kid-eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scaleY(0.18);
-}
-
-.kiln-kid.pose-grin .kid-mouth {
-  d: path('M25 34q7 8 14 0');
-}
-
-.firing-veil .kiln-kid .kid-body {
-  transform-origin: 36px 80px;
-  animation: kid-bob 0.72s ease-in-out infinite;
-}
-
-.rail-brand .kiln-kid .kid-body {
-  transform-origin: 36px 80px;
-  animation: kid-idle 2.4s ease-in-out infinite;
+  fill: var(--void);
 }
 
 .lever.busy {
@@ -1361,29 +1206,6 @@ body:has(.glaze-hall.is-open) {
   }
 }
 
-@keyframes kid-bob {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(0, -3px);
-  }
-}
-
-@keyframes kid-idle {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  40% {
-    transform: translate(0, -2px) rotate(-2deg);
-  }
-  70% {
-    transform: translate(0, 1px) rotate(2deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .firing-charge {
     transition: none;
@@ -1401,8 +1223,7 @@ body:has(.glaze-hall.is-open) {
     transform: none;
   }
 
-  .firing-veil .kiln-kid .kid-body,
-  .rail-brand .kiln-kid .kid-body {
-    animation: none;
+  .kiln-kid {
+    transition: none;
   }
 }

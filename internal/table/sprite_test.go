@@ -6,62 +6,41 @@ import (
 	"time"
 )
 
-func TestSpriteLinesAreFourRowsSameBodyWidth(t *testing.T) {
+func TestKilnGlyphIsOneCJKCell(t *testing.T) {
 	for _, ascii := range []bool{false, true} {
-		for tick := 0; tick < poseCount*2; tick++ {
-			body := spriteFrame(tick, 0, ascii)
-			if DisplayWidth(body[0]) != spriteW {
-				t.Fatalf("ascii=%v tick=%d width %d want %d %q", ascii, tick, DisplayWidth(body[0]), spriteW, body[0])
-			}
-			flap := spriteFrame(tick, 1, ascii)
-			if len(flap) != 4 {
-				t.Fatalf("flap lines=%d", len(flap))
-			}
-			for i, line := range flap {
-				if DisplayWidth(line) != spriteW {
-					t.Fatalf("ascii=%v tick=%d flap line %d width %d %q", ascii, tick, i, DisplayWidth(line), line)
-				}
-			}
-			if len(body) != 4 {
-				t.Fatalf("ascii=%v tick=%d lines=%d", ascii, tick, len(body))
-			}
-			w0 := DisplayWidth(body[0])
-			if w0 != spriteW {
-				t.Fatalf("ascii=%v tick=%d width %d want %d %q", ascii, tick, w0, spriteW, body[0])
-			}
-			for i, line := range body {
-				if DisplayWidth(line) != w0 {
-					t.Fatalf("ascii=%v tick=%d line %d width %d vs %d\n%q", ascii, tick, i, DisplayWidth(line), w0, line)
-				}
+		for tick := 0; tick < 16; tick++ {
+			g := KilnGlyph(tick, ascii)
+			if DisplayWidth(g) != spriteW {
+				t.Fatalf("ascii=%v tick=%d width %d %q", ascii, tick, DisplayWidth(g), g)
 			}
 		}
 	}
 }
 
-func TestSpriteCaptionSitsOnFirstLineMoodOnLast(t *testing.T) {
+func TestSpriteLinesAreOneStatusRow(t *testing.T) {
 	lines := SpriteLines(PoseAbacus, "正在读 Codex… 2/6", false)
+	if len(lines) != 1 {
+		t.Fatalf("%#v", lines)
+	}
 	if !strings.Contains(lines[0], "正在读 Codex") {
 		t.Fatalf("%q", lines[0])
 	}
-	if strings.Contains(lines[1], "正在读") || strings.Contains(lines[2], "正在读") {
-		t.Fatalf("caption leaked: %#v", lines)
+	if !strings.Contains(lines[0], "拨珠中") {
+		t.Fatalf("mood missing: %q", lines[0])
 	}
-	if !strings.Contains(lines[3], "拨算盘") {
-		t.Fatalf("mood missing: %#v", lines)
-	}
-	if strings.Contains(lines[0], "拨算盘") {
-		t.Fatalf("mood leaked onto tuft: %q", lines[0])
+	if strings.Contains(lines[0], "\n") {
+		t.Fatal("status line must be one row")
 	}
 }
 
-func TestSpriteASCIIHasNoWideToys(t *testing.T) {
-	for tick := 0; tick < poseCount; tick++ {
+func TestSpriteASCIIHasNoBlockMark(t *testing.T) {
+	for tick := 0; tick < 8; tick++ {
 		block := SpriteBlock(tick, "reading", true, false)
-		if strings.ContainsAny(block, "•ᴗω✧≡∩∪") {
-			t.Fatalf("ascii leaked unicode: %q", block)
+		if strings.ContainsAny(block, "•ᴗ✧≡∩∪▛▜▙▟█") {
+			t.Fatalf("ascii leaked: %q", block)
 		}
-		if !strings.Contains(block, "(o_o)") && !strings.Contains(block, "(^_^)") {
-			t.Fatalf("ascii lost the face: %q", block)
+		if !strings.ContainsAny(block, "#=[]<>%*+o") {
+			t.Fatalf("ascii lost the mark: %q", block)
 		}
 	}
 }
@@ -74,12 +53,12 @@ func TestSpriteColorIsLemonNotClaudeOrange(t *testing.T) {
 	if strings.Contains(got, "38;5;208") {
 		t.Fatal("must not use Claude kiln orange 208")
 	}
-	// caption is ember (bold lemon), mood is dim — not one flat wash
-	if !strings.Contains(got, "1;38;5;228") {
-		t.Fatalf("caption should be bold lemon: %q", got)
+	hud := SpriteHUD(0, PoseScratch, "hi", 1, 2, false, true)
+	if !strings.Contains(hud, "1;38;5;228") {
+		t.Fatalf("mood should be bold lemon: %q", hud)
 	}
-	if !strings.Contains(got, "\x1b[2m") {
-		t.Fatalf("mood should dim: %q", got)
+	if !strings.Contains(hud, "\x1b[2m") {
+		t.Fatalf("caption should dim: %q", hud)
 	}
 }
 
@@ -89,11 +68,8 @@ func TestSpriteTickWalks(t *testing.T) {
 	if a == b {
 		t.Fatalf("tick should advance: %d %d", a, b)
 	}
-	if SpriteTick(0) != PoseScratch {
-		t.Fatalf("tick 0 should scratch, got %d", SpriteTick(0))
-	}
-	if SpriteFlap(0) == SpriteFlap(100*time.Millisecond) {
-		t.Fatal("flap should twitch")
+	if SpriteTick(0) != 0 {
+		t.Fatalf("tick 0: %d", SpriteTick(0))
 	}
 }
 
@@ -103,12 +79,15 @@ func TestLemonNoColor(t *testing.T) {
 	}
 }
 
-func TestSpriteMoodASCII(t *testing.T) {
-	if SpriteMood(PoseAbacus, true) != "abacus" {
+func TestSpriteMoodGerund(t *testing.T) {
+	if SpriteMood(PoseAbacus, true) != "counting" {
 		t.Fatal(SpriteMood(PoseAbacus, true))
 	}
-	if SpriteMood(PoseToss, false) != "投煤" {
+	if SpriteMood(PoseToss, false) != "搬煤中" {
 		t.Fatal(SpriteMood(PoseToss, false))
+	}
+	if SpriteMood(PoseScratch, false) != "挠头中" {
+		t.Fatal(SpriteMood(PoseScratch, false))
 	}
 }
 
@@ -138,19 +117,19 @@ func TestChargeBarFills(t *testing.T) {
 	}
 }
 
-func TestSpriteHUDPutsBarOnSecondLine(t *testing.T) {
-	block := SpriteHUD(PoseAbacus, 0, "正在读 Codex…  2/6", 2, 6, false, false)
+func TestSpriteHUDIsOneLine(t *testing.T) {
+	block := SpriteHUD(0, PoseAbacus, "正在读 Codex…  2/6", 2, 6, false, false)
 	lines := strings.Split(strings.TrimSuffix(block, "\n"), "\n")
-	if len(lines) != 4 {
+	if len(lines) != 1 {
 		t.Fatalf("%#v", lines)
 	}
 	if !strings.Contains(lines[0], "正在读 Codex") {
 		t.Fatalf("caption: %q", lines[0])
 	}
-	if !strings.Contains(lines[1], "▰") {
-		t.Fatalf("bar: %q", lines[1])
+	if !strings.Contains(lines[0], "▰") {
+		t.Fatalf("bar: %q", lines[0])
 	}
-	if !strings.Contains(lines[3], "拨算盘") {
-		t.Fatalf("mood: %q", lines[3])
+	if !strings.Contains(lines[0], "拨珠中") {
+		t.Fatalf("mood: %q", lines[0])
 	}
 }

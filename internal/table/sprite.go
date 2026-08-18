@@ -7,7 +7,7 @@ import (
 
 const (
 	lemon     = "\x1b[38;5;228m" // soft lemon, not Claude orange 208
-	spriteW   = 7
+	spriteW   = 2                // one CJK cell: Kimi moon / Claude asterisk size
 	spriteGap = "  "
 )
 
@@ -28,82 +28,90 @@ const (
 	poseCount
 )
 
-// SpriteTick walks one pose every 180ms (same cadence as the dashboard kid).
+// SpriteTick walks the 2-cell kiln mark (Kimi moon cadence: 120ms × 8).
 func SpriteTick(elapsed time.Duration) int {
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	return int(elapsed/(180*time.Millisecond)) % poseCount
+	return int(elapsed/(120*time.Millisecond)) % len(unicodeGlyphs)
 }
 
-// SpriteFlap is the in-pose twitch (hand, beads, coal) every 90ms.
+// SpriteFlap kept so older HUD call sites compile; the mark itself is the motion.
 func SpriteFlap(elapsed time.Duration) int {
 	if elapsed < 0 {
 		elapsed = 0
 	}
-	return int(elapsed/(90*time.Millisecond)) % 2
+	return int(elapsed/(120*time.Millisecond)) % 2
 }
 
 func SpritePose(tick int) int {
 	return mod(tick, poseCount)
 }
 
-// SpriteMood is the fidget label that sits on the last sprite row.
+func SpriteMoodTick(elapsed time.Duration) int {
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	return int(elapsed/(400*time.Millisecond)) % poseCount
+}
+
+// SpriteMood is the gerund next to the mark: 挠头中 / 搬煤中.
 func SpriteMood(tick int, ascii bool) string {
 	if ascii {
 		switch SpritePose(tick) {
 		case PoseScratch:
-			return "scratch"
+			return "scratching"
 		case PoseAbacus:
-			return "abacus"
+			return "counting"
 		case PoseToss:
-			return "toss"
+			return "hauling"
 		case PoseFire:
-			return "fire"
+			return "firing"
 		case PoseBlink:
-			return "blink"
+			return "blinking"
 		default:
-			return "grin"
+			return "done"
 		}
 	}
 	switch SpritePose(tick) {
 	case PoseScratch:
-		return "挠头"
+		return "挠头中"
 	case PoseAbacus:
-		return "拨算盘"
+		return "拨珠中"
 	case PoseToss:
-		return "投煤"
+		return "搬煤中"
 	case PoseFire:
-		return "煅烧"
+		return "煅烧中"
 	case PoseBlink:
-		return "眨眼"
+		return "眨眼中"
 	default:
-		return "出窑"
+		return "出窑中"
 	}
 }
 
-// SpriteLines is a 4-line kiln kid. Caption sits on the first line; mood on the last.
+var unicodeGlyphs = []string{"▛▜", "▜█", "█▟", "▟█", "▙▟", "█▙", "▛█", "█▜"}
+var asciiGlyphs = []string{"##", "[]", "<>", "%%", "**", "++", "==", "oo"}
+
+// KilnGlyph is a 2-cell block mark. Empty quadrants are the eyes; they rotate like a moon.
+func KilnGlyph(tick int, ascii bool) string {
+	if ascii {
+		return asciiGlyphs[mod(tick, len(asciiGlyphs))]
+	}
+	return unicodeGlyphs[mod(tick, len(unicodeGlyphs))]
+}
+
+// SpriteLines is one status line: mark + mood + caption.
 func SpriteLines(tick int, caption string, ascii bool) []string {
-	body := spriteFrame(tick, 0, ascii)
-	out := make([]string, len(body))
-	copy(out, body)
-	if caption != "" {
-		out[0] = out[0] + spriteGap + caption
-	}
-	if mood := SpriteMood(tick, ascii); mood != "" {
-		last := len(out) - 1
-		out[last] = out[last] + spriteGap + mood
-	}
-	return out
+	return []string{plainMark(KilnGlyph(tick, ascii), SpriteMood(tick, ascii), caption, "")}
 }
 
 func SpriteBlock(tick int, caption string, ascii, color bool) string {
-	return composeSprite(spriteFrame(tick, 0, ascii), extrasFor(tick, caption, "", ascii), color)
+	return markLine(KilnGlyph(tick, ascii), "", caption, "", color) + "\n"
 }
 
-// SpriteHUD is the live scan scene: caption, charge bar, mood, in-pose flap.
-func SpriteHUD(tick, flap int, caption string, index, total int, ascii, color bool) string {
-	return composeSprite(spriteFrame(tick, flap, ascii), extrasFor(tick, caption, ChargeBar(index, total, ascii), ascii), color)
+// SpriteHUD is one Kimi/Claude-style activity line.
+func SpriteHUD(tick, moodTick int, caption string, index, total int, ascii, color bool) string {
+	return markLine(KilnGlyph(tick, ascii), SpriteMood(moodTick, ascii), caption, ChargeBar(index, total, ascii), color) + "\n"
 }
 
 func ChargeBar(index, total int, ascii bool) string {
@@ -124,219 +132,37 @@ func ChargeBar(index, total int, ascii bool) string {
 	return strings.Repeat("▰", n) + strings.Repeat("▱", w-n)
 }
 
-func extrasFor(tick int, caption, bar string, ascii bool) []string {
-	mood := SpriteMood(tick, ascii)
-	return []string{caption, bar, "", mood}
+func plainMark(glyph, mood, caption, bar string) string {
+	parts := []string{glyph}
+	if mood != "" {
+		parts = append(parts, mood)
+	}
+	if caption != "" {
+		parts = append(parts, caption)
+	}
+	if bar != "" {
+		parts = append(parts, bar)
+	}
+	return strings.Join(parts, spriteGap)
 }
 
-func composeSprite(body []string, extras []string, color bool) string {
+func markLine(glyph, mood, caption, bar string, color bool) string {
+	if !color {
+		return plainMark(glyph, mood, caption, bar)
+	}
 	var b strings.Builder
-	for i, row := range body {
-		extra := ""
-		if i < len(extras) && extras[i] != "" {
-			extra = spriteGap + extras[i]
+	b.WriteString(Lemon(glyph, true))
+	writePart := func(s string, paint func(string, bool) string) {
+		if s == "" {
+			return
 		}
-		paint := Lemon
-		if color {
-			if i == 0 {
-				paint = Ember
-			} else {
-				paint = Dim
-			}
-			b.WriteString(Lemon(row, true))
-			if extra != "" {
-				b.WriteString(paint(extra, true))
-			}
-		} else {
-			b.WriteString(row)
-			b.WriteString(extra)
-		}
-		b.WriteByte('\n')
+		b.WriteString(spriteGap)
+		b.WriteString(paint(s, true))
 	}
+	writePart(mood, Ember)
+	writePart(caption, Dim)
+	writePart(bar, Dim)
 	return b.String()
-}
-
-func spriteFrame(tick int, flap int, ascii bool) []string {
-	pose := SpritePose(tick)
-	if ascii {
-		return asciiFrame(pose, flap)
-	}
-	return unicodeFrame(pose, flap)
-}
-
-func unicodeFrame(pose, flap int) []string {
-	// each row is spriteW cells; tuft ∩∩, pot feet ∪∪
-	switch pose {
-	case PoseScratch:
-		if flap%2 == 1 {
-			return []string{
-				"  ~∩∩  ",
-				" (•ᴗ•) ",
-				" /~| \\ ",
-				"  ∪∪   ",
-			}
-		}
-		return []string{
-			"  ∩∩~  ",
-			" (•ᴗ•) ",
-			" /|~|\\ ",
-			"  ∪∪   ",
-		}
-	case PoseAbacus:
-		if flap%2 == 1 {
-			return []string{
-				"  ∩∩   ",
-				" (•ᴗ•) ",
-				" /|≡≡\\ ",
-				"  ∪∪   ",
-			}
-		}
-		return []string{
-			"  ∩∩   ",
-			" (•ᴗ•) ",
-			" /|≡|\\ ",
-			"  ∪∪   ",
-		}
-	case PoseToss:
-		if flap%2 == 1 {
-			return []string{
-				"  ∩*∩  ",
-				" (•ᴗ•) ",
-				" /|  \\ ",
-				"  ∪∪   ",
-			}
-		}
-		return []string{
-			"  ∩∩*  ",
-			" (•ᴗ•) ",
-			" /| *\\ ",
-			"  ∪∪   ",
-		}
-	case PoseFire:
-		if flap%2 == 1 {
-			return []string{
-				"  ∩*∩  ",
-				" (✧ᴗ✧) ",
-				" /|∩|\\ ",
-				"  ∪∪   ",
-			}
-		}
-		return []string{
-			"  ∩∩   ",
-			" (✧ᴗ✧) ",
-			" /|∩|\\ ",
-			"  ∪∪   ",
-		}
-	case PoseBlink:
-		return []string{
-			"  ∩∩   ",
-			" (•-•) ",
-			" /|  \\ ",
-			"  ∪∪   ",
-		}
-	default: // grin
-		if flap%2 == 1 {
-			return []string{
-				"  ∩∩   ",
-				" (✧ᴗ✧) ",
-				" /|~|\\ ",
-				"  ∪∪   ",
-			}
-		}
-		return []string{
-			"  ∩∩   ",
-			" (✧ᴗ✧) ",
-			" /|  \\ ",
-			"  ∪∪   ",
-		}
-	}
-}
-
-func asciiFrame(pose, flap int) []string {
-	switch pose {
-	case PoseScratch:
-		if flap%2 == 1 {
-			return []string{
-				"  ~/\\  ",
-				" (o_o) ",
-				" /~| \\ ",
-				"  \\_/  ",
-			}
-		}
-		return []string{
-			"  /~\\~ ",
-			" (o_o) ",
-			" /|~|\\ ",
-			"  \\_/  ",
-		}
-	case PoseAbacus:
-		if flap%2 == 1 {
-			return []string{
-				"  /~\\  ",
-				" (o_o) ",
-				" /|##\\ ",
-				"  \\_/  ",
-			}
-		}
-		return []string{
-			"  /~\\  ",
-			" (o_o) ",
-			" /|#|\\ ",
-			"  \\_/  ",
-		}
-	case PoseToss:
-		if flap%2 == 1 {
-			return []string{
-				"  /*\\  ",
-				" (o_o) ",
-				" /|  \\ ",
-				"  \\_/  ",
-			}
-		}
-		return []string{
-			"  /~\\* ",
-			" (o_o) ",
-			" /| *\\ ",
-			"  \\_/  ",
-		}
-	case PoseFire:
-		if flap%2 == 1 {
-			return []string{
-				"  /*\\  ",
-				" (^_^) ",
-				" /|n|\\ ",
-				"  \\_/  ",
-			}
-		}
-		return []string{
-			"  /~\\  ",
-			" (^_^) ",
-			" /|n|\\ ",
-			"  \\_/  ",
-		}
-	case PoseBlink:
-		return []string{
-			"  /~\\  ",
-			" (o_o) ",
-			" /|  \\ ",
-			"  \\_/  ",
-		}
-	default:
-		if flap%2 == 1 {
-			return []string{
-				"  /~\\  ",
-				" (^_^) ",
-				" /|~|\\ ",
-				"  \\_/  ",
-			}
-		}
-		return []string{
-			"  /~\\  ",
-			" (^_^) ",
-			" /|  \\ ",
-			"  \\_/  ",
-		}
-	}
 }
 
 func mod(n, m int) int {

@@ -11,7 +11,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
-const hudTick = 180 * time.Millisecond
+const hudTick = 120 * time.Millisecond
 
 type scanHUD struct {
 	w     io.Writer
@@ -114,39 +114,8 @@ func (h *scanHUD) paintLocked() {
 	if h.last.Total > 0 {
 		cap = fmt.Sprintf("%s  %d/%d", cap, h.last.Index, h.last.Total)
 	}
-	block := table.SpriteHUD(table.SpriteTick(elapsed), table.SpriteFlap(elapsed), cap, h.last.Index, h.last.Total, h.ascii, h.color)
-	if tip := kilnTip(elapsed, h.ascii); tip != "" {
-		if h.color {
-			tip = table.Dim("  "+tip, true)
-		} else {
-			tip = "  " + tip
-		}
-		block = strings.TrimSuffix(block, "\n") + "\n" + tip + "\n"
-	}
+	block := table.SpriteHUD(table.SpriteTick(elapsed), table.SpriteMoodTick(elapsed), cap, h.last.Index, h.last.Total, h.ascii, h.color)
 	h.writeBlockLocked(block)
-}
-
-func kilnTip(elapsed time.Duration, ascii bool) string {
-	tips := []string{
-		"煤要一块一块加",
-		"算盘拨一下，账就清一点",
-		"空窑也要守着",
-		"命中率不含输出",
-		"Cursor / Trae 的云账要等一会儿",
-	}
-	if ascii {
-		tips = []string{
-			"one coal at a time",
-			"click the abacus",
-			"keep the cold kiln",
-			"hit rate ignores output",
-			"Cursor / Trae cloud takes a moment",
-		}
-	}
-	if elapsed < 0 {
-		elapsed = 0
-	}
-	return tips[int(elapsed/(2*time.Second))%len(tips)]
 }
 
 func (h *scanHUD) writeBlockLocked(block string) {

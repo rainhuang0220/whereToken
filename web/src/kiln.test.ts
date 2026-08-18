@@ -116,7 +116,6 @@ describe('firing observatory', () => {
     expect(veil).toMatch(/class="firing-veil"/)
     expect(veil).toMatch(/KilnKid/)
     expect(veil).toMatch(/firing-mood/)
-    expect(veil).toMatch(/firing-tip/)
   })
 
   it('keeps the kiln in the hearth and charges with theme embers, static under reduced motion', () => {

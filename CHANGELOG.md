@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Dashboard home follows Kimi-style chrome: a muted status line, footnotes folded into 窑口, an empty-kiln stage with the kid, rotating firing tips, and hit-rate bands on the KPI
+- Kiln mark is a 2-cell block (empty quadrants as eyes) that phases like Kimi's moon; scan HUD is one line (`挠头中` / `搬煤中`), not a 4-line stick figure
+- Dashboard home follows Kimi-style chrome: a muted status line, footnotes folded into 窑口, an empty-kiln stage with the mark, and hit-rate bands on the KPI
 - Claude Code JSONL without a top-level `requestId` still counts, keyed by `message.id` (current CLI logs). Rows with only a per-line `uuid` stay skipped so stream placeholders do not sum
 - Scan HUD is a 4-line kiln kid (tuft + face + pot) that fidgets on its own clock: scratch / abacus / toss / fire / blink / grin
 - Caption stays lemon, the mood (`挠头` / `拨算盘` / `投煤` / `煅烧`) is dim — not one flat wash

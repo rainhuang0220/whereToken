@@ -3,21 +3,20 @@ export const kilnKidPoses = ['scratch', 'abacus', 'toss', 'fire', 'blink', 'grin
 export type KilnKidPose = (typeof kilnKidPoses)[number]
 
 export const kilnKidMoods: Record<KilnKidPose, string> = {
-  scratch: '挠头',
-  abacus: '拨算盘',
-  toss: '投煤',
-  fire: '煅烧',
-  blink: '眨眼',
-  grin: '出窑',
+  scratch: '挠头中',
+  abacus: '拨珠中',
+  toss: '搬煤中',
+  fire: '煅烧中',
+  blink: '眨眼中',
+  grin: '出窑中',
 }
 
-export const kilnKidFrames: Record<KilnKidPose, readonly [string, string, string, string]> = {
-  scratch: ['  ∩∩~  ', ' (•ᴗ•) ', ' /|~|\\ ', '  ∪∪   '],
-  abacus: ['  ∩∩   ', ' (•ᴗ•) ', ' /|≡|\\ ', '  ∪∪   '],
-  toss: ['  ∩∩*  ', ' (•ᴗ•) ', ' /| *\\ ', '  ∪∪   '],
-  fire: ['  ∩∩   ', ' (✧ᴗ✧) ', ' /|∩|\\ ', '  ∪∪   '],
-  blink: ['  ∩∩   ', ' (•-•) ', ' /|  \\ ', '  ∪∪   '],
-  grin: ['  ∩∩   ', ' (✧ᴗ✧) ', ' /|  \\ ', '  ∪∪   '],
+/** 2-cell block mark. Empty quadrants are the eyes; they rotate like Kimi's moon. */
+export const kilnGlyphs = ['▛▜', '▜█', '█▟', '▟█', '▙▟', '█▙', '▛█', '█▜'] as const
+
+export function kilnGlyph(tick: number): string {
+  const n = kilnGlyphs.length
+  return kilnGlyphs[((tick % n) + n) % n]
 }
 
 export function kilnKidPose(tick: number): KilnKidPose {
@@ -26,22 +25,25 @@ export function kilnKidPose(tick: number): KilnKidPose {
 }
 
 export function kilnKidFrame(tick: number): string {
-  return kilnKidFrames[kilnKidPose(tick)].join('\n')
+  return kilnGlyph(tick)
 }
 
 export function kilnKidMood(tick: number): string {
   return kilnKidMoods[kilnKidPose(tick)]
 }
 
-export const kilnTips = [
-  '煤要一块一块加',
-  '算盘拨一下，账就清一点',
-  '空窑也要守着',
-  '命中率不含输出',
-  'Cursor / Trae 的云账要等一会儿',
+export const kilnEyePhases = [
+  { a: [1, 2], b: [5, 2] },
+  { a: [2, 1], b: [5, 3] },
+  { a: [4, 1], b: [5, 4] },
+  { a: [5, 2], b: [5, 5] },
+  { a: [5, 4], b: [2, 5] },
+  { a: [4, 5], b: [1, 4] },
+  { a: [1, 5], b: [1, 2] },
+  { a: [1, 3], b: [2, 1] },
 ] as const
 
-export function kilnTipAt(tick: number): string {
-  const n = kilnTips.length
-  return kilnTips[((tick % n) + n) % n]
+export function kilnEyePhase(tick: number): (typeof kilnEyePhases)[number] {
+  const n = kilnEyePhases.length
+  return kilnEyePhases[((tick % n) + n) % n]
 }

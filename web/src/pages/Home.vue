@@ -112,7 +112,7 @@ onMounted(() => {
   <div class="forge">
     <header class="rail">
       <div class="rail-brand">
-        <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
+        <KilnKid :phase="store.loading ? 2 : emptyHint ? 4 : 0" size="sm" />
         <div class="rail-name">
           <h1>whereToken</h1>
           <p class="whisper">本机 token 窑</p>
@@ -144,7 +144,7 @@ onMounted(() => {
     <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
 
     <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
-      <KilnKid pose="blink" size="md" />
+      <KilnKid :phase="4" size="sm" />
       <div>
         <p class="cold-kicker">窑里还是冷的</p>
         <p class="cold-copy">{{ emptyHint }}</p>

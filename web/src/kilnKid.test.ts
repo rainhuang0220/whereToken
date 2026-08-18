@@ -1,48 +1,38 @@
 import { describe, expect, it } from 'vitest'
 import {
+  kilnEyePhase,
+  kilnEyePhases,
+  kilnGlyph,
+  kilnGlyphs,
   kilnKidFrame,
-  kilnKidFrames,
   kilnKidMood,
   kilnKidPose,
   kilnKidPoses,
-  kilnTipAt,
-  kilnTips,
 } from './kilnKid'
 
 describe('kilnKid', () => {
-  it('returns four lines for every pose', () => {
-    for (const pose of kilnKidPoses) {
-      expect(kilnKidFrames[pose]).toHaveLength(4)
-    }
-    for (let i = 0; i < kilnKidPoses.length * 2; i++) {
-      expect(kilnKidFrame(i).split('\n')).toHaveLength(4)
+  it('is a single 2-cell block mark', () => {
+    for (let i = 0; i < kilnGlyphs.length * 2; i++) {
+      expect(kilnKidFrame(i)).toBe(kilnGlyph(i))
+      expect(kilnGlyph(i).length).toBeGreaterThan(0)
     }
   })
 
-  it('wraps ticks and negative ticks', () => {
+  it('wraps ticks', () => {
     expect(kilnKidPose(0)).toBe(kilnKidPose(kilnKidPoses.length))
     expect(kilnKidPose(-1)).toBe(kilnKidPoses[kilnKidPoses.length - 1])
-    expect(kilnKidFrame(0)).toBe(kilnKidFrame(kilnKidPoses.length))
+    expect(kilnGlyph(0)).toBe(kilnGlyph(kilnGlyphs.length))
   })
 
-  it('names each fidget', () => {
-    expect(kilnKidMood(0)).toBe('挠头')
-    expect(kilnKidMood(1)).toBe('拨算盘')
-    expect(kilnKidMood(2)).toBe('投煤')
-    expect(kilnKidMood(3)).toBe('煅烧')
+  it('names each fidget as a gerund', () => {
+    expect(kilnKidMood(0)).toBe('挠头中')
+    expect(kilnKidMood(1)).toBe('拨珠中')
+    expect(kilnKidMood(2)).toBe('搬煤中')
+    expect(kilnKidMood(3)).toBe('煅烧中')
   })
 
-  it('rotates kiln tips', () => {
-    expect(kilnTipAt(0)).toBe(kilnTips[0])
-    expect(kilnTipAt(kilnTips.length)).toBe(kilnTips[0])
-    expect(kilnTipAt(1)).not.toBe(kilnTipAt(0))
-  })
-
-  it('keeps a tuft and a pot on every frame', () => {
-    for (const pose of kilnKidPoses) {
-      const [tuft, , , feet] = kilnKidFrames[pose]
-      expect(tuft).toMatch(/∩∩/)
-      expect(feet).toMatch(/∪∪/)
-    }
+  it('keeps eight moon-like eye phases', () => {
+    expect(kilnEyePhase(0)).not.toEqual(kilnEyePhase(1))
+    expect(kilnEyePhase(0)).toEqual(kilnEyePhase(kilnEyePhases.length))
   })
 })
