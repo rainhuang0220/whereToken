@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ type Slice struct {
 }
 
 func (s Slice) Total() int64 {
-	return s.Miss + s.CacheRead + s.CacheCreate + s.Output
+	return satAdd(satAdd(s.Miss, s.CacheRead), satAdd(s.CacheCreate, s.Output))
 }
 
 type SourceVendor struct {
@@ -40,7 +41,7 @@ type SourceVendor struct {
 }
 
 func (s SourceVendor) Total() int64 {
-	return s.Miss + s.CacheRead + s.CacheCreate + s.Output
+	return satAdd(satAdd(s.Miss, s.CacheRead), satAdd(s.CacheCreate, s.Output))
 }
 
 type Summary struct {
@@ -185,14 +186,14 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 			}
 			byCross[key] = cross
 		}
-		cross.Miss += e.Miss
-		cross.CacheRead += e.CacheRead
-		cross.CacheCreate += e.CacheCreate
-		cross.Output += e.Output
+		cross.Miss = satAdd(cross.Miss, e.Miss)
+		cross.CacheRead = satAdd(cross.CacheRead, e.CacheRead)
+		cross.CacheCreate = satAdd(cross.CacheCreate, e.CacheCreate)
+		cross.Output = satAdd(cross.Output, e.Output)
 		if !e.SkipRequest {
 			cross.Requests++
 		}
-		toks := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 		ch := price.Event(e)
 		if ch.OK {
 			cross.CostMicro += ch.Micro
@@ -233,10 +234,27 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	return sum
 }
 
+func usableTokens(e event.UsageEvent) bool {
+	return e.Miss >= 0 && e.CacheRead >= 0 && e.CacheCreate >= 0 && e.Output >= 0 && e.Reasoning >= 0
+}
+
+func satAdd(a, b int64) int64 {
+	if b > 0 && a > math.MaxInt64-b {
+		return math.MaxInt64
+	}
+	if b < 0 && a < math.MinInt64-b {
+		return math.MinInt64
+	}
+	return a + b
+}
+
 func mergeByRequest(events []event.UsageEvent) []event.UsageEvent {
 	var out []event.UsageEvent
 	index := map[string]int{}
 	for _, e := range events {
+		if !usableTokens(e) {
+			continue
+		}
 		if e.RequestID == "" {
 			out = append(out, e)
 			continue
@@ -288,17 +306,17 @@ func qualityRank(q event.Quality) int {
 }
 
 func addSlice(s *Slice, e event.UsageEvent) {
-	s.Miss += e.Miss
-	s.CacheRead += e.CacheRead
-	s.CacheCreate += e.CacheCreate
-	s.Output += e.Output
+	s.Miss = satAdd(s.Miss, e.Miss)
+	s.CacheRead = satAdd(s.CacheRead, e.CacheRead)
+	s.CacheCreate = satAdd(s.CacheCreate, e.CacheCreate)
+	s.Output = satAdd(s.Output, e.Output)
 	if !e.SkipRequest {
 		s.Requests++
 	}
 	if qualityRank(e.Quality) > qualityRank(s.Quality) {
 		s.Quality = e.Quality
 	}
-	toks := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 	ch := price.Event(e)
 	if ch.OK {
 		s.CostMicro += ch.Micro
