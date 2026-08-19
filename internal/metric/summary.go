@@ -121,6 +121,17 @@ func View(s Slice) SliceView {
 	return v
 }
 
+// CostSlice merges and prices events without building calendar or drill.
+func CostSlice(events []event.UsageEvent) Slice {
+	merged := mergeByRequest(events)
+	all := Slice{ID: "all", Label: "合计"}
+	for _, e := range merged {
+		addSlice(&all, e)
+	}
+	finishCost(&all)
+	return all
+}
+
 func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	merged := mergeByRequest(events)
 

@@ -2,11 +2,11 @@ package cli
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/community"
 )
 
@@ -23,7 +23,8 @@ func TestRunCommunityStatusAndOptOut(t *testing.T) {
 	if strings.Contains(s, "#0") {
 		t.Fatal("status printed #0")
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".config", "wheretoken", "community.json")); !os.IsNotExist(err) {
+	cfg := community.ConfigPath(testhome.New(dir))
+	if _, err := os.Stat(cfg); !os.IsNotExist(err) {
 		t.Fatalf("status must not create community.json: %v", err)
 	}
 
@@ -34,7 +35,7 @@ func TestRunCommunityStatusAndOptOut(t *testing.T) {
 	if !strings.Contains(out.String(), "community rank on") {
 		t.Fatalf("on:\n%s", out.String())
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, ".config", "wheretoken", "community.json"))
+	raw, err := os.ReadFile(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

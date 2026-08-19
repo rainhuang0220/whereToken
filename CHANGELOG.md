@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hyphenated Anthropic ids (`claude-opus-4-6`) use the current Opus card, not retired Opus 4
 - `wheretoken serve --no-community` actually disables rank upload; rank HTTP rejects dates outside a ±2 day window
 - Community status redacts the participant UUID; leave is rate-limited
 - Dashboard fifth column keeps 估价 over 排名 in one cell on narrow layouts

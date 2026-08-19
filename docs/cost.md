@@ -19,7 +19,7 @@ reasoning into `Output`, only `Output` is priced.
 
 | `cost_status` | Meaning | Display |
 | ------------- | ------- | ------- |
-| `complete` | Every token in the slice matched a list price | `cost_usd` |
+| `complete` | Every token matched a row on the open 2026-08-19 card (including older timestamps). Not a 2025 invoice, cache-TTL, or long-context tier | `cost_usd` |
 | `partial` | Some tokens priced, some not | `cost_usd` of the priced part + `unpriced_tokens` |
 | `unavailable` | No priced tokens | **omit** `cost_usd` — never `$0.00` |
 

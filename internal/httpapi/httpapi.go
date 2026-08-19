@@ -103,7 +103,6 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	if last == nil {
 		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil), Scanning: scanning}
-		s.attachCommunity(&empty)
 		if err := scan.EncodeSummary(w, empty); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

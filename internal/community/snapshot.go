@@ -186,18 +186,18 @@ func BuildLocalAgg(events []event.UsageEvent, now time.Time, loc *time.Location)
 			today = append(today, e)
 		}
 	}
-	sum := metric.Aggregate(today, nil)
+	sum := metric.CostSlice(today)
 	agg := LocalAgg{
 		LocalDate:       day,
 		UTCOffsetMin:    offset / 60,
-		TodayTokens:     sum.All.Total(),
-		TodayCostStatus: sum.All.CostStatus,
+		TodayTokens:     sum.Total(),
+		TodayCostStatus: sum.CostStatus,
 	}
 	if agg.TodayCostStatus == "" {
-		agg.TodayCostStatus = price.Status(sum.All.PricedTokens, sum.All.UnpricedTokens)
+		agg.TodayCostStatus = price.Status(sum.PricedTokens, sum.UnpricedTokens)
 	}
 	if agg.TodayCostStatus == price.StatusComplete || agg.TodayCostStatus == price.StatusPartial {
-		usd := float64(sum.All.CostMicro) / 1e6
+		usd := float64(sum.CostMicro) / 1e6
 		agg.TodayCostUSD = &usd
 	}
 	return agg

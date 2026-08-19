@@ -20,6 +20,32 @@ func TestUnavailableNeverFormatsAsZeroUSD(t *testing.T) {
 	}
 }
 
+func TestHyphenOpus46UsesCurrentCardNotRetiredOpus4(t *testing.T) {
+	hyphen := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4-6", Miss: 1_000_000, Output: 1_000_000})
+	dotted := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1_000_000, Output: 1_000_000})
+	if !hyphen.OK || hyphen.Micro != dotted.Micro || hyphen.Micro != 30_000_000 {
+		t.Fatalf("Cursor/API id claude-opus-4-6 must use $5+$25, not retired opus-4: hyphen=%+v dotted=%+v", hyphen, dotted)
+	}
+}
+
+func TestOpus48DoesNotInheritRetiredOpus4(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4-8", Miss: 1_000_000, Output: 1_000_000})
+	if !c.OK || c.Micro != 30_000_000 {
+		t.Fatalf("opus-4.8 must not inherit opus-4 $15+$75: %+v", c)
+	}
+}
+
+func TestShippedTableBackdatesOpenCard(t *testing.T) {
+	c := Event(event.UsageEvent{
+		Vendor: "anthropic", Model: "claude-opus-4.6",
+		Miss: 1_000_000, Output: 1_000_000,
+		Timestamp: time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC),
+	})
+	if !c.OK || c.Version != CardVersion || c.Micro != 30_000_000 {
+		t.Fatalf("2025 timestamp uses the open %s card, not a 2025 invoice: %+v", CardVersion, c)
+	}
+}
+
 func TestUnknownModelHasNoCost(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "unknown", Model: "mystery", Miss: 1000, Output: 100})
 	if c.OK {

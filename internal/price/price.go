@@ -130,7 +130,19 @@ func matchModel(canon, pattern string) bool {
 	if canon == pattern {
 		return true
 	}
-	return strings.Contains(canon, pattern)
+	i := strings.Index(canon, pattern)
+	if i < 0 {
+		return false
+	}
+	after := i + len(pattern)
+	if after < len(canon) {
+		c := canon[after]
+		// opus-4 must not steal opus-4.6 / opus-4-6
+		if c == '.' || c >= '0' && c <= '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func Canonical(model string) string {
@@ -139,7 +151,17 @@ func Canonical(model string) string {
 		s = s[i+1:]
 	}
 	s = strings.ReplaceAll(s, "_", "-")
-	return s
+	return foldVersionDots(s)
+}
+
+func foldVersionDots(s string) string {
+	b := []byte(s)
+	for i := 1; i < len(b)-1; i++ {
+		if b[i] == '-' && b[i-1] >= '0' && b[i-1] <= '9' && b[i+1] >= '0' && b[i+1] <= '9' {
+			b[i] = '.'
+		}
+	}
+	return string(b)
 }
 
 func Status(pricedTokens, unpricedTokens int64) string {
