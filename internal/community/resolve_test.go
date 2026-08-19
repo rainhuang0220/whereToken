@@ -23,8 +23,8 @@ func TestResolveDoesNotCreateFileWithoutURL(t *testing.T) {
 		Now:    now,
 		Loc:    time.UTC,
 	}, evs)
-	if v.Today.Status != StatusServiceUnconfigured || v.Today.Rank != 0 || v.Today.Display != "" {
-		t.Fatalf("%+v", v.Today)
+	if v.Today.Status != StatusServiceUnconfigured || v.Today.Rank != 0 || v.Today.Display != "" || v.Enabled {
+		t.Fatalf("%+v enabled=%v", v.Today, v.Enabled)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("must not create %s: %v", path, err)
@@ -47,6 +47,30 @@ func TestResolveOfflineAndOptOutSkipUpload(t *testing.T) {
 	out := Resolve(Request{Home: home, Getenv: getenv, OptOut: true, Now: now, Loc: time.UTC}, nil)
 	if out.Enabled || out.Today.Status != StatusOptedOut {
 		t.Fatalf("opt-out %+v", out)
+	}
+}
+
+func TestResolveEnvOffSkipsUploadAndFile(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	now := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	getenv := func(k string) string {
+		switch k {
+		case "WHERETOKEN_COMMUNITY_URL":
+			return "http://127.0.0.1:1"
+		case "WHERETOKEN_COMMUNITY":
+			return "off"
+		}
+		return ""
+	}
+	v := Resolve(Request{
+		Home: home, Getenv: getenv, Now: now, Loc: time.UTC,
+		Version: "0.5.0",
+	}, []event.UsageEvent{{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1000, Timestamp: now}})
+	if v.Enabled || v.Today.Status != StatusOptedOut {
+		t.Fatalf("%+v", v)
+	}
+	if _, err := os.Stat(ConfigPath(home)); !os.IsNotExist(err) {
+		t.Fatal("env off must not mint community.json")
 	}
 }
 

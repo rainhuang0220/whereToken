@@ -674,6 +674,63 @@ func dumpStore(s *Store) string {
 	return string(raw)
 }
 
+func TestStoreMinParticipantsIgnoresZeroTokenRow(t *testing.T) {
+	s := NewStore(20)
+	day := "2026-08-19"
+	for i := 0; i < 19; i++ {
+		id := fmt.Sprintf("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee%02d", i)
+		if err := s.Put(Upload{ParticipantID: id, Period: day, Tokens: 10, ClientVersion: "0.5.0"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lead := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee00"
+	st := s.Rank(lead, PeriodToday, day, MetricTokens)
+	if st.Status != StatusInsufficientParticipants || st.Rank != 0 || st.Display != "" {
+		t.Fatalf("19 %+v", st)
+	}
+	if err := s.Put(Upload{ParticipantID: "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee", Period: day, Tokens: 10, ClientVersion: "0.5.0"}); err != nil {
+		t.Fatal(err)
+	}
+	st = s.Rank(lead, PeriodToday, day, MetricTokens)
+	if st.Status != StatusOK || st.Display != "#1 / 20" {
+		t.Fatalf("20 %+v", st)
+	}
+	if err := s.Put(Upload{ParticipantID: "cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee", Period: day, Tokens: 0, ClientVersion: "0.5.0"}); err != nil {
+		t.Fatal(err)
+	}
+	st = s.Rank(lead, PeriodToday, day, MetricTokens)
+	if st.Participants != 20 || st.Display != "#1 / 20" {
+		t.Fatalf("zero row must not join the board: %+v", st)
+	}
+}
+
+func TestClientZeroTokenDayDoesNotUpload(t *testing.T) {
+	var posts int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/community/usage" {
+			posts++
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(Standing{Status: StatusOK, Rank: 1, Participants: 20, Display: "#1 / 20", SelfReported: true})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{
+		BaseURL:  srv.URL,
+		File:     &File{ParticipantID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", Enabled: true},
+		Version:  "0.5.0",
+		MinCache: time.Millisecond,
+		HTTP:     srv.Client(),
+	}
+	now := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	_ = c.Sync(context.Background(), []event.UsageEvent{{
+		Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1000, Timestamp: now.Add(-24 * time.Hour),
+	}}, now, time.UTC)
+	if posts != 0 {
+		t.Fatalf("yesterday-only must not upload today: posts=%d", posts)
+	}
+}
+
 func TestClientCacheSkipsSecondUpload(t *testing.T) {
 	var posts int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -13,7 +13,9 @@ miss_cost + cache_read_cost + cache_create_cost + output_cost
 ```
 
 Reasoning is never charged as its own line. If an adapter already folded
-reasoning into `Output`, only `Output` is priced.
+reasoning into `Output` (Codex, OpenCode), only `Output` is priced. Grok and
+MiniMax store reasoning beside output and do **not** add it to `Total`; that
+reasoning is also not priced (it is not treated as a second output line).
 
 ## Status
 

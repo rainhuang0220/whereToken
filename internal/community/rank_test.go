@@ -43,6 +43,7 @@ func TestPercentileDefinition(t *testing.T) {
 	}{
 		{name: "first of 842", rank: 1, n: 842, want: 1},
 		{name: "37 of 842", rank: 37, n: 842, want: 1 - float64(37-1)/842},
+		{name: "second of 20 is not 0.90", rank: 2, n: 20, want: 0.95},
 		{name: "last of 842", rank: 842, n: 842, want: 1.0 / 842.0},
 		{name: "zero rank", rank: 0, n: 10, want: 0},
 		{name: "zero n", rank: 1, n: 0, want: 0},
@@ -168,6 +169,9 @@ func TestEmptyViewNeverZeroRank(t *testing.T) {
 	}
 	if _, ok := obj["display"]; ok {
 		t.Fatalf("display must be omitted: %s", raw)
+	}
+	if EmptyView(StatusServiceUnconfigured, "").Enabled {
+		t.Fatal("unconfigured must not look opted-in")
 	}
 }
 

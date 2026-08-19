@@ -143,6 +143,22 @@ func TestUploadJSONHasOnlyAllowedKeys(t *testing.T) {
 	}
 }
 
+func TestBuildLocalAggNegativeUTCOffset(t *testing.T) {
+	loc := time.FixedZone("PDT", -7*3600)
+	now := time.Date(2026, 8, 19, 22, 0, 0, 0, loc) // 2026-08-20 05:00 UTC
+	events := []event.UsageEvent{
+		{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1_000_000, Timestamp: time.Date(2026, 8, 20, 5, 0, 0, 0, time.UTC)},
+		{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 9_000_000, Timestamp: time.Date(2026, 8, 20, 6, 0, 0, 0, loc)},
+	}
+	agg := BuildLocalAgg(events, now, loc)
+	if agg.LocalDate != "2026-08-19" || agg.UTCOffsetMin != -420 {
+		t.Fatalf("%+v", agg)
+	}
+	if agg.TodayTokens != 1_000_000 {
+		t.Fatalf("PDT evening must keep the UTC-next-day event as local today: %d", agg.TodayTokens)
+	}
+}
+
 func TestBuildLocalAggUsesLocalCalendarDay(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	now := time.Date(2026, 8, 19, 0, 30, 0, 0, loc) // 2026-08-18T16:30Z

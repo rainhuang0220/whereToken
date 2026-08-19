@@ -73,7 +73,7 @@ const hint = computed(() => rankHint(props.community, standing.value))
         </button>
       </div>
       <button
-        v-if="community && community.enabled !== false"
+        v-if="community?.enabled"
         type="button"
         class="rank-opt"
         @click="emit('toggle-community', false)"

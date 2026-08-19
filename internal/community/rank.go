@@ -74,7 +74,7 @@ func EmptyView(status, note string) View {
 	today.Period = PeriodToday
 	all.Period = PeriodAll
 	return View{
-		Enabled:      status != StatusOptedOut && status != StatusDisabled,
+		Enabled:      status != StatusOptedOut && status != StatusDisabled && status != StatusServiceUnconfigured,
 		Metric:       MetricTokens,
 		SelfReported: true,
 		Note:         note,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Unconfigured Community Rank no longer looks opted-in on the dashboard
 - Hyphenated Anthropic ids (`claude-opus-4-6`) use the current Opus card, not retired Opus 4
 - `wheretoken serve --no-community` actually disables rank upload; rank HTTP rejects dates outside a ±2 day window
 - Community status redacts the participant UUID; leave is rate-limited
