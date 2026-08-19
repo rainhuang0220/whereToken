@@ -40,7 +40,7 @@ FLAGS
   --since 7d           last N local calendar days including today (7d, 30d)
   --from DATE          inclusive start (YYYY-MM-DD or RFC3339, local timezone)
   --to DATE            inclusive end date (YYYY-MM-DD or RFC3339, local timezone)
-  --tool NAME          slice by tool (claude, kimi, grok, minimax, openclaw, opencode, codex, cursor, trae, gemini, qwen, cline, roo)
+  --tool NAME          slice by tool (claude, kimi, grok, minimax, openclaw, opencode, codex, cursor, trae, gemini, qwen, cline, roo, kilo)
   --vendor NAME        slice by vendor (anthropic, moonshot, minimax, xai, …)
   --model NAME         slice by model id (user turns are per-tool, so that KPI is —)
   --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae

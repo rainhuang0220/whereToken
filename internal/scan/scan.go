@@ -14,6 +14,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/gemini"
 	"github.com/rainhuang0220/whereToken/internal/adapter/grok"
+	"github.com/rainhuang0220/whereToken/internal/adapter/kilo"
 	"github.com/rainhuang0220/whereToken/internal/adapter/kimi"
 	"github.com/rainhuang0220/whereToken/internal/adapter/minimax"
 	"github.com/rainhuang0220/whereToken/internal/adapter/openclaw"
@@ -88,6 +89,7 @@ func Adapters(offline bool) []adapter.Adapter {
 		qwen.Adapter{},
 		cline.Adapter{},
 		roo.Adapter{},
+		kilo.Adapter{},
 	}
 }
 

@@ -127,6 +127,10 @@ guarantee for every row.
 | Roo Code | `cacheReads` | Cache Read | raw | authoritative | |
 | Roo Code | `cacheWrites` | Cache Create | raw | authoritative | |
 | Roo Code | `tokensOut` | Output | raw | authoritative | `cost` ignored. |
+| Kilo Code | `tokensIn` | Miss | raw | authoritative | Legacy `api_req_started` only. |
+| Kilo Code | `cacheReads` | Cache Read | raw | authoritative | |
+| Kilo Code | `cacheWrites` | Cache Create | raw | authoritative | |
+| Kilo Code | `tokensOut` | Output | raw | authoritative | `cost` ignored. CLI 1.x `kilo.db` is not this row. |
 
 ## Request merge
 

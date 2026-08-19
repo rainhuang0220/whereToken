@@ -438,8 +438,35 @@ Do not read `settings/` or conversation bodies. Official
 | Cache Create | `cacheWrites` | raw |
 | Output | `tokensOut` | raw |
 
-`cost` ignored. Quality `authoritative`. Kilo Code 1.x is an OpenCode fork
-(`packages/opencode`), not this file layout — it is not collected here.
+`cost` ignored. Quality `authoritative`.
+
+---
+
+## Kilo Code (legacy VS Code)
+
+### Location
+
+VS Code-family `User/globalStorage/kilocode.kilo-code/tasks/<id>/ui_messages.json`
+(also `kilocode.Kilo-Code`). Same product roots as Cline.
+
+Do not read `settings/`, `api_conversation_history.json`, or conversation
+bodies. Official leftover `consolidateTokenUsage` only sums
+`say=api_req_started`.
+
+The rebuilt **Kilo CLI 1.x** (`~/.local/share/kilo/kilo.db`, OpenCode fork)
+is a different product and is **not** read here — pointing OpenCode at
+`kilo/` would double-count.
+
+### Token mapping
+
+| whereToken | Kilo field | Kind |
+| ---------- | ---------- | ---- |
+| Miss | `tokensIn` | raw |
+| Cache Read | `cacheReads` | raw |
+| Cache Create | `cacheWrites` | raw |
+| Output | `tokensOut` | raw |
+
+`cost` ignored. Quality `authoritative`.
 
 ---
 

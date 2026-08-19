@@ -170,10 +170,11 @@ whereToken reads usage information from data made available by supported coding 
 | Qwen Code | Full | Not required |
 | Cline | Full | Not required |
 | Roo Code | Full | Not required |
+| Kilo Code (legacy VS Code) | Full | Not required |
 | Cursor | Partial | Required for token columns |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 
-Cursor and Trae must be **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted. Cline and Roo Code are read from VS Code-family `ui_messages.json` metrics only; settings and transcripts are skipped.
+Cursor and Trae must be **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted. Cline, Roo Code, and leftover Kilo Code VS Code tasks are read from `ui_messages.json` metrics only; settings and transcripts are skipped.
 
 When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero. The dashboard labels each agent authoritative, degraded, estimated, or unavailable.
 
@@ -181,7 +182,7 @@ See [`docs/data-sources.md`](docs/data-sources.md) for how each agent is read an
 
 ### Not currently supported
 
-Windsurf, GitHub Copilot, Continue, Aider, Kilo Code, GLM/Doubao first-party CLIs, and Lingma are not currently supported because whereToken does not yet have a reliable **safe** usage ledger for these tools. Finding a config directory is not the same as finding usage. See [`docs/provider-matrix.md`](docs/provider-matrix.md).
+Windsurf, GitHub Copilot, Continue, Aider, Kilo CLI 1.x (`kilo.db`), GLM/Doubao first-party CLIs, and Lingma are not currently supported because whereToken does not yet have a reliable **safe** usage ledger for these tools. Finding a config directory is not the same as finding usage. See [`docs/provider-matrix.md`](docs/provider-matrix.md).
 
 ## How it works
 

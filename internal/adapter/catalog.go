@@ -49,6 +49,7 @@ func Catalog() []Tool {
 		{ID: "qwen", Label: "Qwen Code", Caps: jsonl},
 		{ID: "cline", Label: "Cline", Caps: localLedgerCaps(false, false)},
 		{ID: "roo", Label: "Roo Code", Caps: localLedgerCaps(false, false)},
+		{ID: "kilo", Label: "Kilo Code", Caps: localLedgerCaps(false, false)},
 	}
 }
 
