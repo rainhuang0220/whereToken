@@ -717,6 +717,40 @@ func TestCompletionRequiresShell(t *testing.T) {
 	}
 }
 
+func TestCompletionDoctorOffersNoCommunity(t *testing.T) {
+	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
+		s, err := Completion(sh)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch sh {
+		case "bash":
+			if !strings.Contains(s, `doctor) opts="--quiet -q --offline --home --help --ascii --no-color --no-community"`) {
+				t.Fatalf("bash doctor must offer --no-community")
+			}
+		case "zsh":
+			i, j := strings.Index(s, "    doctor)"), strings.Index(s, "    rebuild)")
+			if i < 0 || j <= i {
+				t.Fatal("zsh doctor/rebuild branches")
+			}
+			if !strings.Contains(s[i:j], "--no-community") {
+				t.Fatalf("zsh doctor must offer --no-community:\n%s", s[i:j])
+			}
+		case "fish":
+			if !strings.Contains(s, `-l no-community`) {
+				t.Fatal("fish missing --no-community")
+			}
+			if strings.Contains(s, `scan sources doctor community completion" -l no-community`) {
+				t.Fatal("fish must not hide --no-community after doctor")
+			}
+		case "powershell":
+			if !strings.Contains(s, `'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color','--no-community') }`) {
+				t.Fatalf("powershell doctor must offer --no-community")
+			}
+		}
+	}
+}
+
 func TestCompletionScanOmitsTableFilters(t *testing.T) {
 	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
 		s, err := Completion(sh)

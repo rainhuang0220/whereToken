@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Completions offer `doctor --no-community`. Man page: unavailable rank is not `#0`. `verify-cli.sh` rejects `$0.00`, empty-home `#0`/`$0.00`, and `doctor --no-community` / `DO_NOT_TRACK=1`
 - `verify-cli.sh` requires 估价/排名, rejects `#0` / `rank: 0`, and checks `--no-community`
 - `--help` / man: `--rank all` is uploaded days, not kiln 全部
 - 用量说明 drops a Community Rank podium when N is below 20 (`#1 / 3` cannot appear)

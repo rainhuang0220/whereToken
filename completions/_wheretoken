@@ -38,6 +38,7 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--offline[skip Cursor/Trae account APIs]' \
+        '--no-community[this run: treat Community Rank as off]' \
         '--home[fake home]:dir:_files -/'
       ;;
     rebuild)

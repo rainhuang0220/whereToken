@@ -46,6 +46,10 @@ if echo "$out" | grep -q '#0'; then
   echo "table printed #0" >&2
   exit 1
 fi
+if echo "$out" | grep -E '\$0\.00' >/dev/null; then
+  echo "table printed \$0.00" >&2
+  exit 1
+fi
 if echo "$out" | grep -q eyJ; then
   echo "jwt leaked" >&2
   exit 1
@@ -70,11 +74,19 @@ if echo "$json" | grep -q '#0'; then
   echo "json printed #0" >&2
   exit 1
 fi
+if echo "$json" | grep -E '\$0\.00' >/dev/null; then
+  echo "json printed \$0.00" >&2
+  exit 1
+fi
 
 st="$("$dir/wheretoken" --home "$dir" --quiet community status)"
 echo "$st" | grep -q 'community rank: off'
 if echo "$st" | grep -q '#0'; then
   echo "community status printed #0" >&2
+  exit 1
+fi
+if echo "$st" | grep -E '\$0\.00' >/dev/null; then
+  echo "community status printed \$0.00" >&2
   exit 1
 fi
 
@@ -84,6 +96,24 @@ if echo "$nc" | grep -q '#0'; then
   echo "--no-community printed #0" >&2
   exit 1
 fi
+if echo "$nc" | grep -E '\$0\.00' >/dev/null; then
+  echo "--no-community printed \$0.00" >&2
+  exit 1
+fi
+
+doc="$("$dir/wheretoken" --home "$dir" --no-community --quiet doctor)"
+echo "$doc" | grep -q 'Off this run'
+echo "$doc" | grep -q 'DO_NOT_TRACK'
+if echo "$doc" | grep -q '#0'; then
+  echo "doctor --no-community printed #0" >&2
+  exit 1
+fi
+if echo "$doc" | grep -E '\$0\.00' >/dev/null; then
+  echo "doctor --no-community printed \$0.00" >&2
+  exit 1
+fi
+dnt="$(DO_NOT_TRACK=1 "$dir/wheretoken" --home "$dir" --quiet doctor)"
+echo "$dnt" | grep -q 'Off this run'
 
 vendor="$("$dir/wheretoken" --home "$dir" --vendor=moonshot --ascii --quiet)"
 echo "$vendor" | grep -q 'Moonshot'
@@ -121,6 +151,15 @@ empty="$(mktemp -d)"
 zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
 echo "$zeros" | grep -q '本机没有找到账本'
+echo "$zeros" | grep -q '估价'
+if echo "$zeros" | grep -q '#0'; then
+  echo "empty home printed #0" >&2
+  exit 1
+fi
+if echo "$zeros" | grep -E '\$0\.00' >/dev/null; then
+  echo "empty home printed \$0.00" >&2
+  exit 1
+fi
 empty_json="$("$dir/wheretoken" --home "$empty" --json --quiet)"
 echo "$empty_json" | grep -q '"max_streak_days": 0'
 echo "$empty_json" | grep -q '"current_streak_days": 0'

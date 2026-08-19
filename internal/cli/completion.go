@@ -36,7 +36,7 @@ _wheretoken() {
     scan) opts="--json --quiet -q --offline --home --ascii --no-color --help" ;;
     serve) opts="--port --offline --quiet -q --home --help --ascii --no-color --no-community" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
-    doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
+    doctor) opts="--quiet -q --offline --home --help --ascii --no-color --no-community" ;;
     rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --width --help" ;;
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
@@ -89,6 +89,7 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--offline[skip Cursor/Trae account APIs]' \
+        '--no-community[this run: treat Community Rank as off]' \
         '--home[fake home]:dir:_files -/'
       ;;
     rebuild)
@@ -186,7 +187,7 @@ complete -c wheretoken -l home -r -F
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor completion" -l port -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community completion" -l rank -r -a "today all"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor community completion" -l no-community
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community completion" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 `
@@ -215,7 +216,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'scan' { @('--json','--quiet','--offline','--home','--ascii','--no-color','--help') }
     'serve' { @('--port','--offline','--quiet','--home','--help','--ascii','--no-color','--no-community') }
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
-    'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
+    'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color','--no-community') }
     'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--home','--width','--help') }
     'update' { @('--quiet','--help') }
     'upgrade' { @('--quiet','--help') }

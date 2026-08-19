@@ -73,6 +73,38 @@ func TestEnglishREADMEHonesty(t *testing.T) {
 	}
 }
 
+func TestChineseREADMEHonesty(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "README.zh-CN.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs := string(raw)
+	for _, want := range []string{
+		"不会写成 $0",
+		"远程部署阻塞项",
+		"全体 AI 用户",
+		"DO_NOT_TRACK",
+		"这台客户端上传过的那些天",
+		"窑墙「全部」",
+	} {
+		if !strings.Contains(rs, want) {
+			t.Errorf("Chinese README missing honesty %q", want)
+		}
+	}
+	if regexp.MustCompile(`WHERETOKEN_COMMUNITY_URL\s*=\s*https?://`).MatchString(rs) {
+		t.Fatal("Chinese README must not ship a public WHERETOKEN_COMMUNITY_URL")
+	}
+	for _, bad := range []string{"rank.wheretoken.", "community.wheretoken.", "https://wheretoken.com"} {
+		if strings.Contains(rs, bad) {
+			t.Fatalf("Chinese README invented a public rank URL %q", bad)
+		}
+	}
+}
+
 func TestHelpHonestyCopy(t *testing.T) {
 	h := HelpText()
 	for _, want := range []string{
