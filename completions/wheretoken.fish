@@ -19,6 +19,6 @@ complete -c wheretoken -l home -r -F
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor completion" -l port -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community completion" -l rank -r -a "today all"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community completion" -l no-community
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor community completion" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"

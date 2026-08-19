@@ -22,11 +22,11 @@ func (s *server) attachCommunity(res *scan.Result) {
 		Getenv:  osLookup,
 		Offline: s.offline || res.Offline,
 		OptOut:  s.noCommunity,
-		Version: "dev",
+		Version: s.version,
 		Now:     time.Now(),
 		Loc:     time.Local,
 	}
-	if req.Offline || community.EnvDisabled(req.Getenv) || community.EnvURL(req.Getenv) == "" {
+	if req.OptOut || req.Offline || community.EnvDisabled(req.Getenv) || community.EnvURL(req.Getenv) == "" {
 		v := community.Resolve(req, res.Events)
 		res.Community = &v
 		return
@@ -45,6 +45,8 @@ func (s *server) attachCommunity(res *scan.Result) {
 }
 
 func (s *server) ensureClient() (*community.Client, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.comm != nil {
 		return s.comm, nil
 	}
@@ -53,12 +55,16 @@ func (s *server) ensureClient() (*community.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	ver := s.version
+	if ver == "" {
+		ver = "dev"
+	}
 	s.comm = &community.Client{
 		BaseURL: community.EnvURL(osLookup),
 		File:    f,
 		Path:    path,
 		Offline: s.offline,
-		Version: "dev",
+		Version: ver,
 	}
 	return s.comm, nil
 }
@@ -89,19 +95,20 @@ func (s *server) getCommunity(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	s.mu.Lock()
-	last := s.last
+	var snap *community.View
+	if s.last != nil && s.last.Community != nil {
+		v := *s.last.Community
+		snap = &v
+	}
 	s.mu.Unlock()
-	if last != nil {
-		s.attachCommunity(last)
-		if last.Community != nil {
-			_ = json.NewEncoder(w).Encode(communityJSON{
-				Enabled: last.Community.Enabled,
-				Note:    last.Community.Note,
-				Today:   last.Community.Today,
-				All:     last.Community.All,
-			})
-			return
-		}
+	if snap != nil {
+		_ = json.NewEncoder(w).Encode(communityJSON{
+			Enabled: snap.Enabled,
+			Note:    snap.Note,
+			Today:   snap.Today,
+			All:     snap.All,
+		})
+		return
 	}
 	enabled := true
 	if f, err := community.Load(community.ConfigPath(s.home)); err == nil {

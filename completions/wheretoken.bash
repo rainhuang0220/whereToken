@@ -10,7 +10,7 @@ _wheretoken() {
   local opts
   case "$cmd" in
     scan) opts="--json --quiet -q --offline --home --ascii --no-color --help" ;;
-    serve) opts="--port --offline --quiet -q --home --help --ascii --no-color" ;;
+    serve) opts="--port --offline --quiet -q --home --help --ascii --no-color --no-community" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --width --help" ;;

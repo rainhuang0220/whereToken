@@ -30,6 +30,7 @@ type server struct {
 	scanning    bool
 	offline     bool
 	noCommunity bool
+	version     string
 	comm        *community.Client
 }
 
@@ -38,9 +39,13 @@ func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {
 }
 
 func NewHTTPServerOpts(addr string, home adapter.Home, offline, noCommunity bool) *http.Server {
+	return NewHTTPServerFull(addr, home, offline, noCommunity, "dev")
+}
+
+func NewHTTPServerFull(addr string, home adapter.Home, offline, noCommunity bool, version string) *http.Server {
 	return &http.Server{
 		Addr:              addr,
-		Handler:           NewMuxOpts(home, scan.Adapters(offline), noCommunity),
+		Handler:           NewMuxFull(home, scan.Adapters(offline), noCommunity, version),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }
@@ -54,7 +59,14 @@ func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
 }
 
 func NewMuxOpts(home adapter.Home, adapters []adapter.Adapter, noCommunity bool) http.Handler {
-	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters), noCommunity: noCommunity}
+	return NewMuxFull(home, adapters, noCommunity, "dev")
+}
+
+func NewMuxFull(home adapter.Home, adapters []adapter.Adapter, noCommunity bool, version string) http.Handler {
+	if version == "" {
+		version = "dev"
+	}
+	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters), noCommunity: noCommunity, version: version}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/summary", s.getSummary)
 	mux.HandleFunc("/api/scan", s.postScan)

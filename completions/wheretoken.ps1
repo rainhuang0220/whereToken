@@ -20,7 +20,7 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
   }
   $cmds = switch ($cmd) {
     'scan' { @('--json','--quiet','--offline','--home','--ascii','--no-color','--help') }
-    'serve' { @('--port','--offline','--quiet','--home','--help','--ascii','--no-color') }
+    'serve' { @('--port','--offline','--quiet','--home','--help','--ascii','--no-color','--no-community') }
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--home','--width','--help') }

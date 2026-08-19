@@ -325,7 +325,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			continue
 		}
 		fmt.Fprint(a.Stderr, ServeStartedMessage(addr))
-		srv := httpapi.NewHTTPServerOpts(addr, home, offline, flags.NoCommunity || community.EnvDisabled(a.LookupEnv))
+		srv := httpapi.NewHTTPServerFull(addr, home, offline, flags.NoCommunity || community.EnvDisabled(a.LookupEnv), a.Version)
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail

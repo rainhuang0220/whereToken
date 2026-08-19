@@ -21,7 +21,8 @@ _wheretoken() {
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
-        '--offline[skip Cursor/Trae account APIs]' \
+        '--offline[skip Cursor/Trae account APIs and community upload]' \
+        '--no-community[this run: no community upload]' \
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:'
       ;;

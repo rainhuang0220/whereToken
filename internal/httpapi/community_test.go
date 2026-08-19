@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
@@ -120,5 +122,39 @@ func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 	}
 	if body["enabled"] != false {
 		t.Fatalf("serve --no-community must disable rank: %v", body)
+	}
+}
+
+func TestNoCommunityScanDoesNotMintOrUpload(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	home := testhome.New(dir)
+	srv := httptest.NewServer(NewMuxOpts(home, scan.Adapters(true), true))
+	t.Cleanup(srv.Close)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Origin", "http://"+req.URL.Host)
+	res, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("scan %d", res.StatusCode)
+	}
+	var payload map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if comm, ok := payload["community"].(map[string]any); ok {
+		if comm["enabled"] != false {
+			t.Fatalf("scan with --no-community must not opt in: %v", comm)
+		}
+	}
+	if _, err := os.Stat(community.ConfigPath(home)); !os.IsNotExist(err) {
+		t.Fatalf("must not mint community.json: %v", err)
 	}
 }
