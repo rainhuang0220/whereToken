@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, rankCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, optionalDay, qualityCaption, rankCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -67,6 +67,12 @@ describe('tokenCell', () => {
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 0, user_turns: 0 })).toBe('不可用')
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('0.00 M')
   })
+
+  it('does not invent a measured 0.00 M for a missing day', () => {
+    expect(optionalDay(undefined, 'authoritative')).toBe('—')
+    expect(optionalDay(undefined, 'absent')).toBe('不可用')
+    expect(optionalDay('0.00 M', 'authoritative')).toBe('0.00 M')
+  })
 })
 
 describe('costCaption', () => {
@@ -94,6 +100,7 @@ describe('rankCaption', () => {
     expect(rankCaption({ status: 'ok', rank: 1, display: '#1/3' })).toBe('—')
     expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 19' })).toBe('—')
     expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 20' })).toBe('#1 / 20')
+    expect(rankCaption({ status: 'ok', rank: 1, display: '#1', participants: 3 })).toBe('—')
   })
 })
 

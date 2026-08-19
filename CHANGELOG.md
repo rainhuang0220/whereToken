@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Dashboard KPI uses 不可用 / — for absent usage and a missing day, never a fake `0.00 M`. Rank hides a podium when `participants` < 20 even if display is only `#1`
+
 ## 0.4.5 — 2026-08-20 (Alpha)
 
 - Gemini CLI reads official session `tokens` (`~/.gemini/tmp/*/chats/`). Qwen Code reads `~/.qwen/usage/token-usage-*.jsonl`. Cline and Roo Code read VS Code-family `ui_messages.json` metrics only

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { rankHint } from '../community'
-import { costHonestyNote, costKPI, formatCount, hitBand, rankCaption } from '../format'
+import { costHonestyNote, costKPI, formatCount, hitBand, optionalDay, rankCaption, tokenCell } from '../format'
 import type { CommunityView, RankPeriod, SliceView } from '../types'
 
 const props = defineProps<{
@@ -32,7 +32,7 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
   <section class="readout" aria-label="合计">
     <div class="read-lead">
       <span class="read-k">合计</span>
-      <strong>{{ all.total_m }}</strong>
+      <strong>{{ tokenCell(all.total_m, all.quality, all) }}</strong>
     </div>
     <div class="read-cell" :data-hit="hitBand(all.hit_rate_text)">
       <span class="read-k">命中率</span>
@@ -44,7 +44,7 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
     </div>
     <div class="read-cell">
       <span class="read-k">当日用量</span>
-      <strong>{{ todayM || '0.00 M' }}</strong>
+      <strong>{{ optionalDay(todayM, all.quality) }}</strong>
     </div>
     <div
       class="read-cell read-col5"
@@ -106,7 +106,7 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
     </div>
     <div class="read-cell">
       <span class="read-k">单日最高</span>
-      <strong>{{ peakM || '0.00 M' }}</strong>
+      <strong>{{ optionalDay(peakM, all.quality) }}</strong>
     </div>
     <p v-if="compareText" class="read-compare">{{ compareText }}</p>
     <p v-if="honesty" class="read-compare">{{ honesty }}</p>

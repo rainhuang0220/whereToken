@@ -113,6 +113,16 @@ export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | '
   return ''
 }
 
+export function optionalDay(formatted?: string, quality?: string): string {
+  if (quality === 'absent') {
+    return '不可用'
+  }
+  if (!formatted) {
+    return '—'
+  }
+  return formatted
+}
+
 export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
   const usd = usableCostUSD(view.cost_usd)
   if (usd) return usd
@@ -136,7 +146,10 @@ export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status'
 const MIN_RANK_PARTICIPANTS = 20
 const displayCrowd = /#\d+\s*\/\s*(\d+)/
 
-export function rankCaption(st?: { status?: string; display?: string; rank?: number }): string {
+export function rankCaption(st?: { status?: string; display?: string; rank?: number; participants?: number }): string {
+  if (st?.participants != null && st.participants > 0 && st.participants < MIN_RANK_PARTICIPANTS) {
+    return '—'
+  }
   if (st?.status && st.status !== 'ok') {
     return '—'
   }
