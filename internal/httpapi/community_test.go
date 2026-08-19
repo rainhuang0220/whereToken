@@ -125,6 +125,49 @@ func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 	}
 }
 
+func TestConcurrentSummaryAndCommunityToggle(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := t.TempDir()
+	srv := httptest.NewServer(NewMuxOpts(testhome.New(dir), scan.Adapters(true), true))
+	t.Cleanup(srv.Close)
+	origin := "http://" + strings.TrimPrefix(srv.URL, "http://")
+	scanReq, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scanReq.Header.Set("Origin", origin)
+	res, err := srv.Client().Do(scanReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 20; i++ {
+			req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Origin", origin)
+			r, err := srv.Client().Do(req)
+			if err == nil {
+				r.Body.Close()
+			}
+			r2, err := http.Get(srv.URL + "/api/summary")
+			if err == nil {
+				r2.Body.Close()
+			}
+		}
+	}()
+	for i := 0; i < 20; i++ {
+		r, err := http.Get(srv.URL + "/api/summary")
+		if err == nil {
+			r.Body.Close()
+		}
+	}
+	<-done
+}
+
 func TestNoCommunityScanDoesNotMintOrUpload(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")

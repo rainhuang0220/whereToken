@@ -13,6 +13,20 @@ import (
 
 func osLookup(k string) string { return os.Getenv(k) }
 
+func (s *server) snapshotLast() (scan.Result, bool, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.last == nil {
+		return scan.Result{}, s.scanning, false
+	}
+	cur := *s.last
+	if s.last.Community != nil {
+		v := *s.last.Community
+		cur.Community = &v
+	}
+	return cur, s.scanning, true
+}
+
 func (s *server) attachCommunity(res *scan.Result) {
 	if res == nil || res.Community != nil {
 		return
@@ -94,13 +108,11 @@ type communityJSON struct {
 func (s *server) getCommunity(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	s.mu.Lock()
+	cur, _, ok := s.snapshotLast()
 	var snap *community.View
-	if s.last != nil && s.last.Community != nil {
-		v := *s.last.Community
-		snap = &v
+	if ok && cur.Community != nil {
+		snap = cur.Community
 	}
-	s.mu.Unlock()
 	if snap != nil {
 		_ = json.NewEncoder(w).Encode(communityJSON{
 			Enabled: snap.Enabled,

@@ -109,20 +109,17 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	s.mu.Lock()
-	last := s.last
-	scanning := s.scanning
-	s.mu.Unlock()
-	if last == nil {
+	cur, scanning, ok := s.snapshotLast()
+	if !ok {
 		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil), Scanning: scanning}
 		if err := scan.EncodeSummary(w, empty); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
-	cur := *last
 	cur.Scanning = scanning
 	s.attachCommunity(&cur)
+	full := cur
 	win, err := metric.ParseSinceQuery(r.URL.Query().Get("since"), time.Now(), time.Local)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -136,8 +133,8 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !win.IsAll() {
-		cur = scan.ApplyWindow(cur, win, time.Local)
-		cur.Compare = scan.CompareWindows(*last, win, time.Local)
+		cur = scan.ApplyWindow(full, win, time.Local)
+		cur.Compare = scan.CompareWindows(full, win, time.Local)
 	}
 	if err := scan.EncodeSummary(w, cur); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
