@@ -27,13 +27,13 @@ func TestLinesFromCanonicalSummary(t *testing.T) {
 	if !strings.Contains(blob, "largest_tool") || !strings.Contains(blob, "Claude Code") {
 		t.Fatalf("%s", blob)
 	}
-	if !strings.Contains(blob, "Cache Read") {
+	if !strings.Contains(blob, "缓存读") {
 		t.Fatalf("cache %s", blob)
 	}
-	if !strings.Contains(blob, "API-equivalent") {
+	if !strings.Contains(blob, "API 标价等价") {
 		t.Fatalf("cost %s", blob)
 	}
-	if !strings.Contains(blob, "Unpriced") || strings.Contains(blob, "$0") && strings.Contains(blob, "k3") && !strings.Contains(blob, "not $0") {
+	if !strings.Contains(blob, "无标价") || strings.Contains(blob, "$0.0000") {
 		t.Fatalf("partial must say unpriced, not invent $0:\n%s", blob)
 	}
 	if strings.Contains(blob, "Community Rank") || strings.Contains(blob, "global") {
@@ -71,7 +71,7 @@ func TestLinesUnavailableCostNotZero(t *testing.T) {
 	for _, l := range got {
 		blob += l.Kind + ":" + l.Text + "\n"
 	}
-	if !strings.Contains(blob, "unavailable") {
+	if !strings.Contains(blob, "估价不可用") {
 		t.Fatalf("%s", blob)
 	}
 	if strings.Contains(blob, "$0.00") || strings.Contains(blob, "cost $0") {

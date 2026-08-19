@@ -27,6 +27,11 @@ export function observatoryHasSlice(
   return (payload.by_source?.length ?? 0) > 0 || (payload.by_vendor?.length ?? 0) > 0
 }
 
+export function observatoryInsightCaption(axis: { kind: string } | null | undefined): string {
+  if (!axis || axis.kind === 'all') return ''
+  return '相对窗口合计，不是当前窑墙轴。'
+}
+
 export function observatoryHasDrill(pack: { models?: unknown[]; workspaces?: unknown[]; sessions?: unknown[] } | null | undefined): boolean {
   if (!pack) return false
   return (pack.models?.length ?? 0) + (pack.workspaces?.length ?? 0) + (pack.sessions?.length ?? 0) > 0

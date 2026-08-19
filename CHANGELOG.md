@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Vendor-axis workspace drill keeps user turns; 用量说明 is Chinese and notes it is window-all, not the kiln axis
 - Unconfigured Community Rank no longer looks opted-in on the dashboard
 - Hyphenated Anthropic ids (`claude-opus-4-6`) use the current Opus card, not retired Opus 4
 - `wheretoken serve --no-community` actually disables rank upload; rank HTTP rejects dates outside a ±2 day window

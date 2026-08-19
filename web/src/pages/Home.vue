@@ -16,6 +16,7 @@ import {
   observatoryEmptyHint,
   observatoryHasDrill,
   observatoryHasSlice,
+  observatoryInsightCaption,
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
@@ -90,6 +91,7 @@ const series = computed<CalendarSeries>(() => selectSeries(payload.value, axis.v
 
 const cells = computed(() => wallCells(payload.value, axis.value, todayISO()))
 const drill = computed<DrillTables>(() => selectDrill(payload.value, axis.value))
+const insightCaption = computed(() => observatoryInsightCaption(axis.value))
 
 const litDays = computed(() => series.value.days.length)
 const summaryText = computed(() => {
@@ -243,6 +245,7 @@ onMounted(() => {
 
       <details v-if="payload.insights?.length" class="why">
         <summary>用量说明</summary>
+        <p v-if="insightCaption" class="note">{{ insightCaption }}</p>
         <p v-for="line in payload.insights" :key="line.kind + line.text" class="note">{{ line.text }}</p>
       </details>
 

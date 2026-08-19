@@ -6,6 +6,7 @@ import {
   observatoryEmptyHint,
   observatoryHasDrill,
   observatoryHasSlice,
+  observatoryInsightCaption,
   observatoryScanErrorHint,
 } from './observatory'
 import type { SliceView, SummaryPayload } from './types'
@@ -180,5 +181,13 @@ describe('observatoryEmptyHint', () => {
         by_vendor: [],
       }),
     ).toBe('')
+  })
+})
+
+describe('observatoryInsightCaption', () => {
+  it('stays quiet on the all axis and warns when the kiln wall is filtered', () => {
+    expect(observatoryInsightCaption({ kind: 'all' })).toBe('')
+    expect(observatoryInsightCaption({ kind: 'source' })).toBe('相对窗口合计，不是当前窑墙轴。')
+    expect(observatoryInsightCaption({ kind: 'vendor' })).toBe('相对窗口合计，不是当前窑墙轴。')
   })
 })

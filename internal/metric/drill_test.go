@@ -75,6 +75,24 @@ func TestVendorDrillSessionsKeepUserTurns(t *testing.T) {
 	}
 }
 
+func TestVendorDrillWorkspacesKeepUserTurns(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "opus", Workspace: "/a", SessionID: "s1", RequestID: "1", Miss: 10},
+	}
+	sum := Aggregate(events, []event.TurnEvent{{Source: "claude", SessionID: "s1", Workspace: "/a"}})
+	pack := sum.DrillByVendor["anthropic"]
+	var ws *Slice
+	for i := range pack.Workspaces {
+		if pack.Workspaces[i].ID == "/a" {
+			ws = &pack.Workspaces[i]
+			break
+		}
+	}
+	if ws == nil || ws.UserTurns != 1 {
+		t.Fatalf("vendor workspace turns %+v", pack.Workspaces)
+	}
+}
+
 func TestViewDrillOmitsUnavailableCostUSD(t *testing.T) {
 	sum := Aggregate([]event.UsageEvent{
 		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", SessionID: "s1", Miss: 1_000_000, Output: 1_000_000},
