@@ -53,7 +53,7 @@ FLAGS
   --no-community       do not upload or fetch community rank
   --home DIR           fake home directory (tests)
   --port N             serve bind port (default 8787; tries 8787–8797 if busy)
-  --width N            cap ranking width; drop 回合/请求 before truncating names
+  --width N            cap ranking width; drop 估价 then 回合/请求 before truncating names
 
 ENV
   NO_COLOR             disable ANSI (same as --no-color)

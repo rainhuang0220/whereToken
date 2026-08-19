@@ -55,6 +55,19 @@ func TestRenderRankingCostNeverZeroForUnknown(t *testing.T) {
 	if !strings.Contains(out, "估价") {
 		t.Fatalf("ranking must have 估价:\n%s", out)
 	}
+	if !strings.Contains(out, "Kimi Code") || !strings.Contains(out, "—") {
+		t.Fatalf("unpriced Kimi must stay —:\n%s", out)
+	}
+	if strings.Contains(out, "Kimi Code") && strings.Contains(out, "Kimi Code") {
+		idx := strings.Index(out, "Kimi Code")
+		line := out[idx:]
+		if i := strings.Index(line, "\n"); i > 0 {
+			line = line[:i]
+		}
+		if strings.Contains(line, "$0") {
+			t.Fatalf("Kimi priced as zero: %q", line)
+		}
+	}
 	if strings.Contains(out, "$0.0000") || strings.Contains(out, "$0.00") {
 		t.Fatalf("unpriced rows must not print $0:\n%s", out)
 	}
