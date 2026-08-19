@@ -27,9 +27,10 @@ describe('community display', () => {
     expect(rankCaption({ status: 'insufficient_participants', participants: 3 })).toBe('—')
   })
 
-  it('still explains rank when the standing is unavailable', () => {
-    expect(rankHint(undefined, { status: 'unavailable' })).toContain('不是经过审计的竞技排行榜')
-    expect(rankHint()).toContain('不是经过审计的竞技排行榜')
+  it('does not imply a live board when rank is unavailable', () => {
+    expect(rankHint(undefined, { status: 'unavailable' })).toBe('社区排名暂不可用')
+    expect(rankHint()).toBe('社区排名暂不可用')
+    expect(rankHint(undefined, { status: 'unavailable' })).not.toContain('全球')
   })
 
   it('does not describe Community Rank as global or worldwide', () => {

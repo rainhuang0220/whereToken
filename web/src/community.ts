@@ -14,6 +14,10 @@ export const RANK_HINT_ZH =
 
 export function rankHint(_view?: CommunityView | null, st?: RankStanding | null): string {
   const status = st?.status || ''
+  const n = st?.participants
+  if (status === 'ok' && n != null && n > 0 && n < 20) {
+    return '社区排名暂不可用 · 参与者还不够'
+  }
   switch (status) {
     case 'ok':
       return RANK_HINT_ZH
@@ -33,6 +37,6 @@ export function rankHint(_view?: CommunityView | null, st?: RankStanding | null)
       return '尚未进入社区排名'
     case 'unavailable':
     default:
-      return RANK_HINT_ZH
+      return '社区排名暂不可用'
   }
 }

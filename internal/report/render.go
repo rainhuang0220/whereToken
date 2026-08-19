@@ -130,8 +130,8 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 }
 
 func costKPI(snap Snapshot) string {
-	if snap.CostUSD != "" {
-		return snap.CostUSD
+	if usd := omitZeroUSD(snap.CostUSD); usd != "" {
+		return usd
 	}
 	return "—"
 }
@@ -149,10 +149,14 @@ func days(n int) string {
 }
 
 func rowCost(r Row) string {
-	if r.CostStatus == "unavailable" || r.CostUSD == "" {
+	usd := omitZeroUSD(r.CostUSD)
+	if usd == "" || r.CostStatus == "unavailable" {
 		return "—"
 	}
-	return r.CostUSD
+	if r.CostStatus == "partial" {
+		return usd + " · 部分"
+	}
+	return usd
 }
 
 func sparkLine(snap Snapshot, ascii, color bool) string {
@@ -303,6 +307,12 @@ func appendRankNotes(notes []string, snap Snapshot) []string {
 		return append(notes, "社区排名未上传 · --offline")
 	case community.StatusNetworkError:
 		return append(notes, "社区排名暂不可用 · 服务连不上")
+	case community.StatusServiceUnconfigured:
+		return append(notes, "社区排名暂不可用 · 未配置远程服务")
+	case community.StatusNoUsage, community.StatusNotRanked:
+		return append(notes, "尚未进入社区排名")
+	case community.StatusUnavailable:
+		return append(notes, "社区排名暂不可用")
 	default:
 		return notes
 	}

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- CLI ranked 估价 marks 部分; `$0*` never appears in the KPI. Unconfigured rank footnotes 「未配置远程服务」. Dashboard unavailable rank no longer pretends you are on a worldwide board
 - Price: drop invented `haiku-4`; price official `grok-build-0.1` and Z.ai GLM 5.x / 4.7 list rows
 - Kilo Code leftover VS Code `ui_messages.json` plus CLI `kilo.db` (`message.data.tokens`). OpenCode is not pointed at `kilo/`
 - Gemini CLI folds `tokens.thoughts` into Output (official `total` and Gemini output billing). Reasoning is still stored and not added twice
