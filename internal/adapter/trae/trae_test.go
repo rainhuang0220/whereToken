@@ -253,6 +253,31 @@ func TestParseDecryptsICubeAuthInfoAndCallsAPI(t *testing.T) {
 	}
 }
 
+func TestEmptyCommercialResultIsUnavailable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		io.WriteString(w, `{"code":0,"reason":"empty_result","user_usage_group_by_session":{}}`)
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: `{"list":[{"sessionId":"sess-1"}]}`},
+	})
+	jwt := filepath.Join(dir, "jwt")
+	if err := os.WriteFile(jwt, []byte(fakeJWT), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "trae", Path: db, AuthPath: jwt}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {})
+	if err == nil || !strings.Contains(err.Error(), "没有 token 账本") {
+		t.Fatalf("credit/empty_result must be unavailable, not a silent 0: err=%v evs=%+v", err, evs)
+	}
+	if len(evs) != 0 {
+		t.Fatalf("empty commercial result must not emit zeros: %+v", evs)
+	}
+}
+
 func TestParseEncryptedStorageJSONChineseErrorNoSecret(t *testing.T) {
 	dir := t.TempDir()
 	db := writeProductVscdb(t, dir, "Trae CN", []kv{

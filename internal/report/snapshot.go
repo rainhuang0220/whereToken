@@ -366,11 +366,15 @@ func appendCostNotes(notes []string, view metric.SliceView) []string {
 
 func rowFrom(s metric.Slice) Row {
 	v := metric.View(s)
+	totalM := v.TotalM
+	if usageUnavailable(s) {
+		totalM = "不可用"
+	}
 	return Row{
 		ID:           s.ID,
 		Label:        s.Label,
 		Total:        s.Total(),
-		TotalM:       v.TotalM,
+		TotalM:       totalM,
 		HitRateText:  v.HitRateText,
 		Requests:     s.Requests,
 		UserTurns:    s.UserTurns,
@@ -380,6 +384,13 @@ func rowFrom(s metric.Slice) Row {
 		CostStatus:   v.CostStatus,
 		CostUSD:      v.CostUSD,
 	}
+}
+
+func usageUnavailable(s metric.Slice) bool {
+	if s.Quality == event.QualityAbsent {
+		return true
+	}
+	return s.Quality == event.QualityDegraded && s.Total() == 0 && s.Requests == 0 && s.UserTurns == 0
 }
 
 func applyShares(rows []Row, total int64) {

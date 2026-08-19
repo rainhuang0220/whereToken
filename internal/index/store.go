@@ -183,7 +183,8 @@ func (s *Store) load(source, path string, parse ParseFunc, incremental bool) ([]
 		newE, newT, consumed, err := parse(f)
 		f.Close()
 		if err != nil {
-			return nil, nil, ModeIncremental, err
+			note(source, ModeIncremental, 0)
+			return oldE, oldT, ModeIncremental, err
 		}
 		allE := append(append([]event.UsageEvent(nil), oldE...), newE...)
 		allT := append(append([]event.TurnEvent(nil), oldT...), newT...)

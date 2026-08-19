@@ -249,6 +249,34 @@ func assertJSONOmitsCostUSD(t *testing.T, rows any) {
 	}
 }
 
+func TestApplyWindowDoesNotMarkHistoricalSourceAbsent(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, loc)
+	r := Result{
+		Roots: []adapter.SourceRoot{{ID: "openclaw", Path: "/tmp/openclaw"}, {ID: "kimi", Path: "/tmp/kimi"}},
+		Events: []event.UsageEvent{
+			{Source: "openclaw", RequestID: "old", Miss: 10, Quality: event.QualityAuthoritative, Timestamp: now.AddDate(0, 0, -10)},
+			{Source: "kimi", RequestID: "new", Miss: 4, Quality: event.QualityAuthoritative, Timestamp: now.Add(-time.Hour)},
+		},
+	}
+	win, err := metric.ParseWindow(true, "", "", "", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := ApplyWindow(r, win, loc)
+	if got.Summary.All.Miss != 4 {
+		t.Fatalf("today %+v", got.Summary.All)
+	}
+	for _, s := range got.Summary.BySource {
+		if s.ID == "openclaw" && s.Quality == event.QualityAbsent {
+			t.Fatalf("history outside the window is not missing data: %+v", s)
+		}
+		if s.ID == "openclaw" && s.Total() != 0 {
+			t.Fatalf("today must not import last week's openclaw: %+v", s)
+		}
+	}
+}
+
 func TestApplyWindowFiltersEvents(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)

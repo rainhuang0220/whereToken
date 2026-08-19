@@ -25,6 +25,7 @@ const standing = computed(() =>
 )
 const hint = computed(() => rankHint(props.community, standing.value))
 const honesty = computed(() => costHonestyNote(props.all))
+const canJoin = computed(() => standing.value?.status === 'opted_out')
 </script>
 
 <template>
@@ -83,7 +84,7 @@ const honesty = computed(() => costHonestyNote(props.all))
         退出社区
       </button>
       <button
-        v-else
+        v-else-if="canJoin"
         type="button"
         class="rank-opt"
         @click="emit('toggle-community', true)"

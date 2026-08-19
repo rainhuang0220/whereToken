@@ -62,21 +62,35 @@ export function qualityCaption(quality: string): string {
   }
 }
 
-export function tokenCell(formatted: string, quality: string): string {
+export function tokenCell(
+  formatted: string,
+  quality: string,
+  view?: Pick<SliceView, 'total' | 'requests' | 'user_turns'>,
+): string {
   if (quality === 'absent') {
+    return '不可用'
+  }
+  if (
+    quality === 'degraded' &&
+    view &&
+    view.total === 0 &&
+    view.requests === 0 &&
+    !view.user_turns
+  ) {
     return '不可用'
   }
   return formatted
 }
 
 export function columnsFrom(view: SliceView): string[] {
+  const unavailable = view.quality === 'absent' || tokenCell(view.total_m, view.quality, view) === '不可用'
   return [
-    tokenCell(view.miss_m, view.quality),
-    tokenCell(view.cache_read_m, view.quality),
-    tokenCell(view.cache_create_m, view.quality),
-    tokenCell(view.output_m, view.quality),
-    tokenCell(view.total_m, view.quality),
-    view.quality === 'absent' ? '—' : view.hit_rate_text,
+    tokenCell(view.miss_m, view.quality, view),
+    tokenCell(view.cache_read_m, view.quality, view),
+    tokenCell(view.cache_create_m, view.quality, view),
+    tokenCell(view.output_m, view.quality, view),
+    tokenCell(view.total_m, view.quality, view),
+    unavailable ? '—' : view.hit_rate_text,
   ]
 }
 

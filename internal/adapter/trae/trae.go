@@ -35,6 +35,8 @@ var traeProducts = []string{
 
 var errNoLocalAuth = errors.New("未找到本机登录态")
 var errEncryptedLocalAuth = errors.New("登录态在加密存储中，没有可读的 JWT 文件")
+var errCloudSkipped = errors.New("offline · 未请求 Trae 云端用量")
+var errNoTokenLedger = errors.New("没有 token 账本（积分/免费账号的 session usage 是 empty_result，不是 0）")
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 	jwt := firstJWT(home)
@@ -131,6 +133,9 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 		return errNoLocalAuth
 	}
 	if a.Offline {
+		if len(sessions) > 0 {
+			return errCloudSkipped
+		}
 		return nil
 	}
 	events, apiErr := a.fetchAccountUsage(path, root.AuthPath, token, region, sessions)

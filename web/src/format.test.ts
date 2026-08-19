@@ -64,6 +64,8 @@ describe('tokenCell', () => {
   it('does not present absent usage as zero', () => {
     expect(tokenCell('0.00 M', 'absent')).toBe('不可用')
     expect(tokenCell('1.20 M', 'authoritative')).toBe('1.20 M')
+    expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 0, user_turns: 0 })).toBe('不可用')
+    expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('0.00 M')
   })
 })
 

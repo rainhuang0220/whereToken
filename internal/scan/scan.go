@@ -271,7 +271,9 @@ func ApplyWindow(r Result, w metric.Window, loc *time.Location) Result {
 	out.Events = evs
 	out.Turns = turns
 	sum := metric.Aggregate(evs, turns)
-	fillMissingSources(&sum, r.Roots, r.Errors, evs)
+	// Presence is all-time: a source that has history must not become
+	// "absent" just because this window is empty.
+	fillMissingSources(&sum, r.Roots, r.Errors, r.Events)
 	out.Summary = sum
 	return out
 }

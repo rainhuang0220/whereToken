@@ -567,8 +567,8 @@ func TestDiscoveredEmptyTraeAppearsInTools(t *testing.T) {
 	for _, r := range snap.Tools {
 		if r.ID == "trae" {
 			found = true
-			if r.TotalM != "0.00 M" {
-				t.Fatalf("trae %+v", r)
+			if r.TotalM != "不可用" {
+				t.Fatalf("missing Trae usage must not look like 0: %+v", r)
 			}
 		}
 	}

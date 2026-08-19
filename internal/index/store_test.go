@@ -1,6 +1,7 @@
 package index
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -292,6 +293,82 @@ func TestLoadOrReplayNeverSeeksMidFile(t *testing.T) {
 	})
 	if err != nil || mode != ModeFull || start != 0 {
 		t.Fatalf("replay must full-rescan appends: mode=%s start=%d err=%v", mode, start, err)
+	}
+}
+
+func TestIncrementalParseErrorKeepsOldEvents(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(dir, "a.jsonl")
+	if err := os.WriteFile(path, []byte("line1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = store.LoadOrParse("claude", path, fixed([]event.UsageEvent{{RequestID: "old", Miss: 9}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("line2\n"); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(path, later, later)
+
+	evs, _, mode, err := store.LoadOrParse("claude", path, func(_ *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return nil, nil, 0, fmt.Errorf("jsonl line exceeds limit")
+	})
+	if err == nil {
+		t.Fatal("want parse error")
+	}
+	if mode != ModeIncremental {
+		t.Fatalf("mode=%s", mode)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "old" || evs[0].Miss != 9 {
+		t.Fatalf("incremental parse error must keep cached events: %+v", evs)
+	}
+}
+
+func TestSameSizeMtimeChangeIsFullRescan(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(dir, "a.jsonl")
+	if err := os.WriteFile(path, []byte("same-size\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = store.LoadOrParse("claude", path, fixed([]event.UsageEvent{{RequestID: "old", Miss: 9}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("rewritten\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(path, later, later)
+	parsed := 0
+	var start int64 = -1
+	evs, _, mode, err := store.LoadOrParse("claude", path, func(rf *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		parsed++
+		off, _ := rf.Seek(0, 1)
+		start = off
+		return fixed([]event.UsageEvent{{RequestID: "new", Miss: 1}})(rf)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode != ModeFull || parsed != 1 || start != 0 || evs[0].RequestID != "new" {
+		t.Fatalf("same-size rewrite must full-rescan: mode=%s parsed=%d start=%d evs=%+v", mode, parsed, start, evs)
 	}
 }
 

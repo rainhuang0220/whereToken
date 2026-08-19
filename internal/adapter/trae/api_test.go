@@ -203,8 +203,9 @@ func TestOfflineDoesNotCallBillingAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL, Offline: true}
-	if err := a.Parse(adapter.SourceRoot{ID: "trae", Path: db, AuthPath: jwt}, func(event.UsageEvent) {}, func(event.TurnEvent) {}); err != nil {
-		t.Fatal(err)
+	err := a.Parse(adapter.SourceRoot{ID: "trae", Path: db, AuthPath: jwt}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+	if err == nil || !strings.Contains(err.Error(), "未请求") {
+		t.Fatalf("offline with sessions must say cloud usage was skipped, not look like an empty ledger: %v", err)
 	}
 	if hits != 0 {
 		t.Fatalf("offline still hit API %d times", hits)

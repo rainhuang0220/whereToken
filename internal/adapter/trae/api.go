@@ -101,6 +101,9 @@ func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token, region string, s
 	if len(out) == 0 && lastErr != nil {
 		return nil, lastErr
 	}
+	if len(out) == 0 && lastErr == nil && len(sessions) > 0 {
+		return nil, errNoTokenLedger
+	}
 	if truncated {
 		return out, fmt.Errorf("只拉了前 %d 个会话", maxSessions)
 	}

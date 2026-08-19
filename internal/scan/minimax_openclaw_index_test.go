@@ -98,6 +98,33 @@ func TestScanOpenClawAppendIsIncremental(t *testing.T) {
 	}
 }
 
+func TestScanOpenClawResetKeepsHistory(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	t.Setenv("WHERETOKEN_NO_INDEX", "")
+	t.Setenv("WHERETOKEN_INDEX", "")
+	dir := t.TempDir()
+	path := writeOpenClawSession(t, dir, lineOpenClaw("hist", 99))
+	home := testhome.New(dir)
+	ads := []adapter.Adapter{openclaw.Adapter{}}
+	first := Run(home, ads)
+	if first.Summary.All.Miss != 99 {
+		t.Fatalf("first %+v", first.Summary.All)
+	}
+	archived := path + ".reset.2026-08-19T12-00-00.000Z"
+	if err := os.Rename(path, archived); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(lineOpenClaw("new", 3)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(path, later, later)
+	second := Run(home, ads)
+	if second.Summary.All.Miss != 102 || second.Summary.All.Requests != 2 {
+		t.Fatalf("reset must keep archived tokens: %+v", second.Summary.All)
+	}
+}
+
 func TestScanOpenClawTruncateIsFull(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	t.Setenv("WHERETOKEN_NO_INDEX", "")
