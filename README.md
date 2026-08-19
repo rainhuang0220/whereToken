@@ -210,7 +210,7 @@ whereToken is designed to operate locally and does not require a whereToken clou
 
 ### Data collection
 
-Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_COMMUNITY_URL` is set; there is no public whereToken rank URL (a remote deploy blocker). When configured, it uploads **anonymous daily totals** only (participant UUID, local calendar day, token count, optional API-equivalent estimated cost, client version). A missing price is omitted, never sent as $0. It does not upload prompts, sessions, paths, request ids, credentials, raw events, or the SQLite index. Participation is on by default in that mode; `wheretoken community off` or `WHERETOKEN_COMMUNITY=0` turns it off. This is not a global, worldwide, or all-AI-users rank. See [`docs/community.md`](docs/community.md).
+Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_COMMUNITY_URL` is set; there is no public whereToken rank URL (a remote deploy blocker). When configured, it uploads **anonymous daily totals** only (participant UUID, local calendar day, token count, optional API-equivalent estimated cost, client version). A missing price is omitted, never sent as $0. It does not upload prompts, sessions, paths, request ids, credentials, raw events, or the SQLite index. Participation is on by default in that mode; `wheretoken community off`, `WHERETOKEN_COMMUNITY=0`, or `DO_NOT_TRACK=1` turns it off. Rank **累计** is the sum of days this client uploaded, not the kiln 全部 ledger. This is not a global, worldwide, or all-AI-users rank. See [`docs/community.md`](docs/community.md).
 
 ### Data sources
 

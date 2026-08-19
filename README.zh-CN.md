@@ -210,7 +210,7 @@ whereToken 设计为在本机运行，不依赖 whereToken 云服务。本机优
 
 ### 数据采集
 
-本机分析留在这台电脑上。Community Rank 仅在设置了 `WHERETOKEN_COMMUNITY_URL` 时才会连远程；本仓库没有公开的排名服务地址，这是远程部署阻塞项。配置后只会上传**匿名每日合计**（参与者 UUID、本地日历日、token 数、可选的 API 等价估价、客户端版本）。没有标价会省略，不会写成 $0。不会上传提示词、会话、路径、request id、凭证、原始事件或 SQLite 索引。该模式下默认参加；`wheretoken community off` 或 `WHERETOKEN_COMMUNITY=0` 可关闭。这不是全球、全世界或全体 AI 用户排名。见 [`docs/community.md`](docs/community.md)。
+本机分析留在这台电脑上。Community Rank 仅在设置了 `WHERETOKEN_COMMUNITY_URL` 时才会连远程；本仓库没有公开的排名服务地址，这是远程部署阻塞项。配置后只会上传**匿名每日合计**（参与者 UUID、本地日历日、token 数、可选的 API 等价估价、客户端版本）。没有标价会省略，不会写成 $0。不会上传提示词、会话、路径、request id、凭证、原始事件或 SQLite 索引。该模式下默认参加；`wheretoken community off`、`WHERETOKEN_COMMUNITY=0` 或 `DO_NOT_TRACK=1` 可关闭。排名的「累计」是这台客户端上传过的那些天，不是窑墙「全部」。这不是全球、全世界或全体 AI 用户排名。见 [`docs/community.md`](docs/community.md)。
 
 ### 数据来源
 

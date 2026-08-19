@@ -56,6 +56,8 @@ func TestEnglishREADMEHonesty(t *testing.T) {
 		"remote deploy blocker",
 		"never sent as $0",
 		"not a global",
+		"DO_NOT_TRACK",
+		"days this client uploaded",
 	} {
 		if !strings.Contains(rs, want) {
 			t.Errorf("English README missing honesty %q", want)

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- README says Rank 累计 is uploaded days, not kiln 全部; `DO_NOT_TRACK=1` is listed next to community off
 - Man page documents `doctor` Community Rank (no upload) and `DO_NOT_TRACK`
 - Claude Code skips `feedback-bundles/` (full transcripts) and `stats-cache.json`
 - All-time 用量说明 uses 累计 rank (uploaded days), not today's podium. The 累计 control says it is not kiln 全部
