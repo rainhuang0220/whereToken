@@ -171,6 +171,10 @@ before truncating names.
 does the same.
 .SH COMMANDS
 .TP
+.B doctor
+Source detect / usage / quality, plus whether Community Rank is configured.
+Does not upload.
+.TP
 .B community status|on|off|serve
 Anonymous Community Rank participation. Default on when
 .B WHERETOKEN_COMMUNITY_URL
@@ -208,6 +212,8 @@ Set to
 .B off
 to disable Community Rank (same as
 .BR --no-community ).
+.B DO_NOT_TRACK=1
+does the same.
 .TP
 .B WHERETOKEN_COMMUNITY_URL
 Rank service base URL. Unset means no upload. There is no public whereToken rank cluster.
