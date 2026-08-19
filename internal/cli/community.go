@@ -143,7 +143,7 @@ func FormatCommunityDoctor(home adapter.Home, getenv func(string) string, offlin
 	var b strings.Builder
 	b.WriteString("Community Rank\n")
 	if offline || community.EnvDisabled(getenv) {
-		b.WriteString("  · Off this run (--offline / WHERETOKEN_COMMUNITY=off)\n")
+		b.WriteString("  · Off this run (--offline / --no-community / WHERETOKEN_COMMUNITY=off)\n")
 		return b.String()
 	}
 	url := community.EnvURL(getenv)

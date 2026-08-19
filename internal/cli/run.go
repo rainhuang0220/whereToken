@@ -92,7 +92,7 @@ func (a *App) Run() int {
 	case CommandSources:
 		return a.runSources(home, flags.Quiet, flags.Offline)
 	case CommandDoctor:
-		return a.runDoctor(home, flags.Quiet, flags.Offline)
+		return a.runDoctor(home, flags.Quiet, flags.Offline || flags.NoCommunity)
 	case CommandRebuild:
 		return a.runRebuild(flags, home)
 	case CommandUpdate:

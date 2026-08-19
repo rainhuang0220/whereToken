@@ -30,6 +30,31 @@ func TestFormatCommunityDoctorStates(t *testing.T) {
 	if !strings.Contains(ready, "no local participant file") {
 		t.Fatalf("%s", ready)
 	}
+	flagOff := FormatCommunityDoctor(home, url, true)
+	if !strings.Contains(flagOff, "Off this run") || strings.Contains(flagOff, "On ·") {
+		t.Fatalf(" --no-community / --offline must not say On:\n%s", flagOff)
+	}
+}
+
+func TestDoctorNoCommunityDoesNotSayOn(t *testing.T) {
+	dir := t.TempDir()
+	app, out, errb := testApp([]string{"--home", dir, "--no-community", "doctor"})
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_COMMUNITY_URL" {
+			return "http://127.0.0.1:8798"
+		}
+		return ""
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "Off this run") {
+		t.Fatalf("doctor --no-community must say off:\n%s", s)
+	}
+	if strings.Contains(s, "On · anonymous") {
+		t.Fatalf("doctor --no-community must not say On:\n%s", s)
+	}
 }
 
 func TestRunCommunityStatusAndOptOut(t *testing.T) {
