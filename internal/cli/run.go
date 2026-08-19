@@ -264,6 +264,7 @@ func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
 func (a *App) runDoctor(home adapter.Home, quiet, offline bool) int {
 	res := a.doScan(home, quiet, offline, false)
 	fmt.Fprint(a.Stdout, FormatDoctor(scan.Diagnose(res)))
+	fmt.Fprint(a.Stdout, FormatCommunityDoctor(home, a.LookupEnv, offline))
 	return ExitOK
 }
 

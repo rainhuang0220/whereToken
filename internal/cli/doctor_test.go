@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/scan"
@@ -46,6 +47,18 @@ func TestRunDoctorExplainsQualityFromScan(t *testing.T) {
 	}
 	if !strings.Contains(s, "已登录") && !strings.Contains(s, "sign") {
 		t.Fatalf("doctor must carry the scan error:\n%s", s)
+	}
+}
+
+func TestRunDoctorExplainsCommunityRank(t *testing.T) {
+	app, out, errb := testApp([]string{"doctor"})
+	app.Home = testhome.New(t.TempDir())
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "Community Rank") || !strings.Contains(s, "Not configured") {
+		t.Fatalf("doctor must mention community without a URL:\n%s", s)
 	}
 }
 

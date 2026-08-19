@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -132,6 +133,33 @@ func (a *App) runCommunityServe(flags Flags) int {
 		return ExitFail
 	}
 	return ExitOK
+}
+
+func FormatCommunityDoctor(home adapter.Home, getenv func(string) string, offline bool) string {
+	var b strings.Builder
+	b.WriteString("Community Rank\n")
+	if offline || community.EnvDisabled(getenv) {
+		b.WriteString("  · Off this run (--offline / WHERETOKEN_COMMUNITY=off)\n")
+		return b.String()
+	}
+	url := community.EnvURL(getenv)
+	if url == "" {
+		b.WriteString("  · Not configured (set WHERETOKEN_COMMUNITY_URL)\n")
+		return b.String()
+	}
+	path := community.ConfigPath(home)
+	f, err := community.Load(path)
+	if err != nil {
+		b.WriteString("  · URL set; no local participant file yet\n")
+		return b.String()
+	}
+	if !f.Enabled {
+		b.WriteString("  · Opted out\n")
+		return b.String()
+	}
+	b.WriteString("  · On · anonymous daily totals only\n")
+	b.WriteString("  · " + community.DisclaimerEN + "\n")
+	return b.String()
 }
 
 func redactParticipant(id string) string {
