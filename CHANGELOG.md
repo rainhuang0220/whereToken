@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `--help` / man: `--rank all` is uploaded days, not kiln 全部
 - 用量说明 drops a Community Rank podium when N is below 20 (`#1 / 3` cannot appear)
 - README says Rank 累计 is uploaded days, not kiln 全部; `DO_NOT_TRACK=1` is listed next to community off
 - Man page documents `doctor` Community Rank (no upload) and `DO_NOT_TRACK`

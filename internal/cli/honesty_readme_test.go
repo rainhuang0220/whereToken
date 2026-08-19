@@ -84,6 +84,8 @@ func TestHelpHonestyCopy(t *testing.T) {
 		"never $0",
 		"never #0",
 		"request ids",
+		"uploaded days",
+		"kiln 全部",
 	} {
 		if !strings.Contains(h, want) {
 			t.Errorf("help missing honesty %q", want)

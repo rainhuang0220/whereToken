@@ -50,7 +50,7 @@ FLAGS
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
   --offline            local ledgers only; skip Cursor/Trae APIs and community upload
-  --rank today|all     community rank period in the fifth KPI column (default today)
+  --rank today|all     community rank period (default today; all = uploaded days, not kiln 全部)
   --no-community       do not upload or fetch community rank
   --home DIR           fake home directory (tests)
   --port N             serve bind port (default 8787; tries 8787–8797 if busy)
