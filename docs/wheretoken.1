@@ -36,6 +36,11 @@ wheretoken \- local coding-agent token usage as a character table
 .br
 .B wheretoken
 [\fIflags\fR]
+.B community
+[\fIstatus\fR|\fIon\fR|\fIoff\fR|\fIserve\fR]
+.br
+.B wheretoken
+[\fIflags\fR]
 .B completion
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
 .SH DESCRIPTION
@@ -142,6 +147,13 @@ No scan-progress lines on stderr.
 Local ledgers only. Skip Cursor/Trae account APIs (table and
 .BR serve ).
 .TP
+.B --rank \fItoday\fR|\fIall\fR
+Community Rank period in the fifth KPI column (default
+.BR today ).
+.TP
+.B --no-community
+Do not upload or fetch Community Rank this run.
+.TP
 .B --home \fIDIR\fR
 Fake home directory (tests).
 .TP
@@ -156,6 +168,14 @@ then
 before truncating names.
 .B COLUMNS
 does the same.
+.SH COMMANDS
+.TP
+.B community status|on|off|serve
+Anonymous Community Rank participation. Default on when
+.B WHERETOKEN_COMMUNITY_URL
+is set.
+.B serve
+binds 127.0.0.1 for a self-hosted rank service.
 .SH EXIT STATUS
 .TP
 .B 0
@@ -182,6 +202,15 @@ Override home (same idea as
 Same as
 .BR --offline .
 .TP
+.B WHERETOKEN_COMMUNITY
+Set to
+.B off
+to disable Community Rank (same as
+.BR --no-community ).
+.TP
+.B WHERETOKEN_COMMUNITY_URL
+Rank service base URL. Unset means no upload. There is no public whereToken rank cluster.
+.TP
 .B WHERETOKEN_INDEX
 Path to the local scan cache.
 .TP
@@ -192,6 +221,9 @@ to skip the scan cache.
 .TP
 .B WHERETOKEN_EXTRA_ROOTS
 Extra homes (Unix :, Windows ;, or commas).
+.TP
+.B WHERETOKEN_COMMUNITY_FILE
+Override the local participation file.
 .TP
 .B COLUMNS
 Cap ranking table width (same as
@@ -232,7 +264,13 @@ Remove this install. Homebrew installs run
 .B wheretoken --model=k3 --json
 Schema 1 JSON for that model.
 .SH PRIVACY
-Read-only local files. No telemetry. Never prints JWTs or access tokens.
+Local-first remains the core. Never prints JWTs or access tokens.
+Community Rank uploads only when
+.B WHERETOKEN_COMMUNITY_URL
+is set; this tree ships no public rank URL.
+Anonymous daily totals only; never prompts, sessions, paths, or
+credentials. Optional cost is an API-equivalent estimate; missing price
+is omitted, not $0. Not a global, worldwide, or all-AI-users rank.
 .SH SEE ALSO
 https://github.com/rainhuang0220/whereToken
 .PP

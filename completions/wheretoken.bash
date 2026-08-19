@@ -4,7 +4,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -13,11 +13,12 @@ _wheretoken() {
     serve) opts="--port --offline --quiet -q --home --help --ascii --no-color" ;;
     sources) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
     doctor) opts="--quiet -q --offline --home --help --ascii --no-color" ;;
-    rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --width --help" ;;
+    rebuild) opts="--json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --width --help" ;;
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
+    community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }

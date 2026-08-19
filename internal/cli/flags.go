@@ -22,6 +22,7 @@ const (
 	CommandUpdate     = "update"
 	CommandUninstall  = "uninstall"
 	CommandCompletion = "completion"
+	CommandCommunity  = "community"
 )
 
 const (
@@ -44,6 +45,9 @@ type Flags struct {
 	Port            int
 	Width           int
 	CompletionShell string
+	RankPeriod      string
+	NoCommunity     bool
+	CommunityAction string
 }
 
 type usageError struct {
@@ -60,7 +64,7 @@ func IsUsage(err error) bool {
 func Usage(err error) bool { return IsUsage(err) }
 
 func Parse(args []string) (Flags, error) {
-	f := Flags{Command: CommandReport, Port: 8787}
+	f := Flags{Command: CommandReport, Port: 8787, RankPeriod: "today"}
 	if len(args) == 0 {
 		return f, nil
 	}
@@ -90,6 +94,8 @@ func Parse(args []string) (Flags, error) {
 			f.Command = CommandUninstall
 		case "completion":
 			f.Command = CommandCompletion
+		case "community":
+			f.Command = CommandCommunity
 		default:
 			return Flags{}, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", args[0])}
 		}
@@ -110,9 +116,15 @@ func Parse(args []string) (Flags, error) {
 		return f, nil
 	}
 	if extra := fs.Args(); len(extra) > 0 {
+		if f.Command == CommandCommunity {
+			return finishCommunity(&f, extra)
+		}
 		leftover, err := applyTrailingCommand(&f, extra)
 		if err != nil {
 			return Flags{}, err
+		}
+		if f.Command == CommandCommunity {
+			return finishCommunity(&f, leftover)
 		}
 		if f.Command == CommandCompletion {
 			if err := parseCompletionTail(&f, leftover); err != nil {
@@ -222,6 +234,17 @@ func Parse(args []string) (Flags, error) {
 			return Flags{}, usageError{msg: err.Error() + "\ntry `wheretoken --help`"}
 		}
 	}
+	if f.RankPeriod == "" {
+		f.RankPeriod = "today"
+	}
+	switch f.RankPeriod {
+	case "today", "all":
+	default:
+		return Flags{}, usageError{msg: "invalid --rank (today or all)\ntry `wheretoken --help`"}
+	}
+	if f.Command == CommandCommunity && f.CommunityAction == "" {
+		f.CommunityAction = "status"
+	}
 	return f, nil
 }
 
@@ -245,6 +268,8 @@ func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi,
 	fs.StringVar(&f.Home, "home", f.Home, "")
 	fs.IntVar(&f.Port, "port", f.Port, "")
 	fs.IntVar(&f.Width, "width", f.Width, "")
+	fs.StringVar(&f.RankPeriod, "rank", f.RankPeriod, "")
+	fs.BoolVar(&f.NoCommunity, "no-community", f.NoCommunity, "")
 	fs.StringVar(toolFlag, "tool", *toolFlag, "")
 	fs.StringVar(vendorFlag, "vendor", *vendorFlag, "")
 	fs.StringVar(modelFlag, "model", *modelFlag, "")
@@ -359,9 +384,43 @@ func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
 			rest = rest[1:]
 		}
 		return rest, nil
+	case "community":
+		f.Command = CommandCommunity
+		return rest, nil
 	default:
 		return nil, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", extra[0])}
 	}
+}
+
+func finishCommunity(f *Flags, extra []string) (Flags, error) {
+	if f.CommunityAction == "" && len(extra) > 0 && !strings.HasPrefix(extra[0], "-") {
+		switch extra[0] {
+		case "status", "on", "off", "serve":
+			f.CommunityAction = extra[0]
+			extra = extra[1:]
+		default:
+			return Flags{}, usageError{msg: fmt.Sprintf("unknown community action %q\ntry `wheretoken --help`", extra[0])}
+		}
+	}
+	if f.CommunityAction == "" {
+		f.CommunityAction = "status"
+	}
+	if len(extra) == 0 {
+		return *f, nil
+	}
+	var toolFlag, vendorFlag, modelFlag string
+	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
+	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
+	if err := parseFlagSet(fs, f, extra); err != nil {
+		return Flags{}, err
+	}
+	if leftover := fs.Args(); len(leftover) > 0 {
+		return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+	}
+	if f.Port <= 0 || f.Port > 65535 {
+		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	}
+	return *f, nil
 }
 
 func unique(in []string) []string {

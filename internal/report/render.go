@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
@@ -92,6 +93,8 @@ func turnKPI(snap Snapshot) string {
 func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 	hit := table.PaintHit(snap.HitRateText, color)
 	total := table.Bold(snap.TotalM, color)
+	cost := costKPI(snap)
+	rank := community.Caption(rankStanding(snap))
 	if snap.ShowStreaks {
 		return [2][]table.KPI{
 			{
@@ -99,12 +102,14 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 				{Label: "命中率", Value: hit},
 				{Label: "最长连烧", Value: days(snap.MaxStreak)},
 				{Label: "当日用量", Value: snap.TodayM},
+				{Label: "估价", Value: cost},
 			},
 			{
 				{Label: "当前连烧", Value: days(snap.CurrentStreak)},
 				{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 				{Label: "用户回合", Value: turnKPI(snap)},
 				{Label: "单日最高", Value: snap.PeakDayM},
+				{Label: "排名", Value: rank},
 			},
 		}
 	}
@@ -113,13 +118,30 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 			{Label: "总用量", Value: total},
 			{Label: "命中率", Value: hit},
 			{Label: "请求", Value: metric.FormatCount(snap.Requests)},
+			{Label: "估价", Value: cost},
 		},
 		{
 			{Label: "用户回合", Value: turnKPI(snap)},
 			{Label: "工具数", Value: metric.FormatCount(int64(len(snap.Tools)))},
 			{Label: "厂家数", Value: metric.FormatCount(int64(len(snap.Vendors)))},
+			{Label: "排名", Value: rank},
 		},
 	}
+}
+
+func costKPI(snap Snapshot) string {
+	if snap.CostUSD != "" {
+		return snap.CostUSD
+	}
+	return "—"
+}
+
+func rankStanding(snap Snapshot) community.Standing {
+	st := snap.Community.Today
+	if snap.RankPeriod == community.PeriodAll {
+		st = snap.Community.All
+	}
+	return community.SanitizeStanding(st)
 }
 
 func days(n int) string {
@@ -251,5 +273,27 @@ func footnotes(snap Snapshot) []string {
 		}
 		out = append(out, n)
 	}
-	return out
+	return appendRankNotes(out, snap)
+}
+
+func appendRankNotes(notes []string, snap Snapshot) []string {
+	st := community.SanitizeStanding(rankStanding(snap))
+	switch st.Status {
+	case community.StatusOK:
+		period := "今日"
+		if snap.RankPeriod == community.PeriodAll {
+			period = "累计"
+		}
+		return append(notes, "社区排名 "+st.Display+" · "+period+" · 匿名聚合，不是审计榜")
+	case community.StatusInsufficientParticipants:
+		return append(notes, "社区排名暂不可用 · 参与者还不够")
+	case community.StatusOptedOut, community.StatusDisabled:
+		return append(notes, "社区排名已关闭 · wheretoken community on 重新参加")
+	case community.StatusOffline:
+		return append(notes, "社区排名未上传 · --offline")
+	case community.StatusNetworkError:
+		return append(notes, "社区排名暂不可用 · 服务连不上")
+	default:
+		return notes
+	}
 }

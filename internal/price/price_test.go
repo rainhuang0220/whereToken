@@ -7,6 +7,19 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
+func TestUnavailableNeverFormatsAsZeroUSD(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "moonshot", Model: "k3", Miss: 1_000_000, Output: 1_000_000})
+	if c.OK {
+		t.Fatal("moonshot must stay unpriced")
+	}
+	if FormatUSD(c.Micro) == "$0.0000" && c.OK {
+		t.Fatal("priced zero is only for known models")
+	}
+	if c.Micro != 0 && c.OK {
+		t.Fatalf("%+v", c)
+	}
+}
+
 func TestUnknownModelHasNoCost(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "unknown", Model: "mystery", Miss: 1000, Output: 100})
 	if c.OK {

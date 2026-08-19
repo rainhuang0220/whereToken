@@ -424,3 +424,43 @@ func TestParseFlagsBeforeUnknownCommandIsUsage(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+func TestParseCommunityActions(t *testing.T) {
+	f, err := Parse([]string{"community"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandCommunity || f.CommunityAction != "status" || f.RankPeriod != "today" {
+		t.Fatalf("%+v", f)
+	}
+	f, err = Parse([]string{"community", "on"})
+	if err != nil || f.CommunityAction != "on" {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"community", "off"})
+	if err != nil || f.CommunityAction != "off" {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"community", "serve", "--port", "8799"})
+	if err != nil || f.CommunityAction != "serve" || f.Port != 8799 {
+		t.Fatalf("%+v %v", f, err)
+	}
+	_, err = Parse([]string{"community", "explode"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestParseRankPeriodAndNoCommunity(t *testing.T) {
+	f, err := Parse([]string{"--rank", "all", "--no-community"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.RankPeriod != "all" || !f.NoCommunity {
+		t.Fatalf("%+v", f)
+	}
+	_, err = Parse([]string{"--rank", "week"})
+	if err == nil || !IsUsage(err) {
+		t.Fatalf("err=%v", err)
+	}
+}

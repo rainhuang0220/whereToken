@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { fetchSummary, rescan } from '../api'
+import { fetchSummary, rescan, setCommunity } from '../api'
 import { formatScannedAt, type ScanProgress } from '../firing'
 import { acceptPeriod } from '../periodSeq'
-import type { PeriodId, SummaryPayload } from '../types'
+import type { PeriodId, RankPeriod, SummaryPayload } from '../types'
 
 export const useSummaryStore = defineStore('summary', {
   state: () => ({
@@ -13,6 +13,7 @@ export const useSummaryStore = defineStore('summary', {
     progress: null as ScanProgress | null,
     period: 'all' as PeriodId,
     periodSeq: 0,
+    rankPeriod: 'today' as RankPeriod,
   }),
   actions: {
     async hydrate() {
@@ -79,6 +80,17 @@ export const useSummaryStore = defineStore('summary', {
         this.error = err instanceof Error ? err.message : String(err)
       } finally {
         this.loading = false
+      }
+    },
+    setRankPeriod(period: RankPeriod) {
+      this.rankPeriod = period
+    },
+    async toggleCommunity(enabled: boolean) {
+      try {
+        await setCommunity(enabled)
+        await this.refresh()
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
       }
     },
   },

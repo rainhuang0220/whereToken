@@ -1,0 +1,62 @@
+package community
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/event"
+)
+
+func TestResolveDoesNotCreateFileWithoutURL(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	path := ConfigPath(home)
+	now := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	evs := []event.UsageEvent{{
+		Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1000, Timestamp: now,
+	}}
+	v := Resolve(Request{
+		Home:   home,
+		Getenv: func(string) string { return "" },
+		Now:    now,
+		Loc:    time.UTC,
+	}, evs)
+	if v.Today.Status != StatusServiceUnconfigured || v.Today.Rank != 0 || v.Today.Display != "" {
+		t.Fatalf("%+v", v.Today)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("must not create %s: %v", path, err)
+	}
+}
+
+func TestResolveOfflineAndOptOutSkipUpload(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	now := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	getenv := func(k string) string {
+		if k == "WHERETOKEN_COMMUNITY_URL" {
+			return "http://127.0.0.1:1"
+		}
+		return ""
+	}
+	off := Resolve(Request{Home: home, Getenv: getenv, Offline: true, Now: now, Loc: time.UTC}, nil)
+	if off.Today.Status != StatusOffline || off.Today.Rank != 0 {
+		t.Fatalf("offline %+v", off)
+	}
+	out := Resolve(Request{Home: home, Getenv: getenv, OptOut: true, Now: now, Loc: time.UTC}, nil)
+	if out.Enabled || out.Today.Status != StatusOptedOut {
+		t.Fatalf("opt-out %+v", out)
+	}
+}
+
+func TestConfigPathStaysOutOfIndex(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	p := ConfigPath(home)
+	if filepath.Ext(p) != ".json" {
+		t.Fatalf("%s", p)
+	}
+	if filepath.Base(filepath.Dir(p)) == "cache" {
+		t.Fatal("must not live in the usage cache dir")
+	}
+}

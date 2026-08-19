@@ -24,7 +24,13 @@ func TestCheckedInCompletionsMatchGenerator(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, err := os.ReadFile(filepath.Join(root, c.name))
+		path := filepath.Join(root, c.name)
+		if os.Getenv("UPDATE_COMPLETIONS") == "1" {
+			if err := os.WriteFile(path, []byte(want), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		got, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", c.name, err)
 		}

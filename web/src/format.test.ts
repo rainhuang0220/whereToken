@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, rankCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -73,6 +73,22 @@ describe('costCaption', () => {
     expect(costCaption({ cost_usd: '$1.0000', cost_status: 'partial', total: 10 })).toBe('$1.0000 · 部分')
     expect(costCaption({ cost_status: 'unavailable', total: 10 })).toBe('—')
     expect(costCaption({ cost_status: 'unavailable', total: 0 })).toBe('')
+  })
+})
+
+describe('rankCaption', () => {
+  it('never prints #0 for unknown rank', () => {
+    expect(rankCaption(undefined)).toBe('—')
+    expect(rankCaption({ status: 'unavailable' })).toBe('—')
+    expect(rankCaption({ status: 'ok', rank: 0, display: '#0 / 20' })).toBe('—')
+    expect(rankCaption({ status: 'ok', rank: 37, display: '#37 / 842' })).toBe('#37 / 842')
+  })
+})
+
+describe('costKPI', () => {
+  it('uses em dash when the estimate is unavailable', () => {
+    expect(costKPI({ cost_usd: '$12.0000', cost_status: 'complete', total: 10 })).toBe('$12.0000')
+    expect(costKPI({ cost_status: 'unavailable', total: 10 })).toBe('—')
   })
 })
 

@@ -18,6 +18,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/opencode"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/insight"
@@ -36,6 +37,7 @@ type Result struct {
 	Scanning  bool
 	Deltas    []index.Delta
 	Compare   *metric.Compare
+	Community *community.View
 }
 
 const (
@@ -360,6 +362,7 @@ type summaryJSON struct {
 	Why            []whyJSON          `json:"why,omitempty"`
 	Compare        *metric.Compare    `json:"compare,omitempty"`
 	Insights       []insight.Line     `json:"insights,omitempty"`
+	Community      *community.View    `json:"community,omitempty"`
 }
 
 type scanDeltaJSON struct {
@@ -415,11 +418,12 @@ func buildSummaryJSON(r Result) summaryJSON {
 			BySource: map[string]metric.DrillTablesView{},
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
-		Errors:   redactErrors(r.Errors),
-		Offline:  r.Offline,
-		Scanning: r.Scanning,
-		Compare:  r.Compare,
-		Insights: insight.Lines(r.Summary),
+		Errors:    redactErrors(r.Errors),
+		Offline:   r.Offline,
+		Scanning:  r.Scanning,
+		Compare:   r.Compare,
+		Insights:  insight.Lines(r.Summary),
+		Community: r.Community,
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

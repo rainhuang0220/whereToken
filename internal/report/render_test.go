@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
@@ -28,11 +29,43 @@ func TestRenderP0LabelsAndValues(t *testing.T) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
 	}
+	if !strings.Contains(out, "估价") || !strings.Contains(out, "排名") {
+		t.Fatalf("fifth column missing:\n%s", out)
+	}
+	if strings.Contains(out, "#0") {
+		t.Fatalf("unknown rank must not print #0:\n%s", out)
+	}
 	if strings.Contains(out, "消耗") {
 		t.Fatal("must not watermark 消耗")
 	}
 	if strings.Contains(out, "eyJ") {
 		t.Fatal("jwt leaked")
+	}
+}
+
+func TestRenderRankCaptionNeverZero(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap.Community.Today.Status = "ok"
+	snap.Community.Today.Rank = 37
+	snap.Community.Today.Participants = 842
+	snap.Community.Today.Display = "#37 / 842"
+	out := Render(snap, Options{})
+	if !strings.Contains(out, "#37 / 842") {
+		t.Fatalf("missing display:\n%s", out)
+	}
+	if strings.Contains(out, "#0") {
+		t.Fatal(out)
+	}
+	snap.Community.Today = community.Standing{Status: community.StatusOK, Rank: 0, Display: "#0 / 20"}
+	out = Render(snap, Options{})
+	if strings.Contains(out, "#0") {
+		t.Fatalf("zero podium leaked:\n%s", out)
 	}
 }
 

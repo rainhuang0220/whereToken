@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Estimated API-equivalent cost stays in the CLI/dashboard fifth column (row 1); unknown prices stay `—`, never `$0`
+- Community Rank (row 2): anonymous daily totals, Today/All, competition ranking, `#n / N`; not a global / worldwide / all-AI-users rank
+- `wheretoken community status|on|off|serve`, `--rank`, `--no-community`, `WHERETOKEN_COMMUNITY_URL`
+- Privacy docs: local-first remains the core; no public `WHERETOKEN_COMMUNITY_URL` (remote deploy blocker); rank uploads aggregates only; estimated cost is API-equivalent, missing ≠ zero (`docs/community.md`)
+
 ## 0.4.3 — 2026-08-19 (Alpha)
 
 - Windows cmd one-line install: `curl.exe -fsSL -o %TEMP%\wt-install.cmd …/install.cmd && %TEMP%\wt-install.cmd`

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/webembed"
@@ -27,6 +28,8 @@ type server struct {
 	mu       sync.Mutex
 	last     *scan.Result
 	scanning bool
+	offline  bool
+	comm     *community.Client
 }
 
 func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {
@@ -42,10 +45,14 @@ func NewMux(home adapter.Home) http.Handler {
 }
 
 func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
-	s := &server{home: home, adapters: adapters}
+	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/summary", s.getSummary)
 	mux.HandleFunc("/api/scan", s.postScan)
+	mux.HandleFunc("/api/community", s.handleCommunity)
+	mux.HandleFunc("/v1/community/", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if dir := webDist(); dir != "" {
 			serveWeb(w, r, dir)
@@ -87,6 +94,7 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	if last == nil {
 		empty := scan.Result{Errors: []string{}, Summary: metric.Aggregate(nil, nil), Scanning: scanning}
+		s.attachCommunity(&empty)
 		if err := scan.EncodeSummary(w, empty); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -94,6 +102,7 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	cur := *last
 	cur.Scanning = scanning
+	s.attachCommunity(&cur)
 	win, err := metric.ParseSinceQuery(r.URL.Query().Get("since"), time.Now(), time.Local)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -158,6 +167,7 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 	}
 	res := scan.RunWithProgress(s.home, s.adapters, report)
 	res.Offline = scan.CloudSkipped(s.adapters)
+	s.attachCommunity(&res)
 	s.mu.Lock()
 	cp := res
 	s.last = &cp

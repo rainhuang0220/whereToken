@@ -11,6 +11,7 @@ USAGE
   wheretoken [flags] rebuild     wipe the local scan index and rescan
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
+  wheretoken [flags] community [status|on|off|serve]
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -24,10 +25,12 @@ No npm package. GitHub Release binaries are unsigned.
 go install and brew --HEAD embed the CLI table; the kiln dashboard is in
 GitHub Release and brew tap rainhuang0220/wheretoken.
 
-With no flags, scans ledgers already on this machine and prints six figures
-since records began: total (M), cache hit rate, max streak, current streak,
-requests, user turns. Then a 7-day spark and a ranking of tools and vendors
-(with share of total). Degraded Trae/Cursor logins become footnotes.
+With no flags, scans ledgers already on this machine and prints the KPI box
+since records began: total (M), cache hit rate, streaks, today/peak,
+requests, user turns, estimated cost, and community rank. Then a 7-day spark
+and a ranking of tools and vendors (with share of total). Degraded Trae/Cursor
+logins become footnotes. Community rank is self-reported anonymous aggregate
+usage among participants, not a global developer leaderboard.
 
 FLAGS
   -h, --help           this text
@@ -46,6 +49,8 @@ FLAGS
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
   --offline            local ledgers only; skip Cursor/Trae APIs (table and serve)
+  --rank today|all     community rank period in the fifth KPI column (default today)
+  --no-community       do not upload or fetch community rank
   --home DIR           fake home directory (tests)
   --port N             serve bind port (default 8787; tries 8787–8797 if busy)
   --width N            cap ranking width; drop 回合/请求 before truncating names
@@ -55,6 +60,9 @@ ENV
   WHERETOKEN_ASCII=1   ASCII box drawing
   WHERETOKEN_HOME      override home (same idea as --home)
   WHERETOKEN_OFFLINE=1 same as --offline
+  WHERETOKEN_COMMUNITY=off  same as --no-community
+  WHERETOKEN_COMMUNITY_URL  rank service (unset = no upload; no public cluster)
+  WHERETOKEN_COMMUNITY_FILE override ~/.config/wheretoken/community.json
   WHERETOKEN_INDEX     path to the local scan cache (default ~/.cache/wheretoken/index.v1.db)
   WHERETOKEN_NO_INDEX=1  skip the scan cache
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
@@ -71,6 +79,10 @@ EXIT CODES
 PRIVACY
   Read-only local files. No telemetry. Never prints JWTs or access tokens.
   serve binds 127.0.0.1 only. Do not paste secrets into issues.
+  Community Rank (when WHERETOKEN_COMMUNITY_URL is set and not opted out)
+  uploads anonymous daily token totals only — never events, prompts, paths,
+  credentials, or the SQLite index. It is not a global developer rank.
+  wheretoken community off opts out. See docs/community.md.
 
 EXAMPLES
   wheretoken
@@ -90,6 +102,8 @@ EXAMPLES
   wheretoken doctor
   wheretoken --offline --quiet
   wheretoken serve
+  wheretoken community off
+  wheretoken community serve
   wheretoken completion zsh
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787

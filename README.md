@@ -206,11 +206,11 @@ A request made through Claude Code using a MiniMax model is reported as:
 
 ### Local-first
 
-whereToken is designed to operate locally and does not require a whereToken cloud service.
+whereToken is designed to operate locally and does not require a whereToken cloud service. Local-first remains the core.
 
 ### Data collection
 
-whereToken does not upload usage data, session history, or credentials to a whereToken server. There is no telemetry.
+Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_COMMUNITY_URL` is set; there is no public whereToken rank URL (a remote deploy blocker). When configured, it uploads **anonymous daily totals** only (participant UUID, local calendar day, token count, optional API-equivalent estimated cost, client version). A missing price is omitted, never sent as $0. It does not upload prompts, sessions, paths, request ids, credentials, raw events, or the SQLite index. Participation is on by default in that mode; `wheretoken community off` or `WHERETOKEN_COMMUNITY=0` turns it off. This is not a global, worldwide, or all-AI-users rank. See [`docs/community.md`](docs/community.md).
 
 ### Data sources
 
@@ -242,6 +242,7 @@ whereToken is currently in **alpha**.
 - Data sources: [`docs/data-sources.md`](docs/data-sources.md)
 - Token accounting: [`docs/token-accounting.md`](docs/token-accounting.md)
 - Cost estimate: [`docs/cost.md`](docs/cost.md)
+- Community Rank: [`docs/community.md`](docs/community.md)
 - Adding an adapter: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)

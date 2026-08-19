@@ -106,6 +106,8 @@ func (a *App) Run() int {
 		}
 		fmt.Fprint(a.Stdout, script)
 		return ExitOK
+	case CommandCommunity:
+		return a.runCommunity(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}
@@ -217,6 +219,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 			snap.Notes = append([]string{msg}, snap.Notes...)
 		}
 	}
+	a.attachCommunity(&snap, flags, home, res.Events)
 	if flags.JSON {
 		if err := report.WriteJSON(a.Stdout, snap); err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())

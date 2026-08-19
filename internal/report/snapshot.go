@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
@@ -60,6 +61,8 @@ type Snapshot struct {
 	Quality       event.Quality
 	CostStatus    string
 	CostUSD       string
+	Community     community.View
+	RankPeriod    string
 }
 
 type usageErr struct{ msg string }

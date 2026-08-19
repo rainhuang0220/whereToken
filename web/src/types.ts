@@ -87,6 +87,31 @@ export type SummaryPayload = {
   by_model?: SliceView[]
   by_workspace?: SliceView[]
   by_session?: SessionView[]
+  community?: CommunityView
+}
+
+export type RankPeriod = 'today' | 'all'
+
+export type RankStanding = {
+  status: string
+  period?: string
+  metric?: string
+  rank?: number
+  participants?: number
+  percentile?: number | null
+  top_share?: number | null
+  display?: string
+  note?: string
+  self_reported?: boolean
+}
+
+export type CommunityView = {
+  enabled: boolean
+  metric: string
+  self_reported: boolean
+  note: string
+  today: RankStanding
+  all: RankStanding
 }
 
 export type PeriodId = 'all' | 'today' | '7d' | '30d'

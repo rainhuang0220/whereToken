@@ -206,11 +206,11 @@ whereToken 发现各 coding agent 的用量信息，把来源各异的记录归�
 
 ### 本机优先
 
-whereToken 设计为在本机运行，不依赖 whereToken 云服务。
+whereToken 设计为在本机运行，不依赖 whereToken 云服务。本机优先仍是核心。
 
 ### 数据采集
 
-whereToken 不会把用量数据、会话记录或凭证上传到 whereToken 的服务器。没有遥测。
+本机分析留在这台电脑上。Community Rank 仅在设置了 `WHERETOKEN_COMMUNITY_URL` 时才会连远程；本仓库没有公开的排名服务地址，这是远程部署阻塞项。配置后只会上传**匿名每日合计**（参与者 UUID、本地日历日、token 数、可选的 API 等价估价、客户端版本）。没有标价会省略，不会写成 $0。不会上传提示词、会话、路径、request id、凭证、原始事件或 SQLite 索引。该模式下默认参加；`wheretoken community off` 或 `WHERETOKEN_COMMUNITY=0` 可关闭。这不是全球、全世界或全体 AI 用户排名。见 [`docs/community.md`](docs/community.md)。
 
 ### 数据来源
 
@@ -242,6 +242,7 @@ whereToken 目前处于 **alpha**。
 - 数据源：[`docs/data-sources.md`](docs/data-sources.md)
 - Token 账本：[`docs/token-accounting.md`](docs/token-accounting.md)
 - 估价：[`docs/cost.md`](docs/cost.md)
+- 社区排名：[`docs/community.md`](docs/community.md)
 - 增加适配器：[`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON 输出格式：[`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - 补全：[`completions/`](completions/)

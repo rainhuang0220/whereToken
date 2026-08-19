@@ -33,4 +33,27 @@ func TestLinesFromCanonicalSummary(t *testing.T) {
 	if !strings.Contains(blob, "API-equivalent") {
 		t.Fatalf("cost %s", blob)
 	}
+	if !strings.Contains(blob, "Unpriced") || strings.Contains(blob, "$0") && strings.Contains(blob, "k3") && !strings.Contains(blob, "not $0") {
+		t.Fatalf("partial must say unpriced, not invent $0:\n%s", blob)
+	}
+	if strings.Contains(blob, "Community Rank") || strings.Contains(blob, "global") {
+		t.Fatalf("insights must not invent a rank:\n%s", blob)
+	}
+}
+
+func TestLinesUnavailableCostNotZero(t *testing.T) {
+	sum := metric.Aggregate([]event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "b", Miss: 1000, Output: 10},
+	}, nil)
+	got := Lines(sum)
+	blob := ""
+	for _, l := range got {
+		blob += l.Kind + ":" + l.Text + "\n"
+	}
+	if !strings.Contains(blob, "unavailable") {
+		t.Fatalf("%s", blob)
+	}
+	if strings.Contains(blob, "$0.00") || strings.Contains(blob, "cost $0") {
+		t.Fatalf("must not write a zero bill:\n%s", blob)
+	}
 }

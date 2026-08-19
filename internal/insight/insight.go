@@ -63,6 +63,18 @@ func Lines(sum metric.Summary) []Line {
 			})
 		}
 	}
+	if sum.All.CostStatus == price.StatusPartial && sum.All.UnpricedTokens > 0 {
+		out = append(out, Line{
+			Kind: "unpriced",
+			Text: fmt.Sprintf("Unpriced · %s tokens have no list price (not $0)", metric.FormatM(sum.All.UnpricedTokens)),
+		})
+	}
+	if sum.All.CostStatus == price.StatusUnavailable && tot > 0 {
+		out = append(out, Line{
+			Kind: "unpriced",
+			Text: "Estimated API-equivalent cost unavailable · missing price is not written as zero",
+		})
+	}
 	return out
 }
 

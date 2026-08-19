@@ -336,4 +336,4 @@ Codex, OpenCode, and MiniMax Agent replay an unchanged file and fully reparse on
 
 ## Network
 
-Most adapters never leave the machine. Cursor and Trae, when not `--offline` and a local login exists, call **that product’s** usage API. There is no whereToken cloud and no telemetry.
+Most adapters never leave the machine. Cursor and Trae, when not `--offline` and a local login exists, call **that product’s** usage API. Community Rank is a separate, optional anonymous-aggregate layer (`docs/community.md`); it is not a dump of this ledger.

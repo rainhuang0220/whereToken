@@ -12,6 +12,7 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
       'update' { $cmd = $t }
       'upgrade' { $cmd = $t }
       'uninstall' { $cmd = $t }
+      'community' { $cmd = $t }
       'completion' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
@@ -22,12 +23,13 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
     'serve' { @('--port','--offline','--quiet','--home','--help','--ascii','--no-color') }
     'sources' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
     'doctor' { @('--quiet','--offline','--home','--help','--ascii','--no-color') }
-    'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--home','--width','--help') }
+    'rebuild' { @('--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--home','--width','--help') }
     'update' { @('--quiet','--help') }
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
+    'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

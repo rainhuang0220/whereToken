@@ -209,7 +209,13 @@ onMounted(() => {
         :all="payload.all"
         :today-m="todayUsageM"
         :peak-m="series.stats.peak_total_m"
+        :max-streak="series.stats.longest_streak"
+        :current-streak="series.stats.current_streak"
         :compare-text="compareText"
+        :community="payload.community"
+        :rank-period="store.rankPeriod"
+        @update:rank-period="store.setRankPeriod($event)"
+        @toggle-community="store.toggleCommunity($event)"
       />
       <p v-if="compareSources.length && store.period !== 'all'" class="period-delta">
         <span v-for="row in compareSources" :key="row.id">

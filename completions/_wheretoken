@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -51,8 +51,19 @@ _wheretoken() {
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '--offline[skip Cursor/Trae account APIs]' \
+        '--rank[community rank period]:rank:(today all)' \
+        '--no-community[do not upload or fetch community rank]' \
         '--tool[tool id]:tool:(claude kimi grok minimax openclaw codex opencode cursor trae)' \
         '--home[fake home]:dir:_files -/'
+      ;;
+    community)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--home[fake home]:dir:_files -/' \
+        '--port[rank server port]:port:' \
+        '1:action:(status on off serve)'
       ;;
     update|upgrade|uninstall)
       _arguments -s \
@@ -78,6 +89,8 @@ _wheretoken() {
         '--no-color[disable ANSI]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--offline[skip Cursor/Trae account APIs]' \
+        '--rank[community rank period]:rank:(today all)' \
+        '--no-community[do not upload or fetch community rank]' \
         '--tool[tool id]:tool:(claude kimi grok minimax openclaw codex opencode cursor trae)' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
         '--model[model id]:model:' \
@@ -93,7 +106,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community completion help version)'
       ;;
   esac
 }

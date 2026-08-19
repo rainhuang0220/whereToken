@@ -3,6 +3,8 @@ package report
 import (
 	"encoding/json"
 	"io"
+
+	"github.com/rainhuang0220/whereToken/internal/community"
 )
 
 type jsonRow struct {
@@ -19,29 +21,30 @@ type jsonRow struct {
 }
 
 type jsonSnap struct {
-	Schema            int       `json:"schema"`
-	Period            string    `json:"period"`
-	Scope             string    `json:"scope,omitempty"`
-	Total             int64     `json:"total"`
-	TotalM            string    `json:"total_m"`
-	HitRate           *float64  `json:"hit_rate"`
-	HitRateText       string    `json:"hit_rate_text"`
-	MaxStreakDays     *int      `json:"max_streak_days,omitempty"`
-	CurrentStreakDays *int      `json:"current_streak_days,omitempty"`
-	Requests          int64     `json:"requests"`
-	UserTurns         int64     `json:"user_turns"`
-	HideTurns         bool      `json:"hide_turns,omitempty"`
-	Last7             []int64   `json:"last_7d,omitempty"`
-	Today             int64     `json:"today,omitempty"`
-	TodayM            string    `json:"today_m,omitempty"`
-	PeakDay           int64     `json:"peak_day,omitempty"`
-	PeakDayM          string    `json:"peak_day_m,omitempty"`
-	Tools             []jsonRow `json:"tools"`
-	Vendors           []jsonRow `json:"vendors"`
-	Models            []jsonRow `json:"models,omitempty"`
-	Notes             []string  `json:"notes"`
-	CostStatus        string    `json:"cost_status,omitempty"`
-	CostUSD           string    `json:"cost_usd,omitempty"`
+	Schema            int             `json:"schema"`
+	Period            string          `json:"period"`
+	Scope             string          `json:"scope,omitempty"`
+	Total             int64           `json:"total"`
+	TotalM            string          `json:"total_m"`
+	HitRate           *float64        `json:"hit_rate"`
+	HitRateText       string          `json:"hit_rate_text"`
+	MaxStreakDays     *int            `json:"max_streak_days,omitempty"`
+	CurrentStreakDays *int            `json:"current_streak_days,omitempty"`
+	Requests          int64           `json:"requests"`
+	UserTurns         int64           `json:"user_turns"`
+	HideTurns         bool            `json:"hide_turns,omitempty"`
+	Last7             []int64         `json:"last_7d,omitempty"`
+	Today             int64           `json:"today,omitempty"`
+	TodayM            string          `json:"today_m,omitempty"`
+	PeakDay           int64           `json:"peak_day,omitempty"`
+	PeakDayM          string          `json:"peak_day_m,omitempty"`
+	Tools             []jsonRow       `json:"tools"`
+	Vendors           []jsonRow       `json:"vendors"`
+	Models            []jsonRow       `json:"models,omitempty"`
+	Notes             []string        `json:"notes"`
+	CostStatus        string          `json:"cost_status,omitempty"`
+	CostUSD           string          `json:"cost_usd,omitempty"`
+	Community         *community.View `json:"community,omitempty"`
 }
 
 func WriteJSON(w io.Writer, snap Snapshot) error {
@@ -78,6 +81,10 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 	}
 	if out.Notes == nil {
 		out.Notes = []string{}
+	}
+	if snap.Community.Today.Status != "" || snap.Community.All.Status != "" {
+		view := snap.Community
+		out.Community = &view
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")

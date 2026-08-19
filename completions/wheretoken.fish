@@ -1,5 +1,5 @@
 complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community completion help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
@@ -18,4 +18,7 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -l home -r -F
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor completion" -l port -r
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community completion" -l rank -r -a "today all"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community completion" -l no-community
+complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"

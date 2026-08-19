@@ -46,7 +46,8 @@
     "models": { "type": "array", "items": { "$ref": "#/$defs/row" } },
     "notes": { "type": "array", "items": { "type": "string" } },
     "cost_status": { "type": "string", "enum": ["complete", "partial", "unavailable"] },
-    "cost_usd": { "type": "string" }
+    "cost_usd": { "type": "string" },
+    "community": { "$ref": "#/$defs/community" }
   },
   "$defs": {
     "row": {
@@ -64,6 +65,49 @@
         "user_turns": { "type": "integer", "minimum": 0 },
         "cost_status": { "type": "string", "enum": ["complete", "partial", "unavailable"] },
         "cost_usd": { "type": "string" }
+      }
+    },
+    "community": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "metric": { "type": "string" },
+        "self_reported": { "type": "boolean" },
+        "note": { "type": "string" },
+        "today": { "$ref": "#/$defs/standing" },
+        "all": { "$ref": "#/$defs/standing" }
+      }
+    },
+    "standing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "unavailable",
+            "not_ranked",
+            "insufficient_participants",
+            "opted_out",
+            "offline",
+            "disabled",
+            "no_usage",
+            "service_unconfigured",
+            "network_error"
+          ]
+        },
+        "period": { "type": "string" },
+        "metric": { "type": "string" },
+        "rank": { "type": "integer", "minimum": 1 },
+        "participants": { "type": "integer", "minimum": 1 },
+        "percentile": { "type": "number" },
+        "top_share": { "type": "number" },
+        "display": { "type": "string" },
+        "note": { "type": "string" },
+        "self_reported": { "type": "boolean" }
       }
     }
   }

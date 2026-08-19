@@ -89,3 +89,15 @@ export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | '
   }
   return ''
 }
+
+export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
+  if (view.cost_usd) return view.cost_usd
+  return '—'
+}
+
+export function rankCaption(st?: { status?: string; display?: string; rank?: number }): string {
+  if (st?.rank && st.rank > 0 && st.display && !st.display.includes('#0')) {
+    return st.display
+  }
+  return '—'
+}
