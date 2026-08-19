@@ -7,7 +7,7 @@ USAGE
   wheretoken [flags] serve [--port 8787]
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
-  wheretoken [flags] doctor
+  wheretoken [flags] doctor     sources plus Community Rank (no upload)
   wheretoken [flags] rebuild     wipe the local scan index and rescan
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary

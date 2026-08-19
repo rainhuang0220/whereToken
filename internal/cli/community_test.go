@@ -10,6 +10,28 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/community"
 )
 
+func TestFormatCommunityDoctorStates(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	off := FormatCommunityDoctor(home, func(string) string { return "" }, true)
+	if !strings.Contains(off, "Off this run") {
+		t.Fatalf("%s", off)
+	}
+	none := FormatCommunityDoctor(home, func(string) string { return "" }, false)
+	if !strings.Contains(none, "Not configured") {
+		t.Fatalf("%s", none)
+	}
+	url := func(k string) string {
+		if k == "WHERETOKEN_COMMUNITY_URL" {
+			return "http://127.0.0.1:8798"
+		}
+		return ""
+	}
+	ready := FormatCommunityDoctor(home, url, false)
+	if !strings.Contains(ready, "no local participant file") {
+		t.Fatalf("%s", ready)
+	}
+}
+
 func TestRunCommunityStatusAndOptOut(t *testing.T) {
 	dir := t.TempDir()
 	app, out, errb := testApp([]string{"--home", dir, "community", "status"})

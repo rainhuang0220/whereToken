@@ -32,6 +32,8 @@ printed as `#0`.
 ## Opt out
 
 ```text
+wheretoken doctor
+wheretoken community status
 wheretoken community off
 ```
 
