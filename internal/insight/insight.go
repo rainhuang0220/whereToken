@@ -56,13 +56,11 @@ func Lines(sum metric.Summary) []Line {
 			Text: fmt.Sprintf("缓存读 · 占输入侧 token %d%%", pct(sum.All.CacheRead, in)),
 		})
 	}
-	if sum.All.CostStatus == price.StatusComplete || sum.All.CostStatus == price.StatusPartial {
-		if sum.All.CostMicro > 0 {
-			out = append(out, Line{
-				Kind: "cost",
-				Text: fmt.Sprintf("API 标价等价 · %s（%s）", price.FormatUSD(sum.All.CostMicro), sum.All.CostStatus),
-			})
-		}
+	if usd := metric.FormatCostUSD(sum.All.CostStatus, sum.All.CostMicro); usd != "" {
+		out = append(out, Line{
+			Kind: "cost",
+			Text: fmt.Sprintf("API 标价等价 · %s（%s）", usd, sum.All.CostStatus),
+		})
 	}
 	if sum.All.CostStatus == price.StatusPartial && sum.All.UnpricedTokens > 0 {
 		out = append(out, Line{

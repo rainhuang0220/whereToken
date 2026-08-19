@@ -25,8 +25,9 @@ reasoning is also not priced (it is not treated as a second output line).
 | `partial` | Some tokens priced, some not | `cost_usd` of the priced part + `unpriced_tokens` |
 | `unavailable` | No priced tokens | **omit** `cost_usd` — never `$0.00` |
 
-Zero tokens on a known model is a real zero (`complete`, `$0.0000`).
-Missing price is `unavailable`.
+An amount that rounds to `$0.0000` is omitted (not written as a zero bill).
+Zero tokens with no priced work is `unavailable`. Missing price is
+`unavailable`. Neither is `$0`.
 
 ## Card
 
