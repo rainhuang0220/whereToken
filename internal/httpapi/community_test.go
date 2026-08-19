@@ -269,6 +269,64 @@ func TestGetSummaryDoesNotUpload(t *testing.T) {
 	}
 }
 
+func TestGetSummaryPaintDoesNotDial(t *testing.T) {
+	rank := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("GET /api/summary must not dial Community Rank: %s %s", r.Method, r.URL.Path)
+	}))
+	t.Cleanup(rank.Close)
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", rank.URL)
+	t.Setenv("WHERETOKEN_COMMUNITY", "")
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+
+	getOK := func(t *testing.T, srv *httptest.Server) {
+		t.Helper()
+		res, err := srv.Client().Get(srv.URL + "/api/summary")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("summary %d", res.StatusCode)
+		}
+	}
+
+	t.Run("cold", func(t *testing.T) {
+		srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+		t.Cleanup(srv.Close)
+		getOK(t, srv)
+	})
+
+	t.Run("noCommunityScan", func(t *testing.T) {
+		dir := writeKimiHome(t)
+		srv := httptest.NewServer(NewMuxOpts(testhome.New(dir), scan.AllAdapters(), true))
+		t.Cleanup(srv.Close)
+		postScanJSON(t, srv)
+		getOK(t, srv)
+	})
+
+	t.Run("lastCommunitySet", func(t *testing.T) {
+		s := &server{home: testhome.New(t.TempDir())}
+		v := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+		s.last = &scan.Result{Errors: []string{}, Community: &v}
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/summary", s.getSummary)
+		srv := httptest.NewServer(mux)
+		t.Cleanup(srv.Close)
+		getOK(t, srv)
+	})
+
+	t.Run("lastCommunityNil", func(t *testing.T) {
+		s := &server{home: testhome.New(t.TempDir())}
+		s.last = &scan.Result{Errors: []string{}}
+		mux := http.NewServeMux()
+		mux.HandleFunc("/api/summary", s.getSummary)
+		srv := httptest.NewServer(mux)
+		t.Cleanup(srv.Close)
+		getOK(t, srv)
+	})
+}
+
 func TestGetSummaryNeverDialsRankService(t *testing.T) {
 	var mu sync.Mutex
 	hits := 0
