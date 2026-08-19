@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -160,6 +161,90 @@ func TestCompareWindowsMatrix(t *testing.T) {
 		}
 		if !c.compare && got != nil {
 			t.Fatalf("%s: compare must be nil", c.name)
+		}
+	}
+}
+
+func TestCompareWindowsOmitsUnavailableCostUSD(t *testing.T) {
+	loc := time.UTC
+	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)
+	r := Result{
+		Events: []event.UsageEvent{
+			{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "old", Miss: 1_000_000, Output: 1_000_000, Timestamp: now.AddDate(0, 0, -20)},
+			{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "new", Miss: 100, Output: 10, Timestamp: now.Add(-time.Hour)},
+		},
+	}
+	win, err := metric.ParseWindow(false, "7d", "", "", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur := ApplyWindow(r, win, loc)
+	cmp := CompareWindows(r, win, loc)
+	if cmp == nil {
+		t.Fatal("want compare")
+	}
+	cur.Compare = cmp
+	if cur.Summary.All.CostStatus != "unavailable" || cur.Summary.All.CostMicro != 0 || cur.Summary.All.Total() != 110 {
+		t.Fatalf("windowed all %+v", cur.Summary.All)
+	}
+	v := metric.View(cur.Summary.All)
+	if v.CostUSD != "" || v.CostStatus != "unavailable" {
+		t.Fatalf("must omit $0: %+v", v)
+	}
+
+	raw, err := MarshalSummary(cur)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "$0") {
+		t.Fatalf("never $0:\n%s", raw)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	all, _ := payload["all"].(map[string]any)
+	if all["cost_status"] != "unavailable" {
+		t.Fatalf("status=%v", all["cost_status"])
+	}
+	if _, ok := all["cost_usd"]; ok {
+		t.Fatalf("windowed summary must omit cost_usd: %v", all)
+	}
+	assertJSONOmitsCostUSD(t, payload["by_source"])
+	assertJSONOmitsCostUSD(t, payload["by_vendor"])
+	assertJSONOmitsCostUSD(t, payload["by_source_vendor"])
+	drill, _ := payload["drill"].(map[string]any)
+	drillAll, _ := drill["all"].(map[string]any)
+	assertJSONOmitsCostUSD(t, drillAll["models"])
+	assertJSONOmitsCostUSD(t, drillAll["sessions"])
+	assertJSONOmitsCostUSD(t, drillAll["workspaces"])
+
+	full := r
+	full.Summary = metric.Aggregate(r.Events, nil)
+	fullRaw, err := MarshalSummary(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fullPayload map[string]any
+	if err := json.Unmarshal(fullRaw, &fullPayload); err != nil {
+		t.Fatal(err)
+	}
+	fullAll, _ := fullPayload["all"].(map[string]any)
+	if fullAll["cost_usd"] != "$30.0000" || fullAll["cost_status"] != "partial" {
+		t.Fatalf("all-time priced mix %+v", fullAll)
+	}
+}
+
+func assertJSONOmitsCostUSD(t *testing.T, rows any) {
+	t.Helper()
+	list, ok := rows.([]any)
+	if !ok {
+		t.Fatalf("rows=%T", rows)
+	}
+	for _, item := range list {
+		row, _ := item.(map[string]any)
+		if _, ok := row["cost_usd"]; ok {
+			t.Fatalf("unavailable slice must omit cost_usd: %v", row)
 		}
 	}
 }
