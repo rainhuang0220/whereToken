@@ -148,6 +148,13 @@ func days(n int) string {
 	return fmt.Sprintf("%s 天", metric.FormatCount(int64(n)))
 }
 
+func rowCost(r Row) string {
+	if r.CostStatus == "unavailable" || r.CostUSD == "" {
+		return "—"
+	}
+	return r.CostUSD
+}
+
 func sparkLine(snap Snapshot, ascii, color bool) string {
 	if !snap.ShowStreaks || len(snap.Last7) == 0 {
 		return ""
@@ -184,6 +191,8 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		headers = append(headers, "回合")
 		align = append(align, table.AlignRight)
 	}
+	headers = append(headers, "估价")
+	align = append(align, table.AlignRight)
 	const capN = 12
 	n := len(rows)
 	if n > capN {
@@ -204,6 +213,7 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		if withTurns {
 			line = append(line, r.TurnsText)
 		}
+		line = append(line, rowCost(r))
 		body = append(body, line)
 	}
 	if color {

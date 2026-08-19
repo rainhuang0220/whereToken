@@ -43,6 +43,27 @@ func TestRenderP0LabelsAndValues(t *testing.T) {
 	}
 }
 
+func TestRenderRankingCostNeverZeroForUnknown(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events, turns := fixture(loc)
+	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := Render(snap, Options{})
+	if !strings.Contains(out, "估价") {
+		t.Fatalf("ranking must have 估价:\n%s", out)
+	}
+	if strings.Contains(out, "$0.0000") || strings.Contains(out, "$0.00") {
+		t.Fatalf("unpriced rows must not print $0:\n%s", out)
+	}
+	// Kimi is unpriced; Claude/Anthropic have a real estimate.
+	if !strings.Contains(out, "$12.0000") && !strings.Contains(out, "$") {
+		t.Fatalf("priced rows should keep an estimate:\n%s", out)
+	}
+}
+
 func TestRenderRankCaptionNeverZero(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
