@@ -17,6 +17,8 @@ import (
 
 const defaultTimeout = 2 * time.Second
 
+var errNoRedirect = fmt.Errorf("community client does not follow redirects")
+
 // Client talks to a Community Rank service. Missing URL, offline, or any
 // network error become an unavailable standing. Local analytics must not fail.
 type Client struct {
@@ -37,9 +39,30 @@ type Client struct {
 
 func (c *Client) httpc() *http.Client {
 	if c.HTTP != nil {
-		return c.HTTP
+		cl := *c.HTTP
+		cl.CheckRedirect = refuseRedirect
+		return &cl
 	}
-	return &http.Client{Timeout: defaultTimeout}
+	return &http.Client{Timeout: defaultTimeout, CheckRedirect: refuseRedirect}
+}
+
+func refuseRedirect(*http.Request, []*http.Request) error {
+	return errNoRedirect
+}
+
+func (c *Client) endpoint(path string) (string, error) {
+	base, err := ParseServiceURL(c.BaseURL)
+	if err != nil {
+		return "", err
+	}
+	u, err := url.Parse(base)
+	if err != nil {
+		return "", err
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + path
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
 }
 
 func (c *Client) Sync(ctx context.Context, events []event.UsageEvent, now time.Time, loc *time.Location) View {
@@ -56,7 +79,7 @@ func (c *Client) SyncAgg(ctx context.Context, agg LocalAgg) View {
 	if c.Offline {
 		return EmptyView(StatusOffline, DisclaimerEN)
 	}
-	if strings.TrimSpace(c.BaseURL) == "" {
+	if _, err := ParseServiceURL(c.BaseURL); err != nil {
 		return EmptyView(StatusServiceUnconfigured, "Community Rank service is not configured.")
 	}
 	if agg.TodayTokens <= 0 && agg.TodayCostUSD == nil {
@@ -130,7 +153,11 @@ func (c *Client) put(ctx context.Context, u Upload) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/v1/community/usage", bytes.NewReader(raw))
+	dest, err := c.endpoint("/v1/community/usage")
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dest, bytes.NewReader(raw))
 	if err != nil {
 		return err
 	}
@@ -153,7 +180,11 @@ func (c *Client) get(ctx context.Context, period, metric string) Standing {
 	q.Set("participant_id", c.File.ParticipantID)
 	q.Set("period", period)
 	q.Set("metric", metric)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/v1/community/rank?"+q.Encode(), nil)
+	dest, err := c.endpoint("/v1/community/rank")
+	if err != nil {
+		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dest+"?"+q.Encode(), nil)
 	if err != nil {
 		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
 	}
@@ -183,14 +214,21 @@ func (c *Client) get(ctx context.Context, period, metric string) Standing {
 }
 
 func (c *Client) Leave(ctx context.Context) error {
-	if c == nil || c.File == nil || strings.TrimSpace(c.BaseURL) == "" || c.Offline {
+	if c == nil || c.File == nil || c.Offline {
+		return nil
+	}
+	if _, err := ParseServiceURL(c.BaseURL); err != nil {
 		return nil
 	}
 	raw, err := json.Marshal(map[string]string{"participant_id": c.File.ParticipantID})
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/v1/community/leave", bytes.NewReader(raw))
+	dest, err := c.endpoint("/v1/community/leave")
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dest, bytes.NewReader(raw))
 	if err != nil {
 		return err
 	}

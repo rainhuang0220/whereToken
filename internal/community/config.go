@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -107,5 +108,33 @@ func EnvURL(getenv func(string) string) string {
 	if getenv == nil {
 		return ""
 	}
-	return strings.TrimRight(strings.TrimSpace(getenv("WHERETOKEN_COMMUNITY_URL")), "/")
+	s, err := ParseServiceURL(getenv("WHERETOKEN_COMMUNITY_URL"))
+	if err != nil {
+		return ""
+	}
+	return s
+}
+
+// ParseServiceURL accepts only http(s) rank endpoints. file:, userinfo, and
+// empty hosts are rejected so the client never opens those URLs.
+func ParseServiceURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty community url")
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid community url")
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("community url must be http or https")
+	}
+	if u.Host == "" || u.User != nil || strings.Contains(raw, "@") {
+		return "", fmt.Errorf("invalid community url")
+	}
+	u.Scheme = scheme
+	u.Fragment = ""
+	u.RawQuery = ""
+	return strings.TrimRight(u.String(), "/"), nil
 }

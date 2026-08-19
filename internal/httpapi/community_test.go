@@ -68,6 +68,24 @@ func TestCommunityAPILocalOnlyAndNoEnumerate(t *testing.T) {
 	}
 }
 
+func TestCommunityRejectsNonLocalHost(t *testing.T) {
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	t.Cleanup(srv.Close)
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/community", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Host = "evil.example"
+	res, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("status=%d want 403 for foreign Host", res.StatusCode)
+	}
+}
+
 func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
 	srv := httptest.NewServer(NewMuxOpts(testhome.New(t.TempDir()), scan.AllAdapters(), true))

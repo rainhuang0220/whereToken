@@ -22,6 +22,10 @@ The client never sends usage events, prompts, transcripts, session or
 request ids, file paths, workspaces, JWTs, cookies, API keys, hostnames,
 or the SQLite index.
 
+`WHERETOKEN_COMMUNITY_URL` must be `http` or `https` with a host and no
+userinfo. `file:` and other schemes are ignored. The client does not follow
+redirects, so an upload is not replayed onto a third-party hop.
+
 Unknown cost is **not** rewritten as `$0`. A missing rank is **not**
 printed as `#0`.
 
