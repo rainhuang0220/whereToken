@@ -172,6 +172,21 @@ func TestAllTimeSummaryAttachesRealRankInsight(t *testing.T) {
 	}
 }
 
+func TestMarshalSummaryTinyPodiumDoesNotBecomeInsight(t *testing.T) {
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.All.Rank = 1
+	view.All.Display = "#1 / 3"
+	view.All.Participants = 3
+	raw, err := MarshalSummary(Result{Community: &view, Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(raw)
+	if strings.Contains(s, "社区排名 #1 / 3") || strings.Contains(s, "#1 / 3") {
+		t.Fatalf("all-time 用量说明 must not print a 3-person podium:\n%s", s)
+	}
+}
+
 func TestMarshalSummaryCommunityInsightNeverZeroRank(t *testing.T) {
 	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
 	view.Today.Status = community.StatusOK

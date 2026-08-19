@@ -269,6 +269,68 @@ func TestGetSummaryDoesNotUpload(t *testing.T) {
 	}
 }
 
+func TestGetSummaryNeverDialsRankService(t *testing.T) {
+	var mu sync.Mutex
+	hits := 0
+	rank := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		hits++
+		mu.Unlock()
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(community.Standing{
+			Status: community.StatusInsufficientParticipants, Period: "today",
+			Metric: community.MetricTokens, SelfReported: true, Note: community.DisclaimerEN,
+		})
+	}))
+	t.Cleanup(rank.Close)
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", rank.URL)
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := writeKimiHome(t)
+	srv := httptest.NewServer(NewMux(testhome.New(dir)))
+	t.Cleanup(srv.Close)
+
+	res, err := http.Get(srv.URL + "/api/summary")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("cold summary %d", res.StatusCode)
+	}
+	mu.Lock()
+	if hits != 0 {
+		mu.Unlock()
+		t.Fatal("cold GET /api/summary must not dial the rank service")
+	}
+	mu.Unlock()
+
+	postScanJSON(t, srv)
+	mu.Lock()
+	afterScan := hits
+	mu.Unlock()
+	for i := 0; i < 5; i++ {
+		res, err := http.Get(srv.URL + "/api/summary?since=today")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.StatusCode != http.StatusOK {
+			res.Body.Close()
+			t.Fatalf("summary %d", res.StatusCode)
+		}
+		res.Body.Close()
+	}
+	mu.Lock()
+	afterGet := hits
+	mu.Unlock()
+	if afterGet != afterScan {
+		t.Fatalf("GET /api/summary dialed rank after scan: scan=%d get=%d", afterScan, afterGet)
+	}
+}
+
 func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
 	srv := httptest.NewServer(NewMuxOpts(testhome.New(t.TempDir()), scan.AllAdapters(), true))

@@ -86,6 +86,14 @@ func TestAppendStandingNeverZeroRank(t *testing.T) {
 	if strings.Contains(got[1].Text, "#0") {
 		t.Fatal(got[1].Text)
 	}
+	for _, tiny := range []string{"#1 / 3", "#1/3", "#1 / 19"} {
+		if got := AppendStanding(base, "ok", tiny, 1); len(got) != 1 {
+			t.Fatalf("tiny podium %q must not become 用量说明: %+v", tiny, got)
+		}
+	}
+	if got := AppendStanding(base, "ok", "#1 / 20", 1); len(got) != 2 || !strings.Contains(got[1].Text, "#1 / 20") {
+		t.Fatalf("20-person floor must still print: %+v", got)
+	}
 }
 
 func TestLinesTinyCostOmitsRoundingZero(t *testing.T) {
