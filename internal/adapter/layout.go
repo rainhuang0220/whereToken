@@ -38,3 +38,12 @@ func VSCodeGlobalDB(home Home, product string) string {
 		filepath.Join(home.AppData(product), "User", "globalStorage", "state.vscdb"),
 	)
 }
+
+// VSCodeExtDir is User/globalStorage/<publisher.ext> for a VS Code-family product.
+func VSCodeExtDir(home Home, product, extID string) string {
+	return FirstDir(
+		filepath.Join(home.AppSupport(product), "User", "globalStorage", extID),
+		filepath.Join(home.XDGConfig(product), "User", "globalStorage", extID),
+		filepath.Join(home.AppData(product), "User", "globalStorage", extID),
+	)
+}

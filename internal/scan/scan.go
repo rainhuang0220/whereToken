@@ -9,13 +9,17 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/claude"
+	"github.com/rainhuang0220/whereToken/internal/adapter/cline"
 	"github.com/rainhuang0220/whereToken/internal/adapter/codex"
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
+	"github.com/rainhuang0220/whereToken/internal/adapter/gemini"
 	"github.com/rainhuang0220/whereToken/internal/adapter/grok"
 	"github.com/rainhuang0220/whereToken/internal/adapter/kimi"
 	"github.com/rainhuang0220/whereToken/internal/adapter/minimax"
 	"github.com/rainhuang0220/whereToken/internal/adapter/openclaw"
 	"github.com/rainhuang0220/whereToken/internal/adapter/opencode"
+	"github.com/rainhuang0220/whereToken/internal/adapter/qwen"
+	"github.com/rainhuang0220/whereToken/internal/adapter/roo"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
 	"github.com/rainhuang0220/whereToken/internal/community"
@@ -80,6 +84,10 @@ func Adapters(offline bool) []adapter.Adapter {
 		codex.Adapter{},
 		cursor.Adapter{Offline: offline},
 		trae.Adapter{Offline: offline},
+		gemini.Adapter{},
+		qwen.Adapter{},
+		cline.Adapter{},
+		roo.Adapter{},
 	}
 }
 

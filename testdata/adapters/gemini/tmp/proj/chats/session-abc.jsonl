@@ -1,0 +1,2 @@
+{"type":"user","id":"u1","timestamp":"2026-08-20T10:00:00.000Z"}
+{"type":"gemini","id":"g1","timestamp":"2026-08-20T10:00:01.000Z","model":"gemini-2.5-pro","tokens":{"input":120,"output":10,"cached":20,"thoughts":5,"total":130}}

@@ -1,0 +1,3 @@
+[
+  {"type":"say","say":"api_req_started","ts":1787200000000,"text":"{\"tokensIn\":20,\"tokensOut\":3,\"cacheReads\":4,\"cacheWrites\":2,\"model\":\"claude-sonnet-4.6\"}"}
+]

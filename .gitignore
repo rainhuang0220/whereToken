@@ -28,6 +28,9 @@ node_modules/
 coverage/
 /bin/
 tmp/
+# Gemini CLI fixtures use the official tmp/<project>/chats/ layout
+!testdata/adapters/gemini/tmp/
+!testdata/adapters/gemini/tmp/**
 # Go module vendor dir (root only — do not ignore internal/vendor)
 /vendor/
 
