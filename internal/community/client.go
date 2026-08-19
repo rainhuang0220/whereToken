@@ -213,7 +213,19 @@ func (c *Client) get(ctx context.Context, period, metric string) Standing {
 	return SanitizeStanding(st)
 }
 
+func (c *Client) Invalidate() {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	c.haveCached = false
+	c.lastView = View{}
+	c.lastAgg = LocalAgg{}
+	c.mu.Unlock()
+}
+
 func (c *Client) Leave(ctx context.Context) error {
+	c.Invalidate()
 	if c == nil || c.File == nil || c.Offline {
 		return nil
 	}

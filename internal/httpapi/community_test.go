@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
@@ -182,6 +183,85 @@ func TestCommunityDisableKeepsOnWhenLeaveFails(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), `"enabled": true`) {
 		t.Fatalf("must keep participation on after failed leave: %s", raw)
+	}
+}
+
+func TestNoCommunityPOSTDoesNotMint(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
+	dir := t.TempDir()
+	home := testhome.New(dir)
+	srv := httptest.NewServer(NewMuxOpts(home, scan.AllAdapters(), true))
+	t.Cleanup(srv.Close)
+	origin := "http://" + strings.TrimPrefix(srv.URL, "http://")
+	for _, enabled := range []string{"true", "false"} {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":`+enabled+`}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", origin)
+		res, err := srv.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusForbidden {
+			t.Fatalf("enabled=%s status=%d want 403", enabled, res.StatusCode)
+		}
+	}
+	if _, err := os.Stat(community.ConfigPath(home)); !os.IsNotExist(err) {
+		t.Fatal("serve --no-community must not mint community.json")
+	}
+}
+
+func TestGetSummaryDoesNotUpload(t *testing.T) {
+	var mu sync.Mutex
+	posts := 0
+	rank := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/usage"):
+			mu.Lock()
+			posts++
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+		case strings.Contains(r.URL.Path, "/rank"):
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(community.Standing{
+				Status: community.StatusInsufficientParticipants, Period: "today",
+				Metric: community.MetricTokens, SelfReported: true, Note: community.DisclaimerEN,
+			})
+		case strings.Contains(r.URL.Path, "/leave"):
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(rank.Close)
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", rank.URL)
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := writeKimiHome(t)
+	srv := httptest.NewServer(NewMux(testhome.New(dir)))
+	t.Cleanup(srv.Close)
+	postScanJSON(t, srv)
+	mu.Lock()
+	afterScan := posts
+	mu.Unlock()
+	for i := 0; i < 5; i++ {
+		res, err := http.Get(srv.URL + "/api/summary")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.StatusCode != http.StatusOK {
+			res.Body.Close()
+			t.Fatalf("summary %d", res.StatusCode)
+		}
+		res.Body.Close()
+	}
+	mu.Lock()
+	afterGet := posts
+	mu.Unlock()
+	if afterGet != afterScan {
+		t.Fatalf("GET /api/summary uploaded %d extra times (scan=%d get=%d)", afterGet-afterScan, afterScan, afterGet)
 	}
 }
 

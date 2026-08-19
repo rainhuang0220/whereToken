@@ -119,7 +119,7 @@ func (s *server) getSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cur.Scanning = scanning
-	s.attachCommunity(&cur)
+	s.paintCommunity(&cur)
 	full := cur
 	win, err := metric.ParseSinceQuery(r.URL.Query().Get("since"), time.Now(), time.Local)
 	if err != nil {

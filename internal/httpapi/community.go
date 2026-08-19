@@ -27,6 +27,30 @@ func (s *server) snapshotLast() (scan.Result, bool, bool) {
 	return cur, s.scanning, true
 }
 
+// paintCommunity fills a missing Community view without talking to the
+// rank service. GET /api/summary must not upload.
+func (s *server) paintCommunity(res *scan.Result) {
+	if res == nil || res.Community != nil {
+		return
+	}
+	req := community.Request{
+		Home:    s.home,
+		Getenv:  osLookup,
+		Offline: true,
+		OptOut:  s.noCommunity,
+		Now:     time.Now(),
+		Loc:     time.Local,
+	}
+	if req.OptOut || community.EnvDisabled(req.Getenv) {
+		v := community.EmptyView(community.StatusOptedOut, community.DisclaimerEN)
+		v.Enabled = false
+		res.Community = &v
+		return
+	}
+	v := community.Resolve(req, nil)
+	res.Community = &v
+}
+
 func (s *server) attachCommunity(res *scan.Result) {
 	if res == nil || res.Community != nil {
 		return
@@ -155,6 +179,20 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid community settings", http.StatusBadRequest)
 		return
 	}
+	if s.noCommunity || community.EnvDisabled(osLookup) {
+		http.Error(w, "community disabled", http.StatusForbidden)
+		return
+	}
+	if *body.Enabled && community.EnvURL(osLookup) == "" {
+		http.Error(w, "community url not configured", http.StatusBadRequest)
+		return
+	}
+	if !*body.Enabled {
+		if _, err := community.Load(community.ConfigPath(s.home)); os.IsNotExist(err) {
+			s.getCommunity(w, r)
+			return
+		}
+	}
 	c, err := s.ensureClient()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -179,7 +217,13 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	if s.last != nil {
-		s.last.Community = nil
+		v := community.EmptyView(community.StatusUnavailable, community.DisclaimerEN)
+		v.Enabled = *body.Enabled
+		if !*body.Enabled {
+			v = community.EmptyView(community.StatusOptedOut, community.DisclaimerEN)
+			v.Enabled = false
+		}
+		s.last.Community = &v
 	}
 	s.mu.Unlock()
 	s.getCommunity(w, r)
