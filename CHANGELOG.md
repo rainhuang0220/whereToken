@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `wheretoken serve --no-community` actually disables rank upload; rank HTTP rejects dates outside a ±2 day window
+- Community status redacts the participant UUID; leave is rate-limited
+- Dashboard fifth column keeps 估价 over 排名 in one cell on narrow layouts
+- Drill JSON omits `cost_usd` when a slice has no list price; usage insights skip unlabeled model/session buckets
 - Estimated API-equivalent cost stays in the CLI/dashboard fifth column (row 1); unknown prices stay `—`, never `$0`
 - Community Rank (row 2): anonymous daily totals, Today/All, competition ranking, `#n / N`; not a global / worldwide / all-AI-users rank
 - `wheretoken community status|on|off|serve`, `--rank`, `--no-community`, `WHERETOKEN_COMMUNITY_URL`

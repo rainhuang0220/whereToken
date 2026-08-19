@@ -68,6 +68,14 @@ func (h *Handler) putUsage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	now := time.Now()
+	if h.now != nil {
+		now = h.now()
+	}
+	if !periodNearNow(u.Period, now) {
+		http.Error(w, "period outside allowed window", http.StatusBadRequest)
+		return
+	}
 	if err := h.Store.Put(u); err != nil {
 		if errors.Is(err, errRateLimited) {
 			http.Error(w, "rate limited", http.StatusTooManyRequests)
@@ -118,9 +126,27 @@ func (h *Handler) getRank(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(st)
 }
 
+func periodNearNow(period string, now time.Time) bool {
+	d, err := time.Parse("2006-01-02", period)
+	if err != nil {
+		return false
+	}
+	utc := now.UTC()
+	today := time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
+	days := int(today.Sub(d).Hours() / 24)
+	if days < 0 {
+		days = -days
+	}
+	return days <= 2
+}
+
 func (h *Handler) postLeave(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !h.allowIP(r) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
 		return
 	}
 	raw, err := io.ReadAll(io.LimitReader(r.Body, maxUploadBytes+1))

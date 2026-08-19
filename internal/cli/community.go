@@ -70,7 +70,7 @@ func (a *App) communityStatus(flags Flags, home adapter.Home) int {
 		on = "off"
 	}
 	fmt.Fprintf(a.Stdout, "community rank: %s\n", on)
-	fmt.Fprintf(a.Stdout, "participant: %s\n", participant)
+	fmt.Fprintf(a.Stdout, "participant: %s\n", redactParticipant(participant))
 	fmt.Fprintf(a.Stdout, "joined: %s\n", joined)
 	fmt.Fprintf(a.Stdout, "file: %s\n", path)
 	fmt.Fprintf(a.Stdout, "service: %s\n", url)
@@ -132,4 +132,11 @@ func (a *App) runCommunityServe(flags Flags) int {
 		return ExitFail
 	}
 	return ExitOK
+}
+
+func redactParticipant(id string) string {
+	if id == "—" || len(id) < 13 {
+		return id
+	}
+	return id[:8] + "…" + id[len(id)-4:]
 }

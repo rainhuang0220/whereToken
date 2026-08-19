@@ -23,19 +23,24 @@ import (
 )
 
 type server struct {
-	home     adapter.Home
-	adapters []adapter.Adapter
-	mu       sync.Mutex
-	last     *scan.Result
-	scanning bool
-	offline  bool
-	comm     *community.Client
+	home        adapter.Home
+	adapters    []adapter.Adapter
+	mu          sync.Mutex
+	last        *scan.Result
+	scanning    bool
+	offline     bool
+	noCommunity bool
+	comm        *community.Client
 }
 
 func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {
+	return NewHTTPServerOpts(addr, home, offline, false)
+}
+
+func NewHTTPServerOpts(addr string, home adapter.Home, offline, noCommunity bool) *http.Server {
 	return &http.Server{
 		Addr:              addr,
-		Handler:           NewMuxWith(home, scan.Adapters(offline)),
+		Handler:           NewMuxOpts(home, scan.Adapters(offline), noCommunity),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }
@@ -45,7 +50,11 @@ func NewMux(home adapter.Home) http.Handler {
 }
 
 func NewMuxWith(home adapter.Home, adapters []adapter.Adapter) http.Handler {
-	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters)}
+	return NewMuxOpts(home, adapters, false)
+}
+
+func NewMuxOpts(home adapter.Home, adapters []adapter.Adapter, noCommunity bool) http.Handler {
+	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters), noCommunity: noCommunity}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/summary", s.getSummary)
 	mux.HandleFunc("/api/scan", s.postScan)

@@ -18,6 +18,12 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/price"
 )
 
+func testHandler(minN int) *Handler {
+	h := NewHandler(NewStore(minN))
+	h.now = func() time.Time { return time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC) }
+	return h
+}
+
 func TestStoreCompetitionAndThreshold(t *testing.T) {
 	s := NewStore(3)
 	day := "2026-08-19"
@@ -140,7 +146,7 @@ func TestStoreLeaveRemovesParticipant(t *testing.T) {
 }
 
 func TestHandlerFakeServerIntegration(t *testing.T) {
-	h := NewHandler(NewStore(3))
+	h := testHandler(3)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 
@@ -210,7 +216,7 @@ func TestHandlerFakeServerIntegration(t *testing.T) {
 }
 
 func TestHandlerUnavailableCostOmitsUSD(t *testing.T) {
-	h := NewHandler(NewStore(1))
+	h := testHandler(1)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
@@ -251,7 +257,7 @@ func TestHandlerUnavailableCostOmitsUSD(t *testing.T) {
 }
 
 func TestHandlerRejectsHugeAndUnknown(t *testing.T) {
-	h := NewHandler(NewStore(1))
+	h := testHandler(1)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
@@ -275,7 +281,7 @@ func TestHandlerRejectsHugeAndUnknown(t *testing.T) {
 }
 
 func TestClientSyncRoundTripAndOffline(t *testing.T) {
-	h := NewHandler(NewStore(1))
+	h := testHandler(1)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
@@ -507,7 +513,7 @@ func TestResolveSkipsFileAndUploadWithoutURL(t *testing.T) {
 }
 
 func TestLeaveEndpoint(t *testing.T) {
-	h := NewHandler(NewStore(1))
+	h := testHandler(1)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
@@ -571,7 +577,7 @@ func TestOfflineClientDoesNotHTTPPost(t *testing.T) {
 }
 
 func TestHandlerRankRoutes(t *testing.T) {
-	h := NewHandler(NewStore(1))
+	h := testHandler(1)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 	tests := []struct {
@@ -608,6 +614,7 @@ func TestHandlerRankRoutes(t *testing.T) {
 func TestHandlerDoesNotPersistRemoteAddrIntoStore(t *testing.T) {
 	store := NewStore(1)
 	h := NewHandler(store)
+	h.now = func() time.Time { return time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC) }
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 	body := fmt.Sprintf(`{"participant_id":%q,"period":"2026-08-19","tokens":10,"client_version":"0.5.0"}`, id)
 	req := httptest.NewRequest(http.MethodPost, "/v1/community/usage", strings.NewReader(body))
@@ -691,5 +698,18 @@ func TestClientCacheSkipsSecondUpload(t *testing.T) {
 	_ = c.Sync(context.Background(), events, now, time.UTC)
 	if posts != 1 {
 		t.Fatalf("cache failed: posts=%d", posts)
+	}
+}
+
+func TestHandlerRejectsStalePeriod(t *testing.T) {
+	h := testHandler(1)
+	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	body := fmt.Sprintf(`{"participant_id":%q,"period":"2020-01-01","tokens":10,"client_version":"0.5.0"}`, id)
+	req := httptest.NewRequest(http.MethodPost, "/v1/community/usage", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.Mux().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("stale period %d", rec.Code)
 	}
 }

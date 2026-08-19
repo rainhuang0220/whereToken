@@ -65,6 +65,12 @@ describe('drill sessions', () => {
     expect(vue).toMatch(/formatCount\(row\.requests\)/)
     expect(vue).not.toMatch(/\{\{\s*row\.requests\s*\}\}/)
   })
+
+  it('prints server costCaption and never invents $0', () => {
+    const vue = readFileSync(join(SRC, 'components/DrillPanel.vue'), 'utf8')
+    expect(vue).toMatch(/costCaption\(row\)/)
+    expect(vue).not.toMatch(/\$0/)
+  })
 })
 
 describe('cross table', () => {

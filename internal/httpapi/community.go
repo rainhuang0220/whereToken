@@ -21,6 +21,7 @@ func (s *server) attachCommunity(res *scan.Result) {
 		Home:    s.home,
 		Getenv:  osLookup,
 		Offline: s.offline || res.Offline,
+		OptOut:  s.noCommunity,
 		Version: "dev",
 		Now:     time.Now(),
 		Loc:     time.Local,
@@ -106,7 +107,7 @@ func (s *server) getCommunity(w http.ResponseWriter, r *http.Request) {
 	if f, err := community.Load(community.ConfigPath(s.home)); err == nil {
 		enabled = f.Enabled
 	}
-	if community.EnvDisabled(osLookup) {
+	if s.noCommunity || community.EnvDisabled(osLookup) {
 		enabled = false
 	}
 	v := community.EmptyView(community.StatusUnavailable, community.DisclaimerEN)

@@ -13,6 +13,12 @@ const (
 	unlabeledSession   = "(无会话)"
 )
 
+// UnlabeledDrillID reports a fallback bucket (no model / workspace / session
+// on the event), not a named row. Insights must not call it the "largest".
+func UnlabeledDrillID(id string) bool {
+	return id == unlabeledModel || id == unlabeledWorkspace || id == unlabeledSession
+}
+
 type SessionSlice struct {
 	Slice
 	Source, Vendor, Model, Workspace string

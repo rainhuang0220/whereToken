@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
 func TestCommunityAPILocalOnlyAndNoEnumerate(t *testing.T) {
@@ -64,5 +65,23 @@ func TestCommunityAPILocalOnlyAndNoEnumerate(t *testing.T) {
 				t.Fatalf("%s → %d", path, res.StatusCode)
 			}
 		})
+	}
+}
+
+func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
+	srv := httptest.NewServer(NewMuxOpts(testhome.New(t.TempDir()), scan.AllAdapters(), true))
+	t.Cleanup(srv.Close)
+	res, err := http.Get(srv.URL + "/api/community")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var body map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body["enabled"] != false {
+		t.Fatalf("serve --no-community must disable rank: %v", body)
 	}
 }

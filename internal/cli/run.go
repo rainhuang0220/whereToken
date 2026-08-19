@@ -13,6 +13,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
@@ -324,7 +325,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			continue
 		}
 		fmt.Fprint(a.Stderr, ServeStartedMessage(addr))
-		srv := httpapi.NewHTTPServer(addr, home, offline)
+		srv := httpapi.NewHTTPServerOpts(addr, home, offline, flags.NoCommunity || community.EnvDisabled(a.LookupEnv))
 		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail

@@ -41,6 +41,27 @@ func TestLinesFromCanonicalSummary(t *testing.T) {
 	}
 }
 
+func TestLinesSkipUnlabeledDrillBuckets(t *testing.T) {
+	sum := metric.Aggregate([]event.UsageEvent{
+		{Source: "minimax", Vendor: "minimax", Miss: 1000},
+		{Source: "minimax", Vendor: "minimax", Model: "minimax-m2.5", RequestID: "b", SessionID: "s2", Miss: 10},
+	}, nil)
+	got := Lines(sum)
+	blob := ""
+	for _, l := range got {
+		blob += l.Kind + ":" + l.Text + "\n"
+	}
+	if strings.Contains(blob, "(未标模型)") || strings.Contains(blob, "(无会话)") {
+		t.Fatalf("unlabeled drill buckets are not a named largest row:\n%s", blob)
+	}
+	if strings.Contains(blob, "largest_model") {
+		t.Fatalf("must not call a smaller labeled model the largest:\n%s", blob)
+	}
+	if strings.Contains(blob, "largest_session") {
+		t.Fatalf("must not call a smaller labeled session the largest:\n%s", blob)
+	}
+}
+
 func TestLinesUnavailableCostNotZero(t *testing.T) {
 	sum := metric.Aggregate([]event.UsageEvent{
 		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "b", Miss: 1000, Output: 10},

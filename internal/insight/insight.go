@@ -34,14 +34,14 @@ func Lines(sum metric.Summary) []Line {
 			Text: fmt.Sprintf("%s · %d%% of tokens", s.Label, pct(s.Total(), tot)),
 		})
 	}
-	if len(sum.DrillAll.Models) > 0 && sum.DrillAll.Models[0].Total() > 0 {
+	if len(sum.DrillAll.Models) > 0 && sum.DrillAll.Models[0].Total() > 0 && !metric.UnlabeledDrillID(sum.DrillAll.Models[0].ID) {
 		s := sum.DrillAll.Models[0]
 		out = append(out, Line{
 			Kind: "largest_model",
 			Text: fmt.Sprintf("%s · %d%% of tokens", s.Label, pct(s.Total(), tot)),
 		})
 	}
-	if len(sum.DrillAll.Sessions) > 0 && sum.DrillAll.Sessions[0].Total() > 0 {
+	if len(sum.DrillAll.Sessions) > 0 && sum.DrillAll.Sessions[0].Total() > 0 && !metric.UnlabeledDrillID(sum.DrillAll.Sessions[0].ID) {
 		s := sum.DrillAll.Sessions[0]
 		out = append(out, Line{
 			Kind: "largest_session",

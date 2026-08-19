@@ -613,11 +613,16 @@ h1 {
 
 .readout {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr);
   gap: 0;
   margin: 0 0 1.6rem;
   border-top: 1px solid var(--copper);
   border-bottom: 1px solid var(--copper);
+}
+
+.read-col5 {
+  grid-column: 5;
+  grid-row: 1 / span 2;
 }
 
 .read-col5 strong.rank-v {
@@ -665,10 +670,6 @@ h1 {
 }
 
 .read-lead {
-  border-left: 0;
-}
-
-.readout > .read-cell:nth-child(6) {
   border-left: 0;
 }
 
@@ -868,6 +869,11 @@ th {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .read-col5 {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .read-cell:nth-child(3n + 1) {
     border-left: 0;
   }
@@ -879,6 +885,11 @@ th {
   .rail,
   .readout {
     display: block;
+  }
+
+  .read-col5 {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .marks {
