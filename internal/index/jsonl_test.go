@@ -177,6 +177,34 @@ func TestScanJSONLResumeAfterIncompleteThenComplete(t *testing.T) {
 	}
 }
 
+func TestScanJSONLOversizeCompleteLineIsSkipped(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	huge := strings.Repeat("x", maxJSONLLine+8)
+	raw := "keep-a\n" + huge + "\nkeep-b\n"
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	var kept []string
+	consumed, err := ScanJSONL(f, func(line []byte, _ int64) error {
+		kept = append(kept, string(line))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(kept) != 2 || kept[0] != "keep-a" || kept[1] != "keep-b" {
+		t.Fatalf("oversize complete line must be skipped: %v", kept)
+	}
+	if consumed != int64(len(raw)) {
+		t.Fatalf("consumed=%d want %d", consumed, len(raw))
+	}
+}
+
 func TestScanJSONLOversizeIncompleteLineErrors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "a.jsonl")
 	if err := os.WriteFile(path, []byte(strings.Repeat("x", maxJSONLLine+1)), 0o644); err != nil {

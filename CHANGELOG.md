@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Oversize complete JSONL lines are skipped instead of aborting the file. Claude/Grok/Kimi keep parsing sibling files if one path is unreadable
+
 ## 0.4.4 — 2026-08-20 (Alpha)
 
 - OpenClaw counts `/reset` and `/delete` session transcripts (`*.jsonl.reset.*`, `*.jsonl.deleted.*`). A rename no longer drops historical tokens. Trajectory `data.usage` is a fallback only when that session has no transcript; prompts stay off the event. Compaction `*.checkpoint.*` is skipped

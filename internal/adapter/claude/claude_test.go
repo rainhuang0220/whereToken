@@ -292,3 +292,26 @@ func TestDiscoverXDGConfigClaude(t *testing.T) {
 		t.Fatalf("roots=%v", roots)
 	}
 }
+
+func TestOneUnreadableFileDoesNotDropSibling(t *testing.T) {
+	dir := t.TempDir()
+	line := `{"type":"assistant","requestId":"ok","message":{"model":"claude-opus-4.6","usage":{"input_tokens":3,"output_tokens":1}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "good.jsonl"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bad := filepath.Join(dir, "bad.jsonl")
+	if err := os.WriteFile(bad, []byte(line), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(bad, 0o644) })
+	var evs []event.UsageEvent
+	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {})
+	if err == nil {
+		t.Fatal("unreadable sibling should still surface an error")
+	}
+	if len(evs) != 1 || evs[0].Miss != 3 {
+		t.Fatalf("good file must still count: %+v", evs)
+	}
+}

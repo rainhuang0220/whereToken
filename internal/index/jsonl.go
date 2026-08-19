@@ -2,10 +2,15 @@ package index
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 )
+
+// errSkipLine is an oversized but newline-terminated record. The scanner
+// consumes it so the next scan does not stick, and does not call fn.
+var errSkipLine = errors.New("jsonl line skipped")
 
 const maxJSONLLine = 10 * 1024 * 1024
 
@@ -28,6 +33,10 @@ func ScanJSONL(f *os.File, fn func(line []byte, at int64) error) (consumed int64
 	var n int64
 	for {
 		raw, complete, err := readCompleteLine(r)
+		if errors.Is(err, errSkipLine) && complete {
+			n += int64(len(raw))
+			continue
+		}
 		if complete {
 			rec := raw[:len(raw)-1]
 			if len(rec) > 0 && rec[len(rec)-1] == '\r' {
@@ -55,6 +64,12 @@ func readCompleteLine(r *bufio.Reader) (line []byte, complete bool, err error) {
 		part, e := r.ReadSlice('\n')
 		buf = append(buf, part...)
 		if len(buf) > maxJSONLLine {
+			if len(buf) > 0 && buf[len(buf)-1] == '\n' {
+				return buf, true, errSkipLine
+			}
+			if e == bufio.ErrBufferFull {
+				continue
+			}
 			return nil, false, fmt.Errorf("jsonl line exceeds %d bytes", maxJSONLLine)
 		}
 		if len(part) > 0 && part[len(part)-1] == '\n' {
