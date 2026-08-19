@@ -45,7 +45,8 @@ Anthropic cache writes use the **5-minute** list rate. The ledger does not say
 whether a write was 5 minutes or 1 hour.
 
 xAI uses the **short-context** tier. Long-context rates (≥200k prompt) are not
-applied: the ledger does not store prompt length.
+applied: the ledger does not store prompt length. `grok-4`, `grok-4-fast`, and
+`grok-4-latest` stay unpriced: the public list has no grok-4 row.
 
 OpenAI `o4-mini` uses the **standard** list, not Batch or Flex.
 

@@ -28,6 +28,38 @@ func TestHyphenOpus46UsesCurrentCardNotRetiredOpus4(t *testing.T) {
 	}
 }
 
+func TestGrok4BareAndHyphenSlugsStayUnpriced(t *testing.T) {
+	for _, model := range []string{"grok-4", "grok-4-fast", "grok-4-latest"} {
+		c := Event(event.UsageEvent{Vendor: "xai", Model: model, Miss: 1_000_000, Output: 1_000_000})
+		if c.OK {
+			t.Fatalf("%s must stay unpriced (no grok-4 list row): %+v", model, c)
+		}
+	}
+}
+
+func TestGrok46AndBuildStayOnShortContextCard(t *testing.T) {
+	for _, model := range []string{"grok-4.6", "grok-4.6-build"} {
+		c := Event(event.UsageEvent{Vendor: "xai", Model: model, Miss: 1_000_000, Output: 1_000_000})
+		if !c.OK || c.Micro != 8_000_000 { // $2+$6
+			t.Fatalf("%s must stay $2+$6: %+v", model, c)
+		}
+	}
+}
+
+func TestGPT5MiniUsesOwnCardNotGPT5(t *testing.T) {
+	mini := Event(event.UsageEvent{Vendor: "openai", Model: "gpt-5-mini", Miss: 1_000_000, Output: 1_000_000})
+	full := Event(event.UsageEvent{Vendor: "openai", Model: "gpt-5", Miss: 1_000_000, Output: 1_000_000})
+	if !mini.OK || mini.Micro != 2_250_000 { // $0.25+$2
+		t.Fatalf("gpt-5-mini must use its own card: %+v", mini)
+	}
+	if !full.OK || full.Micro != 11_250_000 { // $1.25+$10
+		t.Fatalf("gpt-5 %+v", full)
+	}
+	if mini.Micro == full.Micro {
+		t.Fatal("gpt-5-mini must not inherit gpt-5")
+	}
+}
+
 func TestOpus48DoesNotInheritRetiredOpus4(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-opus-4-8", Miss: 1_000_000, Output: 1_000_000})
 	if !c.OK || c.Micro != 30_000_000 {

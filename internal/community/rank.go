@@ -1,8 +1,8 @@
 // Package community is the anonymous aggregate Community Rank layer.
 //
 // Local usage stays on the machine. This package ranks self-reported daily
-// token totals among whereToken participants. It is not a global developer
-// rank and not an audited leaderboard.
+// token totals among whereToken participants. It is not a global, worldwide,
+// or all-AI-users rank and not an audited leaderboard.
 package community
 
 import (

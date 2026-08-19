@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- xAI `grok-4` / `grok-4-fast` / `grok-4-latest` stay unpriced; prefix match treats `-`, `.`, or a following digit as a different model id
 - Community Rank leave drops the participant's rate-limit hits and does not write an `opted_out` tombstone. Local leave invalidates the rank cache
 - Community Rank CLI/dashboard copy: not a global / worldwide / all-AI-users rank; estimated cost is not a subscription bill
 - `GET /api/summary` no longer uploads Community Rank. `serve --no-community` forbids dashboard join/leave and does not mint `community.json`

@@ -30,11 +30,13 @@ var table = []Rate{
 	// xAI — docs.x.ai/developers/pricing short-context tier (2026-08-19).
 	// Long-context rates (≥200k prompt) are not applied; that would need
 	// per-request prompt length, which the ledger does not store.
+	// No grok-4 row: the public list has none. grok-4-0709 retired 2026-05-15;
+	// leftover slugs are not $2/$6 on this card.
+	xai("grok-4.6-build", 2, 0.50, 0, 6),
 	xai("grok-4.6", 2, 0.50, 0, 6),
 	xai("grok-4.5", 2, 0.30, 0, 6),
 	xai("grok-4.3", 1.25, 0.20, 0, 2.50),
 	xai("grok-build", 1, 0.20, 0, 2),
-	xai("grok-4", 2, 0.50, 0, 6),
 
 	// OpenAI — developers.openai.com/api/docs/pricing short-context + long-standing 4o card
 	oai("gpt-4o-mini", 0.15, 0.075, 0, 0.60),

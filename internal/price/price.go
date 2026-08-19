@@ -144,8 +144,9 @@ func matchModel(canon, pattern string) bool {
 	after := i + len(pattern)
 	if after < len(canon) {
 		c := canon[after]
-		// opus-4 must not steal opus-4.6 / opus-4-6
-		if c == '.' || c >= '0' && c <= '9' {
+		// After the pattern, '.', '-', or a digit is a different id
+		// (opus-4 must not steal opus-4.6; grok-4 must not steal grok-4-fast).
+		if c == '.' || c == '-' || (c >= '0' && c <= '9') {
 			return false
 		}
 	}
