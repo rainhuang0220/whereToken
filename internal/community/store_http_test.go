@@ -114,6 +114,33 @@ func TestStoreZeroTokensNotRanked(t *testing.T) {
 	}
 }
 
+func TestStoreCostScoreRoundsAndDropsDust(t *testing.T) {
+	s := NewStore(1)
+	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	dust := 0.0000004 // 0.4 µUSD — truncation and rounding both skip
+	if err := s.Put(Upload{
+		ParticipantID: id, Period: "2026-08-19", Tokens: 10,
+		EstimatedCostUSD: &dust, CostStatus: price.StatusComplete, ClientVersion: "0.5.0",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st := s.Rank(id, PeriodToday, "2026-08-19", MetricCost)
+	if st.Rank != 0 || st.Display != "" {
+		t.Fatalf("dust cost must not be a podium: %+v", st)
+	}
+	half := 0.0000015 // 1.5 µUSD rounds to 2
+	if err := s.Put(Upload{
+		ParticipantID: id, Period: "2026-08-19", Tokens: 10,
+		EstimatedCostUSD: &half, CostStatus: price.StatusComplete, ClientVersion: "0.5.0",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st = s.Rank(id, PeriodToday, "2026-08-19", MetricCost)
+	if st.Status != StatusOK || st.Rank != 1 {
+		t.Fatalf("rounded micro must rank: %+v", st)
+	}
+}
+
 func TestStoreAllTimeCostUnavailable(t *testing.T) {
 	s := NewStore(1)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"

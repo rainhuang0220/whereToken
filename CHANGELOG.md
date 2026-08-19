@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Dashboard treats `$0.0000` as unknown. Cost rank scores round to µUSD. Rank GET is rate-limited
 - Cost footnotes skip a blank/zero bill when the priced amount rounds under `$0.0001`
 - 用量说明 uses the same cost formatter as the KPI (sub-cent rounding to `$0.0000` is omitted)
 - CLI tool/vendor/model rankings print 估价 (`—` when unpriced). Narrow terminals drop that column first

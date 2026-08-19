@@ -93,6 +93,10 @@ func (h *Handler) getRank(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if !h.allowIP(r) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+		return
+	}
 	id := strings.TrimSpace(r.URL.Query().Get("participant_id"))
 	if !uuidRe.MatchString(id) {
 		http.Error(w, "invalid participant_id", http.StatusBadRequest)

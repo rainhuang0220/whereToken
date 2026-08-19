@@ -1,6 +1,7 @@
 package community
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -153,8 +154,9 @@ func rowValue(row dayRow, metric string) (int64, bool) {
 		if row.CostStatus != price.StatusComplete || row.CostUSD == nil {
 			return 0, false
 		}
-		// micro-dollars so ranking stays integer
-		return int64(*row.CostUSD * 1e6), true
+		// micro-dollars so ranking stays integer; round so 0.1 does not become 99999.
+		micro := int64(math.Round(*row.CostUSD * 1e6))
+		return micro, micro > 0
 	}
 	return row.Tokens, row.Tokens > 0
 }

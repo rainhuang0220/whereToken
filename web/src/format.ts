@@ -80,9 +80,18 @@ export function columnsFrom(view: SliceView): string[] {
   ]
 }
 
+function usableCostUSD(usd?: string): string {
+  const s = (usd || '').trim()
+  if (!s || s === '$0.0000' || s === '-$0.0000' || s === '$0.00' || s === '$0') {
+    return ''
+  }
+  return s
+}
+
 export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
-  if (view.cost_usd) {
-    return view.cost_status === 'partial' ? `${view.cost_usd} · 部分` : view.cost_usd
+  const usd = usableCostUSD(view.cost_usd)
+  if (usd) {
+    return view.cost_status === 'partial' ? `${usd} · 部分` : usd
   }
   if (view.cost_status === 'unavailable' && view.total > 0) {
     return '—'
@@ -91,7 +100,8 @@ export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | '
 }
 
 export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
-  if (view.cost_usd) return view.cost_usd
+  const usd = usableCostUSD(view.cost_usd)
+  if (usd) return usd
   return '—'
 }
 

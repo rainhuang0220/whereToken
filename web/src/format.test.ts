@@ -73,6 +73,8 @@ describe('costCaption', () => {
     expect(costCaption({ cost_usd: '$1.0000', cost_status: 'partial', total: 10 })).toBe('$1.0000 · 部分')
     expect(costCaption({ cost_status: 'unavailable', total: 10 })).toBe('—')
     expect(costCaption({ cost_status: 'unavailable', total: 0 })).toBe('')
+    expect(costCaption({ cost_usd: '$0.0000', cost_status: 'complete', total: 10 })).toBe('')
+    expect(costKPI({ cost_usd: '$0.00', cost_status: 'complete', total: 1 })).toBe('—')
   })
 })
 
