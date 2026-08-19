@@ -124,14 +124,23 @@ func (s *server) getCommunity(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	enabled := true
+	urlSet := community.EnvURL(osLookup) != ""
+	enabled := urlSet
 	if f, err := community.Load(community.ConfigPath(s.home)); err == nil {
-		enabled = f.Enabled
+		enabled = enabled && f.Enabled
 	}
 	if s.noCommunity || community.EnvDisabled(osLookup) {
 		enabled = false
 	}
-	v := community.EmptyView(community.StatusUnavailable, community.DisclaimerEN)
+	status := community.StatusUnavailable
+	note := community.DisclaimerEN
+	if !urlSet {
+		status = community.StatusServiceUnconfigured
+		note = "Community Rank service is not configured."
+	} else if s.noCommunity || community.EnvDisabled(osLookup) {
+		status = community.StatusOptedOut
+	}
+	v := community.EmptyView(status, note)
 	v.Enabled = enabled
 	_ = json.NewEncoder(w).Encode(communityJSON{Enabled: enabled, Note: v.Note, Today: v.Today, All: v.All})
 }

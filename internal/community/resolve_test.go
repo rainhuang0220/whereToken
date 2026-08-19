@@ -3,6 +3,7 @@ package community
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -75,6 +76,7 @@ func TestResolveEnvOffSkipsUploadAndFile(t *testing.T) {
 }
 
 func TestConfigPathStaysOutOfIndex(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_FILE", "")
 	home := testhome.New(t.TempDir())
 	p := ConfigPath(home)
 	if filepath.Ext(p) != ".json" {
@@ -82,5 +84,23 @@ func TestConfigPathStaysOutOfIndex(t *testing.T) {
 	}
 	if filepath.Base(filepath.Dir(p)) == "cache" {
 		t.Fatal("must not live in the usage cache dir")
+	}
+}
+
+func TestConfigPathUnixVsWindowsLayout(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_FILE", "")
+	home := testhome.New(t.TempDir())
+	unix := filepath.Join(home.XDGConfig("wheretoken"), "community.json")
+	win := filepath.Join(home.AppData("whereToken"), "community.json")
+	if unix == win {
+		t.Fatal("testhome XDGConfig and AppData community.json paths must differ")
+	}
+	got := ConfigPath(home)
+	want := unix
+	if runtime.GOOS == "windows" {
+		want = win
+	}
+	if got != want {
+		t.Fatalf("ConfigPath=%q want %q (unix XDGConfig=%q windows AppData=%q)", got, want, unix, win)
 	}
 }

@@ -120,3 +120,71 @@ func TestHandlerRateLimitsPerIP(t *testing.T) {
 		t.Fatalf("ok=%d limited=%d", ok, limited)
 	}
 }
+
+func TestHandlerRateLimitsRankGET(t *testing.T) {
+	h := NewHandler(NewStore(1))
+	clock := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	h.now = func() time.Time { return clock }
+	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	mux := h.Mux()
+	ok, limited := 0, 0
+	for i := 0; i < 61; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/v1/community/rank?participant_id="+id+"&period=2026-08-19&metric=tokens", nil)
+		req.RemoteAddr = "198.51.100.10:9"
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		switch rec.Code {
+		case http.StatusOK:
+			ok++
+		case http.StatusTooManyRequests:
+			limited++
+		default:
+			t.Fatalf("hit %d status %d", i, rec.Code)
+		}
+	}
+	if ok != 60 || limited != 1 {
+		t.Fatalf("ok=%d limited=%d", ok, limited)
+	}
+}
+
+func TestHandlerEvictsEmptyIPHitKeys(t *testing.T) {
+	h := NewHandler(NewStore(1))
+	clock := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	h.now = func() time.Time { return clock }
+	mux := h.Mux()
+	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	hit := func(addr string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/v1/community/rank?participant_id="+id+"&period=2026-08-19&metric=tokens", nil)
+		req.RemoteAddr = addr
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status %d", addr, rec.Code)
+		}
+	}
+	hit("203.0.113.1:1")
+	h.mu.Lock()
+	if len(h.ipHit["203.0.113.1"]) == 0 {
+		h.mu.Unlock()
+		t.Fatal("expected live ipHit")
+	}
+	h.mu.Unlock()
+
+	clock = clock.Add(2 * time.Minute)
+	hit("203.0.113.2:2")
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.ipHit["203.0.113.1"]; ok {
+		t.Fatalf("expired ip key still present: %+v", h.ipHit)
+	}
+	if n := len(h.ipHit["203.0.113.2"]); n != 1 {
+		t.Fatalf("current ip hits=%d map=%+v", n, h.ipHit)
+	}
+	for k, ts := range h.ipHit {
+		if len(ts) == 0 {
+			t.Fatalf("empty ipHit key %q", k)
+		}
+	}
+}

@@ -135,3 +135,13 @@ func TestCaptionHelperNeverZero(t *testing.T) {
 		t.Fatal("zero podium")
 	}
 }
+
+func TestHelpDocumentsUnixAndWindowsCommunityFile(t *testing.T) {
+	h := HelpText()
+	if !strings.Contains(h, "~/.config/wheretoken") {
+		t.Fatal("help must name the Unix community.json directory")
+	}
+	if !strings.Contains(h, `%APPDATA%`) {
+		t.Fatal("help must name the Windows community.json directory")
+	}
+}

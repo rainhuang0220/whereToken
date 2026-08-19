@@ -174,8 +174,8 @@ func (h *Handler) postLeave(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// allowIP is an ephemeral connection throttle. It does not persist IPs and
-// does not join them to participant_id.
+// allowIP is an ephemeral connection throttle. It does not persist IPs, does
+// not join them to participant_id, and drops keys whose window is empty.
 func (h *Handler) allowIP(r *http.Request) bool {
 	ip := r.RemoteAddr
 	if host, _, ok := strings.Cut(ip, "]"); ok && strings.HasPrefix(ip, "[") {
@@ -193,14 +193,21 @@ func (h *Handler) allowIP(r *http.Request) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	cut := now.Add(-time.Minute)
-	kept := h.ipHit[ip][:0]
-	for _, t := range h.ipHit[ip] {
-		if t.After(cut) {
-			kept = append(kept, t)
+	for k, ts := range h.ipHit {
+		kept := ts[:0]
+		for _, t := range ts {
+			if t.After(cut) {
+				kept = append(kept, t)
+			}
 		}
+		if len(kept) == 0 {
+			delete(h.ipHit, k)
+			continue
+		}
+		h.ipHit[k] = kept
 	}
+	kept := h.ipHit[ip]
 	if len(kept) >= 60 {
-		h.ipHit[ip] = kept
 		return false
 	}
 	h.ipHit[ip] = append(kept, now)

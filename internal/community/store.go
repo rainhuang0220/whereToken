@@ -74,6 +74,10 @@ func (s *Store) Leave(id string) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, ok := s.days[id]; !ok {
+		// Unknown ids stay never-seen; do not mint opted_out for random UUIDs.
+		return nil
+	}
 	delete(s.days, id)
 	s.left[id] = true
 	return nil
@@ -88,9 +92,8 @@ func (s *Store) Rank(id, periodKind, periodDate, metric string) Standing {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.left[id] {
-		return FinishStanding(StatusOptedOut, periodKind, metric, 0, 0, s.minN)
-	}
+	// A departed id must rank identically to a never-seen id. Returning
+	// opted_out here would let anyone probe whether a UUID once joined.
 	if metric == MetricCost && periodKind == PeriodAll {
 		st := FinishStanding(StatusUnavailable, periodKind, metric, 0, 0, s.minN)
 		st.Note = "All-time estimated-cost rank is unavailable until historical pricing is archived."

@@ -35,6 +35,9 @@ func TestCommunityAPILocalOnlyAndNoEnumerate(t *testing.T) {
 	if _, ok := body["users"]; ok {
 		t.Fatal("must not enumerate users")
 	}
+	if body["enabled"] != false {
+		t.Fatalf("unconfigured rank must not look opted-in: %v", body)
+	}
 
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
 	if err != nil {

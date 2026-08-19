@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Community Rank `community.json` tests use testhome XDGConfig vs AppData (Unix and Windows); the man page names both defaults
+- Community Rank leave of an unknown UUID matches never-seen (no `opted_out` oracle). Empty `ipHit` keys are evicted
+- GET `/rank` after leave matches a never-seen UUID. Unconfigured `/api/community` stays disabled
 - Dashboard complete 估价 footnotes that it is not a bill. `FormatUSD` omits `$0.0000` when a price is unavailable
 - Dashboard treats `$0.0000` as unknown. Cost rank scores round to µUSD. Rank GET is rate-limited
 - Cost footnotes skip a blank/zero bill when the priced amount rounds under `$0.0001`

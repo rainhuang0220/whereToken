@@ -266,60 +266,88 @@ func TestWriteJSONRowIncludesRawTotal(t *testing.T) {
 }
 
 func TestWriteJSONSatisfiesPublishedSchema(t *testing.T) {
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("caller")
-	}
-	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "cli-json.schema.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var schema struct {
-		Required   []string       `json:"required"`
-		Properties map[string]any `json:"properties"`
-		Defs       struct {
-			Row struct {
-				Required []string `json:"required"`
-			} `json:"row"`
-		} `json:"$defs"`
-	}
-	if err := json.Unmarshal(raw, &schema); err != nil {
-		t.Fatal(err)
-	}
+	schema := loadPublishedCLIJSONSchema(t)
 	if len(schema.Required) < 8 {
 		t.Fatalf("schema required too small: %v", schema.Required)
 	}
+	if len(schema.Defs.Community.Properties) == 0 {
+		t.Fatal("schema $defs/community has no properties")
+	}
+	if schema.Defs.Standing.Properties["rank"] == nil {
+		t.Fatal("schema $defs/standing must declare rank")
+	}
+
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
 	events, turns := fixture(loc)
-	snap, err := Build(events, turns, nil, Filter{}, now, loc)
+	base, err := Build(events, turns, nil, Filter{}, now, loc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var buf bytes.Buffer
-	if err := WriteJSON(&buf, snap); err != nil {
-		t.Fatal(err)
+
+	unconfigured := community.EmptyView(community.StatusServiceUnconfigured, "Community Rank service is not configured.")
+	zeroPodium := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	zeroPodium.Today.Rank = 0
+	zeroPodium.Today.Display = "#0 / 20"
+	zeroPodium.All = zeroPodium.Today
+	zeroPodium.All.Period = community.PeriodAll
+
+	ranked := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	ranked.Today = community.FinishStanding(community.StatusOK, community.PeriodToday, community.MetricTokens, 37, 842, 20)
+	ranked.All = community.FinishStanding(community.StatusOK, community.PeriodAll, community.MetricTokens, 12, 842, 20)
+
+	cases := []struct {
+		name string
+		comm *community.View
+		rank float64
+	}{
+		{name: "without community"},
+		{name: "unconfigured community", comm: &unconfigured},
+		{name: "zero podium sanitized", comm: &zeroPodium},
+		{name: "real rank", comm: &ranked, rank: 37},
 	}
-	var m map[string]any
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		t.Fatal(err)
-	}
-	for _, k := range schema.Required {
-		if _, ok := m[k]; !ok {
-			t.Errorf("missing required %q", k)
-		}
-	}
-	for k := range m {
-		if _, ok := schema.Properties[k]; !ok {
-			t.Errorf("undeclared key %q", k)
-		}
-	}
-	tools := m["tools"].([]any)
-	row := tools[0].(map[string]any)
-	for _, k := range schema.Defs.Row.Required {
-		if _, ok := row[k]; !ok {
-			t.Errorf("tools row missing %q", k)
-		}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			snap := base
+			if tc.comm != nil {
+				snap.Community = *tc.comm
+			}
+			got := writeJSONMap(t, snap)
+			m := got.obj
+			for _, k := range schema.Required {
+				if _, ok := m[k]; !ok {
+					t.Errorf("missing required %q", k)
+				}
+			}
+			for k := range m {
+				if _, ok := schema.Properties[k]; !ok {
+					t.Errorf("undeclared key %q", k)
+				}
+			}
+			tools := m["tools"].([]any)
+			row := tools[0].(map[string]any)
+			for _, k := range schema.Defs.Row.Required {
+				if _, ok := row[k]; !ok {
+					t.Errorf("tools row missing %q", k)
+				}
+			}
+			if tc.comm == nil {
+				if _, ok := m["community"]; ok {
+					t.Fatalf("community should be omitted: %s", got.raw)
+				}
+				return
+			}
+			assertCommunityAgainstSchema(t, m, schema)
+			comm := m["community"].(map[string]any)
+			today := comm["today"].(map[string]any)
+			if tc.rank == 0 {
+				if _, has := today["rank"]; has {
+					t.Fatalf("rank must be omitted: %s", got.raw)
+				}
+			} else if today["rank"] != tc.rank {
+				t.Fatalf("rank=%v want %v", today["rank"], tc.rank)
+			}
+		})
 	}
 }
 
@@ -335,6 +363,48 @@ func TestWriteJSONCommunitySanitizesZeroRank(t *testing.T) {
 	snap.Community.Today.Display = "#0 / 20"
 	snap.Community.All = snap.Community.Today
 	snap.Community.All.Period = community.PeriodAll
+	got := writeJSONMap(t, snap)
+	assertCommunityAgainstSchema(t, got.obj, loadPublishedCLIJSONSchema(t))
+	comm, ok := got.obj["community"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing community: %s", got.raw)
+	}
+	today := comm["today"].(map[string]any)
+	if _, has := today["rank"]; has {
+		t.Fatalf("rank must be omitted: %s", got.raw)
+	}
+	if today["status"] == "ok" {
+		t.Fatalf("zero podium must not stay ok: %s", got.raw)
+	}
+	if strings.Contains(got.raw, "#0") {
+		t.Fatalf("#0 leaked: %s", got.raw)
+	}
+}
+
+type publishedCLIJSONSchema struct {
+	Required   []string       `json:"required"`
+	Properties map[string]any `json:"properties"`
+	Defs       struct {
+		Row struct {
+			Required []string `json:"required"`
+		} `json:"row"`
+		Community struct {
+			Properties map[string]any `json:"properties"`
+		} `json:"community"`
+		Standing struct {
+			Required   []string       `json:"required"`
+			Properties map[string]any `json:"properties"`
+		} `json:"standing"`
+	} `json:"$defs"`
+}
+
+type jsonMap struct {
+	raw string
+	obj map[string]any
+}
+
+func writeJSONMap(t *testing.T, snap Snapshot) jsonMap {
+	t.Helper()
 	var buf bytes.Buffer
 	if err := WriteJSON(&buf, snap); err != nil {
 		t.Fatal(err)
@@ -343,18 +413,85 @@ func TestWriteJSONCommunitySanitizesZeroRank(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
 		t.Fatal(err)
 	}
-	comm, ok := m["community"].(map[string]any)
+	return jsonMap{raw: buf.String(), obj: m}
+}
+
+func loadPublishedCLIJSONSchema(t *testing.T) publishedCLIJSONSchema {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatalf("missing community: %s", buf.String())
+		t.Fatal("caller")
 	}
-	today := comm["today"].(map[string]any)
-	if _, has := today["rank"]; has {
-		t.Fatalf("rank must be omitted: %s", buf.String())
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "cli-json.schema.json"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if today["status"] == "ok" {
-		t.Fatalf("zero podium must not stay ok: %s", buf.String())
+	var schema publishedCLIJSONSchema
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
 	}
-	if strings.Contains(buf.String(), "#0") {
-		t.Fatalf("#0 leaked: %s", buf.String())
+	return schema
+}
+
+func assertCommunityAgainstSchema(t *testing.T, payload map[string]any, schema publishedCLIJSONSchema) {
+	t.Helper()
+	raw, ok := payload["community"]
+	if !ok {
+		t.Fatal("community missing")
 	}
+	comm, ok := raw.(map[string]any)
+	if !ok {
+		t.Fatalf("community must be an object, got %T", raw)
+	}
+	assertDeclaredKeys(t, comm, schema.Defs.Community.Properties, "community")
+	for _, period := range []string{"today", "all"} {
+		stRaw, ok := comm[period]
+		if !ok {
+			continue
+		}
+		st, ok := stRaw.(map[string]any)
+		if !ok {
+			t.Fatalf("community.%s must be an object, got %T", period, stRaw)
+		}
+		path := "community." + period
+		assertDeclaredKeys(t, st, schema.Defs.Standing.Properties, path)
+		for _, req := range schema.Defs.Standing.Required {
+			if _, ok := st[req]; !ok {
+				t.Errorf("%s missing required %q", path, req)
+			}
+		}
+		if rank, has := st["rank"]; has {
+			n, ok := jsonNumber(rank)
+			min := standingMinimum(schema, "rank")
+			if min < 1 {
+				min = 1
+			}
+			if !ok || n < min || n != float64(int64(n)) {
+				t.Errorf("%s.rank=%v must be an integer >= %v (never 0)", path, rank, min)
+			}
+		}
+	}
+}
+
+func assertDeclaredKeys(t *testing.T, obj map[string]any, allowed map[string]any, path string) {
+	t.Helper()
+	for k := range obj {
+		if _, ok := allowed[k]; !ok {
+			t.Errorf("%s undeclared key %q", path, k)
+		}
+	}
+}
+
+func standingMinimum(schema publishedCLIJSONSchema, field string) float64 {
+	spec, ok := schema.Defs.Standing.Properties[field].(map[string]any)
+	if !ok {
+		return 0
+	}
+	min, _ := spec["minimum"].(float64)
+	return min
+}
+
+func jsonNumber(v any) (float64, bool) {
+	n, ok := v.(float64)
+	return n, ok
 }

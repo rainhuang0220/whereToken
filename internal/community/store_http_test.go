@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -167,8 +168,38 @@ func TestStoreLeaveRemovesParticipant(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := s.Rank(id, PeriodToday, "2026-08-19", MetricTokens)
-	if st.Status != StatusOptedOut {
-		t.Fatalf("%+v", st)
+	if st.Rank != 0 || st.Display != "" || Caption(st) != "—" {
+		t.Fatalf("left id must not keep a place: %+v", st)
+	}
+	if st.Status == StatusOptedOut {
+		t.Fatal("remote rank must not advertise opted_out — that is a leave oracle")
+	}
+}
+
+func TestStoreLeaveRankMatchesNeverSeen(t *testing.T) {
+	s := NewStore(2)
+	seen := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	other := "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	never := "cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	if err := s.Put(Upload{ParticipantID: seen, Period: "2026-08-19", Tokens: 10, ClientVersion: "0.5.0"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Put(Upload{ParticipantID: other, Period: "2026-08-19", Tokens: 20, ClientVersion: "0.5.0"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Leave(seen); err != nil {
+		t.Fatal(err)
+	}
+	left := s.Rank(seen, PeriodToday, "2026-08-19", MetricTokens)
+	unknown := s.Rank(never, PeriodToday, "2026-08-19", MetricTokens)
+	if left.Status != unknown.Status || left.Rank != unknown.Rank || left.Display != unknown.Display || left.Participants != unknown.Participants {
+		t.Fatalf("leave oracle: left=%+v never=%+v", left, unknown)
+	}
+	if left.Status == StatusOptedOut || unknown.Status == StatusOptedOut {
+		t.Fatal("GET rank must not distinguish a departed UUID from a never-seen one")
+	}
+	if err := s.Leave(never); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -489,7 +520,7 @@ func TestNewParticipantIDIsRandomUUID(t *testing.T) {
 
 func TestConfigRoundTripDefaultOn(t *testing.T) {
 	dir := t.TempDir()
-	path := dir + "/community.json"
+	path := filepath.Join(dir, "community.json")
 	f, err := LoadOrCreate(path, "2026-08-19")
 	if err != nil {
 		t.Fatal(err)
@@ -558,9 +589,39 @@ func TestLeaveEndpoint(t *testing.T) {
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("leave %d", res.StatusCode)
 	}
-	st := h.Store.Rank(id, PeriodToday, "2026-08-19", MetricTokens)
-	if st.Status != StatusOptedOut {
-		t.Fatalf("%+v", st)
+	never := "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	leftRes, err := http.Get(srv.URL + "/v1/community/rank?participant_id=" + id + "&period=2026-08-19&metric=tokens")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer leftRes.Body.Close()
+	var left Standing
+	if err := json.NewDecoder(leftRes.Body).Decode(&left); err != nil {
+		t.Fatal(err)
+	}
+	unknownRes, err := http.Get(srv.URL + "/v1/community/rank?participant_id=" + never + "&period=2026-08-19&metric=tokens")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unknownRes.Body.Close()
+	var unknown Standing
+	if err := json.NewDecoder(unknownRes.Body).Decode(&unknown); err != nil {
+		t.Fatal(err)
+	}
+	if leftRes.StatusCode != unknownRes.StatusCode || left.Status != unknown.Status || left.Rank != unknown.Rank || left.Display != unknown.Display {
+		t.Fatalf("leave oracle via GET /rank: left=%d %+v never=%d %+v", leftRes.StatusCode, left, unknownRes.StatusCode, unknown)
+	}
+	if left.Status == StatusOptedOut {
+		t.Fatal("remote rank must not advertise opted_out")
+	}
+	// unknown leave is the same 204 as a real leave
+	res, err = http.Post(srv.URL+"/v1/community/leave", "application/json", bytes.NewReader([]byte(`{"participant_id":"`+never+`"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("unknown leave %d", res.StatusCode)
 	}
 }
 
