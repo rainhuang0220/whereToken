@@ -60,11 +60,18 @@ func Micro(tokens int64, usdPerM float64) int64 {
 }
 
 func FormatUSD(micro int64) string {
-	if micro < 0 {
+	neg := micro < 0
+	if neg {
 		micro = -micro
-		return fmt.Sprintf("-$%.4f", float64(micro)/1e6)
 	}
-	return fmt.Sprintf("$%.4f", float64(micro)/1e6)
+	s := fmt.Sprintf("$%.4f", float64(micro)/1e6)
+	if s == "$0.0000" {
+		return ""
+	}
+	if neg {
+		return "-" + s
+	}
+	return s
 }
 
 func Event(e event.UsageEvent) Charge {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { rankHint } from '../community'
-import { costKPI, formatCount, hitBand, rankCaption } from '../format'
+import { costHonestyNote, costKPI, formatCount, hitBand, rankCaption } from '../format'
 import type { CommunityView, RankPeriod, SliceView } from '../types'
 
 const props = defineProps<{
@@ -24,6 +24,7 @@ const standing = computed(() =>
   props.rankPeriod === 'all' ? props.community?.all : props.community?.today,
 )
 const hint = computed(() => rankHint(props.community, standing.value))
+const honesty = computed(() => costHonestyNote(props.all))
 </script>
 
 <template>
@@ -106,12 +107,7 @@ const hint = computed(() => rankHint(props.community, standing.value))
       <strong>{{ peakM || '0.00 M' }}</strong>
     </div>
     <p v-if="compareText" class="read-compare">{{ compareText }}</p>
-    <p v-if="all.cost_status === 'partial' && all.cost_usd" class="read-compare">
-      估价 {{ all.cost_usd }} · 部分无标价 · API 标价等价，不是订阅账单
-    </p>
-    <p v-else-if="all.cost_status === 'unavailable' && all.total > 0" class="read-compare">
-      估价不可用 · 不会写成 $0
-    </p>
+    <p v-if="honesty" class="read-compare">{{ honesty }}</p>
     <p v-if="hint" class="read-compare">{{ hint }}</p>
   </section>
 </template>

@@ -237,6 +237,37 @@ func TestSamePromptIDInTwoSessionsStayDistinct(t *testing.T) {
 	}
 }
 
+func TestGrokReasoningNotInTotal(t *testing.T) {
+	t.Parallel()
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "grok", Path: fixtureRoot(t)}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	var reason, parts int64
+	for _, e := range evs {
+		if e.Output != 10 && e.Output != 5 {
+			t.Fatalf("unexpected output (reasoning must not fold in) %+v", e)
+		}
+		reason += e.Reasoning
+		parts += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	}
+	if reason == 0 {
+		t.Fatal("fixture must expose reasoning tokens")
+	}
+	sum := metric.Aggregate(evs, nil)
+	if sum.All.Total() != parts {
+		t.Fatalf("total=%d want %d (no reasoning addend)", sum.All.Total(), parts)
+	}
+	if sum.All.Total() == parts+reason {
+		t.Fatal("reasoning was added into Total")
+	}
+	if sum.All.Output != 15 {
+		t.Fatalf("reasoning folded into output: %+v", sum.All)
+	}
+}
+
 func TestParseDoesNotKeepUSD(t *testing.T) {
 	t.Parallel()
 	var evs []event.UsageEvent

@@ -92,6 +92,17 @@ describe('cross table', () => {
   })
 })
 
+describe('kpi cost honesty', () => {
+  it('footnotes complete 估价 as not a bill', () => {
+    const vue = readFileSync(join(SRC, 'components/KpiRow.vue'), 'utf8')
+    expect(vue).toMatch(/costHonestyNote/)
+    expect(vue).toMatch(/honesty/)
+    const fmt = readFileSync(join(SRC, 'format.ts'), 'utf8')
+    expect(fmt).toMatch(/case 'complete'/)
+    expect(fmt).toMatch(/不是订阅账单/)
+  })
+})
+
 describe('home rail copy', () => {
   it('labels the rescan control 刷新, not 再扫', () => {
     const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')

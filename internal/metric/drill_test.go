@@ -162,11 +162,15 @@ func TestDrillDoesNotDoubleCountReasoning(t *testing.T) {
 	events := []event.UsageEvent{
 		{Source: "minimax", Vendor: "minimax", Model: "minimax-m2.5", RequestID: "1", SessionID: "s1", Miss: 100, Output: 8, Reasoning: 2},
 		{Source: "codex", Vendor: "openai", Model: "gpt-5", RequestID: "2", SessionID: "s2", Miss: 10, Output: 12, Reasoning: 2},
+		{Source: "grok", Vendor: "xai", Model: "grok-4.6-build", RequestID: "3", SessionID: "s3", Miss: 20, Output: 10, Reasoning: 4},
 	}
 	sum := Aggregate(events, nil)
-	want := int64(100 + 8 + 10 + 12)
+	want := int64(100 + 8 + 10 + 12 + 20 + 10)
 	if sum.All.Total() != want {
 		t.Fatalf("all=%d want %d (reasoning is not a sixth addend)", sum.All.Total(), want)
+	}
+	if sum.All.Output != 8+12+10 {
+		t.Fatalf("Grok/MiniMax reasoning must not fold into Output %+v", sum.All)
 	}
 	if got := sliceSum(sum.DrillAll.Models); got != want {
 		t.Fatalf("models=%d all=%d", got, want)
@@ -185,12 +189,21 @@ func TestDrillDoesNotDoubleCountReasoning(t *testing.T) {
 	if gpt == nil || gpt.Total() != 22 || gpt.Output != 12 {
 		t.Fatalf("gpt-5 %+v", gpt)
 	}
+	grok := sliceByID(sum.DrillAll.Models, "grok-4.6-build")
+	if grok == nil || grok.Total() != 30 || grok.Output != 10 {
+		t.Fatalf("grok reasoning must stay out of Total %+v", grok)
+	}
 	priced := Aggregate([]event.UsageEvent{
 		{Source: "minimax", Vendor: "minimax", Model: "minimax-m2.5", RequestID: "1", Output: 1_000_000, Reasoning: 1_000_000},
+		{Source: "grok", Vendor: "xai", Model: "grok-4.6-build", RequestID: "g", Output: 1_000_000, Reasoning: 1_000_000},
 	}, nil)
 	row := sliceByID(priced.DrillAll.Models, "minimax-m2.5")
 	if row == nil || row.Total() != 1_000_000 || row.CostMicro != 1_200_000 {
 		t.Fatalf("reasoning must not be charged again %+v", row)
+	}
+	grow := sliceByID(priced.DrillAll.Models, "grok-4.6-build")
+	if grow == nil || grow.Total() != 1_000_000 || grow.CostMicro != 6_000_000 {
+		t.Fatalf("Grok reasoning must not be charged as output %+v", grow)
 	}
 }
 

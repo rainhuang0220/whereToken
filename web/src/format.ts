@@ -105,6 +105,20 @@ export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'tota
   return '—'
 }
 
+export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
+  const usd = usableCostUSD(view.cost_usd)
+  switch (view.cost_status) {
+    case 'complete':
+      return usd ? `估价 ${usd} · API 标价等价，不是订阅账单` : ''
+    case 'partial':
+      return usd ? `估价 ${usd} · 部分无标价 · API 标价等价，不是订阅账单` : ''
+    case 'unavailable':
+      return view.total > 0 ? '估价不可用 · 不会写成 $0' : ''
+    default:
+      return ''
+  }
+}
+
 export function rankCaption(st?: { status?: string; display?: string; rank?: number }): string {
   if (st?.rank && st.rank > 0 && st.display && !st.display.includes('#0')) {
     return st.display

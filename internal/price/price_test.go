@@ -12,11 +12,11 @@ func TestUnavailableNeverFormatsAsZeroUSD(t *testing.T) {
 	if c.OK {
 		t.Fatal("moonshot must stay unpriced")
 	}
-	if FormatUSD(c.Micro) == "$0.0000" && c.OK {
-		t.Fatal("priced zero is only for known models")
+	if FormatUSD(c.Micro) == "$0.0000" {
+		t.Fatal("unavailable must not format as $0.0000")
 	}
-	if c.Micro != 0 && c.OK {
-		t.Fatalf("%+v", c)
+	if FormatUSD(c.Micro) != "" {
+		t.Fatalf("unavailable format %q", FormatUSD(c.Micro))
 	}
 }
 
@@ -84,6 +84,20 @@ func TestReasoningNotChargedTwice(t *testing.T) {
 	})
 	if !c.OK || c.Micro != 10_000_000 {
 		t.Fatalf("output-only $10, got %+v", c)
+	}
+	grok := Event(event.UsageEvent{
+		Vendor: "xai", Model: "grok-4.6-build",
+		Output: 1_000_000, Reasoning: 1_000_000,
+	})
+	if !grok.OK || grok.Micro != 6_000_000 {
+		t.Fatalf("Grok reasoning is not a second output line %+v", grok)
+	}
+	mm := Event(event.UsageEvent{
+		Vendor: "minimax", Model: "MiniMax-M2.5",
+		Output: 1_000_000, Reasoning: 1_000_000,
+	})
+	if !mm.OK || mm.Micro != 1_200_000 {
+		t.Fatalf("MiniMax reasoning is not a second output line %+v", mm)
 	}
 }
 
@@ -217,6 +231,12 @@ func TestStatus(t *testing.T) {
 func TestFormatUSD(t *testing.T) {
 	if FormatUSD(36_750_000) != "$36.7500" {
 		t.Fatalf("%s", FormatUSD(36_750_000))
+	}
+	if FormatUSD(0) != "" {
+		t.Fatalf("zero %q", FormatUSD(0))
+	}
+	if FormatUSD(1) != "" {
+		t.Fatalf("rounds to $0.0000 must omit %q", FormatUSD(1))
 	}
 }
 

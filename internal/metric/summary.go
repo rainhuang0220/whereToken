@@ -135,11 +135,7 @@ func formatCostPart(micro int64) string {
 	if micro <= 0 {
 		return ""
 	}
-	s := price.FormatUSD(micro)
-	if s == "$0.0000" || s == "-$0.0000" {
-		return ""
-	}
-	return s
+	return price.FormatUSD(micro)
 }
 
 // CostSlice merges and prices events without building calendar or drill.

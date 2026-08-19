@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, rankCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, rankCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -91,6 +91,19 @@ describe('costKPI', () => {
   it('uses em dash when the estimate is unavailable', () => {
     expect(costKPI({ cost_usd: '$12.0000', cost_status: 'complete', total: 10 })).toBe('$12.0000')
     expect(costKPI({ cost_status: 'unavailable', total: 10 })).toBe('—')
+  })
+})
+
+describe('costHonestyNote', () => {
+  it('footnotes complete 估价 as not a bill', () => {
+    expect(costHonestyNote({ cost_usd: '$12.0000', cost_status: 'complete', total: 10 })).toBe(
+      '估价 $12.0000 · API 标价等价，不是订阅账单',
+    )
+    expect(costHonestyNote({ cost_usd: '$1.0000', cost_status: 'partial', total: 10 })).toBe(
+      '估价 $1.0000 · 部分无标价 · API 标价等价，不是订阅账单',
+    )
+    expect(costHonestyNote({ cost_status: 'unavailable', total: 10 })).toBe('估价不可用 · 不会写成 $0')
+    expect(costHonestyNote({ cost_usd: '$0.0000', cost_status: 'complete', total: 10 })).toBe('')
   })
 })
 

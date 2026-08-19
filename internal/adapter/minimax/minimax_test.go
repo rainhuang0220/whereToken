@@ -130,6 +130,14 @@ func TestDiscoverAndParseLedger(t *testing.T) {
 	if evs[1].Reasoning != 2 || evs[1].Output != 8 {
 		t.Fatalf("reasoning must not fold into output %+v", evs[1])
 	}
+	sum := metric.Aggregate(evs, turns)
+	if sum.All.Output != 21 {
+		t.Fatalf("aggregate output folded reasoning: %+v", sum.All)
+	}
+	want := int64(100 + 50 + 5 + 10 + 20 + 80 + 8 + 7 + 1 + 3)
+	if sum.All.Total() != want {
+		t.Fatalf("reasoning in total: got %d want %d", sum.All.Total(), want)
+	}
 	if evs[2].Vendor != "deepseek" {
 		t.Fatalf("deepseek vendor %+v", evs[2])
 	}
