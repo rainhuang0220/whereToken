@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Community Rank client accepts only http(s) URLs, refuses redirects, and rate-limits the fake rank server by connection IP
+- Drill sessions fold into `(其余)` after 40 rows; `--offline` also skips community upload
 - Vendor-axis workspace drill keeps user turns; 用量说明 is Chinese and notes it is window-all, not the kiln axis
 - Unconfigured Community Rank no longer looks opted-in on the dashboard
 - Hyphenated Anthropic ids (`claude-opus-4-6`) use the current Opus card, not retired Opus 4

@@ -68,6 +68,25 @@ func TestCommunityAPILocalOnlyAndNoEnumerate(t *testing.T) {
 	}
 }
 
+func TestCommunityRejectsForeignReferer(t *testing.T) {
+	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
+	t.Cleanup(srv.Close)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Referer", "https://evil.example/page")
+	res, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("foreign referer %d", res.StatusCode)
+	}
+}
+
 func TestCommunityRejectsNonLocalHost(t *testing.T) {
 	srv := httptest.NewServer(NewMux(testhome.New(t.TempDir())))
 	t.Cleanup(srv.Close)

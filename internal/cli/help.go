@@ -48,7 +48,7 @@ FLAGS
   --ascii              ASCII box drawing (also auto on old Windows consoles)
   --no-color           no ANSI (NO_COLOR in the environment does the same)
   -q, --quiet          no scan-progress lines on stderr
-  --offline            local ledgers only; skip Cursor/Trae APIs (table and serve)
+  --offline            local ledgers only; skip Cursor/Trae APIs and community upload
   --rank today|all     community rank period in the fifth KPI column (default today)
   --no-community       do not upload or fetch community rank
   --home DIR           fake home directory (tests)
@@ -62,7 +62,7 @@ ENV
   WHERETOKEN_OFFLINE=1 same as --offline
   WHERETOKEN_COMMUNITY=off  same as --no-community
   WHERETOKEN_COMMUNITY_URL  rank service (unset = no upload; no public cluster)
-  WHERETOKEN_COMMUNITY_FILE override ~/.config/wheretoken/community.json
+  WHERETOKEN_COMMUNITY_FILE override community.json (Unix ~/.config/wheretoken, Windows %APPDATA%\\whereToken)
   WHERETOKEN_INDEX     path to the local scan cache (default ~/.cache/wheretoken/index.v1.db)
   WHERETOKEN_NO_INDEX=1  skip the scan cache
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)

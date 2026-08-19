@@ -11,12 +11,14 @@ const (
 	unlabeledModel     = "(未标模型)"
 	unlabeledWorkspace = "(未知工作区)"
 	unlabeledSession   = "(无会话)"
+	remainderSession   = "(其余)"
+	maxDrillSessions   = 40
 )
 
 // UnlabeledDrillID reports a fallback bucket (no model / workspace / session
 // on the event), not a named row. Insights must not call it the "largest".
 func UnlabeledDrillID(id string) bool {
-	return id == unlabeledModel || id == unlabeledWorkspace || id == unlabeledSession
+	return id == unlabeledModel || id == unlabeledWorkspace || id == unlabeledSession || id == remainderSession
 }
 
 type SessionSlice struct {
@@ -230,6 +232,7 @@ func flattenPack(models, workspaces map[string]*Slice, sessions map[string]*Sess
 	sort.Slice(p.Models, func(i, j int) bool { return p.Models[i].Total() > p.Models[j].Total() })
 	sort.Slice(p.Workspaces, func(i, j int) bool { return p.Workspaces[i].Total() > p.Workspaces[j].Total() })
 	sort.Slice(p.Sessions, func(i, j int) bool { return p.Sessions[i].Total() > p.Sessions[j].Total() })
+	p.Sessions = foldSessions(p.Sessions)
 	if p.Models == nil {
 		p.Models = []Slice{}
 	}
@@ -240,4 +243,30 @@ func flattenPack(models, workspaces map[string]*Slice, sessions map[string]*Sess
 		p.Sessions = []SessionSlice{}
 	}
 	return p
+}
+
+func foldSessions(in []SessionSlice) []SessionSlice {
+	if len(in) <= maxDrillSessions {
+		return in
+	}
+	keep := append([]SessionSlice(nil), in[:maxDrillSessions-1]...)
+	rest := SessionSlice{Slice: Slice{ID: remainderSession, Label: remainderSession}}
+	for _, s := range in[maxDrillSessions-1:] {
+		rest.Miss += s.Miss
+		rest.CacheRead += s.CacheRead
+		rest.CacheCreate += s.CacheCreate
+		rest.Output += s.Output
+		rest.Requests += s.Requests
+		rest.UserTurns += s.UserTurns
+		rest.Records += s.Records
+		rest.CostMicro += s.CostMicro
+		rest.MissCostMicro += s.MissCostMicro
+		rest.CacheReadCostMicro += s.CacheReadCostMicro
+		rest.CacheCreateCostMicro += s.CacheCreateCostMicro
+		rest.OutputCostMicro += s.OutputCostMicro
+		rest.PricedTokens += s.PricedTokens
+		rest.UnpricedTokens += s.UnpricedTokens
+	}
+	finishCost(&rest.Slice)
+	return append(keep, rest)
 }

@@ -2,6 +2,7 @@ package metric
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -72,6 +73,30 @@ func TestVendorDrillSessionsKeepUserTurns(t *testing.T) {
 	pack := sum.DrillByVendor["anthropic"]
 	if len(pack.Sessions) != 1 || pack.Sessions[0].UserTurns != 1 {
 		t.Fatalf("vendor session turns %+v", pack.Sessions)
+	}
+}
+
+func TestFoldSessionsKeepsTokenSum(t *testing.T) {
+	var events []event.UsageEvent
+	var want int64
+	for i := 0; i < 50; i++ {
+		n := int64(i + 1)
+		want += n
+		events = append(events, event.UsageEvent{
+			Source: "claude", Vendor: "anthropic", Model: "opus",
+			SessionID: fmt.Sprintf("s%02d", i), RequestID: fmt.Sprintf("r%02d", i), Miss: n,
+		})
+	}
+	sum := Aggregate(events, nil)
+	if got := sessionSum(sum.DrillAll.Sessions); got != want {
+		t.Fatalf("folded sessions=%d want=%d n=%d", got, want, len(sum.DrillAll.Sessions))
+	}
+	if len(sum.DrillAll.Sessions) != maxDrillSessions {
+		t.Fatalf("sessions=%d want %d", len(sum.DrillAll.Sessions), maxDrillSessions)
+	}
+	last := sum.DrillAll.Sessions[len(sum.DrillAll.Sessions)-1]
+	if last.ID != remainderSession || last.Total() <= 0 {
+		t.Fatalf("remainder %+v", last)
 	}
 }
 

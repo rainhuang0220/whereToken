@@ -38,7 +38,8 @@ wheretoken community off
 `--no-community` and `WHERETOKEN_COMMUNITY=off` skip upload and fetch for
 that process. `--offline` does not upload.
 
-The local file is `~/.config/wheretoken/community.json` (override with
+The local file is `~/.config/wheretoken/community.json` on Unix and
+`%APPDATA%\whereToken\community.json` on Windows (override with
 `WHERETOKEN_COMMUNITY_FILE`). It is not stored in the usage index.
 
 ## KPI
