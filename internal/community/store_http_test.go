@@ -118,27 +118,30 @@ func TestStoreZeroTokensNotRanked(t *testing.T) {
 func TestStoreCostScoreRoundsAndDropsDust(t *testing.T) {
 	s := NewStore(1)
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
-	dust := 0.0000004 // 0.4 µUSD — truncation and rounding both skip
+	dust := 0.0000004 // 0.4 µUSD — formats as $0.0000
 	if err := s.Put(Upload{
 		ParticipantID: id, Period: "2026-08-19", Tokens: 10,
 		EstimatedCostUSD: &dust, CostStatus: price.StatusComplete, ClientVersion: "0.5.0",
+	}); err == nil {
+		t.Fatal("dust cost must not upload")
+	}
+	tenth := 0.1 // 100000 µUSD — 0.1 must not become 99999
+	if err := s.Put(Upload{
+		ParticipantID: id, Period: "2026-08-19", Tokens: 10,
+		EstimatedCostUSD: &tenth, CostStatus: price.StatusComplete, ClientVersion: "0.5.0",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	st := s.Rank(id, PeriodToday, "2026-08-19", MetricCost)
-	if st.Rank != 0 || st.Display != "" {
-		t.Fatalf("dust cost must not be a podium: %+v", st)
-	}
-	half := 0.0000015 // 1.5 µUSD rounds to 2
-	if err := s.Put(Upload{
-		ParticipantID: id, Period: "2026-08-19", Tokens: 10,
-		EstimatedCostUSD: &half, CostStatus: price.StatusComplete, ClientVersion: "0.5.0",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	st = s.Rank(id, PeriodToday, "2026-08-19", MetricCost)
 	if st.Status != StatusOK || st.Rank != 1 {
-		t.Fatalf("rounded micro must rank: %+v", st)
+		t.Fatalf("0.1 USD must rank: %+v", st)
+	}
+	s.mu.Lock()
+	row := s.days[id]["2026-08-19"]
+	s.mu.Unlock()
+	micro, ok := rowValue(row, MetricCost)
+	if !ok || micro != 100_000 {
+		t.Fatalf("0.1 USD score=%d ok=%v want 100000", micro, ok)
 	}
 }
 
@@ -301,6 +304,16 @@ func TestHandlerUnavailableCostOmitsUSD(t *testing.T) {
 		{
 			name: "explicit zero rejected",
 			body: fmt.Sprintf(`{"participant_id":%q,"period":"2026-08-19","tokens":10,"cost_status":"unavailable","estimated_cost_usd":0,"client_version":"0.5.0"}`, id),
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "complete zero rejected",
+			body: fmt.Sprintf(`{"participant_id":%q,"period":"2026-08-19","tokens":10,"cost_status":"complete","estimated_cost_usd":0,"client_version":"0.5.0"}`, id),
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "complete dust rejected",
+			body: fmt.Sprintf(`{"participant_id":%q,"period":"2026-08-19","tokens":10,"cost_status":"complete","estimated_cost_usd":0.00004,"client_version":"0.5.0"}`, id),
 			want: http.StatusBadRequest,
 		},
 	}

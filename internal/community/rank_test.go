@@ -216,6 +216,12 @@ func TestSanitizeStandingDropsZeroPodium(t *testing.T) {
 			display: "#4 / 20",
 			status:  StatusOK,
 		},
+		{
+			name:    "insufficient podium dropped",
+			in:      Standing{Status: StatusInsufficientParticipants, Rank: 1, Participants: 3, Display: "#1 / 3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

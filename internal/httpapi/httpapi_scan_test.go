@@ -100,6 +100,26 @@ func TestGetSummarySinceFiltersLastScan(t *testing.T) {
 	}
 }
 
+func TestGetSummarySinceTodayIs200(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	dir := writeKimiHome(t)
+	srv := httptest.NewServer(NewMux(testhome.New(dir)))
+	t.Cleanup(srv.Close)
+	postScanJSON(t, srv)
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/summary?since=today", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("dashboard 今日 must not 400: status=%d", resp.StatusCode)
+	}
+}
+
 func TestPostScanStreamsProgressThenComplete(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	dir := writeKimiHome(t)

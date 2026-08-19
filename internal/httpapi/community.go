@@ -119,8 +119,8 @@ func (s *server) getCommunity(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(communityJSON{
 			Enabled: snap.Enabled,
 			Note:    snap.Note,
-			Today:   snap.Today,
-			All:     snap.All,
+			Today:   community.SanitizeStanding(snap.Today),
+			All:     community.SanitizeStanding(snap.All),
 		})
 		return
 	}

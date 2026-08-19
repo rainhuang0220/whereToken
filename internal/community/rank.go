@@ -168,6 +168,15 @@ func Caption(st Standing) string {
 // SanitizeStanding drops a zero or missing rank so callers never print
 // "#0". Unknown is an em dash via Caption, not a podium place.
 func SanitizeStanding(st Standing) Standing {
+	switch st.Status {
+	case StatusInsufficientParticipants, StatusNotRanked, StatusUnavailable,
+		StatusOptedOut, StatusOffline, StatusDisabled, StatusNoUsage,
+		StatusServiceUnconfigured, StatusNetworkError:
+		st.Rank = 0
+		st.Display = ""
+		st.Percentile = nil
+		st.TopShare = nil
+	}
 	if st.Rank <= 0 {
 		st.Rank = 0
 		st.Display = ""

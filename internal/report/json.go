@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/community"
 )
@@ -63,7 +64,7 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		Vendors:     jsonRows(snap.Vendors, false),
 		Notes:       snap.Notes,
 		CostStatus:  snap.CostStatus,
-		CostUSD:     snap.CostUSD,
+		CostUSD:     omitZeroUSD(snap.CostUSD),
 	}
 	if snap.CostStatus == "unavailable" {
 		out.CostUSD = ""
@@ -96,6 +97,16 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 	return enc.Encode(out)
 }
 
+// omitZeroUSD drops a rounding-to-zero estimate. Unknown is omitted, never $0.
+func omitZeroUSD(usd string) string {
+	switch strings.TrimSpace(usd) {
+	case "", "$0.0000", "-$0.0000", "$0.00", "-$0.00", "$0", "-$0":
+		return ""
+	default:
+		return usd
+	}
+}
+
 func jsonRows(rows []Row, turns bool) []jsonRow {
 	if rows == nil {
 		return []jsonRow{}
@@ -111,7 +122,7 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			HitRateText: r.HitRateText,
 			Requests:    r.Requests,
 			CostStatus:  r.CostStatus,
-			CostUSD:     r.CostUSD,
+			CostUSD:     omitZeroUSD(r.CostUSD),
 		}
 		if r.CostStatus == "unavailable" {
 			item.CostUSD = ""

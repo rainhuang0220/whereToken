@@ -381,6 +381,36 @@ func TestWriteJSONCommunitySanitizesZeroRank(t *testing.T) {
 	}
 }
 
+func TestWriteJSONOmitsRoundingToZeroCost(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap.CostStatus = "complete"
+	snap.CostUSD = "$0.0000"
+	snap.Tools = []Row{{
+		ID: "kimi", Label: "Kimi Code", Total: 10, TotalM: "0.00 M",
+		HitRateText: "—", CostStatus: "complete", CostUSD: "$0.0000",
+	}}
+	got := writeJSONMap(t, snap)
+	if _, ok := got.obj["cost_usd"]; ok {
+		t.Fatalf("complete $0.0000 must omit cost_usd: %s", got.raw)
+	}
+	if strings.Contains(got.raw, "$0.0000") || strings.Contains(got.raw, `"$0"`) {
+		t.Fatalf("zero estimate leaked: %s", got.raw)
+	}
+	tools := got.obj["tools"].([]any)
+	row := tools[0].(map[string]any)
+	if _, ok := row["cost_usd"]; ok {
+		t.Fatalf("row cost_usd must be omitted: %s", got.raw)
+	}
+	if row["cost_status"] != "complete" {
+		t.Fatalf("status=%v", row["cost_status"])
+	}
+}
+
 type publishedCLIJSONSchema struct {
 	Required   []string       `json:"required"`
 	Properties map[string]any `json:"properties"`

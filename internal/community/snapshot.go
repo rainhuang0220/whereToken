@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -141,6 +142,9 @@ func ValidateUpload(u Upload) error {
 		if *u.EstimatedCostUSD < 0 || *u.EstimatedCostUSD > MaxCostUSD {
 			return fmt.Errorf("estimated_cost_usd out of range")
 		}
+		if !displayableCostUSD(*u.EstimatedCostUSD) {
+			return fmt.Errorf("estimated_cost_usd must omit rounding-to-zero")
+		}
 	}
 	if u.CostStatus == price.StatusUnavailable && u.EstimatedCostUSD != nil {
 		return fmt.Errorf("unavailable cost must omit estimated_cost_usd")
@@ -215,8 +219,19 @@ func MakeUpload(participantID, version string, agg LocalAgg) (Upload, error) {
 		CostStatus:       agg.TodayCostStatus,
 		ClientVersion:    version,
 	}
+	if u.EstimatedCostUSD != nil && !displayableCostUSD(*u.EstimatedCostUSD) {
+		u.EstimatedCostUSD = nil
+	}
 	if err := ValidateUpload(u); err != nil {
 		return Upload{}, err
 	}
 	return u, nil
+}
+
+func displayableCostUSD(usd float64) bool {
+	if usd <= 0 {
+		return false
+	}
+	micro := int64(math.Round(usd * 1e6))
+	return price.FormatUSD(micro) != ""
 }

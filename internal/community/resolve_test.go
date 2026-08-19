@@ -104,3 +104,12 @@ func TestConfigPathUnixVsWindowsLayout(t *testing.T) {
 		t.Fatalf("ConfigPath=%q want %q (unix XDGConfig=%q windows AppData=%q)", got, want, unix, win)
 	}
 }
+
+func TestConfigPathHonorsCommunityFileEnv(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	custom := filepath.Join(t.TempDir(), "override.json")
+	t.Setenv("WHERETOKEN_COMMUNITY_FILE", custom)
+	if got := ConfigPath(home); got != custom {
+		t.Fatalf("ConfigPath=%q want override %q", got, custom)
+	}
+}

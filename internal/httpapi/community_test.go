@@ -110,6 +110,46 @@ func TestCommunityRejectsNonLocalHost(t *testing.T) {
 	}
 }
 
+func TestCommunityAPISanitizesZeroRank(t *testing.T) {
+	s := &server{home: testhome.New(t.TempDir())}
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.Today.Rank = 0
+	view.Today.Display = "#0 / 20"
+	view.All = view.Today
+	view.All.Period = community.PeriodAll
+	s.last = &scan.Result{Community: &view, Errors: []string{}}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/community", s.getCommunity)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	res, err := http.Get(srv.URL + "/api/community")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var body map[string]any
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	today, ok := body["today"].(map[string]any)
+	if !ok {
+		t.Fatalf("today: %v", body)
+	}
+	if today["status"] == "ok" {
+		t.Fatalf("zero podium must not stay ok: %v", body)
+	}
+	if _, has := today["rank"]; has {
+		t.Fatalf("rank must be omitted: %v", body)
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "#0") {
+		t.Fatalf("#0 leaked: %s", raw)
+	}
+}
+
 func TestCommunityDisableKeepsOnWhenLeaveFails(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
 	dir := t.TempDir()

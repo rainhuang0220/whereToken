@@ -27,6 +27,27 @@ func TestParseWindowSinceSevenDays(t *testing.T) {
 	}
 }
 
+func TestParseSinceQueryTodayIsLocalCalendarDay(t *testing.T) {
+	loc := time.FixedZone("PDT", -7*3600)
+	now := time.Date(2026, 8, 19, 1, 0, 0, 0, loc)
+	w, err := ParseSinceQuery("today", now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.From.IsZero() || w.To.IsZero() {
+		t.Fatalf("today must be a bounded local day: %+v", w)
+	}
+	if w.From.In(loc).Format("2006-01-02") != "2026-08-19" {
+		t.Fatalf("from=%s", w.From)
+	}
+	if w.Contains(time.Date(2026, 8, 18, 23, 0, 0, 0, loc), loc) {
+		t.Fatal("yesterday must be outside today")
+	}
+	if !w.Contains(now, loc) {
+		t.Fatal("now must be inside today")
+	}
+}
+
 func TestParseSinceErrorMentionsNd(t *testing.T) {
 	_, err := ParseSince("nope")
 	if err == nil || !strings.Contains(err.Error(), "Nd") {

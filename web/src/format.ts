@@ -120,6 +120,9 @@ export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status'
 }
 
 export function rankCaption(st?: { status?: string; display?: string; rank?: number }): string {
+  if (st?.status && st.status !== 'ok') {
+    return '—'
+  }
   if (st?.rank && st.rank > 0 && st.display && !st.display.includes('#0')) {
     return st.display
   }

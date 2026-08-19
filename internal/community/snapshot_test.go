@@ -235,6 +235,31 @@ func TestMakeUploadNeverCarriesEvents(t *testing.T) {
 	}
 }
 
+func TestMakeUploadOmitsDustCost(t *testing.T) {
+	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	u, err := MakeUpload(id, "0.5.0", LocalAgg{
+		LocalDate: "2026-08-19", UTCOffsetMin: 480, TodayTokens: 10,
+		TodayCostUSD: ptrFloat(0.00004), TodayCostStatus: price.StatusComplete,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var obj map[string]any
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := obj["estimated_cost_usd"]; ok {
+		t.Fatalf("dust complete must omit estimated_cost_usd: %s", raw)
+	}
+	if u.EstimatedCostUSD != nil {
+		t.Fatalf("usd=%v", *u.EstimatedCostUSD)
+	}
+}
+
 func TestUnavailableCostNeverBecomesZeroInUpload(t *testing.T) {
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 	tests := []struct {
@@ -251,12 +276,13 @@ func TestUnavailableCostNeverBecomesZeroInUpload(t *testing.T) {
 			wantOK: true,
 		},
 		{
-			name: "unavailable with explicit zero rejected",
+			name: "unavailable with explicit zero omitted",
 			agg: LocalAgg{
 				LocalDate: "2026-08-19", UTCOffsetMin: 480, TodayTokens: 1000,
 				TodayCostUSD:    ptrFloat(0),
 				TodayCostStatus: price.StatusUnavailable,
 			},
+			wantOK: true,
 		},
 	}
 	for _, tc := range tests {
@@ -293,6 +319,13 @@ func TestUnavailableCostNeverBecomesZeroInUpload(t *testing.T) {
 				t.Fatalf("decoded usd=%v", got.EstimatedCostUSD)
 			}
 		})
+	}
+}
+
+func TestDecodeUploadRejectsZeroCost(t *testing.T) {
+	raw := `{"participant_id":"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee","period":"2026-08-19","tokens":10,"cost_status":"complete","estimated_cost_usd":0,"client_version":"0.5.0"}`
+	if _, err := DecodeUpload([]byte(raw)); err == nil {
+		t.Fatal("complete $0 must not decode")
 	}
 }
 

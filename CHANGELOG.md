@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `--json` and `/api/community` omit `$0.0000` and sanitize `#0`. Rank upload rejects an `estimated_cost_usd` that formats as `$0.0000`. Non-ok standing never keeps a podium. Dashboard `?since=today` is the local calendar day
 - Community Rank `community.json` tests use testhome XDGConfig vs AppData (Unix and Windows); the man page names both defaults
 - Community Rank leave of an unknown UUID matches never-seen (no `opted_out` oracle). Empty `ipHit` keys are evicted
 - GET `/rank` after leave matches a never-seen UUID. Unconfigured `/api/community` stays disabled

@@ -84,6 +84,7 @@ describe('rankCaption', () => {
     expect(rankCaption({ status: 'unavailable' })).toBe('—')
     expect(rankCaption({ status: 'ok', rank: 0, display: '#0 / 20' })).toBe('—')
     expect(rankCaption({ status: 'ok', rank: 37, display: '#37 / 842' })).toBe('#37 / 842')
+    expect(rankCaption({ status: 'insufficient_participants', rank: 1, display: '#1 / 3', participants: 3 })).toBe('—')
   })
 })
 
