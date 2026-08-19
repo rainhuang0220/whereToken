@@ -169,10 +169,15 @@ read, not a single context window.
 
 ### Location
 
-`~/.openclaw/agents/<agent>/sessions/<session>.jsonl`.
+`~/.openclaw/agents/<agent>/sessions/<session>.jsonl` (archive / leftover
+transcripts). The live runtime after 2026.7.2 is
+`~/.openclaw/agents/<agent>/agent/openclaw-agent.sqlite` plus
+`state/openclaw.sqlite`. Those files mix session JSON with auth and
+transcripts; whereToken does **not** open them.
 
 Do not read `*.trajectory.jsonl`, `skills-prompts/`, `credentials/`,
-`identity/`, `openclaw.json`, or workspace trees. Never map `usage.cost`.
+`identity/`, `openclaw.json`, workspace trees, or the per-agent `agent/`
+directory. Never map `usage.cost`.
 
 ### Parser
 

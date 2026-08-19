@@ -101,7 +101,12 @@ func EnvDisabled(getenv func(string) string) bool {
 		return false
 	}
 	v := strings.ToLower(strings.TrimSpace(getenv("WHERETOKEN_COMMUNITY")))
-	return v == "0" || v == "false" || v == "off"
+	if v == "0" || v == "false" || v == "off" {
+		return true
+	}
+	// DO_NOT_TRACK=1 (true/on/yes) opts out; empty and 0 do not.
+	d := strings.ToLower(strings.TrimSpace(getenv("DO_NOT_TRACK")))
+	return d == "1" || d == "true" || d == "on" || d == "yes"
 }
 
 func EnvURL(getenv func(string) string) string {

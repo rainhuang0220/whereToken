@@ -2,6 +2,8 @@ package cli
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -33,6 +35,27 @@ func TestFormatCommunityDoctorStates(t *testing.T) {
 	flagOff := FormatCommunityDoctor(home, url, true)
 	if !strings.Contains(flagOff, "Off this run") || strings.Contains(flagOff, "On ·") {
 		t.Fatalf(" --no-community / --offline must not say On:\n%s", flagOff)
+	}
+	envOff := FormatCommunityDoctor(home, func(k string) string {
+		if k == "WHERETOKEN_COMMUNITY" {
+			return "off"
+		}
+		return url(k)
+	}, false)
+	if !strings.Contains(envOff, "Off this run") || strings.Contains(envOff, "On ·") {
+		t.Fatalf("WHERETOKEN_COMMUNITY=off must say off:\n%s", envOff)
+	}
+	dnt := FormatCommunityDoctor(home, func(k string) string {
+		if k == "DO_NOT_TRACK" {
+			return "1"
+		}
+		return url(k)
+	}, false)
+	if !strings.Contains(dnt, "Off this run") || strings.Contains(dnt, "On ·") {
+		t.Fatalf("DO_NOT_TRACK=1 must say off:\n%s", dnt)
+	}
+	if strings.Count(dnt, "DO_NOT_TRACK") != 1 {
+		t.Fatalf("doctor must mention DO_NOT_TRACK once:\n%s", dnt)
 	}
 }
 
@@ -195,5 +218,26 @@ func TestHelpDocumentsUnixAndWindowsCommunityFile(t *testing.T) {
 	}
 	if !strings.Contains(h, `%APPDATA%`) {
 		t.Fatal("help must name the Windows community.json directory")
+	}
+}
+
+func TestDoNotTrackMentionedOnceInDoctorHelpDocs(t *testing.T) {
+	h := HelpText()
+	if strings.Count(h, "DO_NOT_TRACK") != 1 {
+		t.Fatalf("help must mention DO_NOT_TRACK once, got %d", strings.Count(h, "DO_NOT_TRACK"))
+	}
+	if !strings.Contains(h, "WHERETOKEN_COMMUNITY=off") {
+		t.Fatal("WHERETOKEN_COMMUNITY=off stays the primary env flag")
+	}
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "docs", "community.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(string(body), "DO_NOT_TRACK"); n != 1 {
+		t.Fatalf("docs/community.md must mention DO_NOT_TRACK once, got %d", n)
 	}
 }

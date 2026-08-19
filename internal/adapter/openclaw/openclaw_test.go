@@ -217,6 +217,30 @@ func TestParseLiveHomeLayout(t *testing.T) {
 	}
 }
 
+func TestParseSkipsRuntimeSQLite(t *testing.T) {
+	dir := t.TempDir()
+	writeSession(t, dir, "keep.jsonl", `{"type":"message","timestamp":"2026-08-19T11:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"r1","usage":{"input":4,"output":1},"timestamp":"2026-08-19T11:00:00Z"}}`+"\n")
+	agentDir := filepath.Join(dir, ".openclaw", "agents", "main", "agent")
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Fake ledger-shaped JSONL under the runtime DB dir. Must not be parsed.
+	poison := `{"type":"message","timestamp":"2026-08-19T11:00:01Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"secret-row","usage":{"input":99999,"output":1},"timestamp":"2026-08-19T11:00:01Z"}}` + "\n"
+	for _, name := range []string{"openclaw-agent.sqlite", "usage.jsonl"} {
+		if err := os.WriteFile(filepath.Join(agentDir, name), []byte(poison), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var evs []event.UsageEvent
+	roots := (Adapter{}).Discover(testhome.New(dir))
+	if err := (Adapter{}).Parse(roots[0], func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Miss != 4 || evs[0].RequestID == "secret-row" {
+		t.Fatalf("runtime sqlite/auth dir leaked into usage: %+v", evs)
+	}
+}
+
 func TestDiscoverEmpty(t *testing.T) {
 	if roots := (Adapter{}).Discover(testhome.New(t.TempDir())); len(roots) != 0 {
 		t.Fatalf("%+v", roots)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `DO_NOT_TRACK=1` (also true/on/yes) turns Community Rank off the same way as `WHERETOKEN_COMMUNITY=off`; empty and `0` do not
+- OpenClaw skips the per-agent runtime SQLite dir (`agent/`); JSONL archives still count
 - SanitizeStanding and dashboard rankCaption hide `#n / m` when m < 20 so a remote payload cannot show a three-person podium
 - xAI `grok-4` / `grok-4-fast` / `grok-4-latest` stay unpriced; prefix match treats `-`, `.`, or a following digit as a different model id
 - Community Rank leave drops the participant's rate-limit hits and does not write an `opted_out` tombstone. Local leave invalidates the rank cache

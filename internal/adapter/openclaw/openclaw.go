@@ -18,7 +18,8 @@ import (
 // Adapter reads OpenClaw session JSONL usage.
 //
 // Only agents/*/sessions/*.jsonl (not *.trajectory.jsonl). Login files,
-// credentials, workspace trees, and message bodies are ignored.
+// credentials, workspace trees, the per-agent runtime SQLite dir (agent/),
+// and message bodies are ignored.
 type Adapter struct{}
 
 func (Adapter) ID() string { return "openclaw" }
@@ -40,7 +41,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 		}
 		if d.IsDir() {
 			switch d.Name() {
-			case "credentials", "workspace", "skills-prompts", "plugins":
+			case "credentials", "workspace", "skills-prompts", "plugins", "agent":
 				return fs.SkipDir
 			}
 			return nil

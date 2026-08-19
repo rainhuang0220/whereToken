@@ -38,7 +38,7 @@ wheretoken community off
 ```
 
 `--no-community` and `WHERETOKEN_COMMUNITY=off` skip upload and fetch for
-that process. `--offline` does not upload.
+that process (`DO_NOT_TRACK=1` does the same). `--offline` does not upload.
 
 The local file is `~/.config/wheretoken/community.json` on Unix and
 `%APPDATA%\whereToken\community.json` on Windows (override with

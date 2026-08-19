@@ -61,7 +61,7 @@ ENV
   WHERETOKEN_ASCII=1   ASCII box drawing
   WHERETOKEN_HOME      override home (same idea as --home)
   WHERETOKEN_OFFLINE=1 same as --offline
-  WHERETOKEN_COMMUNITY=off  same as --no-community
+  WHERETOKEN_COMMUNITY=off  same as --no-community (also DO_NOT_TRACK=1)
   WHERETOKEN_COMMUNITY_URL  rank service (unset = no upload; no public cluster)
   WHERETOKEN_COMMUNITY_FILE override community.json (Unix ~/.config/wheretoken, Windows %APPDATA%\\whereToken)
   WHERETOKEN_INDEX     path to the local scan cache (default ~/.cache/wheretoken/index.v1.db)
