@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -84,6 +85,58 @@ func TestNeverReadsSettingsJSON(t *testing.T) {
 	}
 	if len(evs) != 1 {
 		t.Fatalf("events=%d", len(evs))
+	}
+}
+
+func TestDiscoverSkipsFeedbackBundles(t *testing.T) {
+	dir := t.TempDir()
+	proj := filepath.Join(dir, ".claude", "projects", "x")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(`{"type":"assistant","requestId":"ok","message":{"model":"claude-opus-4.6","usage":{"input_tokens":1,"output_tokens":1}}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fb := filepath.Join(dir, ".claude", "feedback-bundles")
+	if err := os.MkdirAll(fb, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fb, "dump.jsonl"), []byte(`{"type":"assistant","requestId":"bundle","message":{"model":"claude-opus-4.6","usage":{"input_tokens":99999,"output_tokens":1}}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	roots := (Adapter{}).Discover(testhome.New(dir))
+	if len(roots) != 1 || !strings.Contains(roots[0].Path, "projects") || strings.Contains(roots[0].Path, "feedback-bundles") {
+		t.Fatalf("discover must stay under projects: %+v", roots)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(roots[0], func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range evs {
+		if e.RequestID == "bundle" || e.Miss == 99999 {
+			t.Fatal("parsed feedback-bundles")
+		}
+	}
+}
+
+func TestParseSkipsNestedFeedbackBundles(t *testing.T) {
+	dir := t.TempDir()
+	fb := filepath.Join(dir, "projects", "x", "feedback-bundles")
+	if err := os.MkdirAll(fb, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fb, "dump.jsonl"), []byte(`{"type":"assistant","requestId":"bundle","message":{"model":"claude-opus-4.6","usage":{"input_tokens":99999,"output_tokens":1}}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "projects", "x", "s.jsonl"), []byte(`{"type":"assistant","requestId":"ok","message":{"model":"claude-opus-4.6","usage":{"input_tokens":1,"output_tokens":1}}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "claude", Path: dir}, func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "ok" {
+		t.Fatalf("nested feedback-bundles leaked: %+v", evs)
 	}
 }
 

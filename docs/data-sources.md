@@ -34,7 +34,8 @@ Rules that apply to every adapter:
 
 `~/.claude/projects/<workspace-slug>/*.jsonl` (and `~/.config/claude/projects` as a fallback). Includes `*/subagents/*.jsonl`.
 
-Do not read `settings.json` (may contain `ANTHROPIC_AUTH_TOKEN`) or `stats-cache.json`.
+Do not read `settings.json` (may contain `ANTHROPIC_AUTH_TOKEN`),
+`stats-cache.json`, or `~/.claude/feedback-bundles/` (full transcripts).
 
 ### Parser
 

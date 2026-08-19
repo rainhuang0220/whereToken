@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Claude Code skips `feedback-bundles/` (full transcripts) and `stats-cache.json`
 - All-time 用量说明 uses 累计 rank (uploaded days), not today's podium. The 累计 control says it is not kiln 全部
 - `DO_NOT_TRACK=1` (also true/on/yes) turns Community Rank off the same way as `WHERETOKEN_COMMUNITY=off`; empty and `0` do not
 - OpenClaw skips the per-agent runtime SQLite dir (`agent/`); JSONL archives still count

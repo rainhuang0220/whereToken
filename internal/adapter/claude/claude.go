@@ -35,9 +35,13 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 			return nil
 		}
 		if d.IsDir() {
+			if d.Name() == "feedback-bundles" {
+				return fs.SkipDir
+			}
 			return nil
 		}
-		if d.Name() == "settings.json" {
+		switch d.Name() {
+		case "settings.json", "stats-cache.json":
 			return nil
 		}
 		if !strings.HasSuffix(d.Name(), ".jsonl") {
