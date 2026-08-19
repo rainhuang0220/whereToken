@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
@@ -319,5 +320,41 @@ func TestWriteJSONSatisfiesPublishedSchema(t *testing.T) {
 		if _, ok := row[k]; !ok {
 			t.Errorf("tools row missing %q", k)
 		}
+	}
+}
+
+func TestWriteJSONCommunitySanitizesZeroRank(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build(nil, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap.Community = community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	snap.Community.Today.Rank = 0
+	snap.Community.Today.Display = "#0 / 20"
+	snap.Community.All = snap.Community.Today
+	snap.Community.All.Period = community.PeriodAll
+	var buf bytes.Buffer
+	if err := WriteJSON(&buf, snap); err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatal(err)
+	}
+	comm, ok := m["community"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing community: %s", buf.String())
+	}
+	today := comm["today"].(map[string]any)
+	if _, has := today["rank"]; has {
+		t.Fatalf("rank must be omitted: %s", buf.String())
+	}
+	if today["status"] == "ok" {
+		t.Fatalf("zero podium must not stay ok: %s", buf.String())
+	}
+	if strings.Contains(buf.String(), "#0") {
+		t.Fatalf("#0 leaked: %s", buf.String())
 	}
 }

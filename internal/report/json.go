@@ -84,6 +84,8 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 	}
 	if snap.Community.Today.Status != "" || snap.Community.All.Status != "" {
 		view := snap.Community
+		view.Today = community.SanitizeStanding(view.Today)
+		view.All = community.SanitizeStanding(view.All)
 		out.Community = &view
 	}
 	enc := json.NewEncoder(w)

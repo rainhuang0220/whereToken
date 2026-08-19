@@ -170,11 +170,18 @@ func TestRunJSON(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), `"total_m": "11.68 M"`) {
-		t.Fatalf("%s", out.String())
+	s := out.String()
+	if !strings.Contains(s, `"total_m": "11.68 M"`) {
+		t.Fatalf("%s", s)
 	}
-	if strings.Contains(out.String(), "┌") {
+	if strings.Contains(s, "┌") {
 		t.Fatal("json must not be a table")
+	}
+	if !strings.Contains(s, `"community"`) {
+		t.Fatal("CLI --json must include community")
+	}
+	if strings.Contains(s, `"rank": 0`) || strings.Contains(s, `"#0`) {
+		t.Fatalf("unavailable rank must not be 0:\n%s", s)
 	}
 }
 
