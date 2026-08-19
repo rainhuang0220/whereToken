@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -112,6 +113,21 @@ func TestMarshalSummaryOmitsRawEvents(t *testing.T) {
 	s := string(raw)
 	if strings.Contains(s, `"events"`) || strings.Contains(s, `"turns"`) {
 		t.Fatalf("raw events leaked into observatory JSON")
+	}
+}
+
+func TestApplyWindowClonesCommunity(t *testing.T) {
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.Today.Display = "#37 / 842"
+	r := Result{Community: &view, Errors: []string{}}
+	win := metric.Window{Today: true}
+	got := ApplyWindow(r, win, time.UTC)
+	if got.Community == nil || got.Community == r.Community {
+		t.Fatal("window must clone community")
+	}
+	got.Community.Today.Display = "mutated"
+	if r.Community.Today.Display != "#37 / 842" {
+		t.Fatal("window must not mutate the full-scan standing")
 	}
 }
 

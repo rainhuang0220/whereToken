@@ -32,6 +32,7 @@ type server struct {
 	noCommunity bool
 	version     string
 	comm        *community.Client
+	commMu      sync.Mutex
 }
 
 func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {

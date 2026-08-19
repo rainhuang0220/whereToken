@@ -111,10 +111,10 @@ func View(s Slice) SliceView {
 	v.CostStatus = st
 	if usd := FormatCostUSD(st, s.CostMicro); usd != "" {
 		v.CostUSD = usd
-		v.MissCostUSD = price.FormatUSD(s.MissCostMicro)
-		v.CacheReadCostUSD = price.FormatUSD(s.CacheReadCostMicro)
-		v.CacheCreateCostUSD = price.FormatUSD(s.CacheCreateCostMicro)
-		v.OutputCostUSD = price.FormatUSD(s.OutputCostMicro)
+		v.MissCostUSD = formatCostPart(s.MissCostMicro)
+		v.CacheReadCostUSD = formatCostPart(s.CacheReadCostMicro)
+		v.CacheCreateCostUSD = formatCostPart(s.CacheCreateCostMicro)
+		v.OutputCostUSD = formatCostPart(s.OutputCostMicro)
 	}
 	v.UnpricedTokens = s.UnpricedTokens
 	if pct, ok := HitRate(s.Miss, s.CacheRead, s.CacheCreate); ok {
@@ -125,10 +125,21 @@ func View(s Slice) SliceView {
 }
 
 func FormatCostUSD(status string, micro int64) string {
-	if status == price.StatusComplete || (status == price.StatusPartial && micro > 0) {
-		return price.FormatUSD(micro)
+	if status != price.StatusComplete && !(status == price.StatusPartial && micro > 0) {
+		return ""
 	}
-	return ""
+	return formatCostPart(micro)
+}
+
+func formatCostPart(micro int64) string {
+	if micro <= 0 {
+		return ""
+	}
+	s := price.FormatUSD(micro)
+	if s == "$0.0000" || s == "-$0.0000" {
+		return ""
+	}
+	return s
 }
 
 // CostSlice merges and prices events without building calendar or drill.

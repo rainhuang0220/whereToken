@@ -264,6 +264,10 @@ func ApplyWindow(r Result, w metric.Window, loc *time.Location) Result {
 		}
 	}
 	out := r
+	if r.Community != nil {
+		v := *r.Community
+		out.Community = &v
+	}
 	out.Events = evs
 	out.Turns = turns
 	sum := metric.Aggregate(evs, turns)

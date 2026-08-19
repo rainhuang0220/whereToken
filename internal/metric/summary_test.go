@@ -141,6 +141,26 @@ func TestViewPartialZeroMicroOmitsUSD(t *testing.T) {
 	}
 }
 
+func TestFormatCostUSDTinyMicroOmits(t *testing.T) {
+	if FormatCostUSD("partial", 1) != "" {
+		t.Fatal("1 microdollar rounds to $0.0000 and must be omitted")
+	}
+	if FormatCostUSD("complete", 1) != "" {
+		t.Fatal("complete rounding zero must not print $0.0000")
+	}
+}
+
+func TestViewOmitsZeroComponentUSD(t *testing.T) {
+	s := Slice{CostStatus: "complete", CostMicro: 25_000_000, OutputCostMicro: 25_000_000, PricedTokens: 1_000_000, Output: 1_000_000}
+	v := View(s)
+	if v.CostUSD != "$25.0000" {
+		t.Fatalf("total %q", v.CostUSD)
+	}
+	if v.MissCostUSD != "" || v.CacheReadCostUSD != "" {
+		t.Fatalf("zero buckets must not be $0.0000: %+v", v)
+	}
+}
+
 func TestSourceVendorCostOmitsUnavailable(t *testing.T) {
 	sum := Aggregate([]event.UsageEvent{
 		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Miss: 1_000_000, Output: 1_000_000},

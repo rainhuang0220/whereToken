@@ -51,10 +51,12 @@ func (s *server) attachCommunity(res *scan.Result) {
 		res.Community = &v
 		return
 	}
-	c.Offline = req.Offline
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	s.commMu.Lock()
+	c.Offline = req.Offline
 	v := c.Sync(ctx, res.Events, req.Now, req.Loc)
+	s.commMu.Unlock()
 	res.Community = &v
 }
 
@@ -149,12 +151,15 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.commMu.Lock()
 	if !*body.Enabled {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		_ = c.Leave(ctx)
 		cancel()
 	}
-	if err := c.File.SetEnabled(c.Path, *body.Enabled); err != nil {
+	err = c.File.SetEnabled(c.Path, *body.Enabled)
+	s.commMu.Unlock()
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

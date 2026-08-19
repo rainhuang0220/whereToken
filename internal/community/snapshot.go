@@ -196,9 +196,11 @@ func BuildLocalAgg(events []event.UsageEvent, now time.Time, loc *time.Location)
 	if agg.TodayCostStatus == "" {
 		agg.TodayCostStatus = price.Status(sum.PricedTokens, sum.UnpricedTokens)
 	}
-	if agg.TodayCostStatus == price.StatusComplete || agg.TodayCostStatus == price.StatusPartial {
+	if (agg.TodayCostStatus == price.StatusComplete || agg.TodayCostStatus == price.StatusPartial) && sum.CostMicro > 0 {
 		usd := float64(sum.CostMicro) / 1e6
-		agg.TodayCostUSD = &usd
+		if usd > 0 {
+			agg.TodayCostUSD = &usd
+		}
 	}
 	return agg
 }
