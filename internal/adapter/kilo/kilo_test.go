@@ -1,10 +1,13 @@
 package kilo
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
@@ -69,5 +72,55 @@ func TestMalformedJSONDoesNotPanic(t *testing.T) {
 func TestDiscoverEmpty(t *testing.T) {
 	if roots := (Adapter{}).Discover(testhome.New(t.TempDir())); len(roots) != 0 {
 		t.Fatalf("%+v", roots)
+	}
+}
+
+func TestParseKiloDB(t *testing.T) {
+	dir := t.TempDir()
+	data := filepath.Join(dir, ".local", "share", "kilo")
+	if err := os.MkdirAll(data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(data, "kilo.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE message (id TEXT, session_id TEXT, data TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE credential (token TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO credential (token) VALUES (?)`, secret); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO message (id, session_id, data) VALUES (?, ?, ?)`,
+		"a1", "s1", `{"role":"assistant","tokens":{"input":40,"output":4,"reasoning":1,"cache":{"read":8,"write":2}},"modelID":"claude-sonnet-4.6","providerID":"anthropic"}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(data, "auth.json"), []byte(`{"apiKey":"`+secret+`"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	roots := (Adapter{}).Discover(testhome.New(dir))
+	if len(roots) != 1 {
+		t.Fatalf("roots=%+v", roots)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(roots[0], func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 {
+		t.Fatalf("events=%d %+v", len(evs), evs)
+	}
+	if evs[0].Source != "kilo" || evs[0].Miss != 40 || evs[0].Output != 5 || evs[0].CacheRead != 8 {
+		t.Fatalf("%+v", evs[0])
+	}
+	if strings.Contains(evs[0].RequestID+evs[0].Model, secret) {
+		t.Fatalf("leaked %+v", evs[0])
 	}
 }

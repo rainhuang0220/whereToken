@@ -130,7 +130,12 @@ guarantee for every row.
 | Kilo Code | `tokensIn` | Miss | raw | authoritative | Legacy `api_req_started` only. |
 | Kilo Code | `cacheReads` | Cache Read | raw | authoritative | |
 | Kilo Code | `cacheWrites` | Cache Create | raw | authoritative | |
-| Kilo Code | `tokensOut` | Output | raw | authoritative | `cost` ignored. CLI 1.x `kilo.db` is not this row. |
+| Kilo Code | `tokensOut` | Output | raw | authoritative | `cost` ignored. |
+| Kilo CLI | `tokens.input` | Miss | raw | authoritative | `kilo.db` `message.data`, same as OpenCode. |
+| Kilo CLI | `tokens.cache.read` | Cache Read | raw | authoritative | |
+| Kilo CLI | `tokens.cache.write` | Cache Create | raw | authoritative | |
+| Kilo CLI | `tokens.output + tokens.reasoning` | Output | derived | authoritative | |
+| Kilo CLI | `tokens.reasoning` | Reasoning | raw | authoritative | Also in Output. |
 
 ## Request merge
 

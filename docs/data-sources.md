@@ -453,9 +453,10 @@ Do not read `settings/`, `api_conversation_history.json`, or conversation
 bodies. Official leftover `consolidateTokenUsage` only sums
 `say=api_req_started`.
 
-The rebuilt **Kilo CLI 1.x** (`~/.local/share/kilo/kilo.db`, OpenCode fork)
-is a different product and is **not** read here — pointing OpenCode at
-`kilo/` would double-count.
+The rebuilt **Kilo CLI 1.x** ledger is `~/.local/share/kilo/kilo.db`
+(`KILO_DB` override). Same `message.data.tokens` shape as OpenCode.
+OpenCode still only reads `opencode.db` — do not point it at `kilo/`.
+Skip `auth.json` and credential tables.
 
 ### Token mapping
 

@@ -41,7 +41,7 @@ Finding `~/.tool` is **discovery**, not usage.
 | OpenHands | D | `~/.openhands/conversations/` | no | — | — | — | — | Metrics sit next to secrets / trajectories |
 | SWE-agent | D | cwd `trajectories/**/*.traj` | no | — | — | — | — | Experiment output, not a home ledger |
 | Kilo Code (legacy VS Code) | A | `kilocode.kilo-code/tasks/*/ui_messages.json` | yes | no | no | no | replay | Metrics JSON only; skip settings |
-| Kilo CLI 1.x | B/D | `~/.local/share/kilo/kilo.db` | mixed | — | — | — | — | OpenCode fork; not shipped; do not point OpenCode at kilo/ |
+| Kilo CLI 1.x | A | `~/.local/share/kilo/kilo.db` | yes | no | no | no | replay | OpenCode-shaped `message.data.tokens`; skip auth |
 | ChatGPT desktop | E | no local request ledger | — | admin usage API | yes | — | — | Class C if org admin key (not used) |
 
 Sources: official GitHub (gemini-cli `chatRecordingTypes.ts`, qwen-code `tokenUsageService.ts`, cline `getApiMetrics.ts`), plus existing whereToken adapters. Re-check when those products change storage.

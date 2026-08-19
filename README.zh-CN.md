@@ -170,7 +170,7 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Qwen Code | 完整 | 不需要 |
 | Cline | 完整 | 不需要 |
 | Roo Code | 完整 | 不需要 |
-| Kilo Code（旧版 VS Code） | 完整 | 不需要 |
+| Kilo Code（旧版 VS Code + CLI `kilo.db`） | 完整 | 不需要 |
 | Cursor | 部分 | token 列需要 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
@@ -182,7 +182,7 @@ Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密�
 
 ### 目前不支持
 
-Windsurf、GitHub Copilot、Continue、Aider、Kilo CLI 1.x（`kilo.db`）、GLM/豆包第一方 CLI、Lingma 目前不受支持：还没有可安全读取的用量账本。发现配置目录不等于发现 usage。见 [`docs/provider-matrix.md`](docs/provider-matrix.md)。
+Windsurf、GitHub Copilot、Continue、Aider、GLM/豆包第一方 CLI、Lingma 目前不受支持：还没有可安全读取的用量账本。发现配置目录不等于发现 usage。见 [`docs/provider-matrix.md`](docs/provider-matrix.md)。
 
 ## 工作原理
 
