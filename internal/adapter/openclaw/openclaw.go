@@ -25,12 +25,27 @@ type Adapter struct{}
 func (Adapter) ID() string { return "openclaw" }
 
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
-	dir := home.DotDir("openclaw")
-	st, err := os.Stat(dir)
-	if err != nil || !st.IsDir() {
-		return nil
+	var out []adapter.SourceRoot
+	seen := map[string]struct{}{}
+	add := func(dir string) {
+		st, err := os.Stat(dir)
+		if err != nil || !st.IsDir() {
+			return
+		}
+		if _, ok := seen[dir]; ok {
+			return
+		}
+		seen[dir] = struct{}{}
+		out = append(out, adapter.SourceRoot{ID: "openclaw", Path: dir})
 	}
-	return []adapter.SourceRoot{{ID: "openclaw", Path: dir}}
+	if env := strings.TrimSpace(os.Getenv("OPENCLAW_STATE_DIR")); env != "" {
+		add(env)
+	}
+	if env := strings.TrimSpace(os.Getenv("OPENCLAW_HOME")); env != "" {
+		add(env)
+	}
+	add(home.DotDir("openclaw"))
+	return out
 }
 
 func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
@@ -42,7 +57,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 		}
 		if d.IsDir() {
 			switch d.Name() {
-			case "credentials", "workspace", "skills-prompts", "plugins", "agent":
+			case "credentials", "workspace", "skills-prompts", "plugins", "agent", "identity":
 				return fs.SkipDir
 			}
 			return nil
@@ -88,6 +103,10 @@ func isTrajectory(name string) bool {
 // *.jsonl.reset.<ts> and *.jsonl.deleted.<ts>; those still hold usage.
 func isSessionTranscript(name string) bool {
 	if isTrajectory(name) || strings.Contains(name, ".checkpoint.") {
+		return false
+	}
+	lower := strings.ToLower(name)
+	if strings.HasSuffix(lower, ".zst") || strings.HasSuffix(lower, ".gz") || strings.HasSuffix(lower, ".br") {
 		return false
 	}
 	if strings.HasSuffix(name, ".jsonl") {

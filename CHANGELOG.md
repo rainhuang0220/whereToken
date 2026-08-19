@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- OpenClaw honors `OPENCLAW_STATE_DIR` / `OPENCLAW_HOME`, skips `identity/`, and does not parse `.zst` delete archives as JSONL
 - Same-size JSONL rewrite with a pending tail is a full rescan. Oversize incomplete lines no longer grow the read buffer to EOF. Complementary RequestID merge keeps the dated timestamp
 - CLI ranked 估价 marks 部分; `$0*` never appears in the KPI. Unconfigured rank footnotes 「未配置远程服务」. Dashboard unavailable rank no longer pretends you are on a worldwide board
 - Price: drop invented `haiku-4`; price official `grok-build-0.1` and Z.ai GLM 5.x / 4.7 list rows

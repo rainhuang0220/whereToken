@@ -251,6 +251,45 @@ func TestDiscoverEmpty(t *testing.T) {
 	}
 }
 
+func TestDiscoverHonorsStateDir(t *testing.T) {
+	dir := t.TempDir()
+	reloc := filepath.Join(dir, "state")
+	if err := os.Mkdir(reloc, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OPENCLAW_STATE_DIR", reloc)
+	t.Setenv("OPENCLAW_HOME", "")
+	roots := (Adapter{}).Discover(testhome.New(t.TempDir()))
+	if len(roots) != 1 || roots[0].Path != reloc {
+		t.Fatalf("OPENCLAW_STATE_DIR roots=%+v", roots)
+	}
+}
+
+func TestDeletedZstIsNotParsedAsJSONL(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "main", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	zst := filepath.Join(sess, "s.jsonl.deleted.2026-08-20T00-00-00.zst")
+	if err := os.WriteFile(zst, []byte{0x28, 0xb5, 0x2f, 0xfd, 0x00, 0x00}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	keep := `{"type":"message","timestamp":"2026-08-19T11:00:01Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"live","usage":{"input":4,"output":1}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "s.jsonl"), []byte(keep), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "live" {
+		t.Fatalf("zstd archive must not be parsed as JSONL: %+v", evs)
+	}
+}
+
 func TestSourceAvoidsCredentialWalk(t *testing.T) {
 	src, err := os.ReadFile("openclaw.go")
 	if err != nil {

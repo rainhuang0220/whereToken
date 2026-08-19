@@ -172,7 +172,9 @@ read, not a single context window.
 
 `~/.openclaw/agents/<agent>/sessions/<session>.jsonl` plus the same
 transcript after `/reset` or delete (`*.jsonl.reset.<ts>`,
-`*.jsonl.deleted.<ts>`). The live runtime after 2026.7.2 is
+`*.jsonl.deleted.<ts>`). Relocated homes: `OPENCLAW_STATE_DIR` /
+`OPENCLAW_HOME`. Compressed delete archives (`*.jsonl.deleted.*.zst`)
+are skipped, not parsed as JSONL. The live runtime after 2026.7.2 is
 `~/.openclaw/agents/<agent>/agent/openclaw-agent.sqlite` plus
 `state/openclaw.sqlite`. Those files mix session JSON with auth and
 transcripts; whereToken does **not** open them.
