@@ -64,13 +64,7 @@ func readCompleteLine(r *bufio.Reader) (line []byte, complete bool, err error) {
 		part, e := r.ReadSlice('\n')
 		buf = append(buf, part...)
 		if len(buf) > maxJSONLLine {
-			if len(buf) > 0 && buf[len(buf)-1] == '\n' {
-				return buf, true, errSkipLine
-			}
-			if e == bufio.ErrBufferFull {
-				continue
-			}
-			return nil, false, fmt.Errorf("jsonl line exceeds %d bytes", maxJSONLLine)
+			return drainOversize(r, buf, e)
 		}
 		if len(part) > 0 && part[len(part)-1] == '\n' {
 			return buf, true, e
@@ -80,4 +74,26 @@ func readCompleteLine(r *bufio.Reader) (line []byte, complete bool, err error) {
 		}
 		return buf, false, e
 	}
+}
+
+func drainOversize(r *bufio.Reader, buf []byte, e error) ([]byte, bool, error) {
+	n := len(buf)
+	if n > 0 && buf[n-1] == '\n' {
+		return dummyNL(n), true, errSkipLine
+	}
+	for e == bufio.ErrBufferFull {
+		var part []byte
+		part, e = r.ReadSlice('\n')
+		n += len(part)
+		if len(part) > 0 && part[len(part)-1] == '\n' {
+			return dummyNL(n), true, errSkipLine
+		}
+	}
+	return nil, false, fmt.Errorf("jsonl line exceeds %d bytes", maxJSONLLine)
+}
+
+func dummyNL(n int) []byte {
+	out := make([]byte, n)
+	out[n-1] = '\n'
+	return out
 }

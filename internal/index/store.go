@@ -232,6 +232,11 @@ func decide(prev fileRow, ok bool, cur fileRow) string {
 	if cur.Size == prev.Size && cur.Mtime == prev.Mtime && cur.Inode == prev.Inode {
 		return ModeUnchanged
 	}
+	// Same length + new mtime is a rewrite, even if a pending incomplete
+	// tail left offset behind EOF. Incremental would keep a stale prefix.
+	if cur.Size == prev.Size && cur.Mtime != prev.Mtime {
+		return ModeFull
+	}
 	if cur.Size > prev.Offset {
 		return ModeIncremental
 	}
@@ -259,7 +264,10 @@ func (s *Store) getBlobs(path string) ([]event.UsageEvent, []event.TurnEvent, er
 	}
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
-	if err := gob.NewDecoder(bytes.NewReader(evB)).Decode(&evs); err != nil && len(evB) > 0 {
+	if len(evB) == 0 {
+		return nil, nil, fmt.Errorf("empty events blob")
+	}
+	if err := gob.NewDecoder(bytes.NewReader(evB)).Decode(&evs); err != nil {
 		return nil, nil, err
 	}
 	if err := gob.NewDecoder(bytes.NewReader(tnB)).Decode(&turns); err != nil && len(tnB) > 0 {

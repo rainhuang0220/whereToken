@@ -21,6 +21,34 @@ func TestNegativeTokensDoNotInventUsage(t *testing.T) {
 	}
 }
 
+func TestMergedZeroTimestampTakesDatedSibling(t *testing.T) {
+	dated := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	sum := Aggregate([]event.UsageEvent{
+		{Source: "claude", RequestID: "r", Miss: 1},
+		{Source: "claude", RequestID: "r", Output: 9, Timestamp: dated},
+	}, nil)
+	if sum.All.Miss != 1 || sum.All.Output != 9 {
+		t.Fatalf("merge %+v", sum.All)
+	}
+	w, err := ParseWindow(true, "", "", "", dated, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int64
+	for _, e := range mergeByRequest([]event.UsageEvent{
+		{Source: "claude", RequestID: "r", Miss: 1},
+		{Source: "claude", RequestID: "r", Output: 9, Timestamp: dated},
+	}) {
+		if !w.Contains(e.Timestamp, time.UTC) {
+			t.Fatalf("merged timestamp still zero: %+v", e)
+		}
+		n += e.Miss + e.Output
+	}
+	if n != 10 {
+		t.Fatalf("today dropped complementary tokens: %d", n)
+	}
+}
+
 func TestNegativeReasoningDoesNotDropPositiveTokens(t *testing.T) {
 	sum := Aggregate([]event.UsageEvent{{
 		Source: "grok", RequestID: "g", Miss: 100, Output: 10, Reasoning: -1,

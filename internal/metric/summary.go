@@ -289,6 +289,9 @@ func maxEvent(a, b event.UsageEvent) event.UsageEvent {
 	if qualityRank(b.Quality) > qualityRank(a.Quality) {
 		a.Quality = b.Quality
 	}
+	if a.Timestamp.IsZero() || (!b.Timestamp.IsZero() && b.Timestamp.After(a.Timestamp)) {
+		a.Timestamp = b.Timestamp
+	}
 	return a
 }
 

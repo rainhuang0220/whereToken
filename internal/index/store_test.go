@@ -372,6 +372,44 @@ func TestSameSizeMtimeChangeIsFullRescan(t *testing.T) {
 	}
 }
 
+func TestSameSizeRewriteWithPendingTailIsFullRescan(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(dir, "a.jsonl")
+	if err := os.WriteFile(path, []byte("keep-a\npartial"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = store.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		n, err := ScanJSONL(f, func([]byte, int64) error { return nil })
+		return []event.UsageEvent{{RequestID: "old", Miss: 9}}, nil, n, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("rewrote\nxxxxx"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(path, later, later)
+	var start int64 = -1
+	evs, _, mode, err := store.LoadOrParse("claude", path, func(rf *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		off, _ := rf.Seek(0, 1)
+		start = off
+		n, err := ScanJSONL(rf, func([]byte, int64) error { return nil })
+		return []event.UsageEvent{{RequestID: "new", Miss: 1}}, nil, n, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode != ModeFull || start != 0 || evs[0].RequestID != "new" {
+		t.Fatalf("pending-tail rewrite must full-rescan: mode=%s start=%d evs=%+v", mode, start, evs)
+	}
+}
+
 func TestWipeClearsIndex(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "idx.db")
