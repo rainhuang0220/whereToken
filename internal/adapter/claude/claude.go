@@ -82,16 +82,7 @@ func parseJSONL(path string, root adapter.SourceRoot, emit func(event.UsageEvent
 	evs, turns, _, err := index.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSONLFile(f, path, root)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	for _, t := range turns {
-		emitTurn(t)
-	}
-	return nil
+	return index.Forward(evs, turns, err, emit, emitTurn)
 }
 
 func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {

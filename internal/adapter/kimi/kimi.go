@@ -22,6 +22,12 @@ func (Adapter) ID() string { return "kimi" }
 func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 	var out []adapter.SourceRoot
 	var seen []os.FileInfo
+	if env := strings.TrimSpace(os.Getenv("KIMI_CODE_HOME")); env != "" {
+		if st, err := os.Stat(env); err == nil && st.IsDir() {
+			seen = append(seen, st)
+			out = append(out, adapter.SourceRoot{ID: "kimi", Path: env})
+		}
+	}
 	for _, name := range []string{"kimi-code", "kimi"} {
 		p := home.DotDir(name)
 		st, err := os.Stat(p)
@@ -83,23 +89,15 @@ type wireLine struct {
 	Origin struct {
 		Kind string `json:"kind"`
 	} `json:"origin"`
-	Time int64 `json:"time"`
+	UsageScope string `json:"usageScope"`
+	Time       int64  `json:"time"`
 }
 
 func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	evs, turns, _, err := index.LoadOrParse("kimi", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseWireFile(f, path, root)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	for _, t := range turns {
-		emitTurn(t)
-	}
-	return nil
+	return index.Forward(evs, turns, err, emit, emitTurn)
 }
 
 func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
@@ -116,6 +114,11 @@ func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.Us
 		}
 		switch rec.Type {
 		case "usage.record":
+			// Session-scoped rows are cumulative totals (ccusage + official
+			// turn vs session). Summing them would inflate Class A totals.
+			if strings.EqualFold(strings.TrimSpace(rec.UsageScope), "session") {
+				return nil
+			}
 			seq++
 			ws, sess := kimiContext(root.Path, path)
 			evs = append(evs, event.UsageEvent{

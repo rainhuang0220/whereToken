@@ -33,14 +33,14 @@ Finding `~/.tool` is **discovery**, not usage.
 | Doubao / Volcengine | E | none first-party | — | yes for Ark | — | — | — | May appear as Trae model |
 | DeepSeek | E | none first-party CLI ledger | — | balance API | — | — | — | Vendor via host tools |
 | GitHub Copilot | B | `~/.copilot` config / no usage files | — | — | — | — | — | Schema has `assistant.usage`; no ledger on disk |
-| Windsurf | E | none found | — | — | — | — | — | |
+| Windsurf | B | `~/.codeium` / Windsurf globalStorage | — | — | — | — | — | Config/memories/transcripts, no token ledger |
+| ZCode (Z.ai ADE) | E* | `~/.zcode/cli/db/db.sqlite` `model_usage` | yes if table-only | no | no | no | replay | *A-candidate; schema is reverse-engineered, not shipped |
 | Continue | B | `~/.continue` is config | — | — | — | — | — | Config ≠ usage |
-| Roo Code | D | leftover Cline-shaped trees | mixed | — | — | — | — | Product shut down; transcripts |
 | Aider | B | `.aider.chat.history.md` is prompts | no for bodies | — | — | — | — | `/tokens` is context window |
-| Goose | E | research: no billed ledger | — | — | — | — | — | |
-| OpenHands | E | research: no billed ledger | — | — | — | — | — | |
-| SWE-agent | E | research: no billed ledger | — | — | — | — | — | |
-| Kilo Code | E | OpenCode-fork CLI + rebuilt VS Code ext | — | — | — | — | — | Do not scrape Cline leftovers; would double-count OpenCode |
+| Goose | D | `sessions.db` has `usage_ledger` + messages | mixed | — | — | — | — | A if SELECT usage_ledger only; not shipped |
+| OpenHands | D | `~/.openhands/conversations/` | no | — | — | — | — | Metrics sit next to secrets / trajectories |
+| SWE-agent | D | cwd `trajectories/**/*.traj` | no | — | — | — | — | Experiment output, not a home ledger |
+| Kilo Code | B/D | `kilo.db` (OpenCode fork) + leftover `ui_messages` | mixed | — | — | — | — | Confirm token fields before shipping; do not point OpenCode at kilo/ |
 | ChatGPT desktop | E | no local request ledger | — | admin usage API | yes | — | — | Class C if org admin key (not used) |
 
 Sources: official GitHub (gemini-cli `chatRecordingTypes.ts`, qwen-code `tokenUsageService.ts`, cline `getApiMetrics.ts`), plus existing whereToken adapters. Re-check when those products change storage.

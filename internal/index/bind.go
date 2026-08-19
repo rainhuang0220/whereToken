@@ -45,6 +45,20 @@ func LoadOrReplay(source, path string, parse ParseFunc) ([]event.UsageEvent, []e
 	return parseFull(path, parse)
 }
 
+// Forward emits cached or newly parsed events even when parse failed, so a
+// later incremental error cannot drop tokens the store already returned.
+func Forward(evs []event.UsageEvent, turns []event.TurnEvent, err error, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+	for _, e := range evs {
+		emit(e)
+	}
+	if emitTurn != nil {
+		for _, t := range turns {
+			emitTurn(t)
+		}
+	}
+	return err
+}
+
 func parseFull(path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	f, err := os.Open(path)
 	if err != nil {

@@ -235,7 +235,7 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 }
 
 func usableTokens(e event.UsageEvent) bool {
-	return e.Miss >= 0 && e.CacheRead >= 0 && e.CacheCreate >= 0 && e.Output >= 0 && e.Reasoning >= 0
+	return e.Miss >= 0 && e.CacheRead >= 0 && e.CacheCreate >= 0 && e.Output >= 0
 }
 
 func satAdd(a, b int64) int64 {

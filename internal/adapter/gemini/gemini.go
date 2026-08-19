@@ -84,30 +84,12 @@ func parseSession(path string, root adapter.SourceRoot, emit func(event.UsageEve
 		evs, turns, _, err := index.LoadOrReplay("gemini", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 			return parseJSONFile(f, path, root)
 		})
-		if err != nil {
-			return err
-		}
-		for _, e := range evs {
-			emit(e)
-		}
-		for _, t := range turns {
-			emitTurn(t)
-		}
-		return nil
+		return index.Forward(evs, turns, err, emit, emitTurn)
 	}
 	evs, turns, _, err := index.LoadOrParse("gemini", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSONLFile(f, path, root)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	for _, t := range turns {
-		emitTurn(t)
-	}
-	return nil
+	return index.Forward(evs, turns, err, emit, emitTurn)
 }
 
 type tokens struct {

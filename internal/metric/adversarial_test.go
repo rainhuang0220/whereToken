@@ -21,6 +21,15 @@ func TestNegativeTokensDoNotInventUsage(t *testing.T) {
 	}
 }
 
+func TestNegativeReasoningDoesNotDropPositiveTokens(t *testing.T) {
+	sum := Aggregate([]event.UsageEvent{{
+		Source: "grok", RequestID: "g", Miss: 100, Output: 10, Reasoning: -1,
+	}}, nil)
+	if sum.All.Miss != 100 || sum.All.Output != 10 || sum.All.Total() != 110 {
+		t.Fatalf("display-only reasoning must not drop billed tokens: %+v", sum.All)
+	}
+}
+
 func TestEmptyModelStaysUnpriced(t *testing.T) {
 	sum := Aggregate([]event.UsageEvent{{
 		Source: "claude", Vendor: "anthropic", Model: "", Miss: 1000, Output: 10,

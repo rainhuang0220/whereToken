@@ -56,16 +56,7 @@ func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), 
 	evs, turns, _, err := index.LoadOrReplay("minimax", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseDBPath(f.Name(), root)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	for _, t := range turns {
-		emitTurn(t)
-	}
-	return nil
+	return index.Forward(evs, turns, err, emit, emitTurn)
 }
 
 func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {

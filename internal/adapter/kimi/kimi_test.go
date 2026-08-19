@@ -79,3 +79,39 @@ func TestParseUsageRecord(t *testing.T) {
 		t.Fatalf("session=%q", evs[0].SessionID)
 	}
 }
+
+func TestSessionScopedUsageIsNotSummed(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, "sessions", "x", "s", "agents", "main")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"type":"usage.record","usageScope":"turn","time":1,"model":"kimi-k3","usage":{"inputOther":10,"output":1}}
+{"type":"usage.record","usageScope":"session","time":2,"model":"kimi-k3","usage":{"inputOther":99,"output":9}}
+`
+	if err := os.WriteFile(filepath.Join(sess, "wire.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "kimi", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Miss != 10 {
+		t.Fatalf("session-scoped cumulative must be skipped: %+v", evs)
+	}
+}
+
+func TestDiscoverHonorsKimiCodeHome(t *testing.T) {
+	dir := t.TempDir()
+	home := filepath.Join(dir, "relocated")
+	if err := os.Mkdir(home, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("KIMI_CODE_HOME", home)
+	roots := (Adapter{}).Discover(testhome.New(t.TempDir()))
+	if len(roots) != 1 || roots[0].Path != home {
+		t.Fatalf("KIMI_CODE_HOME roots=%+v", roots)
+	}
+}

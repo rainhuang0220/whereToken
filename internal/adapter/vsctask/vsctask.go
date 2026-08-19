@@ -94,13 +94,7 @@ func parseMessages(path, session string, root adapter.SourceRoot, opt Options, e
 	evs, _, _, err := index.LoadOrReplay(opt.SourceID, path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSON(f, path, session, root, opt)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	return nil
+	return index.Forward(evs, nil, err, emit, nil)
 }
 
 type msg struct {

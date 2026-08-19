@@ -85,13 +85,7 @@ func parseFile(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 	evs, _, _, err := index.LoadOrParse("qwen", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSONL(f, path, root)
 	})
-	if err != nil {
-		return err
-	}
-	for _, e := range evs {
-		emit(e)
-	}
-	return nil
+	return index.Forward(evs, nil, err, emit, nil)
 }
 
 func parseJSONL(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
