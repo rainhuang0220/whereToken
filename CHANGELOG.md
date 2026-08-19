@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 工具 × 厂家 prints 估价; a partial slice with no priced dollars omits `cost_usd` instead of `$0.0000`. Rank HTTP sanitizes `#0` before encode
 - Session and workspace drill print 估价 the same way as models (`—` when unpriced). 用量说明 names a real Community Rank place, never `#0`
 - Community Rank client accepts only http(s) URLs, refuses redirects, and rate-limits the fake rank server by connection IP
 - `serve --no-community` skips rank Sync even when `WHERETOKEN_COMMUNITY_URL` is set

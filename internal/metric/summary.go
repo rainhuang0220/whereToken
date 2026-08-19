@@ -33,6 +33,9 @@ type SourceVendor struct {
 	Source, Vendor, SourceLabel, VendorLabel string
 	Miss, CacheRead, CacheCreate, Output     int64
 	Requests                                 int64
+	CostMicro                                int64
+	PricedTokens, UnpricedTokens             int64
+	CostStatus                               string
 }
 
 func (s SourceVendor) Total() int64 {
@@ -106,8 +109,8 @@ func View(s Slice) SliceView {
 		st = price.Status(s.PricedTokens, s.UnpricedTokens)
 	}
 	v.CostStatus = st
-	if st == price.StatusComplete || st == price.StatusPartial {
-		v.CostUSD = price.FormatUSD(s.CostMicro)
+	if usd := FormatCostUSD(st, s.CostMicro); usd != "" {
+		v.CostUSD = usd
 		v.MissCostUSD = price.FormatUSD(s.MissCostMicro)
 		v.CacheReadCostUSD = price.FormatUSD(s.CacheReadCostMicro)
 		v.CacheCreateCostUSD = price.FormatUSD(s.CacheCreateCostMicro)
@@ -119,6 +122,13 @@ func View(s Slice) SliceView {
 		v.HitRateText = fmt.Sprintf("%.1f%%", pct)
 	}
 	return v
+}
+
+func FormatCostUSD(status string, micro int64) string {
+	if status == price.StatusComplete || (status == price.StatusPartial && micro > 0) {
+		return price.FormatUSD(micro)
+	}
+	return ""
 }
 
 // CostSlice merges and prices events without building calendar or drill.
@@ -174,6 +184,14 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 		if !e.SkipRequest {
 			cross.Requests++
 		}
+		toks := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		ch := price.Event(e)
+		if ch.OK {
+			cross.CostMicro += ch.Micro
+			cross.PricedTokens += toks
+		} else if toks > 0 {
+			cross.UnpricedTokens += toks
+		}
 	}
 
 	for _, t := range turns {
@@ -196,6 +214,7 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 		sum.ByVendor = append(sum.ByVendor, *s)
 	}
 	for _, s := range byCross {
+		s.CostStatus = price.Status(s.PricedTokens, s.UnpricedTokens)
 		sum.BySourceVendor = append(sum.BySourceVendor, *s)
 	}
 	sort.Slice(sum.BySource, func(i, j int) bool { return sum.BySource[i].Total() > sum.BySource[j].Total() })

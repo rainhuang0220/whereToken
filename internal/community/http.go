@@ -120,7 +120,7 @@ func (h *Handler) getRank(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid period", http.StatusBadRequest)
 		return
 	}
-	st := h.Store.Rank(id, kind, date, metric)
+	st := SanitizeStanding(h.Store.Rank(id, kind, date, metric))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(st)

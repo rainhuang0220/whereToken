@@ -8,7 +8,7 @@ import KilnKid from '../components/KilnKid.vue'
 import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
-import { derivationCaption, formatCount, qualityCaption } from '../format'
+import { costCaption, derivationCaption, formatCount, qualityCaption } from '../format'
 import {
   collectKilnMouth,
   observatoryCursorWindowHint,
@@ -292,6 +292,7 @@ onMounted(() => {
               <th class="num">输出</th>
               <th class="num">合计</th>
               <th class="num">请求</th>
+              <th class="num">估价</th>
             </tr>
           </thead>
           <tbody>
@@ -304,6 +305,7 @@ onMounted(() => {
               <td class="num">{{ row.output_m }}</td>
               <td class="num">{{ row.total_m }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>
+              <td class="num">{{ costCaption(row) || '—' }}</td>
             </tr>
           </tbody>
         </table>

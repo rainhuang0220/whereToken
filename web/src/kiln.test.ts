@@ -82,6 +82,14 @@ describe('cross table', () => {
     expect(home).toMatch(/缓存写/)
     expect(home).toMatch(/cache_create_m/)
   })
+
+  it('prints 估价 on the tool × vendor table without inventing $0', () => {
+    const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')
+    const cross = home.slice(home.indexOf('工具 × 厂家'))
+    expect(cross).toMatch(/估价/)
+    expect(cross).toMatch(/costCaption\(row\)/)
+    expect(cross).not.toMatch(/\$0/)
+  })
 })
 
 describe('home rail copy', () => {

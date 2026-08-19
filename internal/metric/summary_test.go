@@ -130,6 +130,46 @@ func TestAggregateUnknownCostNotZeroUSD(t *testing.T) {
 	}
 }
 
+func TestViewPartialZeroMicroOmitsUSD(t *testing.T) {
+	s := Slice{CostStatus: "partial", CostMicro: 0, PricedTokens: 1, UnpricedTokens: 10, Miss: 11}
+	v := View(s)
+	if v.CostUSD != "" || v.MissCostUSD != "" {
+		t.Fatalf("partial with no priced dollars must not print $0: %+v", v)
+	}
+	if v.CostStatus != "partial" {
+		t.Fatalf("status=%s", v.CostStatus)
+	}
+}
+
+func TestSourceVendorCostOmitsUnavailable(t *testing.T) {
+	sum := Aggregate([]event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Miss: 1_000_000, Output: 1_000_000},
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "b", Miss: 100, Output: 10},
+	}, nil)
+	var claude, kimi *SourceVendor
+	for i := range sum.BySourceVendor {
+		row := &sum.BySourceVendor[i]
+		switch row.Source {
+		case "claude":
+			claude = row
+		case "kimi":
+			kimi = row
+		}
+	}
+	if claude == nil || claude.CostStatus != "complete" || claude.CostMicro != 30_000_000 {
+		t.Fatalf("claude cross %+v", claude)
+	}
+	if kimi == nil || kimi.CostStatus != "unavailable" || kimi.CostMicro != 0 {
+		t.Fatalf("kimi cross %+v", kimi)
+	}
+	if FormatCostUSD(kimi.CostStatus, kimi.CostMicro) != "" {
+		t.Fatal("kimi cross must omit $0")
+	}
+	if FormatCostUSD(claude.CostStatus, claude.CostMicro) != "$30.0000" {
+		t.Fatalf("claude %s", FormatCostUSD(claude.CostStatus, claude.CostMicro))
+	}
+}
+
 func TestAggregatePartialCost(t *testing.T) {
 	events := []event.UsageEvent{
 		{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a", Miss: 1_000_000},

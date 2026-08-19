@@ -339,6 +339,8 @@ type sourceVendorView struct {
 	OutputM      string `json:"output_m"`
 	TotalM       string `json:"total_m"`
 	Requests     int64  `json:"requests"`
+	CostStatus   string `json:"cost_status,omitempty"`
+	CostUSD      string `json:"cost_usd,omitempty"`
 }
 
 type drillJSON struct {
@@ -455,7 +457,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 		out.ByVendor = []metric.SliceView{}
 	}
 	for _, s := range r.Summary.BySourceVendor {
-		out.BySourceVendor = append(out.BySourceVendor, sourceVendorView{
+		row := sourceVendorView{
 			Source:       s.Source,
 			Vendor:       s.Vendor,
 			SourceLabel:  s.SourceLabel,
@@ -471,7 +473,10 @@ func buildSummaryJSON(r Result) summaryJSON {
 			OutputM:      metric.FormatM(s.Output),
 			TotalM:       metric.FormatM(s.Total()),
 			Requests:     s.Requests,
-		})
+			CostStatus:   s.CostStatus,
+			CostUSD:      metric.FormatCostUSD(s.CostStatus, s.CostMicro),
+		}
+		out.BySourceVendor = append(out.BySourceVendor, row)
 	}
 	if out.BySourceVendor == nil {
 		out.BySourceVendor = []sourceVendorView{}

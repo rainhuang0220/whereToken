@@ -68,6 +68,8 @@ export type SourceVendorView = {
   output_m: string
   total_m: string
   requests: number
+  cost_status?: string
+  cost_usd?: string
 }
 
 export type SummaryPayload = {

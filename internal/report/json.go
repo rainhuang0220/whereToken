@@ -65,6 +65,9 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		CostStatus:  snap.CostStatus,
 		CostUSD:     snap.CostUSD,
 	}
+	if snap.CostStatus == "unavailable" {
+		out.CostUSD = ""
+	}
 	if snap.ShowStreaks {
 		max := snap.MaxStreak
 		cur := snap.CurrentStreak
@@ -109,6 +112,9 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			Requests:    r.Requests,
 			CostStatus:  r.CostStatus,
 			CostUSD:     r.CostUSD,
+		}
+		if r.CostStatus == "unavailable" {
+			item.CostUSD = ""
 		}
 		if turns {
 			item.UserTurns = r.UserTurns
