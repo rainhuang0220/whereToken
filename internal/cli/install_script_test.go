@@ -89,6 +89,31 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 	}
 }
 
+func TestInstallCMDLaunchesPowerShell(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	body, err := os.ReadFile(filepath.Join(filepath.Dir(file), "..", "..", "scripts", "install.cmd"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"powershell",
+		"-ExecutionPolicy Bypass",
+		"install.ps1",
+		"irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("install.cmd missing %q", want)
+		}
+	}
+	if strings.Contains(s, "eyJ") {
+		t.Fatal("install.cmd must not contain JWT material")
+	}
+}
+
 func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -232,6 +257,10 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	}
 	if !strings.Contains(rs, irm) {
 		t.Fatal("README must show the PowerShell irm | iex one-liner")
+	}
+	cmd := `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"`
+	if !strings.Contains(rs, cmd) {
+		t.Fatal("README must show the Command Prompt powershell -Command wrapper")
 	}
 	ci := strings.Index(rs, curl)
 	gi := strings.Index(rs, goInstall)

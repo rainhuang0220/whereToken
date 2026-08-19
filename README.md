@@ -79,13 +79,19 @@ macOS and Linux:
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
-Windows:
+Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-The script prints the installed path (usually `~/.local/bin/wheretoken`). Run that line. Open a new terminal if the command is not on `PATH` yet.
+Windows (Command Prompt, the `C:\Users\…>` window): `irm` is not a cmd command. Use:
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+```
+
+The script prints the installed path (`~/.local/bin/wheretoken` on Unix, `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe` on Windows). Run that line. Open a new terminal if the command is not on `PATH` yet.
 
 ### Build from source
 

@@ -62,8 +62,11 @@ rescans this machine. Reloading the tab does not.
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 .fi
 .PP
-Windows:
+Windows PowerShell:
 .B irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+.PP
+Windows Command Prompt:
+.B powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
 .PP
 Homebrew:
 .B brew tap rainhuang0220/wheretoken

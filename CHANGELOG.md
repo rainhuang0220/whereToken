@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Windows Command Prompt install: `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm …/install.ps1 | iex"` (`irm` is PowerShell-only)
 - OpenClaw session JSONL is re-read: an earlier empty index cache no longer sticks at 0
 - Trae CN login is read from the encrypted `storage.json` blob (same format Trae uses). Missing `trae-jwt-token` is no longer treated as logged out
 

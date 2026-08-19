@@ -79,13 +79,19 @@ macOS / Linux：
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
 ```
 
-Windows：
+Windows（PowerShell）：
 
 ```powershell
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-脚本会印出安装路径（一般是 `~/.local/bin/wheretoken`）。跑那一行。当前终端找不到命令，就新开一个。
+Windows（命令提示符，也就是 `C:\Users\…>` 那种窗口）：`irm` 不是 cmd 命令。请用：
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+```
+
+脚本会印出安装路径（Unix 一般是 `~/.local/bin/wheretoken`，Windows 是 `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe`）。跑那一行。当前终端找不到命令，就新开一个。
 
 ### 从源码构建
 
