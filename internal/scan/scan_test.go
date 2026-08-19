@@ -115,6 +115,41 @@ func TestMarshalSummaryOmitsRawEvents(t *testing.T) {
 	}
 }
 
+func TestWindowedSummaryDoesNotPasteTodayRankOntoInsights(t *testing.T) {
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.Today.Rank = 37
+	view.Today.Display = "#37 / 842"
+	r := Result{
+		Errors:    []string{},
+		Community: &view,
+		Compare:   &metric.Compare{},
+	}
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "社区排名") {
+		t.Fatalf("7d/today window must not reuse today's podium:\n%s", raw)
+	}
+}
+
+func TestAllTimeSummaryAttachesRealRankInsight(t *testing.T) {
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.Today.Rank = 37
+	view.Today.Display = "#37 / 842"
+	r := Result{Errors: []string{}, Community: &view}
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "社区排名 #37 / 842") || !strings.Contains(string(raw), "不是全球榜") {
+		t.Fatalf("%s", raw)
+	}
+	if strings.Contains(string(raw), "#0") {
+		t.Fatal(string(raw))
+	}
+}
+
 func TestMarshalSummaryCommunityInsightNeverZeroRank(t *testing.T) {
 	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
 	view.Today.Status = community.StatusOK

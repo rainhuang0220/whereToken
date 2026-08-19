@@ -430,7 +430,11 @@ func buildSummaryJSON(r Result) summaryJSON {
 		v.Today = community.SanitizeStanding(v.Today)
 		v.All = community.SanitizeStanding(v.All)
 		out.Community = &v
-		out.Insights = insight.AppendStanding(out.Insights, v.Today.Status, v.Today.Display, v.Today.Rank)
+		// Today-rank belongs on the all-time observatory. A 7d/today window
+		// has different totals; do not paste today's podium onto it.
+		if r.Compare == nil {
+			out.Insights = insight.AppendStanding(out.Insights, v.Today.Status, v.Today.Display, v.Today.Rank)
+		}
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)
