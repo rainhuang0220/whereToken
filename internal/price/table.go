@@ -25,18 +25,19 @@ var table = []Rate{
 	anth("sonnet-5", 2, 0.20, 2.50, 10),
 	anth("sonnet-4", 3, 0.30, 3.75, 15),
 	anth("haiku-4.5", 1, 0.10, 1.25, 5),
-	anth("haiku-4", 1, 0.10, 1.25, 5),
 
 	// xAI — docs.x.ai/developers/pricing short-context tier (2026-08-19).
 	// Long-context rates (≥200k prompt) are not applied; that would need
 	// per-request prompt length, which the ledger does not store.
 	// No grok-4 row: the public list has none. grok-4-0709 retired 2026-05-15;
 	// leftover slugs are not $2/$6 on this card.
+	// grok-4.6-build is the Grok CLI product slug, not a separate list row.
+	// It uses the public grok-4.6 short-context rates.
 	xai("grok-4.6-build", 2, 0.50, 0, 6),
 	xai("grok-4.6", 2, 0.50, 0, 6),
 	xai("grok-4.5", 2, 0.30, 0, 6),
 	xai("grok-4.3", 1.25, 0.20, 0, 2.50),
-	xai("grok-build", 1, 0.20, 0, 2),
+	xai("grok-build-0.1", 1, 0.20, 0, 2),
 
 	// OpenAI — developers.openai.com/api/docs/pricing short-context + long-standing 4o card
 	oai("gpt-4o-mini", 0.15, 0.075, 0, 0.60),
@@ -63,7 +64,19 @@ var table = []Rate{
 	kimi("kimi-k3", 3.00, 0.30, 0, 15.00),
 	kimi("kimi-k2.7-code-highspeed", 1.90, 0.38, 0, 8.00),
 	kimi("kimi-k2.7-code", 0.95, 0.19, 0, 4.00),
+	kimi("kimi-k2.6", 0.95, 0.16, 0, 4.00),
 	kimi("kimi-k2.5", 0.60, 0.10, 0, 3.00),
+
+	// Z.ai — docs.z.ai/guides/overview/pricing (2026-08-20). Cache write
+	// storage is listed as limited-time free, not a token rate.
+	zhi("glm-5.3", 1.4, 0.26, 0, 4.4),
+	zhi("glm-5.2", 1.4, 0.26, 0, 4.4),
+	zhi("glm-5.1", 1.4, 0.26, 0, 4.4),
+	zhi("glm-5-turbo", 1.2, 0.24, 0, 4.0),
+	zhi("glm-5", 1.0, 0.20, 0, 3.2),
+	zhi("glm-4.7", 0.6, 0.11, 0, 2.2),
+	zhi("glm-4.6", 0.6, 0.11, 0, 2.2),
+	zhi("glm-4.5", 0.6, 0.11, 0, 2.2),
 
 	// Google — ai.google.dev/gemini-api/docs/pricing (2026-08-13). Flat
 	// Flash/Lite rows only. 2.5 Pro / 3.x Pro stay unpriced (≤200k / >200k).
@@ -134,5 +147,14 @@ func ggl(model string, miss, cacheRead, cacheCreate, output float64) Rate {
 		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
 		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Source: "google_api_list", Version: CardVersion,
+	}
+}
+
+func zhi(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return Rate{
+		Vendor: "zhipu", Model: model,
+		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		Source: "zai_api_list", Version: CardVersion,
 	}
 }

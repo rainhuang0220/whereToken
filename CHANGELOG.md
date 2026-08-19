@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Price: drop invented `haiku-4`; price official `grok-build-0.1` and Z.ai GLM 5.x / 4.7 list rows
 - Kilo Code leftover VS Code `ui_messages.json` metrics (`kilocode.kilo-code`). The OpenCode-fork CLI `kilo.db` is not read
 - Gemini CLI folds `tokens.thoughts` into Output (official `total` and Gemini output billing). Reasoning is still stored and not added twice
 - Dashboard KPI uses 不可用 / — for absent usage and a missing day, never a fake `0.00 M`. Rank hides a podium when `participants` < 20 even if display is only `#1`

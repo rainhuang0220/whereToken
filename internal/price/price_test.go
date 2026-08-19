@@ -26,6 +26,31 @@ func TestKimiK3UsesOfficialCardButBareK3StaysUnpriced(t *testing.T) {
 	}
 }
 
+func TestHaiku4StaysUnpriced(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "anthropic", Model: "claude-haiku-4", Miss: 1_000_000, Output: 1_000_000})
+	if c.OK {
+		t.Fatal("there is no Haiku 4 list row; do not copy 4.5 rates")
+	}
+}
+
+func TestGrokBuild01UsesOfficialSlug(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "xai", Model: "grok-build-0.1", Miss: 1_000_000, Output: 1_000_000})
+	if !c.OK || c.Micro != 3_000_000 { // $1+$2
+		t.Fatalf("grok-build-0.1 %+v", c)
+	}
+}
+
+func TestGLM53DoesNotInheritGLM5(t *testing.T) {
+	v53 := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-5.3", Miss: 1_000_000, Output: 1_000_000})
+	v5 := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-5", Miss: 1_000_000, Output: 1_000_000})
+	if !v53.OK || v53.Micro != 5_800_000 { // $1.4+$4.4
+		t.Fatalf("glm-5.3 %+v", v53)
+	}
+	if !v5.OK || v5.Micro != 4_200_000 { // $1+$3.2
+		t.Fatalf("glm-5 %+v", v5)
+	}
+}
+
 func TestGeminiFlashPricedProUnpriced(t *testing.T) {
 	flash := Event(event.UsageEvent{Vendor: "google", Model: "gemini-2.5-flash", Miss: 1_000_000, Output: 1_000_000})
 	if !flash.OK || flash.Micro != 2_800_000 { // $0.30+$2.50

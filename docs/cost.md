@@ -65,10 +65,17 @@ splits stay unpriced.
 Qwen / DashScope coder models are context-tiered (`qwen3-coder-plus` steps
 at 32k / 128k / 256k) and stay unpriced.
 
-Moonshot **kimi-k3**, **kimi-k2.7-code** (+ highspeed), and **kimi-k2.5**
-use the official USD list (no cache-write token rate). Bare `k3` stays
-unpriced. Z.ai / GLM, DeepSeek (peak/off-peak), and ByteDance / Doubao
-(CNY / length bands) have no card.
+Moonshot **kimi-k3**, **kimi-k2.7-code** (+ highspeed), **kimi-k2.6**, and
+**kimi-k2.5** use the official USD list (no cache-write token rate). Bare
+`k3` stays unpriced.
+
+Z.ai **glm-5.x** / **glm-4.7** (and 4.6 / 4.5) use the public USD list.
+Cache-write storage is not a token rate, so `CacheCreate>0` stays unpriced.
+Flash/Free GLM rows are not on this card.
+
+DeepSeek (peak/off-peak) and ByteDance / Doubao (CNY / length bands) stay
+unavailable. There is no Anthropic **Haiku 4** list row (only 4.5). xAI
+coding list id is **`grok-build-0.1`**.
 
 ## What is not priced
 
