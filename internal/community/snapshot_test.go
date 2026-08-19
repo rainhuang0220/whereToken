@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/price"
 )
 
@@ -197,6 +198,37 @@ func TestBuildLocalAggExcludesJustBeforeLocalMidnight(t *testing.T) {
 	}
 	if agg.TodayTokens != 7 {
 		t.Fatalf("just-before-midnight must stay on yesterday: tokens=%d", agg.TodayTokens)
+	}
+}
+
+func TestBuildLocalAggDoesNotNeedCalendar(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	now := time.Date(2026, 8, 19, 12, 0, 0, 0, loc)
+	today := event.UsageEvent{
+		Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+		RequestID: "today", Miss: 1_000_000, Output: 2_000, Timestamp: now,
+	}
+	events := []event.UsageEvent{
+		today,
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "yday", Miss: 9_000_000, Timestamp: time.Date(2026, 8, 18, 23, 0, 0, 0, loc),
+		},
+	}
+	agg := BuildLocalAgg(events, now, loc)
+	want := metric.CostSlice([]event.UsageEvent{today})
+	if agg.TodayTokens == 0 || agg.TodayTokens != want.Total() {
+		t.Fatalf("tokens=%d costslice=%d (BuildLocalAgg must not require Aggregate)", agg.TodayTokens, want.Total())
+	}
+	if agg.TodayCostStatus != want.CostStatus {
+		t.Fatalf("status=%s want %s", agg.TodayCostStatus, want.CostStatus)
+	}
+	u, err := MakeUpload("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", "0.5.0", agg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Tokens != agg.TodayTokens {
+		t.Fatalf("upload tokens=%d", u.Tokens)
 	}
 }
 
