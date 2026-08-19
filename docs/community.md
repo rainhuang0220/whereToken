@@ -53,3 +53,15 @@ the product shows "not available yet" instead of a three-person podium.
 **累计 / `--rank all` is the sum of days this client uploaded**, not the
 kiln 全部 ledger. Miss a day of running whereToken and that day never
 enters 累计.
+
+## Identity
+
+- `community.json` holds one random UUID. Reinstall that **keeps** the
+  file is the same participant. Deleting the file mints a new UUID.
+- `community off` then `on` keeps the same UUID; leave wipes remote days
+  so 累计 starts empty.
+- Copying `community.json` to another machine is one participant. Last
+  write for a calendar day wins; the two ledgers are not summed.
+- HMAC is not used in v1. The UUID is a bearer capability. That is
+  enough for a self-hosted, self-reported board. It does not stop
+  someone from inventing tokens.

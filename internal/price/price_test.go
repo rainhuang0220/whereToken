@@ -95,6 +95,35 @@ func TestO4MiniUsesStandardListNotBatch(t *testing.T) {
 	}
 }
 
+func TestChatGPT4oDoesNotInheritGPT4o(t *testing.T) {
+	for _, model := range []string{"chatgpt-4o", "chatgpt-5", "foo-o3"} {
+		c := Event(event.UsageEvent{Vendor: "openai", Model: model, Miss: 1_000_000, Output: 1_000_000})
+		if c.OK {
+			t.Fatalf("%s must not inherit a sibling list id: %+v", model, c)
+		}
+	}
+}
+
+func TestGrokCacheCreateWithoutWriteRateIsUnpriced(t *testing.T) {
+	c := Event(event.UsageEvent{
+		Vendor: "xai", Model: "grok-4.6",
+		CacheCreate: 1_000_000,
+	})
+	if c.OK {
+		t.Fatalf("xAI has no public cache-write rate; must not be complete $0: %+v", c)
+	}
+	if FormatUSD(c.Micro) != "" {
+		t.Fatalf("unpriced cache write formatted %q", FormatUSD(c.Micro))
+	}
+	priced := Event(event.UsageEvent{
+		Vendor: "xai", Model: "grok-4.6",
+		Miss: 1_000_000, Output: 1_000_000,
+	})
+	if !priced.OK || priced.Micro != 8_000_000 {
+		t.Fatalf("Grok without cache write still prices input/output: %+v", priced)
+	}
+}
+
 func TestUnknownModelHasNoCost(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "unknown", Model: "mystery", Miss: 1000, Output: 100})
 	if c.OK {

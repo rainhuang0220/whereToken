@@ -79,6 +79,9 @@ func Event(e event.UsageEvent) Charge {
 	if !ok {
 		return Charge{}
 	}
+	if unpricedComponent(e, r) {
+		return Charge{}
+	}
 	miss := Micro(e.Miss, r.Miss)
 	cr := Micro(e.CacheRead, r.CacheRead)
 	cc := Micro(e.CacheCreate, r.CacheCreate)
@@ -92,6 +95,13 @@ func Event(e event.UsageEvent) Charge {
 		Output:      out,
 		Version:     r.Version,
 	}
+}
+
+func unpricedComponent(e event.UsageEvent, r Rate) bool {
+	return (e.Miss > 0 && r.Miss <= 0) ||
+		(e.CacheRead > 0 && r.CacheRead <= 0) ||
+		(e.CacheCreate > 0 && r.CacheCreate <= 0) ||
+		(e.Output > 0 && r.Output <= 0)
 }
 
 func Lookup(vendor, model string, ts time.Time) (Rate, bool) {
@@ -137,20 +147,44 @@ func matchModel(canon, pattern string) bool {
 	if canon == pattern {
 		return true
 	}
-	i := strings.Index(canon, pattern)
-	if i < 0 {
-		return false
-	}
-	after := i + len(pattern)
-	if after < len(canon) {
-		c := canon[after]
-		// After the pattern, '.', '-', or a digit is a different id
-		// (opus-4 must not steal opus-4.6; grok-4 must not steal grok-4-fast).
-		if c == '.' || c == '-' || (c >= '0' && c <= '9') {
+	for start := 0; start <= len(canon); {
+		i := strings.Index(canon[start:], pattern)
+		if i < 0 {
 			return false
 		}
+		at := start + i
+		if leftBoundaryOK(canon, at, pattern) && rightBoundaryOK(canon, at+len(pattern)) {
+			return true
+		}
+		start = at + 1
 	}
-	return true
+	return false
+}
+
+func leftBoundaryOK(canon string, at int, pattern string) bool {
+	if at == 0 {
+		return true
+	}
+	c := canon[at-1]
+	if c == '/' {
+		return true
+	}
+	if c != '-' {
+		return false
+	}
+	// "chatgpt-4o" must not inherit "gpt-4o". A short id like "o3" must not
+	// match inside "foo-o3". Multi-part patterns (opus-4.6) may sit after '-'.
+	return strings.ContainsAny(pattern, "-.")
+}
+
+func rightBoundaryOK(canon string, after int) bool {
+	if after >= len(canon) {
+		return true
+	}
+	c := canon[after]
+	// After the pattern, '.', '-', or a digit is a different id
+	// (opus-4 must not steal opus-4.6; grok-4 must not steal grok-4-fast).
+	return c != '.' && c != '-' && (c < '0' || c > '9')
 }
 
 func Canonical(model string) string {

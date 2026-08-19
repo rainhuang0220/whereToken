@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/price"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
@@ -326,36 +327,11 @@ func getSlice(m map[string]*Slice, id, label string) *Slice {
 	return s
 }
 
-func sourceLabel(id string) string {
-	switch id {
-	case "claude":
-		return "Claude Code"
-	case "kimi":
-		return "Kimi Code"
-	case "minimax":
-		return "MiniMax Agent"
-	case "openclaw":
-		return "OpenClaw"
-	case "opencode":
-		return "OpenCode"
-	case "codex":
-		return "Codex"
-	case "cursor":
-		return "Cursor"
-	case "trae":
-		return "Trae"
-	case "grok":
-		return "Grok"
-	default:
-		return id
-	}
-}
+func sourceLabel(id string) string { return adapter.Label(id) }
 
 func SourceLabel(id string) string { return sourceLabel(id) }
 
-func KnownSourceIDs() []string {
-	return []string{"claude", "kimi", "grok", "minimax", "openclaw", "opencode", "codex", "cursor", "trae"}
-}
+func KnownSourceIDs() []string { return adapter.KnownIDs() }
 
 func LookupSource(name string) (string, bool) {
 	n := compactName(name)

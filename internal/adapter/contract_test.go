@@ -34,6 +34,21 @@ func allAdapters() []adapter.Adapter {
 	}
 }
 
+func TestCatalogMatchesRegisteredAdapters(t *testing.T) {
+	have := map[string]struct{}{}
+	for _, a := range allAdapters() {
+		have[a.ID()] = struct{}{}
+	}
+	for _, tool := range adapter.Catalog() {
+		if _, ok := have[tool.ID]; !ok {
+			t.Fatalf("catalog %s has no adapter", tool.ID)
+		}
+	}
+	if len(have) != len(adapter.Catalog()) {
+		t.Fatalf("adapter count %d catalog %d", len(have), len(adapter.Catalog()))
+	}
+}
+
 func TestAdaptersHaveIDsAndSafeEmptyDiscover(t *testing.T) {
 	home := testhome.New(t.TempDir())
 	for _, a := range allAdapters() {

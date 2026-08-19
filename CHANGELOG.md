@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.4.4 — 2026-08-20 (Alpha)
+
+- OpenClaw counts `/reset` and `/delete` session transcripts (`*.jsonl.reset.*`, `*.jsonl.deleted.*`). A rename no longer drops historical tokens. Trajectory `data.usage` is a fallback only when that session has no transcript; prompts stay off the event. Compaction `*.checkpoint.*` is skipped
+- Incremental JSONL parse errors keep the cached events for that file (append-only totals must not collapse). A today/7d window no longer marks last week's OpenClaw as 数据不可用
+- Trae `--offline` with local sessions is skipped-cloud (degraded), not a silent empty ledger. Credit-account `empty_result` is unavailable, not 0. CLI/JSON print `不可用` for an absent/empty degraded tool instead of `0.00 M`
+- Cost: `chatgpt-4o` does not inherit `gpt-4o`. A missing cache-write list rate is unavailable, not a `$0` complete bill
+- Adapter labels/IDs live in `adapter.Catalog` so doctor/`--tool` do not need a third copy
 - Completions offer `doctor --no-community`. Man page: unavailable rank is not `#0`. `verify-cli.sh` rejects `$0.00`, empty-home `#0`/`$0.00`, and `doctor --no-community` / `DO_NOT_TRACK=1`
 - `verify-cli.sh` requires 估价/排名, rejects `#0` / `rank: 0`, and checks `--no-community`
 - `--help` / man: `--rank all` is uploaded days, not kiln 全部

@@ -16,7 +16,7 @@ worse than leaving the agent unsupported.
 8. Add a malformed-input test: bad JSON / truncated rows must not panic and must not drop later good rows.
 9. Add a secret-leak test: a fake `sk-…` / JWT in a neighboring file must not appear on events or in errors.
 10. Add regression tests for the mapping and for any dedup / delta / stream rule.
-11. Register the adapter in `scan.Adapters` and `metric.KnownSourceIDs`.
+11. Register the adapter in `scan.Adapters` and `adapter.Catalog` (labels, doctor, `--tool`).
 12. Update `docs/data-sources.md` and the supported-agents table in the README.
 
 CI is `go test ./...` plus the web suite. A new adapter should not require editing eight unrelated packages by hand.
