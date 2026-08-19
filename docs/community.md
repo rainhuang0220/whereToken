@@ -65,3 +65,18 @@ enters 累计.
 - HMAC is not used in v1. The UUID is a bearer capability. That is
   enough for a self-hosted, self-reported board. It does not stop
   someone from inventing tokens.
+
+## v1 threat decisions
+
+| Threat | Impact | Likelihood | Mitigation | v1 |
+| ------ | ------ | ---------- | ---------- | -- |
+| Fake tokens | Rank lie | High if URL public | Cap, rate limit, self-reported copy | Accept |
+| Fake UUIDs / Sybil | Unlock N≥20 podium | High if public | N≥20, IP limit | Accept |
+| Replay PUT | Overwrite day | Medium | Last write wins | Intended |
+| Duplicate honest scan | None | High | 5 min cache, last write | OK |
+| Clock skew | ±2 UTC days stuffed | Low | periodNearNow | Accept |
+| Multi-device same UUID | Last write per day | Medium | Document | Accept |
+| Opt-out oracle | Learn if UUID joined | Low | Leave = never-seen | Mitigated |
+| Rank scraping | See board | Low | No public URL | Accept |
+| Privacy inference | Offset + version | Low | Aggregates only | Accept |
+| HMAC | Would not stop self-lie | — | — | **Not added** |

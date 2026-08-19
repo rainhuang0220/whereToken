@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- Oversize complete JSONL lines are skipped instead of aborting the file. Claude/Grok/Kimi keep parsing sibling files if one path is unreadable
+- Gemini CLI reads official session `tokens` (`~/.gemini/tmp/*/chats/`). Qwen Code reads `~/.qwen/usage/token-usage-*.jsonl`. Cline and Roo Code read VS Code-family `ui_messages.json` metrics only
+- `adapter.Caps` / `Probe` distinguish discovery from usage. Global class table: `docs/provider-matrix.md`
+- Negative token fields are dropped in `metric.Aggregate`; huge sums saturate instead of wrapping
+- Gemini/Qwen/DashScope context-tiered list prices stay unpriced (no guessed tier). Flat Kimi K3/K2.7/K2.5 and Gemini Flash/Lite list rows are priced
+- Codex reads `cache_write_input_tokens`. Gemini walks subagent `chats/<parent>/` files and honors `GEMINI_CLI_HOME`. Qwen honors `QWEN_HOME` / `QWEN_RUNTIME_DIR`
+- `--tool` completions follow `adapter.Catalog`
 
 ## 0.4.4 — 2026-08-20 (Alpha)
 

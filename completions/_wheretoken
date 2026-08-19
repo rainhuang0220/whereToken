@@ -55,7 +55,7 @@ _wheretoken() {
         '--offline[skip Cursor/Trae account APIs]' \
         '--rank[community rank period]:rank:(today all)' \
         '--no-community[do not upload or fetch community rank]' \
-        '--tool[tool id]:tool:(claude kimi grok minimax openclaw codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax openclaw opencode codex cursor trae gemini qwen cline roo)' \
         '--home[fake home]:dir:_files -/'
       ;;
     community)
@@ -93,7 +93,7 @@ _wheretoken() {
         '--offline[skip Cursor/Trae account APIs]' \
         '--rank[community rank period]:rank:(today all)' \
         '--no-community[do not upload or fetch community rank]' \
-        '--tool[tool id]:tool:(claude kimi grok minimax openclaw codex opencode cursor trae)' \
+        '--tool[tool id]:tool:(claude kimi grok minimax openclaw opencode codex cursor trae gemini qwen cline roo)' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
         '--model[model id]:model:' \
         '--claude[slice Claude Code]' \

@@ -166,10 +166,14 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Grok CLI | 完整 | 不需要 |
 | MiniMax Agent | 完整 | 不需要 |
 | OpenClaw | 完整 | 不需要 |
+| Gemini CLI | 完整 | 不需要 |
+| Qwen Code | 完整 | 不需要 |
+| Cline | 完整 | 不需要 |
+| Roo Code | 完整 | 不需要 |
 | Cursor | 部分 | token 列需要 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
-Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密的 Trae 存储只汇报，不解密。
+Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
 
 当某个 coding agent 没有提供可靠的用量信息时，whereToken 会标为不可用，而不是记成零。
 
@@ -177,7 +181,7 @@ Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密�
 
 ### 目前不支持
 
-Windsurf、GitHub Copilot、Cline、Lingma 目前不受支持，因为 whereToken 还没有这些工具可靠的用量数据源。
+Windsurf、GitHub Copilot、Continue、Aider、Kilo Code、GLM/豆包第一方 CLI、Lingma 目前不受支持：还没有可安全读取的用量账本。发现配置目录不等于发现 usage。见 [`docs/provider-matrix.md`](docs/provider-matrix.md)。
 
 ## 工作原理
 

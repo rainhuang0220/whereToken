@@ -57,6 +57,19 @@ international pay-as-you-go list (not Token Plan credits). MiniMax **M3** stays
 unpriced: the public page splits ≤512k / >512k and prints strikethrough promo
 pairs.
 
+Google Gemini **2.5 Flash / Lite**, **2.0 Flash / Lite**, and **3.5 Flash /
+Lite** use the standard paid list (cache write is hourly storage, so
+`CacheCreate>0` stays unpriced). Gemini **2.5 Pro** and other ≤200k / >200k
+splits stay unpriced.
+
+Qwen / DashScope coder models are context-tiered (`qwen3-coder-plus` steps
+at 32k / 128k / 256k) and stay unpriced.
+
+Moonshot **kimi-k3**, **kimi-k2.7-code** (+ highspeed), and **kimi-k2.5**
+use the official USD list (no cache-write token rate). Bare `k3` stays
+unpriced. Z.ai / GLM, DeepSeek (peak/off-peak), and ByteDance / Doubao
+(CNY / length bands) have no card.
+
 ## What is not priced
 
 Moonshot / Kimi Code, MiniMax-M3, DeepSeek, Doubao, Zhipu, Alibaba, and any

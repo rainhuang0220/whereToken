@@ -342,6 +342,107 @@ read.
 
 ---
 
+## Gemini CLI
+
+### Location
+
+`~/.gemini/tmp/<project>/chats/session-*.jsonl` (legacy `session-*.json`).
+Windows: `%USERPROFILE%\.gemini\tmp\…`.
+
+Do not read `oauth_creds.json`, `settings.json`, `google_accounts.json`,
+or message `content`.
+
+### Parser
+
+`internal/adapter/gemini`. `type=gemini` rows with `tokens` become usage.
+`type=user` is a user turn. Malformed lines are skipped.
+
+### Token mapping
+
+| whereToken | Gemini field | Kind |
+| ---------- | ------------ | ---- |
+| Miss | `tokens.input - tokens.cached` (min 0) | derived |
+| Cache Read | `tokens.cached` | raw |
+| Output | `tokens.output` | raw |
+| Reasoning | `tokens.thoughts` | raw (not in Total) |
+
+Quality `authoritative`. Official schema: `TokensSummary` in gemini-cli
+`chatRecordingTypes.ts`.
+
+---
+
+## Qwen Code
+
+### Location
+
+`~/.qwen/usage/token-usage-*.jsonl` (Qwen Code `tokenUsageService`).
+
+Do not read `settings.json`, `oauth_creds.json`, or chat transcripts under
+`tmp/*/chats/` (those hold prompts). The usage ledger has no prompt fields.
+
+### Token mapping
+
+| whereToken | Qwen field | Kind |
+| ---------- | ---------- | ---- |
+| Miss | `inputTokens - cachedTokens` (min 0) | derived |
+| Cache Read | `cachedTokens` | raw |
+| Output | `outputTokens` | raw |
+| Reasoning | `thoughtsTokens` | raw (not in Total) |
+
+Quality `authoritative`. Incremental JSONL.
+
+---
+
+## Cline
+
+### Location
+
+VS Code-family `User/globalStorage/saoudrizwan.claude-dev/tasks/<id>/ui_messages.json`
+(Code, VSCodium, Cursor, Windsurf, Insiders). Linux `~/.config/<product>/…`,
+Windows `%APPDATA%\<product>\…`.
+
+Do not read `settings/`, API keys, or conversation bodies except the
+`api_req_started` / `deleted_api_reqs` / `subagent_usage` metrics JSON
+that Cline itself sums in `getApiMetrics`.
+
+### Token mapping
+
+| whereToken | Cline field | Kind |
+| ---------- | ----------- | ---- |
+| Miss | `tokensIn` (uncached input) | raw |
+| Cache Read | `cacheReads` | raw |
+| Cache Create | `cacheWrites` | raw |
+| Output | `tokensOut` | raw |
+
+`cost` in those blobs is ignored. Quality `authoritative`.
+
+---
+
+## Roo Code
+
+### Location
+
+VS Code-family `User/globalStorage/RooVeterinaryInc.roo-cline/tasks/<id>/ui_messages.json`
+(and `RooVeterinaryInc.roo-code-nightly`). Same product roots as Cline.
+
+Do not read `settings/` or conversation bodies. Official
+`consolidateTokenUsage` only sums `say=api_req_started` (not Cline's
+`deleted_api_reqs` / `subagent_usage`).
+
+### Token mapping
+
+| whereToken | Roo field | Kind |
+| ---------- | --------- | ---- |
+| Miss | `tokensIn` | raw |
+| Cache Read | `cacheReads` | raw |
+| Cache Create | `cacheWrites` | raw |
+| Output | `tokensOut` | raw |
+
+`cost` ignored. Quality `authoritative`. Kilo Code 1.x is an OpenCode fork
+(`packages/opencode`), not this file layout — it is not collected here.
+
+---
+
 ## Incremental index
 
 JSONL adapters (Claude, Kimi, Grok, OpenClaw) cache normalized events by path / size / mtime / inode / offset. Appends parse only the new tail. Truncation or a new inode is a full rescan of that file.

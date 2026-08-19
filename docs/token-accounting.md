@@ -94,7 +94,7 @@ guarantee for every row.
 | OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. Trajectory uses `runId`. |
 | Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
-| Codex | — | Cache Create | — | — | Not exposed. |
+| Codex | Δ `cache_write_input_tokens` | Cache Create | derived | authoritative | CLI 0.145+; often 0 on older logs. |
 | Codex | Δ `output_tokens` + Δ `reasoning_output_tokens` | Output | derived | authoritative | Reasoning is folded into Output. |
 | Codex | Δ `reasoning_output_tokens` | Reasoning | derived | authoritative | Also included in Output; not added again. |
 | OpenCode | `tokens.input` | Miss | raw | authoritative | From `message.data`. |
@@ -111,6 +111,22 @@ guarantee for every row.
 | Trae | `cache_read_token` | Cache Read | raw | authoritative | |
 | Trae | `cache_write_token` | Cache Create | raw | authoritative | |
 | Trae | `output_token` | Output | raw | authoritative | |
+| Gemini CLI | `tokens.input - tokens.cached` | Miss | derived | authoritative | Session `type=gemini`. |
+| Gemini CLI | `tokens.cached` | Cache Read | raw | authoritative | |
+| Gemini CLI | `tokens.output` | Output | raw | authoritative | |
+| Gemini CLI | `tokens.thoughts` | Reasoning | raw | authoritative | Not added into Total. |
+| Qwen Code | `inputTokens - cachedTokens` | Miss | derived | authoritative | `usage/token-usage-*.jsonl` only. |
+| Qwen Code | `cachedTokens` | Cache Read | raw | authoritative | |
+| Qwen Code | `outputTokens` | Output | raw | authoritative | |
+| Qwen Code | `thoughtsTokens` | Reasoning | raw | authoritative | Not added into Total. |
+| Cline | `tokensIn` | Miss | raw | authoritative | `ui_messages.json` metrics only. |
+| Cline | `cacheReads` | Cache Read | raw | authoritative | |
+| Cline | `cacheWrites` | Cache Create | raw | authoritative | |
+| Cline | `tokensOut` | Output | raw | authoritative | `cost` ignored. |
+| Roo Code | `tokensIn` | Miss | raw | authoritative | `api_req_started` only. |
+| Roo Code | `cacheReads` | Cache Read | raw | authoritative | |
+| Roo Code | `cacheWrites` | Cache Create | raw | authoritative | |
+| Roo Code | `tokensOut` | Output | raw | authoritative | `cost` ignored. |
 
 ## Request merge
 

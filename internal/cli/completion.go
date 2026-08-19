@@ -3,9 +3,19 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"github.com/rainhuang0220/whereToken/internal/adapter"
 )
 
 func Completion(shell string) (string, error) {
+	src, err := completionSource(shell)
+	if err != nil {
+		return "", err
+	}
+	return strings.ReplaceAll(src, oldToolIDs, strings.Join(adapter.KnownIDs(), " ")), nil
+}
+
+func completionSource(shell string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(shell)) {
 	case "bash":
 		return bashCompletion, nil
@@ -21,6 +31,11 @@ func Completion(shell string) (string, error) {
 		return "", usageError{msg: fmt.Sprintf("unknown shell %q (bash, zsh, fish, powershell)", shell)}
 	}
 }
+
+// oldToolIDs is the static list baked into the completion scripts.
+// Completion() rewrites it from adapter.Catalog so a new tool is not
+// forgotten in four shells.
+const oldToolIDs = "claude kimi grok minimax openclaw codex opencode cursor trae"
 
 const bashCompletion = `# bash completion for wheretoken
 _wheretoken() {

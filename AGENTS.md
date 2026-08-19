@@ -6,6 +6,8 @@ Local-first token usage accounting. Read these before changing parsers or totals
 
 - Product token math: [`docs/token-accounting.md`](docs/token-accounting.md)
 - Adapter contract: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md), [`docs/data-sources.md`](docs/data-sources.md)
+- Register a tool in `internal/adapter/<id>/`, `adapter.Catalog`, and `scan.Adapters` only. Completions rewrite `--tool` from Catalog.
+- Global research table: [`docs/provider-matrix.md`](docs/provider-matrix.md)
 - Cost: [`docs/cost.md`](docs/cost.md)
 - Community Rank: [`docs/community.md`](docs/community.md)
 
