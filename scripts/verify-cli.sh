@@ -22,6 +22,10 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q update
 "$dir/wheretoken" --help | grep -q uninstall
 "$dir/wheretoken" --help | grep -q -- '--since'
+"$dir/wheretoken" --help | grep -q -- '--rank'
+"$dir/wheretoken" --help | grep -q -- '--no-community'
+"$dir/wheretoken" --help | grep -q 'uploaded days'
+"$dir/wheretoken" --help | grep -q community
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2
   exit 1
@@ -36,6 +40,12 @@ echo "$out"
 echo "$out" | grep -q '0.0012 M'
 echo "$out" | grep -q 'Kimi'
 echo "$out" | grep -q '占比'
+echo "$out" | grep -q '估价'
+echo "$out" | grep -q '排名'
+if echo "$out" | grep -q '#0'; then
+  echo "table printed #0" >&2
+  exit 1
+fi
 if echo "$out" | grep -q eyJ; then
   echo "jwt leaked" >&2
   exit 1
@@ -49,6 +59,29 @@ echo "$json" | grep -q '"max_streak_days"'
 echo "$json" | grep -q '"current_streak_days"'
 if echo "$json" | grep -q '"events"'; then
   echo "raw events in --json" >&2
+  exit 1
+fi
+echo "$json" | grep -q '"community"'
+if echo "$json" | grep -Eq '"rank":[[:space:]]*0'; then
+  echo "json shipped rank 0" >&2
+  exit 1
+fi
+if echo "$json" | grep -q '#0'; then
+  echo "json printed #0" >&2
+  exit 1
+fi
+
+st="$("$dir/wheretoken" --home "$dir" --quiet community status)"
+echo "$st" | grep -q 'community rank: off'
+if echo "$st" | grep -q '#0'; then
+  echo "community status printed #0" >&2
+  exit 1
+fi
+
+nc="$("$dir/wheretoken" --home "$dir" --no-community --ascii --quiet)"
+echo "$nc" | grep -q '社区排名已关闭'
+if echo "$nc" | grep -q '#0'; then
+  echo "--no-community printed #0" >&2
   exit 1
 fi
 
