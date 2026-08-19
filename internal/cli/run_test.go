@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -177,11 +178,33 @@ func TestRunJSON(t *testing.T) {
 	if strings.Contains(s, "┌") {
 		t.Fatal("json must not be a table")
 	}
-	if !strings.Contains(s, `"community"`) {
-		t.Fatal("CLI --json must include community")
+	var m map[string]any
+	if err := json.Unmarshal(out.Bytes(), &m); err != nil {
+		t.Fatal(err)
 	}
-	if strings.Contains(s, `"rank": 0`) || strings.Contains(s, `"#0`) {
+	assertCLICommunityAgainstSchema(t, m)
+	if strings.Contains(s, `"rank": 0`) || strings.Contains(s, `"rank":0`) || strings.Contains(s, `"#0`) {
 		t.Fatalf("unavailable rank must not be 0:\n%s", s)
+	}
+}
+
+func TestRunJSONCommunityMatchesPublishedSchema(t *testing.T) {
+	for _, args := range [][]string{
+		{"--json"},
+		{"--json", "--offline"},
+		{"--json", "--no-community"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			app, out, errb := testApp(args)
+			if code := app.Run(); code != ExitOK {
+				t.Fatalf("code=%d %s", code, errb.String())
+			}
+			var m map[string]any
+			if err := json.Unmarshal(out.Bytes(), &m); err != nil {
+				t.Fatal(err)
+			}
+			assertCLICommunityAgainstSchema(t, m)
+		})
 	}
 }
 
