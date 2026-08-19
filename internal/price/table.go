@@ -58,6 +58,23 @@ var table = []Rate{
 	// International API list. Token Plan subscriptions are not this card.
 	// M3 is not listed here: the public page splits ≤512k / >512k and prints
 	// strikethrough promo pairs. Guessing one rate would be a billed fiction.
+	// Moonshot — platform.kimi.ai/docs/pricing (2026-08-20). No cache-write
+	// token rate; events with CacheCreate>0 stay unpriced.
+	kimi("kimi-k3", 3.00, 0.30, 0, 15.00),
+	kimi("kimi-k2.7-code-highspeed", 1.90, 0.38, 0, 8.00),
+	kimi("kimi-k2.7-code", 0.95, 0.19, 0, 4.00),
+	kimi("kimi-k2.5", 0.60, 0.10, 0, 3.00),
+
+	// Google — ai.google.dev/gemini-api/docs/pricing (2026-08-13). Flat
+	// Flash/Lite rows only. 2.5 Pro / 3.x Pro stay unpriced (≤200k / >200k).
+	// Cache write is hourly storage, not a token rate.
+	ggl("gemini-2.5-flash-lite", 0.10, 0.01, 0, 0.40),
+	ggl("gemini-2.5-flash", 0.30, 0.03, 0, 2.50),
+	ggl("gemini-2.0-flash-lite", 0.075, 0, 0, 0.30),
+	ggl("gemini-2.0-flash", 0.10, 0.025, 0, 0.40),
+	ggl("gemini-3.5-flash-lite", 0.30, 0.03, 0, 2.50),
+	ggl("gemini-3.5-flash", 1.50, 0.15, 0, 9.00),
+
 	mm("minimax-m2.7-highspeed", 0.60, 0.06, 0.375, 2.40),
 	mm("minimax-m2.7", 0.30, 0.06, 0.375, 1.20),
 	mm("minimax-m2.5-highspeed", 0.60, 0.03, 0.375, 2.40),
@@ -99,5 +116,23 @@ func mm(model string, miss, cacheRead, cacheCreate, output float64) Rate {
 		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
 		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		Source: "minimax_api_list", Version: CardVersion,
+	}
+}
+
+func kimi(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return Rate{
+		Vendor: "moonshot", Model: model,
+		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		Source: "moonshot_api_list", Version: CardVersion,
+	}
+}
+
+func ggl(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return Rate{
+		Vendor: "google", Model: model,
+		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		Source: "google_api_list", Version: CardVersion,
 	}
 }

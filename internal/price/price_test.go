@@ -7,6 +7,40 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
+func TestKimiK3UsesOfficialCardButBareK3StaysUnpriced(t *testing.T) {
+	k3 := Event(event.UsageEvent{Vendor: "moonshot", Model: "k3", Miss: 1_000_000, Output: 1_000_000})
+	if k3.OK {
+		t.Fatal("bare k3 must stay unpriced")
+	}
+	full := Event(event.UsageEvent{Vendor: "moonshot", Model: "kimi-k3", Miss: 1_000_000, Output: 1_000_000})
+	if !full.OK || full.Micro != 18_000_000 { // $3+$15
+		t.Fatalf("kimi-k3 %+v", full)
+	}
+	hs := Event(event.UsageEvent{Vendor: "moonshot", Model: "kimi-k2.7-code-highspeed", Miss: 1_000_000, Output: 1_000_000})
+	base := Event(event.UsageEvent{Vendor: "moonshot", Model: "kimi-k2.7-code", Miss: 1_000_000, Output: 1_000_000})
+	if !hs.OK || hs.Micro != 9_900_000 { // $1.90+$8
+		t.Fatalf("highspeed %+v", hs)
+	}
+	if !base.OK || base.Micro != 4_950_000 { // $0.95+$4
+		t.Fatalf("k2.7-code %+v", base)
+	}
+}
+
+func TestGeminiFlashPricedProUnpriced(t *testing.T) {
+	flash := Event(event.UsageEvent{Vendor: "google", Model: "gemini-2.5-flash", Miss: 1_000_000, Output: 1_000_000})
+	if !flash.OK || flash.Micro != 2_800_000 { // $0.30+$2.50
+		t.Fatalf("flash %+v", flash)
+	}
+	lite := Event(event.UsageEvent{Vendor: "google", Model: "gemini-2.5-flash-lite", Miss: 1_000_000, Output: 1_000_000})
+	if !lite.OK || lite.Micro != 500_000 { // $0.10+$0.40
+		t.Fatalf("lite must not inherit flash: %+v", lite)
+	}
+	pro := Event(event.UsageEvent{Vendor: "google", Model: "gemini-2.5-pro", Miss: 1_000_000, Output: 1_000_000})
+	if pro.OK {
+		t.Fatal("gemini-2.5-pro is context-tiered and must stay unpriced")
+	}
+}
+
 func TestUnavailableNeverFormatsAsZeroUSD(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "moonshot", Model: "k3", Miss: 1_000_000, Output: 1_000_000})
 	if c.OK {
