@@ -342,8 +342,17 @@ func tokenlessModels(rows []Row) bool {
 func appendCostNotes(notes []string, view metric.SliceView) []string {
 	switch view.CostStatus {
 	case "complete":
+		if view.CostUSD == "" {
+			return notes
+		}
 		return appendUniqueNote(notes, "估价 "+view.CostUSD+" · API 标价等价，不是订阅账单")
 	case "partial":
+		if view.CostUSD == "" {
+			if view.Total == 0 {
+				return notes
+			}
+			return appendUniqueNote(notes, "估价不可用 · 账本模型没有 API 标价，不会写成 $0")
+		}
 		return appendUniqueNote(notes, "估价 "+view.CostUSD+" · 部分模型没有标价，未计入；不是订阅账单")
 	case "unavailable":
 		if view.Total == 0 {

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Cost footnotes skip a blank/zero bill when the priced amount rounds under `$0.0001`
 - 用量说明 uses the same cost formatter as the KPI (sub-cent rounding to `$0.0000` is omitted)
 - CLI tool/vendor/model rankings print 估价 (`—` when unpriced). Narrow terminals drop that column first
 - 工具 × 厂家 prints 估价; a partial slice with no priced dollars omits `cost_usd` instead of `$0.0000`. Rank HTTP sanitizes `#0` before encode

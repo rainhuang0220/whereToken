@@ -712,6 +712,29 @@ func TestTodayKeepsTraeNoteWhenSliced(t *testing.T) {
 	}
 }
 
+func TestSnapshotTinyPricedDoesNotFootnoteBlankOrZeroBill(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	snap, err := Build([]event.UsageEvent{{
+		Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+		RequestID: "tiny", Timestamp: now, Miss: 1, Quality: event.QualityAuthoritative,
+	}}, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.CostUSD != "" && (snap.CostUSD == "$0.0000" || strings.HasPrefix(snap.CostUSD, "$0.")) {
+		t.Fatalf("tiny complete must not claim $0: %+v", snap)
+	}
+	for _, n := range snap.Notes {
+		if strings.Contains(n, "估价  ·") || strings.Contains(n, "估价 ·") {
+			t.Fatalf("blank estimate footnote: %q", n)
+		}
+		if strings.Contains(n, "$0") {
+			t.Fatalf("zero-bill footnote: %q", n)
+		}
+	}
+}
+
 func TestTokenlessModelGetsFootnote(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
