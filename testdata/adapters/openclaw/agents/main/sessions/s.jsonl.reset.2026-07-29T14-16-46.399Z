@@ -1,0 +1,2 @@
+{"type":"session","id":"sess-reset","timestamp":"2026-07-29T14:16:46.399Z","cwd":"/tmp/demo"}
+{"type":"message","id":"ignored-reset-uuid","timestamp":"2026-07-29T14:16:47Z","message":{"role":"assistant","provider":"minimax-portal","model":"MiniMax-M2.1","responseId":"resp-reset","usage":{"input":40,"output":2,"cacheRead":0,"cacheWrite":0},"timestamp":"2026-07-29T14:16:47Z"}}

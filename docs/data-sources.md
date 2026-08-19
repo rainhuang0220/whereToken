@@ -170,22 +170,27 @@ read, not a single context window.
 
 ### Location
 
-`~/.openclaw/agents/<agent>/sessions/<session>.jsonl` (archive / leftover
-transcripts). The live runtime after 2026.7.2 is
+`~/.openclaw/agents/<agent>/sessions/<session>.jsonl` plus the same
+transcript after `/reset` or delete (`*.jsonl.reset.<ts>`,
+`*.jsonl.deleted.<ts>`). The live runtime after 2026.7.2 is
 `~/.openclaw/agents/<agent>/agent/openclaw-agent.sqlite` plus
 `state/openclaw.sqlite`. Those files mix session JSON with auth and
 transcripts; whereToken does **not** open them.
 
-Do not read `*.trajectory.jsonl`, `skills-prompts/`, `credentials/`,
-`identity/`, `openclaw.json`, workspace trees, or the per-agent `agent/`
-directory. Never map `usage.cost`.
+Do not read `skills-prompts/`, `credentials/`, `identity/`,
+`openclaw.json`, workspace trees, or the per-agent `agent/` directory.
+Never map `usage.cost`. `*.trajectory.jsonl` holds prompts; it is used
+only when that session has no transcript, and then only `data.usage`
+numbers.
 
 ### Parser
 
-`internal/adapter/openclaw`. Walks session JSONL. `type=message` with
-`role=assistant` and `message.usage` becomes a usage event. `role=user` is a
-user turn. `toolResult` rows are skipped even if they carry usage.
-`type=session` supplies `cwd` and session id.
+`internal/adapter/openclaw`. Walks session JSONL (active and
+`.reset` / `.deleted` archives). `type=message` with `role=assistant` and
+`message.usage` becomes a usage event. `role=user` is a user turn.
+`toolResult` rows are skipped even if they carry usage. `type=session`
+supplies `cwd` and session id. Trajectory `type=model.completed` is a
+fallback for sessions that have no transcript.
 
 Request id is `message.responseId`. Per-line `id` is ignored.
 
@@ -207,7 +212,10 @@ Vendor comes from `message.model` / `message.provider` via `vendor.Lookup`.
 
 ### Limitations
 
-Trajectory files look like usage but also hold prompts. They are skipped.
+A `/reset` or delete that only renames the JSONL must not drop historical
+tokens: the archive name is still a transcript. Trajectory files also hold
+`finalPromptText` / `messagesSnapshot`; those strings are never copied onto
+events. Sibling trajectory + JSONL is not added together.
 
 ---
 
@@ -327,6 +335,10 @@ Quality `authoritative` when the API returns tokens; `degraded` when sessions ex
 ### Limitations
 
 Needs the user **signed in**. whereToken does not accept a pasted JWT.
+Consumer Trae CN credit/free accounts often return `empty_result` from
+the same session-usage API Trae itself calls. That is **unavailable**,
+not measured zero. SQLCipher `ModularData/ai-agent/database.db` is not
+read.
 
 ---
 

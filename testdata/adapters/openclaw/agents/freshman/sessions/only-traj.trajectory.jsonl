@@ -1,0 +1,1 @@
+{"type":"model.completed","ts":"2026-07-27T03:00:00.000Z","sessionId":"only-traj","runId":"run-fixture","seq":1,"provider":"minimax-portal","modelId":"MiniMax-M2.1","data":{"usage":{"input":25,"output":5,"cacheRead":10,"cacheWrite":2}}}

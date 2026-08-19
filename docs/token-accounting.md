@@ -86,11 +86,12 @@ guarantee for every row.
 | MiniMax Agent | `cache_write_tokens` | Cache Create | raw | authoritative | |
 | MiniMax Agent | `output_tokens` | Output | raw | authoritative | Reasoning is not folded in. |
 | MiniMax Agent | `reasoning_tokens` | Reasoning | raw | authoritative | Not added into Total. |
-| OpenClaw | `message.usage.input` | Miss | raw | authoritative | Session JSONL only; not `*.trajectory.jsonl`. |
+| OpenClaw | `message.usage.input` | Miss | raw | authoritative | Session JSONL, including `.jsonl.reset.*` / `.jsonl.deleted.*`. |
 | OpenClaw | `message.usage.cacheRead` | Cache Read | raw | authoritative | |
 | OpenClaw | `message.usage.cacheWrite` | Cache Create | raw | authoritative | |
 | OpenClaw | `message.usage.output` | Output | raw | authoritative | `usage.cost` is ignored. |
-| OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. |
+| OpenClaw | `data.usage.input` (trajectory) | Miss | raw | authoritative | Only when that session has no transcript. Prompts are discarded. |
+| OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. Trajectory uses `runId`. |
 | Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
 | Codex | — | Cache Create | — | — | Not exposed. |
@@ -120,12 +121,32 @@ overwrite a sibling row’s miss.
 Adapters must not invent a request id from a per-line uuid. That would defeat
 the merge and double-count stream placeholders.
 
+## What “总用量” is
+
+With no window flags, CLI / `--json` / dashboard 全部 is **this scan’s
+currently visible local data**: every adapter event from files still on
+disk (and Cursor/Trae’s product API window when online). It is not “bytes
+in `index.v1.db`” and not a provider invoice.
+
+`--today` / `--since` / `--from` / `--to` filter that set in the local
+timezone. A source that has history but nothing in the window is omitted
+or shows 0 for the window; it is not marked “数据不可用”.
+
+Missing usage (detected tool, no ledger) is **unavailable**, never `0.00 M`.
+
+If source files only append, a later successful scan must not drop tokens.
+A `/reset` that renames `session.jsonl` to `session.jsonl.reset.<ts>` is
+still visible data. Truncation, deletion of the archive, a rolling cloud
+window (Cursor ~53 weeks), or Trae `empty_result` can lower the number
+and must be explainable.
+
 ## Local scan index
 
 The SQLite file under `~/.cache/wheretoken/` is a performance cache. File
 identity is path + size + mtime + inode, not a content hash. `wheretoken rebuild`
 deletes it. Incremental JSONL stores the last **consumed** byte offset, which
-stays behind EOF while the last line is still being written.
+stays behind EOF while the last line is still being written. A parse error
+on the new tail keeps the cached events for that file.
 
 ## Cost
 

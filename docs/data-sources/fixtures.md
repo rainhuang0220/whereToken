@@ -37,6 +37,16 @@ matched message totals on that host.
 Local bubbles on that host: 1,827 user turns, 43,550 requests, `tokenCount`
 almost all zero. Token columns come from the account API, not those zeros.
 
+## OpenClaw
+
+On one host (2026-08-20), 10 active session JSONL files held 67 usage
+rows (~1.85M tokens). The same tree also had `/reset` and `/delete`
+archives plus trajectory-only sessions; counting those archives is
+required or a later `/reset` looks like a token drop.
+
+`testdata/adapters/openclaw/` covers an active transcript, a `.reset`
+archive, a `.deleted` archive, and a trajectory-only fallback.
+
 ## Grok / Trae
 
 See `testdata/adapters/grok` and `internal/adapter/trae` tests. JWT fixtures

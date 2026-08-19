@@ -157,8 +157,12 @@ func TestParseCheckedInFixture(t *testing.T) {
 	if err := (Adapter{}).Parse(root, func(e event.UsageEvent) { evs = append(evs, e) }, func(event.TurnEvent) {}); err != nil {
 		t.Fatal(err)
 	}
-	if len(evs) != 1 || evs[0].Miss != 100 || evs[0].RequestID != "resp-1" {
-		t.Fatalf("%+v", evs)
+	got := map[string]int64{}
+	for _, e := range evs {
+		got[e.RequestID] = e.Miss
+	}
+	if got["resp-1"] != 100 || got["resp-reset"] != 40 || got["resp-deleted"] != 400 || got["run-fixture:1"] != 25 {
+		t.Fatalf("fixture ids=%v evs=%+v", got, evs)
 	}
 }
 
@@ -254,5 +258,172 @@ func TestSourceAvoidsCredentialWalk(t *testing.T) {
 	}
 	if strings.Contains(string(src), "device-auth") || strings.Contains(string(src), "openclaw.json") {
 		t.Fatal("must not open config/login files")
+	}
+}
+
+func TestCheckpointJSONLIsSkipped(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "main", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	poison := `{"type":"message","timestamp":"2026-08-19T11:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"ckpt","usage":{"input":999,"output":1}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "s.checkpoint.abc.jsonl"), []byte(poison), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	keep := `{"type":"message","timestamp":"2026-08-19T11:00:01Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"live","usage":{"input":4,"output":1}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "s.jsonl"), []byte(keep), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].RequestID != "live" {
+		t.Fatalf("compaction checkpoint must not count: %+v", evs)
+	}
+}
+
+func TestParseResetAndDeletedArchives(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "main", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	active := `{"type":"message","timestamp":"2026-08-19T11:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"live","usage":{"input":4,"output":1}}}` + "\n"
+	reset := `{"type":"message","timestamp":"2026-07-29T11:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"old","usage":{"input":40,"output":2}}}` + "\n"
+	deleted := `{"type":"message","timestamp":"2026-07-26T08:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"gone","usage":{"input":400,"output":3}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "live.jsonl"), []byte(active), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sess, "live.jsonl.reset.2026-07-29T14-16-46.399Z"), []byte(reset), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sess, "gone.jsonl.deleted.2026-07-26T08-12-20.568Z"), []byte(deleted), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	var miss int64
+	for _, e := range evs {
+		got[e.RequestID] = e.Miss
+		miss += e.Miss
+	}
+	if got["live"] != 4 || got["old"] != 40 || got["gone"] != 400 {
+		t.Fatalf("reset/deleted archives must still count: %+v", evs)
+	}
+	if miss != 444 {
+		t.Fatalf("miss=%d want 444", miss)
+	}
+}
+
+func TestResetRenameDoesNotDropTokens(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "main", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	live := filepath.Join(sess, "s.jsonl")
+	body := `{"type":"message","timestamp":"2026-07-26T11:03:33Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"hist","usage":{"input":99,"output":1}}}` + "\n"
+	if err := os.WriteFile(live, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}
+	sum := func() int64 {
+		var n int64
+		if err := (Adapter{}).Parse(root, func(e event.UsageEvent) { n += e.Miss }, func(event.TurnEvent) {}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	before := sum()
+	if before != 99 {
+		t.Fatalf("before=%d", before)
+	}
+	archived := filepath.Join(sess, "s.jsonl.reset.2026-08-19T12-00-00.000Z")
+	if err := os.Rename(live, archived); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(live, []byte(`{"type":"message","timestamp":"2026-08-19T12:00:01Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"new","usage":{"input":3,"output":1}}}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after := sum()
+	if after < before {
+		t.Fatalf("reset must keep history: before=%d after=%d", before, after)
+	}
+	if after != 102 {
+		t.Fatalf("after=%d want 102 (99 archived + 3 new)", after)
+	}
+}
+
+func TestTrajectoryUsageOnlyWhenNoTranscript(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "freshman", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const prompt = "SECRET-PROMPT-TEXT-MUST-NOT-LEAK"
+	trajOnly := `{"type":"model.completed","ts":"2026-07-27T03:00:00.000Z","sessionId":"only-traj","runId":"run-1","provider":"minimax-portal","modelId":"MiniMax-M2.1","data":{"usage":{"input":25,"output":5,"cacheRead":10,"cacheWrite":2},"finalPromptText":"` + prompt + `","assistantTexts":["` + prompt + `"]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "only-traj.trajectory.jsonl"), []byte(trajOnly), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bothJSONL := `{"type":"message","timestamp":"2026-07-27T04:00:00Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"both","usage":{"input":7,"output":1}}}` + "\n"
+	bothTraj := `{"type":"model.completed","ts":"2026-07-27T04:00:00.000Z","sessionId":"both","runId":"run-2","provider":"minimax-portal","modelId":"MiniMax-M2.1","data":{"usage":{"input":700,"output":1},"finalPromptText":"` + prompt + `"}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "both.jsonl"), []byte(bothJSONL), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sess, "both.trajectory.jsonl"), []byte(bothTraj), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	var miss int64
+	for _, e := range evs {
+		got[e.RequestID] = e.Miss
+		miss += e.Miss
+		blob := e.RequestID + e.Model + e.SessionID + e.Workspace + e.Provider
+		if strings.Contains(blob, prompt) {
+			t.Fatalf("trajectory prompt leaked onto event %+v", e)
+		}
+	}
+	if got["both"] != 7 {
+		t.Fatalf("sibling trajectory must not replace/add on top of jsonl: %+v", evs)
+	}
+	if miss != 32 { // 25 from traj-only + 7 from jsonl
+		t.Fatalf("traj-only session must count usage once: miss=%d evs=%+v", miss, evs)
+	}
+}
+
+func TestTrajectoryMalformedDoesNotDropLaterRows(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, ".openclaw", "agents", "main", "sessions")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "{nope\n" + `{"type":"model.completed","ts":"2026-07-27T03:00:00.000Z","sessionId":"t","runId":"r","provider":"minimax-portal","modelId":"MiniMax-M2.1","data":{"usage":{"input":11,"output":2}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "t.trajectory.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "openclaw", Path: filepath.Join(dir, ".openclaw")}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Miss != 11 {
+		t.Fatalf("%+v", evs)
 	}
 }
