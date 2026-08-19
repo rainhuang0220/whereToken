@@ -75,6 +75,29 @@ func TestLastTokenUsageFallback(t *testing.T) {
 	}
 }
 
+func TestCacheWriteDelta(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sessions", "2026", "01", "01", "rollout-write.jsonl")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"timestamp":"2026-01-01T00:00:00Z","type":"turn_context","payload":{"model":"gpt-5.6-terra"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":20,"cache_write_input_tokens":8,"output_tokens":30,"reasoning_output_tokens":5}}}}
+`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "codex", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].CacheCreate != 8 || evs[0].Miss != 80 {
+		t.Fatalf("%+v", evs)
+	}
+}
+
 func TestLastThenMatchingTotalDoesNotDoubleCount(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sessions", "2026", "01", "01", "rollout-last-then-total.jsonl")

@@ -64,6 +64,7 @@ func isRollout(path string) bool {
 type tokenUsage struct {
 	InputTokens           int64 `json:"input_tokens"`
 	CachedInputTokens     int64 `json:"cached_input_tokens"`
+	CacheWriteInputTokens int64 `json:"cache_write_input_tokens"`
 	OutputTokens          int64 `json:"output_tokens"`
 	ReasoningOutputTokens int64 `json:"reasoning_output_tokens"`
 }
@@ -71,6 +72,7 @@ type tokenUsage struct {
 func (u tokenUsage) advances(prev tokenUsage) bool {
 	return u.InputTokens > prev.InputTokens ||
 		u.CachedInputTokens > prev.CachedInputTokens ||
+		u.CacheWriteInputTokens > prev.CacheWriteInputTokens ||
 		u.OutputTokens > prev.OutputTokens ||
 		u.ReasoningOutputTokens > prev.ReasoningOutputTokens
 }
@@ -216,6 +218,7 @@ func handleRolloutLine(b []byte, path string, root adapter.SourceRoot, st *rollo
 func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time, seq *int, prev, cur tokenUsage, emit func(event.UsageEvent)) {
 	inDelta := cur.InputTokens - prev.InputTokens
 	cachedDelta := cur.CachedInputTokens - prev.CachedInputTokens
+	writeDelta := cur.CacheWriteInputTokens - prev.CacheWriteInputTokens
 	outDelta := cur.OutputTokens - prev.OutputTokens
 	reasonDelta := cur.ReasoningOutputTokens - prev.ReasoningOutputTokens
 	if inDelta < 0 {
@@ -223,6 +226,9 @@ func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time,
 	}
 	if cachedDelta < 0 {
 		cachedDelta = 0
+	}
+	if writeDelta < 0 {
+		writeDelta = 0
 	}
 	if outDelta < 0 {
 		outDelta = 0
@@ -236,18 +242,19 @@ func emitUsage(path string, root adapter.SourceRoot, model string, ts time.Time,
 	}
 	*seq++
 	emit(event.UsageEvent{
-		Source:     "codex",
-		Vendor:     vendor.Lookup(model, ""),
-		SourceRoot: root.Path,
-		RequestID:  fmt.Sprintf("%s:%d", path, *seq),
-		SessionID:  strings.TrimSuffix(filepath.Base(path), ".jsonl"),
-		Model:      model,
-		Timestamp:  ts,
-		Miss:       miss,
-		CacheRead:  cachedDelta,
-		Output:     outDelta + reasonDelta,
-		Reasoning:  reasonDelta,
-		Quality:    event.QualityAuthoritative,
-		Derivation: event.DeriveDerived,
+		Source:      "codex",
+		Vendor:      vendor.Lookup(model, ""),
+		SourceRoot:  root.Path,
+		RequestID:   fmt.Sprintf("%s:%d", path, *seq),
+		SessionID:   strings.TrimSuffix(filepath.Base(path), ".jsonl"),
+		Model:       model,
+		Timestamp:   ts,
+		Miss:        miss,
+		CacheRead:   cachedDelta,
+		CacheCreate: writeDelta,
+		Output:      outDelta + reasonDelta,
+		Reasoning:   reasonDelta,
+		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveDerived,
 	})
 }
