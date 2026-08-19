@@ -70,9 +70,12 @@ A request that only ever wrote placeholders under-counts. Incremental scan reads
 
 ### Location
 
-`~/.kimi-code/` and `~/.kimi/` (same inode is one root). Usage is `sessions/<workDirKey>/<sessionId>/agents/*/wire.jsonl`.
+`~/.kimi-code/` and `~/.kimi/` (same inode is one root), or `KIMI_CODE_HOME`.
+Usage is `sessions/<workDirKey>/<sessionId>/agents/*/wire.jsonl`.
 
 Skip `telemetry/`, `credentials/`, `config.toml`, `state.json`.
+`usageScope=session` rows are cumulative and are not summed. `/coding/v1/usages`
+is a quota API (needs a key) and is not used.
 
 ### Parser
 

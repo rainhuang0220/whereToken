@@ -103,6 +103,27 @@ func TestSessionScopedUsageIsNotSummed(t *testing.T) {
 	}
 }
 
+func TestMalformedWireLineDoesNotDropLater(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, "sessions", "x", "s", "agents", "main")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "{not json\n" + `{"type":"usage.record","time":3,"model":"kimi-k3","usage":{"inputOther":7,"output":1}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "wire.jsonl"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	if err := (Adapter{}).Parse(adapter.SourceRoot{ID: "kimi", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Miss != 7 {
+		t.Fatalf("%+v", evs)
+	}
+}
+
 func TestDiscoverHonorsKimiCodeHome(t *testing.T) {
 	dir := t.TempDir()
 	home := filepath.Join(dir, "relocated")

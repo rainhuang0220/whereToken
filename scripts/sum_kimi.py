@@ -22,6 +22,8 @@ def sum_kimi(root: Path) -> dict[str, int]:
                     continue
                 if rec.get("type") != "usage.record":
                     continue
+                if str(rec.get("usageScope") or "").lower() == "session":
+                    continue
                 usage = rec.get("usage") or {}
                 miss += int(usage.get("inputOther") or 0)
                 cache_read += int(usage.get("inputCacheRead") or 0)
