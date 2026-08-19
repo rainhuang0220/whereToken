@@ -206,7 +206,19 @@ func TestSanitizeStandingDropsZeroPodium(t *testing.T) {
 			name:    "display contains hash zero",
 			in:      Standing{Status: StatusOK, Rank: 3, Display: "place #0 / 3"},
 			caption: "—",
-			status:  StatusNotRanked,
+			status:  StatusInsufficientParticipants,
+		},
+		{
+			name:    "tiny ok podium dropped",
+			in:      Standing{Status: StatusOK, Rank: 1, Participants: 3, Display: "#1 / 3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
+		},
+		{
+			name:    "tiny ok podium in display only",
+			in:      Standing{Status: StatusOK, Rank: 1, Display: "#1 / 3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
 		},
 		{
 			name:    "real rank kept",
@@ -219,6 +231,24 @@ func TestSanitizeStandingDropsZeroPodium(t *testing.T) {
 		{
 			name:    "insufficient podium dropped",
 			in:      Standing{Status: StatusInsufficientParticipants, Rank: 1, Participants: 3, Display: "#1 / 3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
+		},
+		{
+			name:    "ok remote three person podium",
+			in:      Standing{Status: StatusOK, Rank: 1, Participants: 3, Display: "#1 / 3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
+		},
+		{
+			name:    "ok compact slash display",
+			in:      Standing{Status: StatusOK, Rank: 1, Display: "#1/3"},
+			caption: "—",
+			status:  StatusInsufficientParticipants,
+		},
+		{
+			name:    "ok nineteen via display only",
+			in:      Standing{Status: StatusOK, Rank: 1, Display: "#1 / 19"},
 			caption: "—",
 			status:  StatusInsufficientParticipants,
 		},
@@ -236,5 +266,41 @@ func TestSanitizeStandingDropsZeroPodium(t *testing.T) {
 				t.Fatalf("printed #0: %+v caption=%q", st, Caption(st))
 			}
 		})
+	}
+}
+
+func TestSanitizeStandingHidesSubThresholdRemotePodium(t *testing.T) {
+	p, top := 1.0, 1.0/3
+	tests := []struct {
+		name string
+		in   Standing
+	}{
+		{
+			name: "ok rank 1 of 3 with percentile",
+			in:   Standing{Status: StatusOK, Rank: 1, Participants: 3, Display: "#1 / 3", Percentile: &p, TopShare: &top},
+		},
+		{
+			name: "ok participants 19 display twenty",
+			in:   Standing{Status: StatusOK, Rank: 1, Participants: 19, Display: "#1 / 20"},
+		},
+		{
+			name: "ok participants 100 display three",
+			in:   Standing{Status: StatusOK, Rank: 1, Participants: 100, Display: "#1 / 3"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			st := SanitizeStanding(tc.in)
+			if st.Status != StatusInsufficientParticipants || st.Rank != 0 || st.Display != "" || st.Percentile != nil || st.TopShare != nil {
+				t.Fatalf("%+v", st)
+			}
+			if Caption(st) != "—" || strings.Contains(Caption(st), "#1") {
+				t.Fatalf("caption=%q", Caption(st))
+			}
+		})
+	}
+	kept := SanitizeStanding(Standing{Status: StatusOK, Rank: 1, Participants: 20, Display: "#1 / 20"})
+	if kept.Status != StatusOK || kept.Rank != 1 || kept.Display != "#1 / 20" {
+		t.Fatalf("floor twenty must stay: %+v", kept)
 	}
 }

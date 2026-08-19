@@ -22,7 +22,7 @@ func TestForbiddenUploadKeysCoverPrivacyBoundary(t *testing.T) {
 	for _, k := range ForbiddenUploadKeys {
 		have[k] = struct{}{}
 	}
-	for _, want := range []string{"prompt", "request_id", "path", "sqlite", "sqlite_path"} {
+	for _, want := range []string{"prompt", "request_id", "path", "sqlite", "sqlite_path", "index_path"} {
 		if _, ok := have[want]; !ok {
 			t.Errorf("ForbiddenUploadKeys missing %q", want)
 		}

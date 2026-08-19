@@ -86,6 +86,13 @@ describe('rankCaption', () => {
     expect(rankCaption({ status: 'ok', rank: 37, display: '#37 / 842' })).toBe('#37 / 842')
     expect(rankCaption({ status: 'insufficient_participants', rank: 1, display: '#1 / 3', participants: 3 })).toBe('—')
   })
+
+  it('never prints a remote podium below 20 participants', () => {
+    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 3' })).toBe('—')
+    expect(rankCaption({ status: 'ok', rank: 1, display: '#1/3' })).toBe('—')
+    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 19' })).toBe('—')
+    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 20' })).toBe('#1 / 20')
+  })
 })
 
 describe('costKPI', () => {

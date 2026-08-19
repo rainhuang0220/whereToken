@@ -119,9 +119,19 @@ export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status'
   }
 }
 
+const MIN_RANK_PARTICIPANTS = 20
+const displayCrowd = /#\d+\s*\/\s*(\d+)/
+
 export function rankCaption(st?: { status?: string; display?: string; rank?: number }): string {
   if (st?.status && st.status !== 'ok') {
     return '—'
+  }
+  const crowd = st?.display?.match(displayCrowd)
+  if (crowd) {
+    const n = Number(crowd[1])
+    if (Number.isFinite(n) && n > 0 && n < MIN_RANK_PARTICIPANTS) {
+      return '—'
+    }
   }
   if (st?.rank && st.rank > 0 && st.display && !st.display.includes('#0')) {
     return st.display

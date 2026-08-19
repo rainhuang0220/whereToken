@@ -34,6 +34,9 @@ func TestGrok4BareAndHyphenSlugsStayUnpriced(t *testing.T) {
 		if c.OK {
 			t.Fatalf("%s must stay unpriced (no grok-4 list row): %+v", model, c)
 		}
+		if FormatUSD(c.Micro) != "" {
+			t.Fatalf("%s unknown cost must omit $0.0000, got %q", model, FormatUSD(c.Micro))
+		}
 	}
 }
 

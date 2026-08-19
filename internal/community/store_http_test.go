@@ -221,16 +221,20 @@ func TestStoreLeaveRankMatchesNeverSeen(t *testing.T) {
 }
 
 func TestHandlerFakeServerIntegration(t *testing.T) {
-	h := testHandler(3)
+	h := testHandler(20)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
 
-	ids := []string{
-		"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-		"bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-		"cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+	ids := make([]string, 20)
+	tokens := make([]int64, 20)
+	ids[0] = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	ids[1] = "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	ids[2] = "cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+	tokens[0], tokens[1], tokens[2] = 300, 200, 200
+	for i := 3; i < 20; i++ {
+		ids[i] = fmt.Sprintf("dddddddd-bbbb-4ccc-8ddd-eeeeeeeeee%02d", i)
+		tokens[i] = 1
 	}
-	tokens := []int64{300, 200, 200}
 	for i, id := range ids {
 		body := fmt.Sprintf(`{"participant_id":%q,"period":"2026-08-19","utc_offset_minutes":480,"tokens":%d,"client_version":"0.5.0"}`, id, tokens[i])
 		res, err := http.Post(srv.URL+"/v1/community/usage", "application/json", strings.NewReader(body))
@@ -251,7 +255,7 @@ func TestHandlerFakeServerIntegration(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&st); err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != StatusOK || st.Rank != 1 || st.Display != "#1 / 3" {
+	if st.Status != StatusOK || st.Rank != 1 || st.Display != "#1 / 20" {
 		t.Fatalf("%+v", st)
 	}
 
@@ -263,7 +267,7 @@ func TestHandlerFakeServerIntegration(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&st); err != nil {
 		t.Fatal(err)
 	}
-	if st.Rank != 2 { // 300, 200, 200 → #1, #2, #2
+	if st.Rank != 2 { // 300, 200, 200, then 1s → #1, #2, #2
 		t.Fatalf("tie for second: %+v", st)
 	}
 
@@ -366,9 +370,16 @@ func TestHandlerRejectsHugeAndUnknown(t *testing.T) {
 }
 
 func TestClientSyncRoundTripAndOffline(t *testing.T) {
-	h := testHandler(1)
+	h := testHandler(20)
 	srv := httptest.NewServer(h.Mux())
 	t.Cleanup(srv.Close)
+	day := "2026-08-19"
+	for i := 0; i < 19; i++ {
+		other := fmt.Sprintf("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee%02d", i)
+		if err := h.Store.Put(Upload{ParticipantID: other, Period: day, Tokens: 1, ClientVersion: "0.5.0"}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	id := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 	c := &Client{
 		BaseURL:  srv.URL,
@@ -383,7 +394,7 @@ func TestClientSyncRoundTripAndOffline(t *testing.T) {
 		Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1_000_000, Timestamp: now,
 	}}
 	view := c.Sync(context.Background(), events, now, loc)
-	if view.Today.Status != StatusOK || view.Today.Rank != 1 || view.Today.Display != "#1 / 1" {
+	if view.Today.Status != StatusOK || view.Today.Rank != 1 || view.Today.Display != "#1 / 20" {
 		t.Fatalf("%+v", view.Today)
 	}
 

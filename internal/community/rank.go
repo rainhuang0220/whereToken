@@ -7,6 +7,7 @@ package community
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -38,6 +39,10 @@ const (
 	DisclaimerEN = "Community Rank is self-reported anonymous aggregate usage among participants. It is not a global, worldwide, or all-AI-users rank, and not an audited competitive leaderboard."
 	DisclaimerZH = "社区排名基于参与用户匿名上报的聚合用量，不是全球、全世界或全体 AI 用户排名，也不是经过审计的竞技排行榜。"
 )
+
+// displayCrowdRe matches "#n / m" or "#n/m" so a remote payload cannot
+// keep a three-person podium in Display after sanitizing Participants.
+var displayCrowdRe = regexp.MustCompile(`#\d+\s*/\s*(\d+)`)
 
 // Standing is one period/metric rank. Rank and percentile are omitted when
 // the user is not ranked. Zero is never a stand-in for unavailable.
@@ -166,8 +171,17 @@ func Caption(st Standing) string {
 }
 
 // SanitizeStanding drops a zero or missing rank so callers never print
-// "#0". Unknown is an em dash via Caption, not a podium place.
+// "#0". Unknown is an em dash via Caption, not a podium place. A remote
+// or old-server payload with n < DefaultMinParticipants cannot keep an
+// "ok" podium (including "#1 / 3").
 func SanitizeStanding(st Standing) Standing {
+	if belowMinCrowd(st) {
+		st.Status = StatusInsufficientParticipants
+		st.Rank = 0
+		st.Display = ""
+		st.Percentile = nil
+		st.TopShare = nil
+	}
 	switch st.Status {
 	case StatusInsufficientParticipants, StatusNotRanked, StatusUnavailable,
 		StatusOptedOut, StatusOffline, StatusDisabled, StatusNoUsage,
@@ -198,4 +212,29 @@ func SanitizeStanding(st Standing) Standing {
 		st.Note = DisclaimerEN
 	}
 	return st
+}
+
+func belowMinCrowd(st Standing) bool {
+	if st.Participants > 0 && st.Participants < DefaultMinParticipants {
+		return true
+	}
+	if n := displayParticipants(st.Display); n > 0 && n < DefaultMinParticipants {
+		return true
+	}
+	return false
+}
+
+func displayParticipants(display string) int {
+	m := displayCrowdRe.FindStringSubmatch(display)
+	if len(m) != 2 {
+		return 0
+	}
+	n := 0
+	for _, c := range m[1] {
+		if c < '0' || c > '9' {
+			return 0
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
 }
