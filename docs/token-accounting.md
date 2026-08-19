@@ -113,8 +113,8 @@ guarantee for every row.
 | Trae | `output_token` | Output | raw | authoritative | |
 | Gemini CLI | `tokens.input - tokens.cached` | Miss | derived | authoritative | Session `type=gemini`. |
 | Gemini CLI | `tokens.cached` | Cache Read | raw | authoritative | |
-| Gemini CLI | `tokens.output` | Output | raw | authoritative | |
-| Gemini CLI | `tokens.thoughts` | Reasoning | raw | authoritative | Not added into Total. |
+| Gemini CLI | `tokens.output + tokens.thoughts` | Output | derived | authoritative | Thinking is billed as output (Codex fold). |
+| Gemini CLI | `tokens.thoughts` | Reasoning | raw | authoritative | Also in Output; not added again. |
 | Qwen Code | `inputTokens - cachedTokens` | Miss | derived | authoritative | `usage/token-usage-*.jsonl` only. |
 | Qwen Code | `cachedTokens` | Cache Read | raw | authoritative | |
 | Qwen Code | `outputTokens` | Output | raw | authoritative | |

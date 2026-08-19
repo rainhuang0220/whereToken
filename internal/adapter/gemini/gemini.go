@@ -192,7 +192,7 @@ func emitFromRec(r rec, path string, root adapter.SourceRoot, sess string, at in
 	if miss < 0 {
 		miss = 0
 	}
-	if miss+cached+out == 0 {
+	if miss+cached+out+thoughts == 0 {
 		return event.UsageEvent{}, event.TurnEvent{}, false
 	}
 	req := strings.TrimSpace(r.ID)
@@ -210,7 +210,10 @@ func emitFromRec(r rec, path string, root adapter.SourceRoot, sess string, at in
 		Timestamp:  ts,
 		Miss:       miss,
 		CacheRead:  cached,
-		Output:     out,
+		// Official TokensSummary.total = input + output + thoughts. Gemini
+		// bills thinking as output (Codex-style fold). Reasoning is stored
+		// for display and must not be added into Total again.
+		Output:     out + thoughts,
 		Reasoning:  thoughts,
 		Quality:    event.QualityAuthoritative,
 		Derivation: event.DeriveDerived,

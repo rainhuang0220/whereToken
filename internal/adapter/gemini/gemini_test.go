@@ -51,14 +51,14 @@ func TestDiscoverAndParseJSONL(t *testing.T) {
 	if len(evs) != 2 {
 		t.Fatalf("events=%d %+v", len(evs), evs)
 	}
-	if evs[0].Miss != 100 || evs[0].CacheRead != 20 || evs[0].Output != 10 || evs[0].Reasoning != 5 {
+	if evs[0].Miss != 100 || evs[0].CacheRead != 20 || evs[0].Output != 15 || evs[0].Reasoning != 5 {
 		t.Fatalf("row1 %+v", evs[0])
 	}
 	if evs[0].Vendor != "google" || evs[0].RequestID != "g1" {
 		t.Fatalf("ids %+v", evs[0])
 	}
-	if evs[0].Miss+evs[0].CacheRead+evs[0].Output != 130 {
-		t.Fatalf("thoughts must not enter Total: %+v", evs[0])
+	if evs[0].Miss+evs[0].CacheRead+evs[0].Output != 135 {
+		t.Fatalf("official total is input+output+thoughts; reasoning must not be added again: %+v", evs[0])
 	}
 	for _, e := range evs {
 		blob := e.RequestID + e.Model + e.SessionID

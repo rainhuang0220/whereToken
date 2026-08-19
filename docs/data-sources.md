@@ -363,8 +363,8 @@ or message `content`.
 | ---------- | ------------ | ---- |
 | Miss | `tokens.input - tokens.cached` (min 0) | derived |
 | Cache Read | `tokens.cached` | raw |
-| Output | `tokens.output` | raw |
-| Reasoning | `tokens.thoughts` | raw (not in Total) |
+| Output | `tokens.output + tokens.thoughts` | derived (thinking billed as output) |
+| Reasoning | `tokens.thoughts` | raw (also in Output; not added again) |
 
 Quality `authoritative`. Official schema: `TokensSummary` in gemini-cli
 `chatRecordingTypes.ts`.
