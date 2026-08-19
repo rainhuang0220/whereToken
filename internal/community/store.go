@@ -79,7 +79,8 @@ func (s *Store) Leave(id string) error {
 		return nil
 	}
 	delete(s.days, id)
-	s.left[id] = true
+	delete(s.hits, id)
+	// Do not record s.left: that tombstone is a leave oracle.
 	return nil
 }
 

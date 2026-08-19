@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Community Rank leave drops the participant's rate-limit hits and does not write an `opted_out` tombstone. Local leave invalidates the rank cache
 - Community Rank CLI/dashboard copy: not a global / worldwide / all-AI-users rank; estimated cost is not a subscription bill
 - `GET /api/summary` no longer uploads Community Rank. `serve --no-community` forbids dashboard join/leave and does not mint `community.json`
 - `--json` and `/api/community` omit `$0.0000` and sanitize `#0`. Rank upload rejects an `estimated_cost_usd` that formats as `$0.0000`. Non-ok standing never keeps a podium. Dashboard `?since=today` is the local calendar day

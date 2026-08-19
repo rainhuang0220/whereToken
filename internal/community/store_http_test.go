@@ -205,9 +205,13 @@ func TestStoreLeaveRankMatchesNeverSeen(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.mu.Lock()
-	if s.left[never] {
+	if s.left[seen] || s.left[never] {
 		s.mu.Unlock()
-		t.Fatal("leave of unknown uuid must not record opted_out")
+		t.Fatal("leave must not record opted_out for a departed or unknown uuid")
+	}
+	if _, ok := s.hits[seen]; ok {
+		s.mu.Unlock()
+		t.Fatal("leave must drop rate-limit hits for a departed uuid")
 	}
 	s.mu.Unlock()
 	after := s.Rank(never, PeriodToday, "2026-08-19", MetricTokens)
@@ -845,6 +849,45 @@ func TestClientZeroTokenDayDoesNotUpload(t *testing.T) {
 	}}, now, time.UTC)
 	if posts != 0 {
 		t.Fatalf("yesterday-only must not upload today: posts=%d", posts)
+	}
+}
+
+func TestClientLeaveInvalidatesCache(t *testing.T) {
+	var posts int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/v1/community/usage":
+			posts++
+			w.WriteHeader(http.StatusNoContent)
+		case r.URL.Path == "/v1/community/leave":
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			_ = json.NewEncoder(w).Encode(Standing{Status: StatusOK, Rank: 1, Participants: 20, Display: "#1 / 20", SelfReported: true})
+		}
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{
+		BaseURL:  srv.URL,
+		File:     &File{ParticipantID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", Enabled: true},
+		Version:  "0.5.0",
+		MinCache: time.Hour,
+		HTTP:     srv.Client(),
+	}
+	now := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	events := []event.UsageEvent{{Vendor: "anthropic", Model: "claude-opus-4.6", Miss: 1000, Timestamp: now}}
+	first := c.Sync(context.Background(), events, now, time.UTC)
+	if first.Today.Rank != 1 {
+		t.Fatalf("first %+v", first.Today)
+	}
+	if err := c.Leave(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	second := c.Sync(context.Background(), events, now, time.UTC)
+	if posts != 2 {
+		t.Fatalf("leave must drop the usage cache: posts=%d", posts)
+	}
+	if second.Today.Rank != 1 {
+		t.Fatalf("rejoin after leave %+v", second.Today)
 	}
 }
 
