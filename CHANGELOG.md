@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- OpenClaw session JSONL is re-read: an earlier empty index cache no longer sticks at 0
+- Trae CN login is read from the encrypted `storage.json` blob (same format Trae uses). Missing `trae-jwt-token` is no longer treated as logged out
+
 ## 0.4.1 — 2026-08-19 (Alpha)
 
 - Estimated API-equivalent cost (`docs/cost.md`): unknown prices stay unavailable, never `$0`

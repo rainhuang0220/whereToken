@@ -107,9 +107,18 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 		return err
 	}
 	token := strings.TrimSpace(readAuthFile(root.AuthPath))
+	region := ""
 	encrypted := false
 	if token == "" {
-		token, encrypted = inspectStorageJSONAuth(path)
+		var info traeUserInfo
+		token, info, encrypted = inspectStorageJSONAuth(path)
+		region = strings.TrimSpace(info.UserRegion.Region)
+		if region == "" {
+			region = strings.TrimSpace(info.Account.StoreRegion)
+		}
+		if region == "" {
+			region = strings.TrimSpace(info.Account.UserTag)
+		}
 	}
 	token = stripJWTPrefix(token)
 	if token == "" {
@@ -124,7 +133,7 @@ func (a Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emi
 	if a.Offline {
 		return nil
 	}
-	events, apiErr := a.fetchAccountUsage(path, root.AuthPath, token, sessions)
+	events, apiErr := a.fetchAccountUsage(path, root.AuthPath, token, region, sessions)
 	seenTurn := map[string]struct{}{}
 	for _, e := range events {
 		emit(e)
@@ -335,18 +344,18 @@ func plaintextStorageToken(s string) string {
 	return ""
 }
 
-func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
+func inspectStorageJSONAuth(vscdbPath string) (token string, info traeUserInfo, encrypted bool) {
 	p := filepath.Join(filepath.Dir(vscdbPath), "storage.json")
 	raw, err := os.ReadFile(p)
 	if err != nil {
-		return "", false
+		return "", traeUserInfo{}, false
 	}
 	var obj map[string]any
 	if json.Unmarshal(raw, &obj) != nil {
-		return "", false
+		return "", traeUserInfo{}, false
 	}
 	for k, v := range obj {
-		if !strings.Contains(k, "iCubeAuthInfo://icube.cloudide") {
+		if !strings.Contains(k, "iCubeAuthInfo://") {
 			continue
 		}
 		s, _ := v.(string)
@@ -359,20 +368,24 @@ func inspectStorageJSONAuth(vscdbPath string) (token string, encrypted bool) {
 				token = tok
 				continue
 			}
+			if u, ok := decryptUserInfo(s); ok {
+				token = u.Token
+				info = u
+				continue
+			}
 			encrypted = true
 			continue
 		}
-		var auth struct {
-			Token string `json:"token"`
-		}
+		var auth traeUserInfo
 		if json.Unmarshal([]byte(s), &auth) != nil {
 			continue
 		}
 		if tok := strings.TrimSpace(auth.Token); tok != "" {
 			token = tok
+			info = auth
 		}
 	}
-	return token, encrypted
+	return token, info, encrypted
 }
 
 func openRO(path string) (*sql.DB, error) {

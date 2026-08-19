@@ -275,7 +275,7 @@ func TestFetchAccountUsageReportsSessionCap(t *testing.T) {
 		sessions[i] = "s"
 	}
 	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL}
-	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, sessions)
+	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, "", sessions)
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("err=%v", err)
 	}
@@ -359,7 +359,7 @@ func TestFetchAccountUsageOverlapsSessionRequests(t *testing.T) {
 	}
 	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL}
 	start := time.Now()
-	evs, err := a.fetchAccountUsage("/tmp", "", fakeJWT, sessions)
+	evs, err := a.fetchAccountUsage("/tmp", "", fakeJWT, "", sessions)
 	elapsed := time.Since(start)
 	if err != nil {
 		t.Fatal(err)
@@ -385,7 +385,7 @@ func TestFetchAccountUsageHonorsBudget(t *testing.T) {
 
 	a := Adapter{HTTP: srv.Client(), APIBase: srv.URL, FetchBudget: 80 * time.Millisecond}
 	start := time.Now()
-	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, []string{"s1", "s2", "s3"})
+	_, err := a.fetchAccountUsage("/tmp", "", fakeJWT, "", []string{"s1", "s2", "s3"})
 	elapsed := time.Since(start)
 	if err == nil || !strings.Contains(err.Error(), "超时") {
 		t.Fatalf("err=%v", err)

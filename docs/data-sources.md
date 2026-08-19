@@ -295,13 +295,13 @@ API token window is ~53 weeks; request/turn counts are all local sessions. Needs
 
 ### Location
 
-`~/Library/Application Support/{Trae,Trae CN,Trae-CN,TRAE SOLO,TRAE SOLO CN}/User/globalStorage/state.vscdb` (Linux `~/.config/Trae*`, Windows `%APPDATA%\Trae*`). JWT file `~/.trae-cn/trae-jwt-token` or `~/.trae/trae-jwt-token`. `storage.json` key `iCubeAuthInfo://icube.cloudide` if it is plaintext JSON.
+`~/Library/Application Support/{Trae,Trae CN,Trae-CN,TRAE SOLO,TRAE SOLO CN}/User/globalStorage/state.vscdb` (Linux `~/.config/Trae*`, Windows `%APPDATA%\Trae*`). JWT file `~/.trae-cn/trae-jwt-token` or `~/.trae/trae-jwt-token` when Trae writes it. Otherwise `storage.json` key `iCubeAuthInfo://icube.cloudide`: plaintext JSON, a raw JWT, or Trae's `tc` AES blob (same format Trae uses to restore login). The blob is decrypted only to take `token` and region; it is never printed.
 
-Do not read Cookies, Keychain, `ModularData/ai-agent/database.db`, skill trees, or prompt bodies. Never print the JWT.
+Do not read Cookies, Keychain, `ModularData/ai-agent/database.db` (SQLCipher), skill trees, or prompt bodies.
 
 ### Parser
 
-Session ids from memento keys only. Usage: `POST {host}/api/v1/commercial/get_session_usage` with `Cloud-IDE-JWT`. CN host `trae-api-cn.mchost.guru`; international `coresg-normal.trae.ai`.
+Session ids from memento keys only. Usage: `POST {host}/api/v1/commercial/get_session_usage` with `Cloud-IDE-JWT` and `X-User-Region` when known. CN host `trae-api-cn.mchost.guru`; international `coresg-normal.trae.ai`. Trae itself also calls this API and can get `empty_result` on credit accounts — that is empty usage, not a missing login.
 
 ### Token mapping
 
@@ -314,9 +314,9 @@ Session ids from memento keys only. Usage: `POST {host}/api/v1/commercial/get_se
 
 Vendor comes from `model_name` via `vendor.Lookup` (DeepSeek / Doubao / …), not “trae”.
 
-Quality `authoritative` when the API returns tokens; `degraded` when sessions exist but login is missing or encrypted.
+Quality `authoritative` when the API returns tokens; `degraded` when sessions exist but login is missing or still encrypted after decrypt.
 
-Trae API events currently have **no timestamp**. They appear in all-time totals and are **dropped** by `--today` / `--since` / `--from` / `--to`. That is a known limitation, not priced-as-zero.
+`usage_time` on the API row is used as the event timestamp when present. Zero `usage_time` still has no date and is dropped by `--today` / `--since` / `--from` / `--to`.
 
 ### Limitations
 

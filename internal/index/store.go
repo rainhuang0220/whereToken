@@ -41,7 +41,9 @@ const (
 	ModeFull        = "full"
 	ModeIncremental = "incremental"
 	ModeUnchanged   = "unchanged"
-	schemaVersion   = 1
+	// schema 2: wipe caches written by the first OpenClaw parser, which stored
+	// empty event blobs for unchanged session JSONL.
+	schemaVersion = 2
 )
 
 type ParseFunc func(*os.File) (evs []event.UsageEvent, turns []event.TurnEvent, consumed int64, err error)

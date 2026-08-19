@@ -32,7 +32,7 @@ func (a Adapter) fetchBudget() time.Duration {
 	return defaultFetchBudget
 }
 
-func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions []string) ([]event.UsageEvent, error) {
+func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token, region string, sessions []string) ([]event.UsageEvent, error) {
 	truncated := false
 	if len(sessions) > maxSessions {
 		sessions = sessions[:maxSessions]
@@ -63,7 +63,7 @@ func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token string, sessions 
 				if ctx.Err() != nil {
 					return
 				}
-				raw, err := a.postJSON(ctx, sessionUsagePath, token, map[string]any{"session_id": id}, sourceRoot, authPath)
+				raw, err := a.postJSON(ctx, sessionUsagePath, token, region, map[string]any{"session_id": id}, sourceRoot, authPath)
 				mu.Lock()
 				if err != nil {
 					if isUnauthorized(err) {
@@ -188,6 +188,10 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 	if id == "" {
 		id = fmt.Sprintf("%d:%s", miss+cacheRead+cacheCreate+output, model)
 	}
+	ts := usageTime(pick(m, "usage_time", "usageTime", "timestamp", "created_at", "createdAt"))
+	if ts.IsZero() {
+		ts = usageTime(pick(blob, "usage_time", "usageTime", "timestamp"))
+	}
 	return event.UsageEvent{
 		Source:      "trae",
 		Vendor:      vendor.Lookup(model, ""),
@@ -195,6 +199,7 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 		SessionID:   sess,
 		RequestID:   "trae-api:" + id,
 		Model:       model,
+		Timestamp:   ts,
 		Miss:        miss,
 		CacheRead:   cacheRead,
 		CacheCreate: cacheCreate,
@@ -204,7 +209,21 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 	}, true
 }
 
-func (a Adapter) postJSON(ctx context.Context, path, token string, payload any, hints ...string) ([]byte, error) {
+func usageTime(v any) time.Time {
+	n := flexInt(v)
+	if n <= 0 {
+		return time.Time{}
+	}
+	if n > 1e12 {
+		return time.UnixMilli(n)
+	}
+	if n > 1e10 {
+		return time.UnixMilli(n)
+	}
+	return time.Unix(n, 0)
+}
+
+func (a Adapter) postJSON(ctx context.Context, path, token, region string, payload any, hints ...string) ([]byte, error) {
 	base := a.apiBase(hints...)
 	u, err := url.Parse(base + path)
 	if err != nil {
@@ -228,6 +247,9 @@ func (a Adapter) postJSON(ctx context.Context, path, token string, payload any, 
 	if token != "" {
 		req.Header.Set("Authorization", "Cloud-IDE-JWT "+token)
 		req.Header.Set("X-Cloudide-Token", token)
+	}
+	if region != "" {
+		req.Header.Set("X-User-Region", region)
 	}
 	resp, err := a.client().Do(req)
 	if err != nil {

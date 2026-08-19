@@ -2,6 +2,8 @@ package trae
 
 import (
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -195,6 +197,59 @@ func TestParseUsesPlaintextJWTInStorageJSON(t *testing.T) {
 	}
 	if hits == 0 || n == 0 {
 		t.Fatalf("plaintext JWT in storage.json should call the API, hits=%d events=%d", hits, n)
+	}
+}
+
+func TestParseDecryptsICubeAuthInfoAndCallsAPI(t *testing.T) {
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.Header.Get("X-User-Region") != "CN" {
+			t.Errorf("region=%q", r.Header.Get("X-User-Region"))
+		}
+		if !strings.HasPrefix(r.Header.Get("Authorization"), "Cloud-IDE-JWT eyJ") {
+			t.Errorf("auth=%q", r.Header.Get("Authorization"))
+		}
+		io.WriteString(w, `{"user_usage_group_by_session":{"session_id":"sess-1","model_name":"DeepSeek-V4-Flash","usage_time":1786816508,"extra_info":{"input_token":10,"output_token":2,"cache_read_token":0,"cache_write_token":0}}}`)
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeProductVscdb(t, dir, "Trae CN", []kv{
+		{key: "memento/icube-ai-agent-storage", value: `{"list":[{"sessionId":"sess-1"}]}`},
+	})
+	body, err := json.Marshal(traeUserInfo{Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb", Host: "https://api.trae.cn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var info traeUserInfo
+	if err := json.Unmarshal(body, &info); err != nil {
+		t.Fatal(err)
+	}
+	info.UserRegion.Region = "CN"
+	body, err = json.Marshal(info)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawEnc, err := encryptBlob(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blob, err := json.Marshal(map[string]string{"iCubeAuthInfo://icube.cloudide": base64.StdEncoding.EncodeToString(rawEnc)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(db), "storage.json"), blob, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var evs []event.UsageEvent
+	err = (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "trae", Path: db}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits == 0 || len(evs) != 1 || evs[0].Miss != 10 || evs[0].Timestamp.IsZero() {
+		t.Fatalf("hits=%d evs=%+v", hits, evs)
 	}
 }
 
