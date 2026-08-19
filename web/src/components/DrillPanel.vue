@@ -47,6 +47,7 @@ function sessionLabel(row: SessionView): string {
               <th class="name">工作区</th>
               <th v-for="h in heads" :key="'w' + h" class="num">{{ h }}</th>
               <th class="num">请求</th>
+              <th class="num">估价</th>
             </tr>
           </thead>
           <tbody>
@@ -54,6 +55,7 @@ function sessionLabel(row: SessionView): string {
               <td class="name">{{ row.label }}</td>
               <td v-for="(cell, i) in columnsFrom(row as SliceView)" :key="i" class="num">{{ cell }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>
+              <td class="num">{{ costCaption(row) || '—' }}</td>
             </tr>
           </tbody>
         </table>
@@ -71,6 +73,7 @@ function sessionLabel(row: SessionView): string {
             <th v-for="h in heads" :key="'s' + h" class="num">{{ h }}</th>
             <th class="num">请求</th>
             <th class="num">回合</th>
+            <th class="num">估价</th>
           </tr>
         </thead>
         <tbody>
@@ -82,6 +85,7 @@ function sessionLabel(row: SessionView): string {
             <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
             <td class="num">{{ formatCount(row.requests) }}</td>
             <td class="num">{{ formatCount(row.user_turns) }}</td>
+            <td class="num">{{ costCaption(row) || '—' }}</td>
           </tr>
         </tbody>
       </table>

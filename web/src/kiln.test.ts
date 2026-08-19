@@ -70,6 +70,9 @@ describe('drill sessions', () => {
     const vue = readFileSync(join(SRC, 'components/DrillPanel.vue'), 'utf8')
     expect(vue).toMatch(/costCaption\(row\)/)
     expect(vue).not.toMatch(/\$0/)
+    const sessionBlock = vue.slice(vue.indexOf('按会话'))
+    expect(sessionBlock).toMatch(/估价/)
+    expect(sessionBlock).toMatch(/costCaption\(row\)/)
   })
 })
 

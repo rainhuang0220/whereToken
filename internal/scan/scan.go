@@ -425,6 +425,13 @@ func buildSummaryJSON(r Result) summaryJSON {
 		Insights:  insight.Lines(r.Summary),
 		Community: r.Community,
 	}
+	if r.Community != nil {
+		v := *r.Community
+		v.Today = community.SanitizeStanding(v.Today)
+		v.All = community.SanitizeStanding(v.All)
+		out.Community = &v
+		out.Insights = insight.AppendStanding(out.Insights, v.Today.Status, v.Today.Display, v.Today.Rank)
+	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)
 	}

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Session and workspace drill print 估价 the same way as models (`—` when unpriced). 用量说明 names a real Community Rank place, never `#0`
 - Community Rank client accepts only http(s) URLs, refuses redirects, and rate-limits the fake rank server by connection IP
 - Drill sessions fold into `(其余)` after 40 rows; `--offline` also skips community upload
 - Vendor-axis workspace drill keeps user turns; 用量说明 is Chinese and notes it is window-all, not the kiln axis

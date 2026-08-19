@@ -62,6 +62,29 @@ func TestLinesSkipUnlabeledDrillBuckets(t *testing.T) {
 	}
 }
 
+func TestAppendStandingNeverZeroRank(t *testing.T) {
+	base := []Line{{Kind: "cost", Text: "API 标价等价 · $12.0000（partial）"}}
+	if got := AppendStanding(base, "ok", "#0 / 20", 0); len(got) != 1 {
+		t.Fatalf("zero podium: %+v", got)
+	}
+	if got := AppendStanding(base, "ok", "#0 / 20", 1); len(got) != 1 {
+		t.Fatalf("hash-zero display: %+v", got)
+	}
+	if got := AppendStanding(base, "unavailable", "", 0); len(got) != 1 {
+		t.Fatalf("unavailable: %+v", got)
+	}
+	got := AppendStanding(base, "ok", "#37 / 842", 37)
+	if len(got) != 2 || got[1].Kind != "community" || !strings.Contains(got[1].Text, "#37 / 842") {
+		t.Fatalf("%+v", got)
+	}
+	if strings.Contains(got[1].Text, "全球") == false {
+		t.Fatalf("must say this is not a global rank: %s", got[1].Text)
+	}
+	if strings.Contains(got[1].Text, "#0") {
+		t.Fatal(got[1].Text)
+	}
+}
+
 func TestLinesUnavailableCostNotZero(t *testing.T) {
 	sum := metric.Aggregate([]event.UsageEvent{
 		{Source: "kimi", Vendor: "moonshot", Model: "k3", RequestID: "b", Miss: 1000, Output: 10},

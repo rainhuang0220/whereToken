@@ -4,6 +4,7 @@ package insight
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/price"
@@ -83,4 +84,19 @@ func pct(part, all int64) int64 {
 		return 0
 	}
 	return (part*100 + all/2) / all
+}
+
+// AppendStanding adds a Community Rank line only when the standing is a real
+// place. Unknown rank is omitted, never written as #0 or a global podium.
+func AppendStanding(lines []Line, status, display string, rank int) []Line {
+	if status != "ok" || rank <= 0 || display == "" {
+		return lines
+	}
+	if strings.Contains(display, "#0 /") || strings.Contains(display, "#0/") || display == "#0" {
+		return lines
+	}
+	return append(lines, Line{
+		Kind: "community",
+		Text: "社区排名 " + display + " · 匿名聚合，不是全球榜",
+	})
 }

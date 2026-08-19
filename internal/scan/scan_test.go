@@ -14,6 +14,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
+	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
@@ -111,6 +112,34 @@ func TestMarshalSummaryOmitsRawEvents(t *testing.T) {
 	s := string(raw)
 	if strings.Contains(s, `"events"`) || strings.Contains(s, `"turns"`) {
 		t.Fatalf("raw events leaked into observatory JSON")
+	}
+}
+
+func TestMarshalSummaryCommunityInsightNeverZeroRank(t *testing.T) {
+	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
+	view.Today.Status = community.StatusOK
+	view.Today.Rank = 0
+	view.Today.Display = "#0 / 20"
+	raw, err := MarshalSummary(Result{Community: &view, Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "#0") {
+		t.Fatalf("observatory must not print #0: %s", raw)
+	}
+
+	view.Today.Rank = 37
+	view.Today.Display = "#37 / 842"
+	raw, err = MarshalSummary(Result{Community: &view, Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(raw)
+	if !strings.Contains(s, "#37 / 842") || !strings.Contains(s, "不是全球榜") {
+		t.Fatalf("missing real standing insight: %s", s)
+	}
+	if strings.Contains(s, `"events"`) || strings.Contains(s, "prompt") {
+		t.Fatal("raw payload leaked")
 	}
 }
 
