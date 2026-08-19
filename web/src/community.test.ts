@@ -26,4 +26,9 @@ describe('community display', () => {
     expect(hint).toContain('参与者还不够')
     expect(rankCaption({ status: 'insufficient_participants', participants: 3 })).toBe('—')
   })
+
+  it('still explains rank when the standing is unavailable', () => {
+    expect(rankHint(undefined, { status: 'unavailable' })).toContain('不是经过审计的竞技排行榜')
+    expect(rankHint()).toContain('不是经过审计的竞技排行榜')
+  })
 })

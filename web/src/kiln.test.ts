@@ -92,13 +92,29 @@ describe('cross table', () => {
   })
 })
 
-describe('kpi cost honesty', () => {
-  it('footnotes complete 估价 as not a bill', () => {
-    const vue = readFileSync(join(SRC, 'components/KpiRow.vue'), 'utf8')
+describe('kpi fifth cell', () => {
+  const vue = readFileSync(join(SRC, 'components/KpiRow.vue'), 'utf8')
+  const css = readFileSync(join(SRC, 'styles.css'), 'utf8')
+  const fmt = readFileSync(join(SRC, 'format.ts'), 'utf8')
+
+  it('stacks 估价 over 排名 in .read-col5', () => {
+    expect(vue).toMatch(/class="read-cell read-col5"/)
+    const col5 = vue.slice(vue.indexOf('read-col5'), vue.indexOf('当前连烧'))
+    expect(col5.indexOf('估价')).toBeGreaterThan(-1)
+    expect(col5.indexOf('排名')).toBeGreaterThan(col5.indexOf('估价'))
+    expect(css).toMatch(/\.read-col5\s*\{[^}]*grid-row:\s*1\s*\/\s*span\s*2/)
+  })
+
+  it('shows rankHint and never invents #0 or $0', () => {
+    expect(vue).toMatch(/rankHint/)
+    expect(vue).toMatch(/\{\{\s*hint\s*\}\}/)
+    expect(vue).toMatch(/rankCaption\(standing\)/)
+    expect(vue).not.toMatch(/#0/)
     expect(vue).toMatch(/costHonestyNote/)
     expect(vue).toMatch(/honesty/)
-    const fmt = readFileSync(join(SRC, 'format.ts'), 'utf8')
-    expect(fmt).toMatch(/case 'complete'/)
+    expect(fmt).toMatch(/includes\('#0'\)/)
+    expect(fmt).toMatch(/case 'unavailable'/)
+    expect(fmt).toMatch(/不会写成 \$0/)
     expect(fmt).toMatch(/不是订阅账单/)
   })
 })

@@ -28,7 +28,8 @@ export function rankHint(view?: CommunityView | null, st?: RankStanding | null):
     case 'no_usage':
     case 'not_ranked':
       return '尚未进入社区排名'
+    case 'unavailable':
     default:
-      return ''
+      return '社区排名基于参与用户匿名上报的聚合用量，不是经过审计的竞技排行榜。'
   }
 }
