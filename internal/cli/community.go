@@ -95,8 +95,12 @@ func (a *App) communitySet(home adapter.Home, on bool) int {
 			Version: a.Version,
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		_ = c.Leave(ctx)
+		err := c.Leave(ctx)
 		cancel()
+		if err != nil {
+			fmt.Fprintln(a.Stderr, "community leave failed: "+err.Error())
+			return ExitFail
+		}
 	}
 	if err := f.SetEnabled(path, on); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())

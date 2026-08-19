@@ -136,6 +136,33 @@ func TestCaptionHelperNeverZero(t *testing.T) {
 	}
 }
 
+func TestCommunityOffFailsWhenRemoteLeaveFails(t *testing.T) {
+	dir := t.TempDir()
+	app, _, errb := testApp([]string{"--home", dir, "community", "on"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("on code=%d %s", code, errb.String())
+	}
+	cfg := community.ConfigPath(testhome.New(dir))
+
+	app, out, errb := testApp([]string{"--home", dir, "community", "off"})
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_COMMUNITY_URL" {
+			return "http://127.0.0.1:1"
+		}
+		return ""
+	}
+	if code := app.Run(); code == ExitOK {
+		t.Fatalf("off must not claim success when leave cannot reach the service:\n%s\n%s", out.String(), errb.String())
+	}
+	raw, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"enabled": true`) {
+		t.Fatalf("must keep participation on after failed leave: %s", raw)
+	}
+}
+
 func TestHelpDocumentsUnixAndWindowsCommunityFile(t *testing.T) {
 	h := HelpText()
 	if !strings.Contains(h, "~/.config/wheretoken") {

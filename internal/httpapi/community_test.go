@@ -110,6 +110,41 @@ func TestCommunityRejectsNonLocalHost(t *testing.T) {
 	}
 }
 
+func TestCommunityDisableKeepsOnWhenLeaveFails(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
+	dir := t.TempDir()
+	home := testhome.New(dir)
+	path := community.ConfigPath(home)
+	f := &community.File{ParticipantID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", Enabled: true, JoinedAt: "2026-08-19"}
+	if err := f.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(NewMux(home))
+	t.Cleanup(srv.Close)
+	origin := "http://" + strings.TrimPrefix(srv.URL, "http://")
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", origin)
+	res, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode == http.StatusOK {
+		t.Fatal("dashboard must not report opted-out when remote leave fails")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"enabled": true`) {
+		t.Fatalf("must keep participation on after failed leave: %s", raw)
+	}
+}
+
 func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_URL", "http://127.0.0.1:1")
 	srv := httptest.NewServer(NewMuxOpts(testhome.New(t.TempDir()), scan.AllAdapters(), true))

@@ -46,6 +46,20 @@ func TestShippedTableBackdatesOpenCard(t *testing.T) {
 	}
 }
 
+func TestO4MiniUsesStandardListNotBatch(t *testing.T) {
+	c := Event(event.UsageEvent{
+		Vendor: "openai", Model: "o4-mini",
+		Miss: 1_000_000, CacheRead: 1_000_000, Output: 1_000_000,
+	})
+	// Standard list $1.10 / $0.275 / $4.40 — not Batch/Flex $0.55 / $2.20.
+	if !c.OK || c.Micro != 5_775_000 {
+		t.Fatalf("o4-mini must use standard list, got %+v", c)
+	}
+	if c.Miss != 1_100_000 || c.CacheRead != 275_000 || c.Output != 4_400_000 {
+		t.Fatalf("components %+v", c)
+	}
+}
+
 func TestUnknownModelHasNoCost(t *testing.T) {
 	c := Event(event.UsageEvent{Vendor: "unknown", Model: "mystery", Miss: 1000, Output: 100})
 	if c.OK {

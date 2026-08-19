@@ -163,8 +163,13 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 	s.commMu.Lock()
 	if !*body.Enabled {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		_ = c.Leave(ctx)
+		err = c.Leave(ctx)
 		cancel()
+		if err != nil {
+			s.commMu.Unlock()
+			http.Error(w, "community leave failed", http.StatusBadGateway)
+			return
+		}
 	}
 	err = c.File.SetEnabled(c.Path, *body.Enabled)
 	s.commMu.Unlock()

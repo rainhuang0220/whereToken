@@ -337,6 +337,27 @@ func TestManPageMentionsJSONSchema(t *testing.T) {
 	}
 }
 
+func TestCommunityFileDocsNameWindowsLayout(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	root := filepath.Join(filepath.Dir(file), "..", "..")
+	for _, rel := range []string{"docs/community.md", "docs/wheretoken.1"} {
+		body, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := string(body)
+		if !strings.Contains(s, "~/.config/wheretoken") {
+			t.Errorf("%s must name the Unix community.json directory", rel)
+		}
+		if !strings.Contains(s, "%APPDATA%") {
+			t.Errorf("%s must name the Windows community.json directory", rel)
+		}
+	}
+}
+
 func TestReleaseWorkflowInstallsNodeBeforeGoreleaser(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

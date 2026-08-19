@@ -201,6 +201,16 @@ func TestStoreLeaveRankMatchesNeverSeen(t *testing.T) {
 	if err := s.Leave(never); err != nil {
 		t.Fatal(err)
 	}
+	s.mu.Lock()
+	if s.left[never] {
+		s.mu.Unlock()
+		t.Fatal("leave of unknown uuid must not record opted_out")
+	}
+	s.mu.Unlock()
+	after := s.Rank(never, PeriodToday, "2026-08-19", MetricTokens)
+	if after.Status != unknown.Status || after.Status == StatusOptedOut {
+		t.Fatalf("unknown leave changed rank: %+v want %+v", after, unknown)
+	}
 }
 
 func TestHandlerFakeServerIntegration(t *testing.T) {
@@ -622,6 +632,12 @@ func TestLeaveEndpoint(t *testing.T) {
 	res.Body.Close()
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("unknown leave %d", res.StatusCode)
+	}
+	h.Store.mu.Lock()
+	recorded := h.Store.left[never]
+	h.Store.mu.Unlock()
+	if recorded {
+		t.Fatal("unknown leave must not record opted_out")
 	}
 }
 
