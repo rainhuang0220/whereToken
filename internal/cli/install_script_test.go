@@ -89,7 +89,7 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 	}
 }
 
-func TestInstallCMDLaunchesPowerShell(t *testing.T) {
+func TestInstallCMDUsesCurlTarCertutil(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("caller")
@@ -100,10 +100,15 @@ func TestInstallCMDLaunchesPowerShell(t *testing.T) {
 	}
 	s := string(body)
 	for _, want := range []string{
-		"powershell",
-		"-ExecutionPolicy Bypass",
-		"install.ps1",
-		"irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex",
+		"curl.exe",
+		"tar.exe",
+		"certutil",
+		"checksums.txt",
+		"wheretoken_windows_%GOARCH%.zip",
+		"wheretoken.exe",
+		"LOCALAPPDATA",
+		"update",
+		"uninstall",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.cmd missing %q", want)
@@ -258,9 +263,9 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if !strings.Contains(rs, irm) {
 		t.Fatal("README must show the PowerShell irm | iex one-liner")
 	}
-	cmd := `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"`
+	cmd := `curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd`
 	if !strings.Contains(rs, cmd) {
-		t.Fatal("README must show the Command Prompt powershell -Command wrapper")
+		t.Fatal("README must show the Command Prompt curl.exe install.cmd one-liner")
 	}
 	ci := strings.Index(rs, curl)
 	gi := strings.Index(rs, goInstall)

@@ -85,10 +85,10 @@ Windows（PowerShell）：
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-Windows（命令提示符，也就是 `C:\Users\…>` 那种窗口）：`irm` 不是 cmd 命令。请用：
+Windows（命令提示符，也就是 `C:\Users\…>` 那种窗口）：
 
 ```bat
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd
 ```
 
 脚本会印出安装路径（Unix 一般是 `~/.local/bin/wheretoken`，Windows 是 `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe`）。跑那一行。当前终端找不到命令，就新开一个。

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
@@ -150,6 +151,56 @@ func TestRunUninstallUsesBrewWhenCellar(t *testing.T) {
 	}
 }
 
+func TestRunUpdateReplacesWindowsZip(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "wheretoken.exe")
+	if err := os.WriteFile(dest, []byte("old-bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	payload := []byte("new-win-bin")
+	archive := zipNamed(t, "wheretoken.exe", payload)
+	sum := sha256.Sum256(archive)
+	sums := hex.EncodeToString(sum[:]) + "  wheretoken_windows_amd64.zip\n"
+	app, _, errb := testApp([]string{"update"})
+	app.GOOS = "windows"
+	app.GOARCH = "amd64"
+	app.Executable = func() (string, error) { return dest, nil }
+	app.HTTPGet = func(url string) ([]byte, error) {
+		switch {
+		case strings.HasSuffix(url, "checksums.txt"):
+			return []byte(sums), nil
+		case strings.HasSuffix(url, "wheretoken_windows_amd64.zip"):
+			return archive, nil
+		default:
+			return nil, fmt.Errorf("unexpected %s", url)
+		}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(payload) {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestRemoveBinaryDeletesOrRenames(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "wheretoken.exe")
+	if err := os.WriteFile(dest, []byte("x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeBinary(dest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		t.Fatalf("still there: %v", err)
+	}
+}
+
 func TestBrewManaged(t *testing.T) {
 	if !brewManaged("/opt/homebrew/Cellar/wheretoken/0.3.0/bin/wheretoken") {
 		t.Fatal("cellar")
@@ -174,6 +225,23 @@ func tarGzNamed(t *testing.T, name string, payload []byte) []byte {
 		t.Fatal(err)
 	}
 	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func zipNamed(t *testing.T, name string, payload []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Write(payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
 	return buf.Bytes()

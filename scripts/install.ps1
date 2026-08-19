@@ -52,6 +52,8 @@ function Show-Next {
     Write-Host 'wheretoken: installed'
   }
   Write-Host $exe
+  Write-Host "next: `"$exe`" update"
+  Write-Host "next: `"$exe`" uninstall"
 }
 
 function Install-WithGo {

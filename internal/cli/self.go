@@ -88,7 +88,7 @@ func (a *App) runUninstall(quiet bool) int {
 		}
 		return ExitOK
 	}
-	if err := os.Remove(exe); err != nil && !os.IsNotExist(err) {
+	if err := removeBinary(exe); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail
 	}
@@ -296,7 +296,7 @@ func replaceFile(dest string, payload []byte) error {
 		tmp.Close()
 		return err
 	}
-	if err := tmp.Chmod(0o755); err != nil {
+	if err := tmp.Chmod(0o755); err != nil && runtime.GOOS != "windows" {
 		tmp.Close()
 		return err
 	}
@@ -313,6 +313,37 @@ func replaceFile(dest string, payload []byte) error {
 		return err
 	}
 	ok = true
-	_ = os.Remove(old)
+	if err := os.Remove(old); err != nil && !os.IsNotExist(err) && runtime.GOOS == "windows" {
+		scheduleWindowsDelete(old)
+	}
 	return nil
+}
+
+func removeBinary(exe string) error {
+	if err := os.Remove(exe); err == nil || os.IsNotExist(err) {
+		return nil
+	} else if runtime.GOOS != "windows" {
+		return err
+	}
+	old := exe + ".old"
+	_ = os.Remove(old)
+	if err := os.Rename(exe, old); err != nil {
+		return err
+	}
+	if err := os.Remove(old); err == nil || os.IsNotExist(err) {
+		return nil
+	}
+	scheduleWindowsDelete(old)
+	return nil
+}
+
+func scheduleWindowsDelete(path string) {
+	cmd := exec.Command("cmd", "/C", "ping 127.0.0.1 -n 2 >nul & del /f /q "+strconvQuote(path))
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	_ = cmd.Start()
+}
+
+func strconvQuote(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
 }

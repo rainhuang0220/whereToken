@@ -16,7 +16,7 @@ USAGE
 INSTALL
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
   irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+  curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd
   brew tap rainhuang0220/wheretoken && brew install wheretoken
   go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
   brew install --HEAD ./Formula/wheretoken.rb  # from a clone

@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-- Windows Command Prompt install: `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm …/install.ps1 | iex"` (`irm` is PowerShell-only)
+## 0.4.3 — 2026-08-19 (Alpha)
+
+- Windows cmd one-line install: `curl.exe -fsSL -o %TEMP%\wt-install.cmd …/install.cmd && %TEMP%\wt-install.cmd`
+- `wheretoken update` / `uninstall` replace or remove a running Windows `.exe`
+
+## 0.4.2 — 2026-08-19 (Alpha)
+
 - OpenClaw session JSONL is re-read: an earlier empty index cache no longer sticks at 0
 - Trae CN login is read from the encrypted `storage.json` blob (same format Trae uses). Missing `trae-jwt-token` is no longer treated as logged out
 

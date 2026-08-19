@@ -85,10 +85,10 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 ```
 
-Windows (Command Prompt, the `C:\Users\…>` window): `irm` is not a cmd command. Use:
+Windows (Command Prompt, the `C:\Users\…>` window):
 
 ```bat
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex"
+curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd
 ```
 
 The script prints the installed path (`~/.local/bin/wheretoken` on Unix, `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe` on Windows). Run that line. Open a new terminal if the command is not on `PATH` yet.
