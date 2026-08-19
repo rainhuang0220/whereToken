@@ -68,6 +68,7 @@ const honesty = computed(() => costHonestyNote(props.all))
           class="rank-btn"
           :class="{ on: rankPeriod === 'all' }"
           :aria-pressed="rankPeriod === 'all'"
+          title="已同步的每日合计，不是窑墙「全部」"
           @click="emit('update:rankPeriod', 'all')"
         >
           累计

@@ -292,7 +292,7 @@ func appendRankNotes(notes []string, snap Snapshot) []string {
 	case community.StatusOK:
 		period := "今日"
 		if snap.RankPeriod == community.PeriodAll {
-			period = "累计"
+			period = "累计已同步日"
 		}
 		return append(notes, "社区排名 "+st.Display+" · "+period+" · 匿名聚合，不是审计榜")
 	case community.StatusInsufficientParticipants:

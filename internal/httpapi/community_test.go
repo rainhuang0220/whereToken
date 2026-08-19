@@ -2,12 +2,16 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/community"
@@ -284,46 +288,231 @@ func TestMuxOptsNoCommunityDisablesParticipation(t *testing.T) {
 }
 
 func TestConcurrentSummaryAndCommunityToggle(t *testing.T) {
+	store := community.NewStore(community.DefaultMinParticipants)
+	h := community.NewHandler(store)
+	day := time.Now().In(time.Local).Format("2006-01-02")
+	for i := 0; i < community.DefaultMinParticipants-1; i++ {
+		id := fmt.Sprintf("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeee%02d", i)
+		if err := store.Put(community.Upload{
+			ParticipantID: id, Period: day, Tokens: 10, ClientVersion: "dev",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var mu sync.Mutex
+	usagePosts := 0
+	inner := h.Mux()
+	rank := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/usage") {
+			mu.Lock()
+			usagePosts++
+			mu.Unlock()
+		}
+		inner.ServeHTTP(w, r)
+	}))
+	t.Cleanup(rank.Close)
+
+	t.Setenv("WHERETOKEN_COMMUNITY_URL", rank.URL)
+	t.Setenv("WHERETOKEN_COMMUNITY", "")
+	t.Setenv("DO_NOT_TRACK", "")
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
-	dir := t.TempDir()
-	srv := httptest.NewServer(NewMuxOpts(testhome.New(dir), scan.Adapters(true), true))
+
+	dir := writeKimiHome(t)
+	writeTodayPricedClaude(t, dir)
+	home := testhome.New(dir)
+	srv := httptest.NewServer(NewMuxOpts(home, scan.AllAdapters(), false))
 	t.Cleanup(srv.Close)
+	client := srv.Client()
 	origin := "http://" + strings.TrimPrefix(srv.URL, "http://")
+
 	scanReq, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	scanReq.Header.Set("Origin", origin)
-	res, err := srv.Client().Do(scanReq)
+	code, raw, err := doHTTP(client, scanReq)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res.Body.Close()
+	if code != http.StatusOK {
+		t.Fatalf("scan %d %s", code, raw)
+	}
+	if leak := zeroRankLeak(raw); leak != "" {
+		t.Fatalf("scan leaked %s: %s", leak, raw)
+	}
+	mu.Lock()
+	afterScan := usagePosts
+	mu.Unlock()
+	if afterScan < 1 {
+		t.Fatal("scan with today events must upload Community Rank usage")
+	}
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for i := 0; i < 20; i++ {
-			req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Origin", origin)
-			r, err := srv.Client().Do(req)
-			if err == nil {
-				r.Body.Close()
-			}
-			r2, err := http.Get(srv.URL + "/api/summary")
-			if err == nil {
-				r2.Body.Close()
-			}
+	var (
+		errMu sync.Mutex
+		errs  []string
+	)
+	note := func(format string, args ...any) {
+		errMu.Lock()
+		errs = append(errs, fmt.Sprintf(format, args...))
+		errMu.Unlock()
+	}
+	check := func(label string, code int, raw []byte, err error) {
+		if err != nil {
+			note("%s: %v", label, err)
+			return
 		}
-	}()
-	for i := 0; i < 20; i++ {
-		r, err := http.Get(srv.URL + "/api/summary")
-		if err == nil {
-			r.Body.Close()
+		if code != http.StatusOK {
+			note("%s status %d %s", label, code, raw)
+			return
+		}
+		if leak := zeroRankLeak(raw); leak != "" {
+			note("%s leaked %s: %s", label, leak, raw)
 		}
 	}
-	<-done
+
+	sinces := []string{"", "today", "7d", "1d", "all"}
+	var wg sync.WaitGroup
+	for g := 0; g < 3; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 20; i++ {
+				u := srv.URL + "/api/summary"
+				if q := sinces[i%len(sinces)]; q != "" {
+					u += "?since=" + q
+				}
+				req, err := http.NewRequest(http.MethodGet, u, nil)
+				if err != nil {
+					note("summary req: %v", err)
+					continue
+				}
+				code, raw, err := doHTTP(client, req)
+				check("GET /api/summary", code, raw, err)
+			}
+		}()
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 20; i++ {
+			body := `{"enabled":true}`
+			if i%2 == 0 {
+				body = `{"enabled":false}`
+			}
+			req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(body))
+			if err != nil {
+				note("community post req: %v", err)
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Origin", origin)
+			code, raw, err := doHTTP(client, req)
+			check("POST /api/community", code, raw, err)
+		}
+	}()
+	for g := 0; g < 2; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 20; i++ {
+				req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/community", nil)
+				if err != nil {
+					note("community get req: %v", err)
+					continue
+				}
+				code, raw, err := doHTTP(client, req)
+				check("GET /api/community", code, raw, err)
+			}
+		}()
+	}
+	wg.Wait()
+	if len(errs) > 0 {
+		t.Fatalf("concurrent: %s", strings.Join(errs, "; "))
+	}
+
+	off, err := http.NewRequest(http.MethodPost, srv.URL+"/api/community", strings.NewReader(`{"enabled":false}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	off.Header.Set("Content-Type", "application/json")
+	off.Header.Set("Origin", origin)
+	code, raw, err = doHTTP(client, off)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code != http.StatusOK {
+		t.Fatalf("disable %d %s", code, raw)
+	}
+	if leak := zeroRankLeak(raw); leak != "" {
+		t.Fatalf("disable leaked %s: %s", leak, raw)
+	}
+
+	mu.Lock()
+	afterDisable := usagePosts
+	mu.Unlock()
+	for i := 0; i < 8; i++ {
+		u := srv.URL + "/api/summary"
+		if i%2 == 0 {
+			u += "?since=today"
+		}
+		req, err := http.NewRequest(http.MethodGet, u, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		code, raw, err := doHTTP(client, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if code != http.StatusOK {
+			t.Fatalf("post-disable summary %d %s", code, raw)
+		}
+		if leak := zeroRankLeak(raw); leak != "" {
+			t.Fatalf("post-disable leaked %s: %s", leak, raw)
+		}
+	}
+	mu.Lock()
+	afterGets := usagePosts
+	mu.Unlock()
+	if afterGets != afterDisable {
+		t.Fatalf("GET /api/summary uploaded after enabled:false (scan=%d disable=%d get=%d)", afterScan, afterDisable, afterGets)
+	}
+	if afterDisable != afterScan {
+		t.Fatalf("usage POST rose after scan (scan=%d now=%d); GET must not upload", afterScan, afterDisable)
+	}
+}
+
+func doHTTP(client *http.Client, req *http.Request) (int, []byte, error) {
+	res, err := client.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer res.Body.Close()
+	raw, err := io.ReadAll(res.Body)
+	return res.StatusCode, raw, err
+}
+
+func zeroRankLeak(raw []byte) string {
+	s := string(raw)
+	switch {
+	case strings.Contains(s, `"rank": 0`), strings.Contains(s, `"rank":0`):
+		return `"rank": 0`
+	case strings.Contains(s, "#0"):
+		return "#0"
+	}
+	return ""
+}
+
+func writeTodayPricedClaude(t *testing.T, dir string) {
+	t.Helper()
+	dst := filepath.Join(dir, ".claude", "projects", "today-race")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := fmt.Sprintf(`{"type":"assistant","requestId":"today-race","timestamp":%q,"message":{"id":"today-race","model":"claude-opus-4.6","usage":{"input_tokens":2000,"output_tokens":50,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}`, time.Now().Format(time.RFC3339))
+	if err := os.WriteFile(filepath.Join(dst, "s.jsonl"), []byte(line+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestNoCommunityScanDoesNotMintOrUpload(t *testing.T) {

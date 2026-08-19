@@ -151,18 +151,24 @@ func TestWindowedSummaryDoesNotPasteTodayRankOntoInsights(t *testing.T) {
 
 func TestAllTimeSummaryAttachesRealRankInsight(t *testing.T) {
 	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
-	view.Today.Rank = 37
-	view.Today.Display = "#37 / 842"
+	view.Today.Rank = 1
+	view.Today.Display = "#1 / 20"
+	view.All.Rank = 37
+	view.All.Display = "#37 / 842"
 	r := Result{Errors: []string{}, Community: &view}
 	raw, err := MarshalSummary(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), "社区排名 #37 / 842") || !strings.Contains(string(raw), "不是全球榜") {
-		t.Fatalf("%s", raw)
+	s := string(raw)
+	if !strings.Contains(s, "社区排名 #37 / 842") || !strings.Contains(s, "不是全球榜") {
+		t.Fatalf("%s", s)
 	}
-	if strings.Contains(string(raw), "#0") {
-		t.Fatal(string(raw))
+	if strings.Contains(s, "社区排名 #1 / 20") {
+		t.Fatal("all-time 用量说明 must not paste today's podium")
+	}
+	if strings.Contains(s, "#0") {
+		t.Fatal(s)
 	}
 }
 
@@ -179,8 +185,8 @@ func TestMarshalSummaryCommunityInsightNeverZeroRank(t *testing.T) {
 		t.Fatalf("observatory must not print #0: %s", raw)
 	}
 
-	view.Today.Rank = 37
-	view.Today.Display = "#37 / 842"
+	view.All.Rank = 37
+	view.All.Display = "#37 / 842"
 	raw, err = MarshalSummary(Result{Community: &view, Errors: []string{}})
 	if err != nil {
 		t.Fatal(err)

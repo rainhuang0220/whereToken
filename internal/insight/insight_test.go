@@ -80,6 +80,9 @@ func TestAppendStandingNeverZeroRank(t *testing.T) {
 	if strings.Contains(got[1].Text, "全球") == false {
 		t.Fatalf("must say this is not a global rank: %s", got[1].Text)
 	}
+	if !strings.Contains(got[1].Text, "累计已同步日") {
+		t.Fatalf("must say 累计 is uploaded days, not kiln 全部: %s", got[1].Text)
+	}
 	if strings.Contains(got[1].Text, "#0") {
 		t.Fatal(got[1].Text)
 	}

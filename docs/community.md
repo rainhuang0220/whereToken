@@ -50,3 +50,6 @@ The fifth CLI / dashboard column is **估价** (row 1) and **排名** (row 2).
 `--rank today` (default) or `--rank all` selects the standing. Rank is
 competition ranking (ties share a place and skip). Below 20 participants
 the product shows "not available yet" instead of a three-person podium.
+**累计 / `--rank all` is the sum of days this client uploaded**, not the
+kiln 全部 ledger. Miss a day of running whereToken and that day never
+enters 累计.

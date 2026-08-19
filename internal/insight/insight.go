@@ -95,6 +95,6 @@ func AppendStanding(lines []Line, status, display string, rank int) []Line {
 	}
 	return append(lines, Line{
 		Kind: "community",
-		Text: "社区排名 " + display + " · 匿名聚合，不是全球榜",
+		Text: "社区排名 " + display + " · 累计已同步日 · 匿名聚合，不是全球榜",
 	})
 }
