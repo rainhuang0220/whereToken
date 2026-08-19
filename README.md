@@ -60,7 +60,7 @@ Explore the same data in a browser interface that runs on your machine.
 
 Query usage from the terminal, or export a normalized JSON report for scripts.
 
-whereToken reports token counts. It does not estimate monetary cost.
+whereToken reports token counts. When a public list price exists, it also shows an API-equivalent estimate. That is not a subscription bill, and a missing price is not written as $0.
 
 ## Installation
 

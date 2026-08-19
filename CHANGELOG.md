@@ -12,6 +12,7 @@
 - MiniMax sqlite replay stays unchanged; OpenClaw JSONL appends incrementally and truncations rescan
 - Deterministic usage insights on the observatory payload and dashboard
 - Dashboard period clicks ignore stale `/api/summary` replies
+- README no longer claims the product does not estimate cost
 
 ## 0.4.0 — 2026-08-19 (Alpha)
 
