@@ -46,7 +46,7 @@ var ForbiddenUploadKeys = []string{
 	"session", "session_id", "request_id", "request",
 	"path", "filename", "repository", "workspace", "project",
 	"jwt", "cookie", "authorization", "api_key", "credential",
-	"events", "usage_events", "turns", "sqlite", "index",
+	"events", "usage_events", "turns", "sqlite", "sqlite_path", "index", "index_path",
 	"email", "username", "hostname", "ip", "github",
 }
 

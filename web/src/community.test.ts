@@ -31,4 +31,15 @@ describe('community display', () => {
     expect(rankHint(undefined, { status: 'unavailable' })).toContain('不是经过审计的竞技排行榜')
     expect(rankHint()).toContain('不是经过审计的竞技排行榜')
   })
+
+  it('does not describe Community Rank as global or worldwide', () => {
+    const hint = rankHint(
+      { enabled: true, metric: 'tokens', self_reported: true, note: 'ignored', today: { status: 'ok' }, all: { status: 'ok' } },
+      { status: 'ok', rank: 37, display: '#37 / 842', participants: 842 },
+    )
+    expect(hint).toContain('不是全球')
+    expect(hint).toContain('全世界')
+    expect(hint).toContain('全体 AI 用户')
+    expect(hint).toContain('不是经过审计的竞技排行榜')
+  })
 })

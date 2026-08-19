@@ -1,8 +1,8 @@
 # Community Rank
 
 Community Rank is an **optional, anonymous, self-reported** comparison of
-daily token totals among whereToken participants. It is **not** a global
-developer ranking and **not** an audited leaderboard.
+daily token totals among whereToken participants. It is **not** a global,
+worldwide, or all-AI-users rank and **not** an audited leaderboard.
 
 There is no public whereToken rank cluster. Nothing is uploaded unless you
 set `WHERETOKEN_COMMUNITY_URL` (or run `wheretoken community serve` and

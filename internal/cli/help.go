@@ -27,10 +27,11 @@ GitHub Release and brew tap rainhuang0220/wheretoken.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,
-requests, user turns, estimated cost, and community rank. Then a 7-day spark
+requests, user turns, estimated API-equivalent cost (not a subscription bill),
+and community rank. Then a 7-day spark
 and a ranking of tools and vendors (with share of total). Degraded Trae/Cursor
 logins become footnotes. Community rank is self-reported anonymous aggregate
-usage among participants, not a global developer leaderboard.
+usage among participants, not a global, worldwide, or all-AI-users rank.
 
 FLAGS
   -h, --help           this text
@@ -81,7 +82,9 @@ PRIVACY
   serve binds 127.0.0.1 only. Do not paste secrets into issues.
   Community Rank (when WHERETOKEN_COMMUNITY_URL is set and not opted out)
   uploads anonymous daily token totals only — never events, prompts, paths,
-  credentials, or the SQLite index. It is not a global developer rank.
+  request ids, credentials, or the SQLite index. It is not a global,
+  worldwide, or all-AI-users rank. Unknown cost is omitted, never $0.
+  Unavailable rank is omitted, never #0.
   wheretoken community off opts out. See docs/community.md.
 
 EXAMPLES

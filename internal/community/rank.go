@@ -35,8 +35,8 @@ const (
 	// participation grows.
 	DefaultMinParticipants = 20
 
-	DisclaimerEN = "Community Rank is self-reported anonymous aggregate usage. It is not an audited competitive leaderboard."
-	DisclaimerZH = "社区排名基于参与用户匿名上报的聚合用量，不是经过审计的竞技排行榜。"
+	DisclaimerEN = "Community Rank is self-reported anonymous aggregate usage among participants. It is not a global, worldwide, or all-AI-users rank, and not an audited competitive leaderboard."
+	DisclaimerZH = "社区排名基于参与用户匿名上报的聚合用量，不是全球、全世界或全体 AI 用户排名，也不是经过审计的竞技排行榜。"
 )
 
 // Standing is one period/metric rank. Rank and percentile are omitted when
