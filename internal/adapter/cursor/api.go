@@ -27,7 +27,7 @@ const (
 func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.UsageEvent, error) {
 	token := access
 	events, err := a.fetchUsageWithToken(sourceRoot, token)
-	if err != nil && isUnauthorized(err) && refresh != "" {
+	if err != nil && adapter.IsUnauthorized(err) && refresh != "" {
 		next, rerr := a.refreshAccessToken(refresh)
 		if rerr != nil {
 			return nil, errExpiredAuth
@@ -47,7 +47,7 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	if hasTokenTotals(filtered) {
 		return tagged(sourceRoot, filtered), ferr
 	}
-	if isUnauthorized(ferr) {
+	if adapter.IsUnauthorized(ferr) {
 		return nil, ferr
 	}
 
@@ -182,13 +182,13 @@ func (a Adapter) postJSON(path, token string, payload any) ([]byte, error) {
 	defer resp.Body.Close()
 	raw, _ := adapter.ReadHTTPBody(resp.Body)
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return nil, errStatus{code: resp.StatusCode}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, errStatus{code: resp.StatusCode}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, errStatus{code: resp.StatusCode}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	return raw, nil
 }
@@ -248,21 +248,21 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, error) {
 	if err := dec.Decode(&top); err != nil {
 		return nil, 0, 0, fmt.Errorf("账号用量接口返回无法解析")
 	}
-	total := int(flexInt(pick(top, "totalUsageEventsCount", "total_usage_events_count")))
-	list := asSlice(pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
+	total := int(adapter.FlexInt(adapter.Pick(top, "totalUsageEventsCount", "total_usage_events_count")))
+	list := asSlice(adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
 	out := make([]event.UsageEvent, 0, len(list))
 	for i, item := range list {
-		m := asMap(item)
+		m := adapter.AsMap(item)
 		if m == nil {
 			continue
 		}
-		model := flexString(pick(m, "model", "modelIntent", "model_intent"))
-		ts := parseAPITime(pick(m, "timestamp"))
-		usage := asMap(pick(m, "tokenUsage", "token_usage"))
+		model := adapter.FlexString(adapter.Pick(m, "model", "modelIntent", "model_intent"))
+		ts := parseAPITime(adapter.Pick(m, "timestamp"))
+		usage := adapter.AsMap(adapter.Pick(m, "tokenUsage", "token_usage"))
 		if usage == nil {
 			usage = m
 		}
-		ev := mapTokens(model, flexString(pick(m, "conversationId", "conversation_id")), ts, usage, i)
+		ev := mapTokens(model, adapter.FlexString(adapter.Pick(m, "conversationId", "conversation_id")), ts, usage, i)
 		if ev.Model != "" || ev.Miss+ev.CacheRead+ev.CacheCreate+ev.Output != 0 {
 			out = append(out, ev)
 		}
@@ -277,14 +277,14 @@ func parseAggregated(raw []byte, now time.Time) []event.UsageEvent {
 	if dec.Decode(&top) != nil {
 		return nil
 	}
-	list := asSlice(pick(top, "aggregations"))
+	list := asSlice(adapter.Pick(top, "aggregations"))
 	out := make([]event.UsageEvent, 0, len(list))
 	for i, item := range list {
-		m := asMap(item)
+		m := adapter.AsMap(item)
 		if m == nil {
 			continue
 		}
-		model := flexString(pick(m, "modelIntent", "model_intent", "model"))
+		model := adapter.FlexString(adapter.Pick(m, "modelIntent", "model_intent", "model"))
 		ev := mapTokens(model, "", now, m, i)
 		if ev.Miss+ev.CacheRead+ev.CacheCreate+ev.Output == 0 && model == "" {
 			continue
@@ -295,10 +295,10 @@ func parseAggregated(raw []byte, now time.Time) []event.UsageEvent {
 }
 
 func mapTokens(model, session string, ts time.Time, usage map[string]any, i int) event.UsageEvent {
-	miss := flexInt(pick(usage, "inputTokens", "input_tokens"))
-	out := flexInt(pick(usage, "outputTokens", "output_tokens"))
-	cw := flexInt(pick(usage, "cacheWriteTokens", "cache_write_tokens"))
-	cr := flexInt(pick(usage, "cacheReadTokens", "cache_read_tokens"))
+	miss := adapter.FlexInt(adapter.Pick(usage, "inputTokens", "input_tokens"))
+	out := adapter.FlexInt(adapter.Pick(usage, "outputTokens", "output_tokens"))
+	cw := adapter.FlexInt(adapter.Pick(usage, "cacheWriteTokens", "cache_write_tokens"))
+	cr := adapter.FlexInt(adapter.Pick(usage, "cacheReadTokens", "cache_read_tokens"))
 	id := fmt.Sprintf("cursor-api:%s:%d:%s:%d:%d:%d:%d:%d", session, ts.UnixMilli(), model, miss, cr, cw, out, i)
 	return event.UsageEvent{
 		Source:      "cursor",
@@ -326,70 +326,15 @@ func hasTokenTotals(events []event.UsageEvent) bool {
 	return false
 }
 
-func pick(m map[string]any, names ...string) any {
-	if m == nil {
-		return nil
-	}
-	for _, n := range names {
-		if v, ok := m[n]; ok && v != nil {
-			return v
-		}
-	}
-	return nil
-}
-
-func asMap(v any) map[string]any {
-	m, _ := v.(map[string]any)
-	return m
-}
-
 func asSlice(v any) []any {
 	s, _ := v.([]any)
 	return s
 }
 
-func flexString(v any) string {
-	switch x := v.(type) {
-	case string:
-		return strings.TrimSpace(x)
-	case json.Number:
-		return x.String()
-	default:
-		return ""
-	}
-}
-
-func flexInt(v any) int64 {
-	switch x := v.(type) {
-	case nil:
-		return 0
-	case json.Number:
-		n, err := x.Int64()
-		if err == nil {
-			return n
-		}
-		f, err := x.Float64()
-		if err == nil {
-			return int64(f)
-		}
-		return 0
-	case float64:
-		return int64(x)
-	case int64:
-		return x
-	case int:
-		return int64(x)
-	case string:
-		return atoi64(x)
-	default:
-		return 0
-	}
-}
-
 func parseAPITime(v any) time.Time {
-	n := flexInt(v)
+	n := adapter.FlexInt(v)
 	if n <= 0 {
-		if s := flexString(v); s != "" {
+		if s := adapter.FlexString(v); s != "" {
 			if ts, err := time.Parse(time.RFC3339Nano, s); err == nil {
 				return ts
 			}
@@ -408,22 +353,4 @@ func parseAPITime(v any) time.Time {
 	return time.UnixMilli(n)
 }
 
-type errStatus struct{ code int }
-
-func (e errStatus) Error() string {
-	if e.code == http.StatusUnauthorized || e.code == http.StatusForbidden {
-		return "本机登录态已失效"
-	}
-	return fmt.Sprintf("账号用量接口 HTTP %d", e.code)
-}
-
-func isUnauthorized(err error) bool {
-	return isHTTPStatus(err, http.StatusUnauthorized) || isHTTPStatus(err, http.StatusForbidden)
-}
-
-func isHTTPStatus(err error, code int) bool {
-	es, ok := err.(errStatus)
-	return ok && es.code == code
-}
-
-var errExpiredAuth = errStatus{code: http.StatusUnauthorized}
+var errExpiredAuth = adapter.ErrStatus{Code: http.StatusUnauthorized}

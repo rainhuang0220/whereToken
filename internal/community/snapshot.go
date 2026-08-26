@@ -119,7 +119,7 @@ func rejectForbidden(raw []byte) error {
 
 func ValidateUpload(u Upload) error {
 	if !uuidRe.MatchString(u.ParticipantID) {
-		return fmt.Errorf("invalid participant_id")
+		return errInvalidParticipant
 	}
 	if !periodRe.MatchString(u.Period) {
 		return fmt.Errorf("invalid period")
@@ -197,14 +197,9 @@ func BuildLocalAgg(events []event.UsageEvent, now time.Time, loc *time.Location)
 		TodayTokens:     sum.Total(),
 		TodayCostStatus: sum.CostStatus,
 	}
-	if agg.TodayCostStatus == "" {
-		agg.TodayCostStatus = price.Status(sum.PricedTokens, sum.UnpricedTokens)
-	}
 	if (agg.TodayCostStatus == price.StatusComplete || agg.TodayCostStatus == price.StatusPartial) && sum.CostMicro > 0 {
 		usd := float64(sum.CostMicro) / 1e6
-		if usd > 0 {
-			agg.TodayCostUSD = &usd
-		}
+		agg.TodayCostUSD = &usd
 	}
 	return agg
 }

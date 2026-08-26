@@ -33,6 +33,10 @@ type Rate struct {
 	Output                       float64
 	From, To                     time.Time // To zero = open
 	Source, Version              string
+	// CreateFree marks a card whose cache write is listed as free (Z.ai
+	// "Cached Input Storage: Limited-time Free") rather than unlisted.
+	// A free component bills $0; an unlisted one makes the event unpriced.
+	CreateFree bool
 }
 
 func (r Rate) Contains(t time.Time) bool {
@@ -100,7 +104,7 @@ func Event(e event.UsageEvent) Charge {
 func unpricedComponent(e event.UsageEvent, r Rate) bool {
 	return (e.Miss > 0 && r.Miss <= 0) ||
 		(e.CacheRead > 0 && r.CacheRead <= 0) ||
-		(e.CacheCreate > 0 && r.CacheCreate <= 0) ||
+		(e.CacheCreate > 0 && r.CacheCreate <= 0 && !r.CreateFree) ||
 		(e.Output > 0 && r.Output <= 0)
 }
 

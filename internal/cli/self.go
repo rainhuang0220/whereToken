@@ -339,8 +339,7 @@ func removeBinary(exe string) error {
 
 func scheduleWindowsDelete(path string) {
 	cmd := exec.Command("cmd", "/C", "ping 127.0.0.1 -n 2 >nul & del /f /q "+strconvQuote(path))
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	// Best effort: a failed spawn just leaves the .old file behind.
 	_ = cmd.Start()
 }
 

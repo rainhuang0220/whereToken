@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/rainhuang0220/whereToken/internal/adapter"
 )
 
 const authAccessTokenKey = "cursorAuth/accessToken"
@@ -21,7 +23,7 @@ func readItem(db *sql.DB, key string) (string, error) {
 		return "", nil
 	}
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "no such table") {
+		if !adapter.HasTable(db, "ItemTable") {
 			return "", nil
 		}
 		return "", err

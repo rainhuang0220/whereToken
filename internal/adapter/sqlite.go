@@ -41,3 +41,17 @@ func OpenRO(path string) (*sql.DB, error) {
 	}
 	return db, nil
 }
+
+// HasTable reports whether name is a table in db.
+func HasTable(db *sql.DB, name string) bool {
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&n)
+	return err == nil && n > 0
+}
+
+// HasColumn reports whether table.column exists in db.
+func HasColumn(db *sql.DB, table, column string) bool {
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?`, table, column).Scan(&n)
+	return err == nil && n > 0
+}

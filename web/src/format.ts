@@ -1,4 +1,4 @@
-import type { SliceView } from './types'
+import type { RankStanding, SliceView } from './types'
 
 export function formatCount(n: number): string {
   const neg = n < 0
@@ -143,10 +143,10 @@ export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status'
   }
 }
 
-const MIN_RANK_PARTICIPANTS = 20
+export const MIN_RANK_PARTICIPANTS = 20
 const displayCrowd = /#\d+\s*\/\s*(\d+)/
 
-export function rankCaption(st?: { status?: string; display?: string; rank?: number; participants?: number }): string {
+export function rankCaption(st?: Pick<RankStanding, 'status' | 'display' | 'rank' | 'participants'>): string {
   if (st?.participants != null && st.participants > 0 && st.participants < MIN_RANK_PARTICIPANTS) {
     return '—'
   }

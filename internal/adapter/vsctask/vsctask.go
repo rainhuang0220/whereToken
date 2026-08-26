@@ -79,17 +79,6 @@ func Parse(root adapter.SourceRoot, opt Options, emit func(event.UsageEvent), em
 	return first
 }
 
-func Probe(root adapter.SourceRoot) adapter.Probe {
-	tasks := filepath.Join(root.Path, "tasks")
-	st, err := os.Stat(tasks)
-	ledger := err == nil && st.IsDir()
-	c := adapter.Caps{
-		Discovery: adapter.LevelYes, Usage: adapter.LevelYes,
-		Cache: adapter.LevelYes, Incremental: adapter.LevelUnavailable,
-	}
-	return adapter.InferProbe(true, ledger, c)
-}
-
 func parseMessages(path, session string, root adapter.SourceRoot, opt Options, emit func(event.UsageEvent)) error {
 	evs, _, _, err := index.LoadOrReplay(opt.SourceID, path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseJSON(f, path, session, root, opt)
@@ -153,10 +142,10 @@ func eventFrom(m msg, i int, session string, root adapter.SourceRoot, opt Option
 	if json.Unmarshal([]byte(m.Text), &met) != nil {
 		return event.UsageEvent{}, false
 	}
-	in := clamp0(met.TokensIn)
-	out := clamp0(met.TokensOut)
-	cr := clamp0(met.CacheReads)
-	cw := clamp0(met.CacheWrites)
+	in := adapter.Clamp0(met.TokensIn)
+	out := adapter.Clamp0(met.TokensOut)
+	cr := adapter.Clamp0(met.CacheReads)
+	cw := adapter.Clamp0(met.CacheWrites)
 	if in+out+cr+cw == 0 {
 		return event.UsageEvent{}, false
 	}
@@ -185,11 +174,4 @@ func unixMS(n int64) time.Time {
 		return time.UnixMilli(n).UTC()
 	}
 	return time.Unix(n, 0).UTC()
-}
-
-func clamp0(n int64) int64 {
-	if n < 0 {
-		return 0
-	}
-	return n
 }

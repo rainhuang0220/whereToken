@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -130,7 +131,7 @@ func (a *App) resolveHome(override string) adapter.Home {
 }
 
 func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result {
-	if a.LookupEnv != nil && (a.LookupEnv("WHERETOKEN_OFFLINE") == "1" || a.LookupEnv("WHERETOKEN_OFFLINE") == "true") {
+	if a.envOffline() {
 		offline = true
 	}
 	if a.Scan != nil {
@@ -209,14 +210,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	}
 	if a.wantOffline(flags) {
 		const msg = "offline · 只用本机账本，没有请求 Cursor/Trae 云端"
-		dup := false
-		for _, n := range snap.Notes {
-			if n == msg {
-				dup = true
-				break
-			}
-		}
-		if !dup {
+		if !slices.Contains(snap.Notes, msg) {
 			snap.Notes = append([]string{msg}, snap.Notes...)
 		}
 	}
@@ -255,8 +249,8 @@ func (a *App) runSources(home adapter.Home, quiet, offline bool) int {
 		if !st.Detected {
 			continue
 		}
-		fmt.Fprintf(a.Stdout, "%s\t%s\t%s\t%s\t%s\n",
-			st.ID, yn(st.Detected), yn(st.Usage), string(st.Quality), st.Path)
+		fmt.Fprintf(a.Stdout, "%s\tyes\t%s\t%s\t%s\n",
+			st.ID, yn(st.Usage), string(st.Quality), st.Path)
 	}
 	return ExitOK
 }
@@ -309,9 +303,9 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 		end = 8797
 	}
 	var lastErr error
+	offline := a.wantOffline(flags)
 	for p := start; p <= end; p++ {
 		addr := fmt.Sprintf("127.0.0.1:%d", p)
-		offline := a.wantOffline(flags)
 		if a.Serve != nil {
 			fmt.Fprint(a.Stderr, ServeStartedMessage(addr))
 			if err := a.Serve(addr, home, offline); err != nil {
@@ -332,9 +326,6 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 			return ExitFail
 		}
 		return ExitOK
-	}
-	if lastErr == nil {
-		lastErr = fmt.Errorf("no port available")
 	}
 	fmt.Fprintln(a.Stderr, lastErr.Error())
 	return ExitFail
@@ -377,9 +368,10 @@ func (a *App) termWidth() int {
 }
 
 func (a *App) wantOffline(flags Flags) bool {
-	if flags.Offline {
-		return true
-	}
+	return flags.Offline || a.envOffline()
+}
+
+func (a *App) envOffline() bool {
 	if a.LookupEnv == nil {
 		return false
 	}

@@ -176,3 +176,30 @@ func TestDiscoverDefaultDotDir(t *testing.T) {
 		t.Fatalf("roots=%v", roots)
 	}
 }
+
+func TestOneUnreadableRolloutDoesNotDropSibling(t *testing.T) {
+	dir := t.TempDir()
+	sess := filepath.Join(dir, "sessions", "2026", "01", "01")
+	if err := os.MkdirAll(sess, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":30,"reasoning_output_tokens":5}}}}` + "\n"
+	if err := os.WriteFile(filepath.Join(sess, "rollout-good.jsonl"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bad := filepath.Join(sess, "rollout-bad.jsonl")
+	if err := os.WriteFile(bad, []byte(line), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(bad, 0o644) })
+	var evs []event.UsageEvent
+	err := (Adapter{}).Parse(adapter.SourceRoot{ID: "codex", Path: dir}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {})
+	if err == nil {
+		t.Fatal("unreadable sibling should still surface an error")
+	}
+	if len(evs) != 1 || evs[0].Miss != 80 {
+		t.Fatalf("good rollout must still count: %+v", evs)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/roo"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
+	"github.com/rainhuang0220/whereToken/internal/adapter/zcode"
 	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/index"
@@ -90,6 +92,7 @@ func Adapters(offline bool) []adapter.Adapter {
 		cline.Adapter{},
 		roo.Adapter{},
 		kilo.Adapter{},
+		zcode.Adapter{},
 	}
 }
 
@@ -308,7 +311,7 @@ func FormatDeltas(ds []index.Delta) string {
 	for _, d := range ds {
 		extra := ""
 		if d.Mode != index.ModeUnchanged && d.Added > 0 {
-			extra = "+" + itoa(d.Added)
+			extra = "+" + strconv.Itoa(d.Added)
 		}
 		b.WriteString(pad(metric.SourceLabel(d.Source), 16))
 		b.WriteString(pad(d.Mode, 14))
@@ -323,20 +326,6 @@ func pad(s string, n int) string {
 		return s + " "
 	}
 	return s + strings.Repeat(" ", n-len(s))
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [16]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[i:])
 }
 
 type sourceVendorView struct {

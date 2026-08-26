@@ -69,17 +69,24 @@ Moonshot **kimi-k3**, **kimi-k2.7-code** (+ highspeed), **kimi-k2.6**, and
 **kimi-k2.5** use the official USD list (no cache-write token rate). Bare
 `k3` stays unpriced.
 
-Z.ai **glm-5.x** / **glm-4.7** (and 4.6 / 4.5) use the public USD list.
-Cache-write storage is not a token rate, so `CacheCreate>0` stays unpriced.
-Flash/Free GLM rows are not on this card.
+Z.ai **glm-5.x** / **glm-4.7** (and 4.6 / 4.5) use the public USD list,
+plus **glm-4.7-flashx**, **glm-4.5-x**, **glm-4.5-air**, and
+**glm-4.5-airx**. Cache-write storage is listed as limited-time free, so
+`CacheCreate` bills $0 there. List-free Flash rows stay unpriced rather
+than rendering as $0.
 
-DeepSeek (peak/off-peak) and ByteDance / Doubao (CNY / length bands) stay
+DeepSeek **v4-flash** / **v4-pro** (and flash-vision-exp) use the public
+USD list at **peak** rates. The off-peak half-price windows (01:00-04:00,
+06:00-10:00 UTC Mon-Fri) are not applied; context caching has no write
+charge, so `CacheCreate>0` stays unpriced.
+
+ByteDance / Doubao (CNY / length bands) stays
 unavailable. There is no Anthropic **Haiku 4** list row (only 4.5). xAI
 coding list id is **`grok-build-0.1`**.
 
 ## What is not priced
 
-Moonshot / Kimi Code, MiniMax-M3, DeepSeek, Doubao, Zhipu, Alibaba, and any
+Moonshot / Kimi Code, MiniMax-M3, Doubao, Alibaba, and any
 unknown model stay `unavailable` until a verifiable public API list price is
 added. Coding-agent subscriptions are not treated as API list prices.
 
@@ -89,3 +96,5 @@ added. Coding-agent subscriptions are not treated as API list prices.
 - xAI short-context tier: https://docs.x.ai/developers/pricing
 - OpenAI: https://developers.openai.com/api/docs/pricing
 - MiniMax pay-as-you-go: https://platform.minimax.io/docs/guides/pricing-paygo
+- Z.ai: https://docs.z.ai/guides/overview/pricing
+- DeepSeek (peak rates): https://api-docs.deepseek.com/quick_start/pricing

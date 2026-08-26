@@ -1,6 +1,7 @@
 package index
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -62,7 +63,7 @@ func Forward(evs []event.UsageEvent, turns []event.TurnEvent, err error, emit fu
 func parseFull(path string, parse ParseFunc) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, nil, ModeFull, err
+		return nil, nil, ModeFull, fmt.Errorf("open: %w", PathFree(err))
 	}
 	evs, turns, _, err := parse(f)
 	f.Close()

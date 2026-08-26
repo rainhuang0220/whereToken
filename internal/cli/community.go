@@ -20,7 +20,7 @@ func (a *App) attachCommunity(snap *report.Snapshot, flags Flags, home adapter.H
 	snap.Community = community.Resolve(community.Request{
 		Home:    home,
 		Getenv:  a.LookupEnv,
-		Offline: flags.Offline || a.wantOffline(flags),
+		Offline: a.wantOffline(flags),
 		OptOut:  flags.NoCommunity,
 		Version: a.Version,
 		Now:     a.Now(),
@@ -37,7 +37,7 @@ func (a *App) runCommunity(flags Flags, home adapter.Home) int {
 	case "off":
 		return a.communitySet(home, false)
 	case "serve":
-		return a.runCommunityServe(flags)
+		return a.runCommunityServe(flags, home)
 	default:
 		fmt.Fprintf(a.Stderr, "unknown community action %q\ntry `wheretoken --help`\n", flags.CommunityAction)
 		return ExitUsage
@@ -114,7 +114,7 @@ func (a *App) communitySet(home adapter.Home, on bool) int {
 	return ExitOK
 }
 
-func (a *App) runCommunityServe(flags Flags) int {
+func (a *App) runCommunityServe(flags Flags, home adapter.Home) int {
 	port := flags.Port
 	if port == 8787 {
 		port = 8798
@@ -122,6 +122,10 @@ func (a *App) runCommunityServe(flags Flags) int {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	if a.Serve != nil {
 		fmt.Fprintf(a.Stderr, "community rank http://%s\n", addr)
+		if err := a.Serve(addr, home, a.wantOffline(flags)); err != nil {
+			fmt.Fprintln(a.Stderr, err.Error())
+			return ExitFail
+		}
 		return ExitOK
 	}
 	ln, err := net.Listen("tcp", addr)

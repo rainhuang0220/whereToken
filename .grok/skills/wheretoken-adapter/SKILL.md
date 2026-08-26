@@ -16,7 +16,7 @@ Follow [`docs/adding-an-adapter.md`](../../../docs/adding-an-adapter.md) and [`d
 
 ## Must
 
-1. Implement `adapter.Adapter` (`ID`, `Discover`, `Parse`). Optional `Probe`.
+1. Implement `adapter.Adapter` (`ID`, `Discover`, `Parse`).
 2. Add a row to `adapter.Catalog` with `Caps` (discovery ≠ usage).
 3. Map only fields the source actually has. Set `Quality` and `Derivation`.
 4. Fixture under `testdata/adapters/<id>/` (usage fields only).

@@ -68,7 +68,7 @@ func resolveDB(p string) string {
 }
 
 func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	db, err := openRO(path)
+	db, err := adapter.OpenRO(path)
 	if err != nil {
 		return err
 	}
@@ -370,8 +370,4 @@ func atoi64(s string) int64 {
 		return int64(f)
 	}
 	return 0
-}
-
-func openRO(path string) (*sql.DB, error) {
-	return adapter.OpenRO(path)
 }

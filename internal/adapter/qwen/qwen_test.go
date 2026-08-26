@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
@@ -86,9 +85,5 @@ func TestConfigDirWithoutLedgerIsNotUsage(t *testing.T) {
 	roots := (Adapter{}).Discover(testhome.New(dir))
 	if len(roots) != 1 {
 		t.Fatalf("config dir should still be discovered: %+v", roots)
-	}
-	p := (Adapter{}).Probe(roots[0])
-	if !p.Detected || p.Ledger || p.Caps.Usage != adapter.LevelUnavailable {
-		t.Fatalf("config-only must be usage unavailable: %+v", p)
 	}
 }

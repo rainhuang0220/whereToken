@@ -101,6 +101,7 @@ func parseWire(path string, root adapter.SourceRoot, emit func(event.UsageEvent)
 }
 
 func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+	ws, sess := kimiContext(root.Path, path)
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
 	seq := 0
@@ -120,7 +121,6 @@ func parseWireFile(f *os.File, path string, root adapter.SourceRoot) ([]event.Us
 				return nil
 			}
 			seq++
-			ws, sess := kimiContext(root.Path, path)
 			evs = append(evs, event.UsageEvent{
 				Source:      "kimi",
 				Vendor:      vendor.Lookup(rec.Model, ""),

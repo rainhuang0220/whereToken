@@ -252,20 +252,20 @@ func foldSessions(in []SessionSlice) []SessionSlice {
 	keep := append([]SessionSlice(nil), in[:maxDrillSessions-1]...)
 	rest := SessionSlice{Slice: Slice{ID: remainderSession, Label: remainderSession}}
 	for _, s := range in[maxDrillSessions-1:] {
-		rest.Miss += s.Miss
-		rest.CacheRead += s.CacheRead
-		rest.CacheCreate += s.CacheCreate
-		rest.Output += s.Output
-		rest.Requests += s.Requests
-		rest.UserTurns += s.UserTurns
-		rest.Records += s.Records
-		rest.CostMicro += s.CostMicro
-		rest.MissCostMicro += s.MissCostMicro
-		rest.CacheReadCostMicro += s.CacheReadCostMicro
-		rest.CacheCreateCostMicro += s.CacheCreateCostMicro
-		rest.OutputCostMicro += s.OutputCostMicro
-		rest.PricedTokens += s.PricedTokens
-		rest.UnpricedTokens += s.UnpricedTokens
+		rest.Miss = satAdd(rest.Miss, s.Miss)
+		rest.CacheRead = satAdd(rest.CacheRead, s.CacheRead)
+		rest.CacheCreate = satAdd(rest.CacheCreate, s.CacheCreate)
+		rest.Output = satAdd(rest.Output, s.Output)
+		rest.Requests = satAdd(rest.Requests, s.Requests)
+		rest.UserTurns = satAdd(rest.UserTurns, s.UserTurns)
+		rest.Records = satAdd(rest.Records, s.Records)
+		rest.CostMicro = satAdd(rest.CostMicro, s.CostMicro)
+		rest.MissCostMicro = satAdd(rest.MissCostMicro, s.MissCostMicro)
+		rest.CacheReadCostMicro = satAdd(rest.CacheReadCostMicro, s.CacheReadCostMicro)
+		rest.CacheCreateCostMicro = satAdd(rest.CacheCreateCostMicro, s.CacheCreateCostMicro)
+		rest.OutputCostMicro = satAdd(rest.OutputCostMicro, s.OutputCostMicro)
+		rest.PricedTokens = satAdd(rest.PricedTokens, s.PricedTokens)
+		rest.UnpricedTokens = satAdd(rest.UnpricedTokens, s.UnpricedTokens)
 	}
 	finishCost(&rest.Slice)
 	return append(keep, rest)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { columnsFrom, costCaption, derivationCaption, formatCount, hitBand, qualityCaption } from '../format'
-import { isRowActivateKey, rowIsSelectable } from '../sliceTable'
+import { isRowActivateKey, rowIsSelectable, sliceHeads } from '../sliceTable'
 import type { SliceView } from '../types'
 
 const props = defineProps<{
@@ -13,8 +13,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [id: string]
 }>()
-
-const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命中率']
 
 function activate(id: string, quality: string) {
   if (!rowIsSelectable(quality)) return
@@ -35,7 +33,7 @@ function onRowKey(e: KeyboardEvent, id: string, quality: string) {
       <thead>
         <tr>
           <th class="name">名称</th>
-          <th v-for="h in heads" :key="h" class="num">{{ h }}</th>
+          <th v-for="h in sliceHeads" :key="h" class="num">{{ h }}</th>
           <th class="num">请求</th>
           <th v-if="props.showTurns" class="num">回合</th>
           <th class="num">估价</th>

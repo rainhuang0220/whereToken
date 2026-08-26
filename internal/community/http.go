@@ -186,9 +186,9 @@ func (h *Handler) allowIP(r *http.Request) bool {
 	if ip == "" {
 		return true
 	}
-	now := h.now()
-	if h.now == nil {
-		now = time.Now()
+	now := time.Now()
+	if h.now != nil {
+		now = h.now()
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()

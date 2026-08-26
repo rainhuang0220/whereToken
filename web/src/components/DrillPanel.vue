@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { columnsFrom, costCaption, formatCount } from '../format'
-import type { DrillTables, SessionView, SliceView } from '../types'
+import { sliceHeads } from '../sliceTable'
+import type { DrillTables, SessionView } from '../types'
 
 defineProps<{
   pack: DrillTables
 }>()
-
-const heads = ['未命中', '缓存读', '缓存写', '输出', '合计', '命中率']
 
 function sessionLabel(row: SessionView): string {
   const id = row.label || row.id
@@ -24,7 +23,7 @@ function sessionLabel(row: SessionView): string {
           <thead>
             <tr>
               <th class="name">模型</th>
-              <th v-for="h in heads" :key="h" class="num">{{ h }}</th>
+              <th v-for="h in sliceHeads" :key="h" class="num">{{ h }}</th>
               <th class="num">请求</th>
               <th class="num">估价</th>
             </tr>
@@ -32,7 +31,7 @@ function sessionLabel(row: SessionView): string {
           <tbody>
             <tr v-for="row in pack.models" :key="row.id">
               <td class="name">{{ row.label }}</td>
-              <td v-for="(cell, i) in columnsFrom(row as SliceView)" :key="i" class="num">{{ cell }}</td>
+              <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>
               <td class="num">{{ costCaption(row) || '—' }}</td>
             </tr>
@@ -45,7 +44,7 @@ function sessionLabel(row: SessionView): string {
           <thead>
             <tr>
               <th class="name">工作区</th>
-              <th v-for="h in heads" :key="'w' + h" class="num">{{ h }}</th>
+              <th v-for="h in sliceHeads" :key="'w' + h" class="num">{{ h }}</th>
               <th class="num">请求</th>
               <th class="num">估价</th>
             </tr>
@@ -53,7 +52,7 @@ function sessionLabel(row: SessionView): string {
           <tbody>
             <tr v-for="row in pack.workspaces" :key="row.id">
               <td class="name">{{ row.label }}</td>
-              <td v-for="(cell, i) in columnsFrom(row as SliceView)" :key="i" class="num">{{ cell }}</td>
+              <td v-for="(cell, i) in columnsFrom(row)" :key="i" class="num">{{ cell }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>
               <td class="num">{{ costCaption(row) || '—' }}</td>
             </tr>
@@ -70,7 +69,7 @@ function sessionLabel(row: SessionView): string {
             <th class="name">模型</th>
             <th class="name">工作区</th>
             <th class="num">日期</th>
-            <th v-for="h in heads" :key="'s' + h" class="num">{{ h }}</th>
+            <th v-for="h in sliceHeads" :key="'s' + h" class="num">{{ h }}</th>
             <th class="num">请求</th>
             <th class="num">回合</th>
             <th class="num">估价</th>

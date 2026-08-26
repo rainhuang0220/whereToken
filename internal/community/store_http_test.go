@@ -205,9 +205,13 @@ func TestStoreLeaveRankMatchesNeverSeen(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.mu.Lock()
-	if s.left[seen] || s.left[never] {
+	if _, ok := s.days[seen]; ok {
 		s.mu.Unlock()
-		t.Fatal("leave must not record opted_out for a departed or unknown uuid")
+		t.Fatal("leave must not keep a departed uuid's rows")
+	}
+	if _, ok := s.days[never]; ok {
+		s.mu.Unlock()
+		t.Fatal("unknown leave must not create a row")
 	}
 	if _, ok := s.hits[seen]; ok {
 		s.mu.Unlock()
@@ -662,10 +666,10 @@ func TestLeaveEndpoint(t *testing.T) {
 		t.Fatalf("unknown leave %d", res.StatusCode)
 	}
 	h.Store.mu.Lock()
-	recorded := h.Store.left[never]
+	_, recorded := h.Store.days[never]
 	h.Store.mu.Unlock()
 	if recorded {
-		t.Fatal("unknown leave must not record opted_out")
+		t.Fatal("unknown leave must not create a row")
 	}
 }
 
@@ -797,9 +801,8 @@ func dumpStore(s *Store) string {
 	defer s.mu.Unlock()
 	raw, err := json.Marshal(struct {
 		Days map[string]map[string]dayRow `json:"days"`
-		Left map[string]bool              `json:"left"`
 		Hits map[string][]time.Time       `json:"hits"`
-	}{s.days, s.left, s.hits})
+	}{s.days, s.hits})
 	if err != nil {
 		return err.Error()
 	}

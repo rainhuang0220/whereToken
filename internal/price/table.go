@@ -67,16 +67,30 @@ var table = []Rate{
 	kimi("kimi-k2.6", 0.95, 0.16, 0, 4.00),
 	kimi("kimi-k2.5", 0.60, 0.10, 0, 3.00),
 
-	// Z.ai — docs.z.ai/guides/overview/pricing (2026-08-20). Cache write
-	// storage is listed as limited-time free, not a token rate.
+	// Z.ai — docs.z.ai/guides/overview/pricing (2026-08-25). Cache write
+	// storage is listed as limited-time free, so CacheCreate bills $0
+	// (CreateFree). The GLM-*.7/4.5-Flash rows are list-price free and stay
+	// unpriced here so they never render as $0.
 	zhi("glm-5.3", 1.4, 0.26, 0, 4.4),
 	zhi("glm-5.2", 1.4, 0.26, 0, 4.4),
 	zhi("glm-5.1", 1.4, 0.26, 0, 4.4),
 	zhi("glm-5-turbo", 1.2, 0.24, 0, 4.0),
 	zhi("glm-5", 1.0, 0.20, 0, 3.2),
 	zhi("glm-4.7", 0.6, 0.11, 0, 2.2),
+	zhi("glm-4.7-flashx", 0.07, 0.01, 0, 0.4),
 	zhi("glm-4.6", 0.6, 0.11, 0, 2.2),
 	zhi("glm-4.5", 0.6, 0.11, 0, 2.2),
+	zhi("glm-4.5-x", 2.2, 0.45, 0, 8.9),
+	zhi("glm-4.5-air", 0.2, 0.03, 0, 1.1),
+	zhi("glm-4.5-airx", 1.1, 0.22, 0, 4.5),
+
+	// DeepSeek — api-docs.deepseek.com/quick_start/pricing (2026-08-25).
+	// Peak rates. Off-peak (01:00-04:00, 06:00-10:00 UTC Mon-Fri) is half;
+	// that time-of-day split is not applied (same class of approximation as
+	// the xAI long-context note). Context caching has no write charge.
+	ds("deepseek-v4-flash", 0.44, 0.014, 0, 1.32),
+	ds("deepseek-v4-flash-vision-exp", 0.44, 0.014, 0, 1.32),
+	ds("deepseek-v4-pro", 1.32, 0.044, 0, 3.96),
 
 	// Google — ai.google.dev/gemini-api/docs/pricing (2026-08-13). Flat
 	// Flash/Lite rows only. 2.5 Pro / 3.x Pro stay unpriced (≤200k / >200k).
@@ -96,65 +110,33 @@ var table = []Rate{
 	mm("minimax-m2.1", 0.30, 0.03, 0.375, 1.20),
 }
 
-func anth(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "anthropic", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "anthropic_api_list", Version: CardVersion,
+// card returns a list-price row constructor pinned to one vendor's public
+// API list. All rows share the same open-ended validity window.
+func card(vendor, source string) func(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return cardOpt(vendor, source, false)
+}
+
+// cardOpt is card with the cache-write-is-free flag some cards declare.
+func cardOpt(vendor, source string, createFree bool) func(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+	return func(model string, miss, cacheRead, cacheCreate, output float64) Rate {
+		return Rate{
+			Vendor: vendor, Model: model,
+			Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+			From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			Source: source, Version: CardVersion,
+			CreateFree: createFree,
+		}
 	}
 }
 
-func xai(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "xai", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "xai_api_list", Version: CardVersion,
-	}
-}
-
-func oai(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "openai", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "openai_api_list", Version: CardVersion,
-	}
-}
-
-func mm(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "minimax", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "minimax_api_list", Version: CardVersion,
-	}
-}
-
-func kimi(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "moonshot", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "moonshot_api_list", Version: CardVersion,
-	}
-}
-
-func ggl(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "google", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "google_api_list", Version: CardVersion,
-	}
-}
-
-func zhi(model string, miss, cacheRead, cacheCreate, output float64) Rate {
-	return Rate{
-		Vendor: "zhipu", Model: model,
-		Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
-		From:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		Source: "zai_api_list", Version: CardVersion,
-	}
-}
+var (
+	anth = card("anthropic", "anthropic_api_list")
+	xai  = card("xai", "xai_api_list")
+	oai  = card("openai", "openai_api_list")
+	mm   = card("minimax", "minimax_api_list")
+	kimi = card("moonshot", "moonshot_api_list")
+	ggl  = card("google", "google_api_list")
+	// Z.ai lists cache-write storage as limited-time free: bill it $0.
+	zhi = cardOpt("zhipu", "zai_api_list", true)
+	ds  = card("deepseek", "deepseek_api_list")
+)

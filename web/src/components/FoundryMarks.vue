@@ -8,7 +8,7 @@ defineProps<{ stats: CalendarStats }>()
   <aside class="marks" aria-label="峰值与连烧">
     <div class="stamp">
       <span class="stamp-k">峰值</span>
-      <strong class="stamp-v">{{ stats.peak_total_m }}</strong>
+      <strong class="stamp-v">{{ stats.peak_total ? stats.peak_total_m : '—' }}</strong>
       <span class="stamp-s">{{ stats.peak_date || '—' }}</span>
     </div>
     <div class="stamp">

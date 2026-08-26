@@ -87,10 +87,18 @@ export async function readScanStream(
         throw new Error(err)
       }
       if (ev.event === 'progress' && ev.data) {
-        onProgress(JSON.parse(ev.data) as ScanProgress)
+        try {
+          onProgress(JSON.parse(ev.data) as ScanProgress)
+        } catch {
+          // skip malformed progress frames
+        }
       }
       if (ev.event === 'complete' && ev.data) {
-        complete = JSON.parse(ev.data) as SummaryPayload
+        try {
+          complete = JSON.parse(ev.data) as SummaryPayload
+        } catch {
+          // fall through to the 'scan incomplete' guard below
+        }
       }
     }
     if (done) break

@@ -27,6 +27,24 @@ describe('readScanStream', () => {
     expect(payload.all.total).toBe(1185)
     expect(payload.scanned_at).toContain('2026-08-17')
   })
+
+  it('skips a malformed progress frame instead of aborting the scan', async () => {
+    const seen: string[] = []
+    const payload = await readScanStream(
+      streamOf(
+        'event: progress\ndata: {oops\n\nevent: complete\ndata: {"all":{"total":1},"scanned_at":"2026-08-17T02:00:00+08:00"}\n\n',
+      ),
+      (p) => seen.push(p.label),
+    )
+    expect(seen).toEqual([])
+    expect(payload.all.total).toBe(1)
+  })
+
+  it('surfaces a malformed complete payload as scan incomplete', async () => {
+    await expect(
+      readScanStream(streamOf('event: complete\ndata: {oops\n\n'), () => {}),
+    ).rejects.toThrow('scan incomplete')
+  })
 })
 
 describe('waitWhileScanning', () => {

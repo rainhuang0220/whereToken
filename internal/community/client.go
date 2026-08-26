@@ -72,9 +72,7 @@ func (c *Client) Sync(ctx context.Context, events []event.UsageEvent, now time.T
 
 func (c *Client) SyncAgg(ctx context.Context, agg LocalAgg) View {
 	if c == nil || c.File == nil || !c.File.Enabled {
-		v := EmptyView(StatusOptedOut, DisclaimerEN)
-		v.Enabled = false
-		return v
+		return EmptyView(StatusOptedOut, DisclaimerEN)
 	}
 	if c.Offline {
 		return EmptyView(StatusOffline, DisclaimerEN)
@@ -82,9 +80,7 @@ func (c *Client) SyncAgg(ctx context.Context, agg LocalAgg) View {
 	if _, err := ParseServiceURL(c.BaseURL); err != nil {
 		return EmptyView(StatusServiceUnconfigured, "Community Rank service is not configured.")
 	}
-	if agg.TodayTokens <= 0 && agg.TodayCostUSD == nil {
-		// still try all-time if they uploaded before
-	}
+	// No tokens today: still fetch all-time if they uploaded before.
 
 	c.mu.Lock()
 	cacheFor := c.MinCache
@@ -108,8 +104,8 @@ func (c *Client) SyncAgg(ctx context.Context, agg LocalAgg) View {
 	if agg.TodayTokens > 0 {
 		if u, err := MakeUpload(c.File.ParticipantID, sanitizeVersion(c.Version), agg); err == nil {
 			if err := c.put(ctx, u); err != nil {
-				view.Today = Standing{Status: StatusNetworkError, Period: PeriodToday, Metric: MetricTokens, SelfReported: true, Note: DisclaimerEN}
-				view.All = Standing{Status: StatusNetworkError, Period: PeriodAll, Metric: MetricTokens, SelfReported: true, Note: DisclaimerEN}
+				view.Today = networkError(PeriodToday)
+				view.All = networkError(PeriodAll)
 				return view
 			}
 		} else {
@@ -149,11 +145,15 @@ func sanitizeVersion(v string) string {
 }
 
 func (c *Client) put(ctx context.Context, u Upload) error {
-	raw, err := json.Marshal(u)
+	return c.postJSON(ctx, "/v1/community/usage", "upload", u)
+}
+
+func (c *Client) postJSON(ctx context.Context, path, op string, payload any) error {
+	raw, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	dest, err := c.endpoint("/v1/community/usage")
+	dest, err := c.endpoint(path)
 	if err != nil {
 		return err
 	}
@@ -170,9 +170,13 @@ func (c *Client) put(ctx context.Context, u Upload) error {
 	defer res.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
 	if res.StatusCode >= 300 {
-		return fmt.Errorf("community upload %d", res.StatusCode)
+		return fmt.Errorf("community %s %d", op, res.StatusCode)
 	}
 	return nil
+}
+
+func networkError(period string) Standing {
+	return Standing{Status: StatusNetworkError, Period: period, Metric: MetricTokens, SelfReported: true, Note: DisclaimerEN}
 }
 
 func (c *Client) get(ctx context.Context, period, metric string) Standing {
@@ -182,28 +186,28 @@ func (c *Client) get(ctx context.Context, period, metric string) Standing {
 	q.Set("metric", metric)
 	dest, err := c.endpoint("/v1/community/rank")
 	if err != nil {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dest+"?"+q.Encode(), nil)
 	if err != nil {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	req.Header.Set("Accept", "application/json")
 	res, err := c.httpc().Do(req)
 	if err != nil {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(res.Body, 32<<10))
 	if err != nil {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	if res.StatusCode >= 300 {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	var st Standing
 	if err := json.Unmarshal(body, &st); err != nil {
-		return Standing{Status: StatusNetworkError, Period: period, Metric: metric, SelfReported: true, Note: DisclaimerEN}
+		return networkError(period)
 	}
 	if st.Status == "" {
 		st.Status = StatusUnavailable
@@ -232,27 +236,5 @@ func (c *Client) Leave(ctx context.Context) error {
 	if _, err := ParseServiceURL(c.BaseURL); err != nil {
 		return nil
 	}
-	raw, err := json.Marshal(map[string]string{"participant_id": c.File.ParticipantID})
-	if err != nil {
-		return err
-	}
-	dest, err := c.endpoint("/v1/community/leave")
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dest, bytes.NewReader(raw))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	res, err := c.httpc().Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
-	if res.StatusCode >= 300 {
-		return fmt.Errorf("community leave %d", res.StatusCode)
-	}
-	return nil
+	return c.postJSON(ctx, "/v1/community/leave", "leave", map[string]string{"participant_id": c.File.ParticipantID})
 }

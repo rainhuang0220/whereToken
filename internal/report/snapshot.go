@@ -1,6 +1,7 @@
 package report
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -71,11 +72,8 @@ func (e usageErr) Error() string { return e.msg }
 func (e usageErr) Usage() bool   { return true }
 
 func IsUsage(err error) bool {
-	if err == nil {
-		return false
-	}
-	_, ok := err.(usageErr)
-	return ok
+	var u usageErr
+	return errors.As(err, &u)
 }
 
 func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f Filter, now time.Time, loc *time.Location) (Snapshot, error) {
@@ -122,8 +120,11 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		}
 	}
 
-	sum := metric.Aggregate(fe, ft)
+	sum := metric.AggregateAt(fe, ft, now, loc)
 	view := metric.View(sum.All)
+	// The streak calendar must run on unmerged events: mergeByRequest keeps
+	// per-field maxima on the latest timestamp, which would shift tokens
+	// across days.
 	cal := metric.BuildCalendar(fe, loc, now)
 	snap := Snapshot{
 		Period:        period(f, now),
@@ -177,7 +178,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	}
 	snap.TodayM = metric.FormatM(snap.TodayTotal)
 	snap.PeakDayM = metric.FormatM(snap.PeakDay)
-	if unknownVendorTotal(snap.Vendors) > 0 {
+	if hasUnknownVendorUsage(snap.Vendors) {
 		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}
 	if (snap.Scope != "" || !snap.ShowStreaks) && tokenlessModels(snap.Models) && !(snap.Total == 0 && snap.Requests > 0) {
@@ -198,6 +199,10 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	return snap, nil
 }
 
+// noLedgerNote is the empty-home hint. Keep it tool-agnostic: the supported
+// tool list lives in `wheretoken sources`, not in a hardcoded roster.
+const noLedgerNote = "本机没有找到账本。装好任一受支持的工具并跑一次就会有数；Cursor / Trae 需要已登录。wheretoken sources 列出全部受支持的工具。"
+
 func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 	if snap.Total != 0 || snap.Requests != 0 || snap.UserTurns != 0 {
 		return notes
@@ -205,7 +210,7 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 	if windowed(f) {
 		unscoped := f.Tool == "" && f.Vendor == "" && f.Model == ""
 		if unscoped && len(snap.Tools) == 0 && !discoveredHasUsage(f.Discovered, "", true) {
-			return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。")
+			return appendUniqueNote(notes, noLedgerNote)
 		}
 		msg := emptyWindowNote(f)
 		if discoveredHasUsage(f.Discovered, f.Tool, unscoped) {
@@ -227,7 +232,7 @@ func appendEmptyViewNotes(notes []string, snap Snapshot, f Filter) []string {
 		return appendUniqueNote(notes, "本机账本里没有模型 "+f.Model+"。")
 	}
 	if f.Tool == "" && f.Vendor == "" && f.Model == "" && len(snap.Tools) == 0 && len(notes) == 0 {
-		return appendUniqueNote(notes, "本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。")
+		return appendUniqueNote(notes, noLedgerNote)
 	}
 	return notes
 }
@@ -263,9 +268,6 @@ func windowed(f Filter) bool {
 func emptyWindowNote(f Filter) string {
 	if f.Today {
 		return "今天还没有用量。"
-	}
-	if f.Days > 0 {
-		return "这段时间还没有用量。"
 	}
 	return "这段时间还没有用量。"
 }
@@ -511,8 +513,8 @@ func notes(errs []string, discovered []metric.Slice) []string {
 		id, rest, ok := strings.Cut(msg, ": ")
 		label := id
 		if ok {
-			if l := metric.SourceLabel(id); l != id || id == "claude" || id == "kimi" || id == "grok" || id == "trae" || id == "cursor" || id == "codex" || id == "opencode" {
-				label = metric.SourceLabel(id)
+			if l := metric.SourceLabel(id); l != id {
+				label = l
 			}
 			msg = label + " · " + rest
 		}
@@ -537,9 +539,6 @@ func notes(errs []string, discovered []metric.Slice) []string {
 		case s.Quality == event.QualityDegraded && (s.ID == "cursor" || s.ID == "trae"):
 			msg = label + " · token 列不完整（该工具需要已登录）"
 		default:
-			continue
-		}
-		if _, dup := seen[label]; dup {
 			continue
 		}
 		// skip stock note if we already have an error for this source
@@ -594,14 +593,11 @@ func rankVendors(rows []Row) []Row {
 	return append(known, unknown...)
 }
 
-func unknownVendorTotal(rows []Row) int64 {
+func hasUnknownVendorUsage(rows []Row) bool {
 	for _, r := range rows {
-		if r.ID == "unknown" && r.Requests+r.UserTurns > 0 {
-			return 1
-		}
-		if r.ID == "unknown" && r.TotalM != "" && r.TotalM != "0.00 M" {
-			return 1
+		if r.ID == "unknown" && (r.Requests+r.UserTurns > 0 || r.Total != 0) {
+			return true
 		}
 	}
-	return 0
+	return false
 }

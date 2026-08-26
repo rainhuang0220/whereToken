@@ -171,6 +171,7 @@ whereToken reads usage information from data made available by supported coding 
 | Cline | Full | Not required |
 | Roo Code | Full | Not required |
 | Kilo Code (legacy VS Code + CLI `kilo.db`) | Full | Not required |
+| ZCode (Z.ai ADE) | Full | Not required |
 | Cursor | Partial | Required for token columns |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 

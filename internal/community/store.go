@@ -21,7 +21,6 @@ type dayRow struct {
 type Store struct {
 	mu   sync.Mutex
 	days map[string]map[string]dayRow // participant -> period -> row
-	left map[string]bool
 	hits map[string][]time.Time
 	minN int
 	now  func() time.Time
@@ -33,7 +32,6 @@ func NewStore(minN int) *Store {
 	}
 	return &Store{
 		days: map[string]map[string]dayRow{},
-		left: map[string]bool{},
 		hits: map[string][]time.Time{},
 		minN: minN,
 		now:  time.Now,
@@ -51,7 +49,6 @@ func (s *Store) Put(u Upload) error {
 	if err := s.rateLimitLocked(u.ParticipantID); err != nil {
 		return err
 	}
-	delete(s.left, u.ParticipantID)
 	byDay := s.days[u.ParticipantID]
 	if byDay == nil {
 		byDay = map[string]dayRow{}
@@ -80,7 +77,8 @@ func (s *Store) Leave(id string) error {
 	}
 	delete(s.days, id)
 	delete(s.hits, id)
-	// Do not record s.left: that tombstone is a leave oracle.
+	// No tombstone: a "left" marker would be an oracle for whether a UUID
+	// ever joined.
 	return nil
 }
 
@@ -105,9 +103,6 @@ func (s *Store) Rank(id, periodKind, periodDate, metric string) Standing {
 	var self int64
 	have := false
 	for pid, days := range s.days {
-		if s.left[pid] {
-			continue
-		}
 		val, ok := scoreOf(days, periodKind, periodDate, metric)
 		if !ok || val <= 0 {
 			continue
@@ -196,11 +191,5 @@ func (s *Store) rateLimitLocked(id string) error {
 func (s *Store) ParticipantCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	n := 0
-	for id := range s.days {
-		if !s.left[id] {
-			n++
-		}
-	}
-	return n
+	return len(s.days)
 }

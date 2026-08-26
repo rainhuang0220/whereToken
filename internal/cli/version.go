@@ -14,9 +14,6 @@ func ResolveVersion(ldflag string) string {
 			return tidyVersion(v)
 		}
 	}
-	if ldflag == "" {
-		return "dev"
-	}
 	return "dev"
 }
 

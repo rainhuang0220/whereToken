@@ -61,8 +61,6 @@ func IsUsage(err error) bool {
 	return errors.As(err, &u)
 }
 
-func Usage(err error) bool { return IsUsage(err) }
-
 func Parse(args []string) (Flags, error) {
 	f := Flags{Command: CommandReport, Port: 8787, RankPeriod: "today"}
 	if len(args) == 0 {
@@ -70,41 +68,17 @@ func Parse(args []string) (Flags, error) {
 	}
 	rest := args
 	if !strings.HasPrefix(args[0], "-") {
-		switch args[0] {
-		case "help":
-			f.Help = true
-			return f, nil
-		case "version":
-			f.Version = true
-			return f, nil
-		case "serve":
-			f.Command = CommandServe
-		case "scan":
-			f.Command = CommandScan
-			f.JSON = true
-		case "sources":
-			f.Command = CommandSources
-		case "doctor":
-			f.Command = CommandDoctor
-		case "rebuild":
-			f.Command = CommandRebuild
-		case "update", "upgrade":
-			f.Command = CommandUpdate
-		case "uninstall":
-			f.Command = CommandUninstall
-		case "completion":
-			f.Command = CommandCompletion
-		case "community":
-			f.Command = CommandCommunity
-		default:
+		if !applyCommandWord(&f, args[0]) {
 			return Flags{}, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", args[0])}
+		}
+		if f.Help || f.Version {
+			return f, nil
 		}
 		rest = args[1:]
 	}
 
-	var toolFlag, vendorFlag, modelFlag string
-	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
-	fs := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
+	var tf toolFlags
+	fs := newFlagSet(&f, &tf)
 	if err := parseFlagSet(fs, &f, rest); err != nil {
 		return Flags{}, err
 	}
@@ -139,7 +113,7 @@ func Parse(args []string) (Flags, error) {
 			return f, nil
 		}
 		if len(leftover) > 0 {
-			fs2 := newFlagSet(&f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
+			fs2 := newFlagSet(&f, &tf)
 			if err := parseFlagSet(fs2, &f, leftover); err != nil {
 				return Flags{}, err
 			}
@@ -152,47 +126,17 @@ func Parse(args []string) (Flags, error) {
 	if f.Width < 0 {
 		return Flags{}, usageError{msg: "invalid --width (must be >= 0)\ntry `wheretoken --help`"}
 	}
-	if f.Port <= 0 || f.Port > 65535 {
-		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	if err := checkPort(f.Port); err != nil {
+		return Flags{}, err
 	}
 
-	var tools []string
-	add := func(id string) {
-		tools = append(tools, id)
-	}
-	if claude {
-		add("claude")
-	}
-	if kimi {
-		add("kimi")
-	}
-	if grok {
-		add("grok")
-	}
-	if minimax {
-		add("minimax")
-	}
-	if openclaw {
-		add("openclaw")
-	}
-	if codex {
-		add("codex")
-	}
-	if opencode {
-		add("opencode")
-	}
-	if trae {
-		add("trae")
-	}
-	if cursor {
-		add("cursor")
-	}
-	if strings.TrimSpace(toolFlag) != "" {
-		id, ok := metric.LookupSource(toolFlag)
+	tools := tf.selected()
+	if strings.TrimSpace(tf.tool) != "" {
+		id, ok := metric.LookupSource(tf.tool)
 		if !ok {
-			return Flags{}, unknownName("tool", toolFlag, suggestKnown(toolFlag, metric.KnownSourceIDs()), metric.KnownSourceIDs())
+			return Flags{}, unknownName("tool", tf.tool, suggestKnown(tf.tool, metric.KnownSourceIDs()), metric.KnownSourceIDs())
 		}
-		add(id)
+		tools = append(tools, id)
 	}
 	uniq := unique(tools)
 	if len(uniq) > 1 {
@@ -202,14 +146,14 @@ func Parse(args []string) (Flags, error) {
 		f.Tool = uniq[0]
 	}
 
-	if strings.TrimSpace(vendorFlag) != "" {
-		id, ok := vendor.LookupName(vendorFlag)
+	if strings.TrimSpace(tf.vendor) != "" {
+		id, ok := vendor.LookupName(tf.vendor)
 		if !ok {
-			return Flags{}, unknownName("vendor", vendorFlag, suggestKnown(vendorFlag, vendor.KnownIDs()), vendor.KnownIDs())
+			return Flags{}, unknownName("vendor", tf.vendor, suggestKnown(tf.vendor, vendor.KnownIDs()), vendor.KnownIDs())
 		}
 		f.Vendor = id
 	}
-	f.Model = strings.TrimSpace(modelFlag)
+	f.Model = strings.TrimSpace(tf.model)
 	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
 	}
@@ -248,7 +192,46 @@ func Parse(args []string) (Flags, error) {
 	return f, nil
 }
 
-func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor *bool) *flag.FlagSet {
+func checkPort(port int) error {
+	if port <= 0 || port > 65535 {
+		return usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	}
+	return nil
+}
+
+var shorthandIDs = []string{"claude", "kimi", "grok", "minimax", "openclaw", "codex", "opencode", "trae", "cursor"}
+
+type toolFlags struct {
+	tool, vendor, model string
+	shorthand           map[string]*bool
+}
+
+func (t *toolFlags) bind(fs *flag.FlagSet) {
+	fs.StringVar(&t.tool, "tool", t.tool, "")
+	fs.StringVar(&t.vendor, "vendor", t.vendor, "")
+	fs.StringVar(&t.model, "model", t.model, "")
+	if t.shorthand == nil {
+		t.shorthand = make(map[string]*bool, len(shorthandIDs))
+		for _, id := range shorthandIDs {
+			t.shorthand[id] = new(bool)
+		}
+	}
+	for _, id := range shorthandIDs {
+		fs.BoolVar(t.shorthand[id], id, *t.shorthand[id], "")
+	}
+}
+
+func (t *toolFlags) selected() []string {
+	var tools []string
+	for _, id := range shorthandIDs {
+		if p := t.shorthand[id]; p != nil && *p {
+			tools = append(tools, id)
+		}
+	}
+	return tools
+}
+
+func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs := flag.NewFlagSet("wheretoken", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&f.Help, "h", f.Help, "")
@@ -270,18 +253,7 @@ func newFlagSet(f *Flags, toolFlag, vendorFlag, modelFlag *string, claude, kimi,
 	fs.IntVar(&f.Width, "width", f.Width, "")
 	fs.StringVar(&f.RankPeriod, "rank", f.RankPeriod, "")
 	fs.BoolVar(&f.NoCommunity, "no-community", f.NoCommunity, "")
-	fs.StringVar(toolFlag, "tool", *toolFlag, "")
-	fs.StringVar(vendorFlag, "vendor", *vendorFlag, "")
-	fs.StringVar(modelFlag, "model", *modelFlag, "")
-	fs.BoolVar(claude, "claude", *claude, "")
-	fs.BoolVar(kimi, "kimi", *kimi, "")
-	fs.BoolVar(grok, "grok", *grok, "")
-	fs.BoolVar(minimax, "minimax", *minimax, "")
-	fs.BoolVar(openclaw, "openclaw", *openclaw, "")
-	fs.BoolVar(codex, "codex", *codex, "")
-	fs.BoolVar(opencode, "opencode", *opencode, "")
-	fs.BoolVar(trae, "trae", *trae, "")
-	fs.BoolVar(cursor, "cursor", *cursor, "")
+	tf.bind(fs)
 	return fs
 }
 
@@ -334,9 +306,8 @@ func parseCompletionTail(f *Flags, args []string) error {
 	if len(args) == 0 {
 		return nil
 	}
-	var toolFlag, vendorFlag, modelFlag string
-	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
-	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
+	var tf toolFlags
+	fs := newFlagSet(f, &tf)
 	if err := parseFlagSet(fs, f, args); err != nil {
 		return err
 	}
@@ -346,50 +317,47 @@ func parseCompletionTail(f *Flags, args []string) error {
 	return nil
 }
 
-func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
-	rest := extra[1:]
-	switch extra[0] {
+func applyCommandWord(f *Flags, word string) bool {
+	switch word {
 	case "help":
 		f.Help = true
-		return rest, nil
 	case "version":
 		f.Version = true
-		return rest, nil
 	case "serve":
 		f.Command = CommandServe
-		return rest, nil
 	case "scan":
 		f.Command = CommandScan
 		f.JSON = true
-		return rest, nil
 	case "sources":
 		f.Command = CommandSources
-		return rest, nil
 	case "doctor":
 		f.Command = CommandDoctor
-		return rest, nil
 	case "rebuild":
 		f.Command = CommandRebuild
-		return rest, nil
 	case "update", "upgrade":
 		f.Command = CommandUpdate
-		return rest, nil
 	case "uninstall":
 		f.Command = CommandUninstall
-		return rest, nil
 	case "completion":
 		f.Command = CommandCompletion
-		if len(rest) > 0 && !strings.HasPrefix(rest[0], "-") {
-			f.CompletionShell = rest[0]
-			rest = rest[1:]
-		}
-		return rest, nil
 	case "community":
 		f.Command = CommandCommunity
-		return rest, nil
 	default:
+		return false
+	}
+	return true
+}
+
+func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {
+	rest := extra[1:]
+	if !applyCommandWord(f, extra[0]) {
 		return nil, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", extra[0])}
 	}
+	if f.Command == CommandCompletion && len(rest) > 0 && !strings.HasPrefix(rest[0], "-") {
+		f.CompletionShell = rest[0]
+		rest = rest[1:]
+	}
+	return rest, nil
 }
 
 func finishCommunity(f *Flags, extra []string) (Flags, error) {
@@ -408,17 +376,16 @@ func finishCommunity(f *Flags, extra []string) (Flags, error) {
 	if len(extra) == 0 {
 		return *f, nil
 	}
-	var toolFlag, vendorFlag, modelFlag string
-	var claude, kimi, grok, minimax, openclaw, codex, opencode, trae, cursor bool
-	fs := newFlagSet(f, &toolFlag, &vendorFlag, &modelFlag, &claude, &kimi, &grok, &minimax, &openclaw, &codex, &opencode, &trae, &cursor)
+	var tf toolFlags
+	fs := newFlagSet(f, &tf)
 	if err := parseFlagSet(fs, f, extra); err != nil {
 		return Flags{}, err
 	}
 	if leftover := fs.Args(); len(leftover) > 0 {
 		return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
 	}
-	if f.Port <= 0 || f.Port > 65535 {
-		return Flags{}, usageError{msg: "invalid --port\ntry `wheretoken --help`"}
+	if err := checkPort(f.Port); err != nil {
+		return Flags{}, err
 	}
 	return *f, nil
 }

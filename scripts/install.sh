@@ -123,7 +123,11 @@ go_fallback() {
   fi
   echo "wheretoken: no GitHub Release; installing with go install" >&2
   mkdir -p "$BIN_DIR"
-  GOBIN="$BIN_DIR" go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@latest"
+  local ref=latest
+  if [ -n "$version" ]; then
+    ref="v${version}"
+  fi
+  GOBIN="$BIN_DIR" go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@${ref}"
   finish
   exit 0
 }

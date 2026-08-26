@@ -136,6 +136,11 @@ guarantee for every row.
 | Kilo CLI | `tokens.cache.write` | Cache Create | raw | authoritative | |
 | Kilo CLI | `tokens.output + tokens.reasoning` | Output | derived | authoritative | |
 | Kilo CLI | `tokens.reasoning` | Reasoning | raw | authoritative | Also in Output. |
+| ZCode | `input_tokens − cache_read − cache_creation` | Miss | derived | authoritative | `model_usage` input absorbs both cache buckets. |
+| ZCode | `cache_read_input_tokens` | Cache Read | raw | authoritative | |
+| ZCode | `cache_creation_input_tokens` | Cache Create | raw | authoritative | |
+| ZCode | `output_tokens − reasoning_tokens` | Output | derived | authoritative | Output absorbs reasoning. |
+| ZCode | `reasoning_tokens` | Reasoning | raw | authoritative | Also removed from Output; never in Total. |
 
 ## Request merge
 

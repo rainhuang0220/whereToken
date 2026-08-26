@@ -228,7 +228,7 @@ func sessionIDsFromDB(path string) ([]string, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil
 	}
-	db, err := openRO(path)
+	db, err := adapter.OpenRO(path)
 	if err != nil {
 		return nil, nil
 	}
@@ -391,8 +391,4 @@ func inspectStorageJSONAuth(vscdbPath string) (token string, info traeUserInfo, 
 		}
 	}
 	return token, info, encrypted
-}
-
-func openRO(path string) (*sql.DB, error) {
-	return adapter.OpenRO(path)
 }

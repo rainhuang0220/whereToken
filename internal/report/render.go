@@ -53,7 +53,7 @@ func Render(snap Snapshot, opt Options) string {
 		b.WriteByte('\n')
 		b.WriteString(ranked("模型", snap.Models, false, style, opt.Width, opt.Color))
 	}
-	if snap.Scope != "" && len(snap.Tools) > 0 && !allSameTool(snap) {
+	if !allSameTool(snap) {
 		b.WriteByte('\n')
 		b.WriteString(ranked("工具", snap.Tools, true, style, opt.Width, opt.Color))
 	}
@@ -291,7 +291,7 @@ func footnotes(snap Snapshot) []string {
 }
 
 func appendRankNotes(notes []string, snap Snapshot) []string {
-	st := community.SanitizeStanding(rankStanding(snap))
+	st := rankStanding(snap)
 	switch st.Status {
 	case community.StatusOK:
 		period := "今日"

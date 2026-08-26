@@ -66,7 +66,7 @@ func (a Adapter) fetchAccountUsage(sourceRoot, authPath, token, region string, s
 				raw, err := a.postJSON(ctx, sessionUsagePath, token, region, map[string]any{"session_id": id}, sourceRoot, authPath)
 				mu.Lock()
 				if err != nil {
-					if isUnauthorized(err) {
+					if adapter.IsUnauthorized(err) {
 						unauth = err
 						mu.Unlock()
 						cancel()
@@ -129,7 +129,7 @@ func parseSessionUsage(raw []byte, sourceRoot string) []event.UsageEvent {
 func walkUsage(v any, sourceRoot string, out *[]event.UsageEvent, seq *int) {
 	switch x := v.(type) {
 	case map[string]any:
-		nested := pick(x, "user_usage_group_by_session", "data")
+		nested := adapter.Pick(x, "user_usage_group_by_session", "data")
 		if nested != nil {
 			walkUsage(nested, sourceRoot, out, seq)
 		} else if ev, ok := usageFromMap(x, sourceRoot); ok {
@@ -156,25 +156,25 @@ func walkUsage(v any, sourceRoot string, out *[]event.UsageEvent, seq *int) {
 }
 
 func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) {
-	extra := asMap(pick(m, "extra_info", "extraInfo"))
-	usage := asMap(pick(m, "usage"))
+	extra := adapter.AsMap(adapter.Pick(m, "extra_info", "extraInfo"))
+	usage := adapter.AsMap(adapter.Pick(m, "usage"))
 	blob := m
 	if extra != nil {
 		blob = extra
 	} else if usage != nil {
 		blob = usage
-	} else if pick(m, "input_token", "prompt_tokens", "input_tokens") == nil {
+	} else if adapter.Pick(m, "input_token", "prompt_tokens", "input_tokens") == nil {
 		return event.UsageEvent{}, false
 	}
-	input := flexInt(pick(blob, "input_token", "prompt_tokens", "input_tokens", "inputTokens"))
-	output := flexInt(pick(blob, "output_token", "completion_tokens", "output_tokens", "outputTokens"))
-	cacheRead := flexInt(pick(blob, "cache_read_token", "cache_read_input_tokens", "cached_tokens", "cacheReadTokens"))
+	input := adapter.FlexInt(adapter.Pick(blob, "input_token", "prompt_tokens", "input_tokens", "inputTokens"))
+	output := adapter.FlexInt(adapter.Pick(blob, "output_token", "completion_tokens", "output_tokens", "outputTokens"))
+	cacheRead := adapter.FlexInt(adapter.Pick(blob, "cache_read_token", "cache_read_input_tokens", "cached_tokens", "cacheReadTokens"))
 	if cacheRead == 0 {
-		if details := asMap(pick(blob, "prompt_tokens_details", "input_tokens_details")); details != nil {
-			cacheRead = flexInt(pick(details, "cached_tokens", "cache_read_tokens"))
+		if details := adapter.AsMap(adapter.Pick(blob, "prompt_tokens_details", "input_tokens_details")); details != nil {
+			cacheRead = adapter.FlexInt(adapter.Pick(details, "cached_tokens", "cache_read_tokens"))
 		}
 	}
-	cacheCreate := flexInt(pick(blob, "cache_write_token", "cache_creation_input_tokens", "cacheWriteTokens"))
+	cacheCreate := adapter.FlexInt(adapter.Pick(blob, "cache_write_token", "cache_creation_input_tokens", "cacheWriteTokens"))
 	if input == 0 && output == 0 && cacheRead == 0 && cacheCreate == 0 {
 		return event.UsageEvent{}, false
 	}
@@ -182,18 +182,18 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 	if miss < 0 {
 		miss = 0
 	}
-	model := flexString(pick(m, "model_name", "modelName", "model"))
+	model := adapter.FlexString(adapter.Pick(m, "model_name", "modelName", "model"))
 	if model == "" {
-		model = flexString(pick(blob, "model_name", "modelName", "model"))
+		model = adapter.FlexString(adapter.Pick(blob, "model_name", "modelName", "model"))
 	}
-	sess := flexString(pick(m, "session_id", "sessionId"))
+	sess := adapter.FlexString(adapter.Pick(m, "session_id", "sessionId"))
 	id := sess
 	if id == "" {
 		id = fmt.Sprintf("%d:%s", miss+cacheRead+cacheCreate+output, model)
 	}
-	ts := usageTime(pick(m, "usage_time", "usageTime", "timestamp", "created_at", "createdAt"))
+	ts := usageTime(adapter.Pick(m, "usage_time", "usageTime", "timestamp", "created_at", "createdAt"))
 	if ts.IsZero() {
-		ts = usageTime(pick(blob, "usage_time", "usageTime", "timestamp"))
+		ts = usageTime(adapter.Pick(blob, "usage_time", "usageTime", "timestamp"))
 	}
 	return event.UsageEvent{
 		Source:      "trae",
@@ -213,12 +213,9 @@ func usageFromMap(m map[string]any, sourceRoot string) (event.UsageEvent, bool) 
 }
 
 func usageTime(v any) time.Time {
-	n := flexInt(v)
+	n := adapter.FlexInt(v)
 	if n <= 0 {
 		return time.Time{}
-	}
-	if n > 1e12 {
-		return time.UnixMilli(n)
 	}
 	if n > 1e10 {
 		return time.UnixMilli(n)
@@ -261,10 +258,10 @@ func (a Adapter) postJSON(ctx context.Context, path, token, region string, paylo
 	defer resp.Body.Close()
 	raw, _ := adapter.ReadHTTPBody(resp.Body)
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return nil, errStatus{code: resp.StatusCode}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, errStatus{code: resp.StatusCode}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	return raw, nil
 }
@@ -321,79 +318,4 @@ func (a Adapter) allowedURL(u *url.URL) bool {
 		}
 	}
 	return false
-}
-
-func pick(m map[string]any, names ...string) any {
-	if m == nil {
-		return nil
-	}
-	for _, n := range names {
-		if v, ok := m[n]; ok && v != nil {
-			return v
-		}
-	}
-	return nil
-}
-
-func asMap(v any) map[string]any {
-	m, _ := v.(map[string]any)
-	return m
-}
-
-func flexString(v any) string {
-	switch x := v.(type) {
-	case string:
-		return strings.TrimSpace(x)
-	case json.Number:
-		return x.String()
-	default:
-		return ""
-	}
-}
-
-func flexInt(v any) int64 {
-	switch x := v.(type) {
-	case nil:
-		return 0
-	case json.Number:
-		n, err := x.Int64()
-		if err == nil {
-			return n
-		}
-		f, err := x.Float64()
-		if err == nil {
-			return int64(f)
-		}
-		return 0
-	case float64:
-		return int64(x)
-	case int64:
-		return x
-	case int:
-		return int64(x)
-	case string:
-		s := strings.TrimSpace(x)
-		if s == "" {
-			return 0
-		}
-		var n int64
-		fmt.Sscan(s, &n)
-		return n
-	default:
-		return 0
-	}
-}
-
-type errStatus struct{ code int }
-
-func (e errStatus) Error() string {
-	if e.code == http.StatusUnauthorized || e.code == http.StatusForbidden {
-		return "本机登录态已失效"
-	}
-	return fmt.Sprintf("账号用量接口 HTTP %d", e.code)
-}
-
-func isUnauthorized(err error) bool {
-	es, ok := err.(errStatus)
-	return ok && (es.code == http.StatusUnauthorized || es.code == http.StatusForbidden)
 }

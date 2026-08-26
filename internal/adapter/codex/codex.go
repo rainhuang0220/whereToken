@@ -35,7 +35,8 @@ func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 }
 
 func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	return filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {
+	var first error
+	err := filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -48,8 +49,15 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 		if !isRollout(path) {
 			return nil
 		}
-		return parseRollout(path, root, emit, emitTurn)
+		if e := parseRollout(path, root, emit, emitTurn); e != nil && first == nil {
+			first = e
+		}
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+	return first
 }
 
 func isRollout(path string) bool {

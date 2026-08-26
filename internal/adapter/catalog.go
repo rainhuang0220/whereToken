@@ -30,6 +30,8 @@ func Catalog() []Tool {
 	jsonl.Reasoning = LevelYes
 	openclaw := localLedgerCaps(true, true)
 	sqlite := localLedgerCaps(false, false)
+	sqliteReasoning := sqlite
+	sqliteReasoning.Reasoning = LevelYes
 	cloud := Caps{
 		Discovery: LevelYes, Usage: LevelYes, Cost: LevelUnavailable,
 		Model: LevelYes, Timestamp: LevelYes, Session: LevelYes,
@@ -50,6 +52,7 @@ func Catalog() []Tool {
 		{ID: "cline", Label: "Cline", Caps: localLedgerCaps(false, false)},
 		{ID: "roo", Label: "Roo Code", Caps: localLedgerCaps(false, false)},
 		{ID: "kilo", Label: "Kilo Code", Caps: localLedgerCaps(false, false)},
+		{ID: "zcode", Label: "ZCode", Caps: sqliteReasoning},
 	}
 }
 

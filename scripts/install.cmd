@@ -61,9 +61,7 @@ if errorlevel 1 (
 )
 
 set "GOT="
-for /f "skip=1 tokens=1" %%H in ('certutil -hashfile "%WORKDIR%\%ASSET%" SHA256') do (
-  if not defined GOT set "GOT=%%H"
-)
+for /f "skip=1 delims=" %%H in ('certutil -hashfile "%WORKDIR%\%ASSET%" SHA256') do if not defined GOT set "GOT=%%H"
 set "GOT=!GOT: =!"
 set "WANT="
 for /f "usebackq tokens=1*" %%A in ("%WORKDIR%\checksums.txt") do (

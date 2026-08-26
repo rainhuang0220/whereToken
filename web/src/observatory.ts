@@ -1,4 +1,4 @@
-import type { SliceView, SummaryPayload } from './types'
+import type { SummaryPayload } from './types'
 
 export function observatoryCursorWindowHint(
   payload: Pick<SummaryPayload, 'by_source'>,
@@ -44,7 +44,7 @@ export function observatoryEmptyHint(
   if (!all) return ''
   if (all.total !== 0 || all.requests !== 0 || all.user_turns !== 0) return ''
   if ((payload.by_source ?? []).length > 0) return ''
-  return '本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。'
+  return '本机没有找到账本。装好任一受支持的工具并跑一次就会有数；Cursor / Trae 需要已登录。wheretoken sources 列出全部受支持的工具。'
 }
 
 export function collectKilnMouth(input: {

@@ -1,18 +1,14 @@
 package kilo
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	_ "modernc.org/sqlite"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/index"
-	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
 func dbFile(path string) (string, bool) {
@@ -34,95 +30,7 @@ func dbFile(path string) (string, bool) {
 
 func parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	evs, turns, _, err := index.LoadOrReplay("kilo", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
-		return parseDBPath(f.Name(), root)
+		return adapter.ParseOpenDB("kilo", f.Name(), root)
 	})
 	return index.Forward(evs, turns, err, emit, emitTurn)
-}
-
-func parseDBPath(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
-	var evs []event.UsageEvent
-	var turns []event.TurnEvent
-	err := parseDBOpen(path, root, func(e event.UsageEvent) {
-		evs = append(evs, e)
-	}, func(t event.TurnEvent) {
-		turns = append(turns, t)
-	})
-	return evs, turns, 0, err
-}
-
-func parseDBOpen(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	db, err := adapter.OpenRO(path)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(`SELECT session_id, data FROM message`)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	i := 0
-	for rows.Next() {
-		var sessionID, raw string
-		if err := rows.Scan(&sessionID, &raw); err != nil {
-			return err
-		}
-		i++
-		handleRow(raw, sessionID, path, i, root, emit, emitTurn)
-	}
-	return rows.Err()
-}
-
-type msgData struct {
-	Role       string `json:"role"`
-	ModelID    string `json:"modelID"`
-	ProviderID string `json:"providerID"`
-	Time       struct {
-		Created int64 `json:"created"`
-	} `json:"time"`
-	Tokens *struct {
-		Input     int64 `json:"input"`
-		Output    int64 `json:"output"`
-		Reasoning int64 `json:"reasoning"`
-		Cache     struct {
-			Read  int64 `json:"read"`
-			Write int64 `json:"write"`
-		} `json:"cache"`
-	} `json:"tokens"`
-}
-
-func handleRow(raw, sessionID, path string, seq int, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
-	var m msgData
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		return
-	}
-	var ts time.Time
-	if m.Time.Created > 0 {
-		ts = time.UnixMilli(m.Time.Created).UTC()
-	}
-	if m.Role == "user" {
-		emitTurn(event.TurnEvent{Source: "kilo", SessionID: sessionID, Timestamp: ts})
-	}
-	if m.Tokens == nil {
-		return
-	}
-	out := m.Tokens.Output + m.Tokens.Reasoning
-	emit(event.UsageEvent{
-		Source:      "kilo",
-		Vendor:      vendor.Lookup(m.ModelID, m.ProviderID),
-		SourceRoot:  root.Path,
-		RequestID:   fmt.Sprintf("%s:%d", path, seq),
-		SessionID:   sessionID,
-		Model:       m.ModelID,
-		Provider:    m.ProviderID,
-		Timestamp:   ts,
-		Miss:        m.Tokens.Input,
-		CacheRead:   m.Tokens.Cache.Read,
-		CacheCreate: m.Tokens.Cache.Write,
-		Output:      out,
-		Reasoning:   m.Tokens.Reasoning,
-		Quality:     event.QualityAuthoritative,
-		Derivation:  event.DeriveDerived,
-	})
 }

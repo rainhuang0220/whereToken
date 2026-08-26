@@ -34,7 +34,7 @@ Finding `~/.tool` is **discovery**, not usage.
 | DeepSeek | E | none first-party CLI ledger | — | balance API | — | — | — | Vendor via host tools |
 | GitHub Copilot | B | `~/.copilot` config / no usage files | — | — | — | — | — | Schema has `assistant.usage`; no ledger on disk |
 | Windsurf | B | `~/.codeium` / Windsurf globalStorage | — | — | — | — | — | Config/memories/transcripts, no token ledger |
-| ZCode (Z.ai ADE) | E* | `~/.zcode/cli/db/db.sqlite` `model_usage` | yes if table-only | no | no | no | replay | *A-candidate; schema is reverse-engineered, not shipped |
+| ZCode (Z.ai ADE) | A | `~/.zcode/cli/db/db.sqlite` `model_usage` | yes | no | no | no | replay | `input_tokens` is cache-inclusive, `output_tokens` includes reasoning; `computed_total_tokens` disambiguates |
 | Continue | B | `~/.continue` is config | — | — | — | — | — | Config ≠ usage |
 | Aider | B | `.aider.chat.history.md` is prompts | no for bodies | — | — | — | — | `/tokens` is context window |
 | Goose | D | `sessions.db` has `usage_ledger` + messages | mixed | — | — | — | — | A if SELECT usage_ledger only; not shipped |

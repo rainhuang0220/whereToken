@@ -16,7 +16,7 @@ function parseISODate(iso: string): Date {
   return new Date(y, m - 1, d)
 }
 
-export function formatISODate(d: Date): string {
+function formatISODate(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -35,7 +35,6 @@ export function layoutCells(opts: {
   windowFrom: string
   windowTo: string
   today: string
-  weekStart: 'monday'
   days: Day[]
 }): Cell[] {
   const from = parseISODate(opts.windowFrom)
@@ -103,12 +102,12 @@ export function kilnStep(i: number, key: string, n: number): number {
   }
 }
 
-export const emptySeries: CalendarSeries = {
+const emptySeries: CalendarSeries = {
   days: [],
   stats: {
     peak_date: '',
     peak_total: 0,
-    peak_total_m: '0.00 M',
+    peak_total_m: '',
     current_streak: 0,
     longest_streak: 0,
   },
@@ -122,7 +121,7 @@ export function selectSeries(payload: SummaryPayload | null | undefined, axis: A
   return cal.all ?? emptySeries
 }
 
-export function defaultWindow(today: string): { from: string; to: string } {
+function defaultWindow(today: string): { from: string; to: string } {
   const d = parseISODate(today)
   const weekStart = new Date(d)
   weekStart.setDate(weekStart.getDate() - mondayIndex(d))
@@ -139,7 +138,6 @@ export function wallCells(payload: SummaryPayload | null | undefined, axis: Axis
     windowFrom: cal?.window_from || fallback.from,
     windowTo: cal?.window_to || fallback.to,
     today,
-    weekStart: 'monday',
     days: series.days ?? [],
   })
 }

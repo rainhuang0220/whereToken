@@ -32,9 +32,7 @@ func Resolve(req Request, events []event.UsageEvent) View {
 		req.Now = time.Now()
 	}
 	if req.OptOut || EnvDisabled(req.Getenv) {
-		v := EmptyView(StatusOptedOut, DisclaimerEN)
-		v.Enabled = false
-		return v
+		return EmptyView(StatusOptedOut, DisclaimerEN)
 	}
 	if req.Offline {
 		return EmptyView(StatusOffline, DisclaimerEN)
@@ -46,9 +44,7 @@ func Resolve(req Request, events []event.UsageEvent) View {
 		return EmptyView(StatusUnavailable, DisclaimerEN)
 	}
 	if f != nil && !f.Enabled {
-		v := EmptyView(StatusOptedOut, DisclaimerEN)
-		v.Enabled = false
-		return v
+		return EmptyView(StatusOptedOut, DisclaimerEN)
 	}
 	if url == "" {
 		return EmptyView(StatusServiceUnconfigured, "Community Rank service is not configured.")

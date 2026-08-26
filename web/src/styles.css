@@ -371,15 +371,6 @@ h1 {
   padding: 0.45rem 0.55rem 0.7rem;
 }
 
-.firing-kicker {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ember-3);
-}
-
 .firing-step {
   margin: 0;
   max-width: 100%;
@@ -813,6 +804,7 @@ th {
   font-size: 0.58rem;
   letter-spacing: 0.04em;
   color: var(--ash);
+  white-space: nowrap;
 }
 
 .drill {

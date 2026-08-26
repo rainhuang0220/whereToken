@@ -4,8 +4,6 @@ export type KeyZone = 'alpha' | 'num' | 'fn' | 'mod' | 'arrow' | 'space'
 export type EmberToken = 'ember-1' | 'ember-2' | 'ember-3' | 'ember-4'
 export type RestToken = 'ember-1' | 'ember-2' | 'ember-3'
 
-export const RESERVED_PRESS: EmberToken = 'ember-4'
-
 export const ZONE_REST = {
   alpha: 'ember-1',
   num: 'ember-2',

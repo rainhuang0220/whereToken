@@ -113,7 +113,7 @@ const mouthLines = computed(() =>
 
 const todayUsageM = computed(() => {
   const day = series.value.days.find((d) => d.date === todayISO())
-  return day?.total_m || '0.00 M'
+  return day?.total_m ?? ''
 })
 
 const statusKind = computed(() => {
@@ -197,7 +197,7 @@ onMounted(() => {
       :vendors="payload.by_vendor"
     />
 
-    <section class="hearth" :class="{ firing: store.loading }">
+    <section class="hearth">
       <div class="hearth-stage">
         <KilnWall :cells="cells" :peak-date="series.stats.peak_date" />
         <FiringVeil v-if="store.loading" :progress="store.progress" />
@@ -210,7 +210,7 @@ onMounted(() => {
       <KpiRow
         :all="payload.all"
         :today-m="todayUsageM"
-        :peak-m="series.stats.peak_total_m"
+        :peak-m="series.stats.peak_total ? series.stats.peak_total_m : ''"
         :max-streak="series.stats.longest_streak"
         :current-streak="series.stats.current_streak"
         :compare-text="compareText"

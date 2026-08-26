@@ -43,7 +43,6 @@ func (s *server) paintCommunity(res *scan.Result) {
 	}
 	if req.OptOut || community.EnvDisabled(req.Getenv) {
 		v := community.EmptyView(community.StatusOptedOut, community.DisclaimerEN)
-		v.Enabled = false
 		res.Community = &v
 		return
 	}
@@ -195,7 +194,7 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := s.ensureClient()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "community client unavailable", http.StatusInternalServerError)
 		return
 	}
 	s.commMu.Lock()
@@ -212,7 +211,7 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 	err = c.File.SetEnabled(c.Path, *body.Enabled)
 	s.commMu.Unlock()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "community config write failed", http.StatusInternalServerError)
 		return
 	}
 	s.mu.Lock()
@@ -221,7 +220,6 @@ func (s *server) postCommunity(w http.ResponseWriter, r *http.Request) {
 		v.Enabled = *body.Enabled
 		if !*body.Enabled {
 			v = community.EmptyView(community.StatusOptedOut, community.DisclaimerEN)
-			v.Enabled = false
 		}
 		s.last.Community = &v
 	}

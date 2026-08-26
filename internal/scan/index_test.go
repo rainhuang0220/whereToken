@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestScanSecondPassIsUnchanged(t *testing.T) {
 	}
 	var b strings.Builder
 	for i := 0; i < 200; i++ {
-		b.WriteString(`{"type":"assistant","requestId":"r` + itoa(i) + `","message":{"model":"claude-opus-4.6","usage":{"input_tokens":2,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}` + "\n")
+		b.WriteString(`{"type":"assistant","requestId":"r` + strconv.Itoa(i) + `","message":{"model":"claude-opus-4.6","usage":{"input_tokens":2,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}` + "\n")
 	}
 	if err := os.WriteFile(filepath.Join(proj, "s.jsonl"), []byte(b.String()), 0o644); err != nil {
 		t.Fatal(err)
@@ -58,7 +59,7 @@ func TestScanAppendIsIncremental(t *testing.T) {
 	}
 	path := filepath.Join(proj, "s.jsonl")
 	line := func(id string, miss int) string {
-		return `{"type":"assistant","requestId":"` + id + `","message":{"model":"claude-opus-4.6","usage":{"input_tokens":` + itoa(miss) + `,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}` + "\n"
+		return `{"type":"assistant","requestId":"` + id + `","message":{"model":"claude-opus-4.6","usage":{"input_tokens":` + strconv.Itoa(miss) + `,"output_tokens":1,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}` + "\n"
 	}
 	if err := os.WriteFile(path, []byte(line("a", 10)), 0o644); err != nil {
 		t.Fatal(err)

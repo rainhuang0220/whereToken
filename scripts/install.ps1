@@ -65,8 +65,10 @@ function Install-WithGo {
   New-Item -ItemType Directory -Path $binDir -Force | Out-Null
   $oldGobin = $env:GOBIN
   $env:GOBIN = $binDir
+  $ref = 'latest'
+  if ($version) { $ref = "v$version" }
   try {
-    go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+    go install "github.com/rainhuang0220/whereToken/cmd/wheretoken@$ref"
   } finally {
     if ($null -eq $oldGobin) { Remove-Item Env:GOBIN -ErrorAction SilentlyContinue } else { $env:GOBIN = $oldGobin }
   }

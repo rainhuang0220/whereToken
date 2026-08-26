@@ -146,7 +146,7 @@ func parseSession(path string, root adapter.SourceRoot, emit func(event.UsageEve
 func parseFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	var evs []event.UsageEvent
 	var turns []event.TurnEvent
-	sess := sessionID(path)
+	sess := sessionIDFromName(path)
 	var workspace string
 	consumed, err := index.ScanJSONL(f, func(raw []byte, at int64) error {
 		if len(raw) == 0 {
@@ -182,10 +182,10 @@ func parseFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageE
 			if m.Role != "assistant" || m.Usage == nil {
 				return nil
 			}
-			miss := clamp0(m.Usage.Input)
-			out := clamp0(m.Usage.Output)
-			cr := clamp0(m.Usage.CacheRead)
-			cw := clamp0(m.Usage.CacheWrite)
+			miss := adapter.Clamp0(m.Usage.Input)
+			out := adapter.Clamp0(m.Usage.Output)
+			cr := adapter.Clamp0(m.Usage.CacheRead)
+			cw := adapter.Clamp0(m.Usage.CacheWrite)
 			if miss+out+cr+cw == 0 {
 				return nil
 			}
@@ -261,10 +261,10 @@ func parseTrajectoryFile(f *os.File, path string, root adapter.SourceRoot) ([]ev
 		if json.Unmarshal(rec.Data, &data) != nil || data.Usage == nil {
 			return nil
 		}
-		miss := clamp0(data.Usage.Input)
-		out := clamp0(data.Usage.Output)
-		cr := clamp0(data.Usage.CacheRead)
-		cw := clamp0(data.Usage.CacheWrite)
+		miss := adapter.Clamp0(data.Usage.Input)
+		out := adapter.Clamp0(data.Usage.Output)
+		cr := adapter.Clamp0(data.Usage.CacheRead)
+		cw := adapter.Clamp0(data.Usage.CacheWrite)
 		if miss+out+cr+cw == 0 {
 			return nil
 		}
@@ -286,7 +286,7 @@ func parseTrajectoryFile(f *os.File, path string, root adapter.SourceRoot) ([]ev
 			SessionID:   sess,
 			Model:       rec.ModelID,
 			Provider:    rec.Provider,
-			Timestamp:   parseTS(rec.TS),
+			Timestamp:   adapter.ParseTS(rec.TS),
 			Miss:        miss,
 			CacheRead:   cr,
 			CacheCreate: cw,
@@ -314,10 +314,6 @@ func trajSeq(raw json.RawMessage) string {
 	return ""
 }
 
-func sessionID(path string) string {
-	return sessionIDFromName(path)
-}
-
 func sessionIDFromName(path string) string {
 	name := filepath.Base(path)
 	switch {
@@ -341,7 +337,7 @@ func parseTSRaw(raw json.RawMessage) time.Time {
 	}
 	var s string
 	if json.Unmarshal(raw, &s) == nil {
-		return parseTS(s)
+		return adapter.ParseTS(s)
 	}
 	var n int64
 	if json.Unmarshal(raw, &n) == nil && n > 0 {
@@ -351,25 +347,4 @@ func parseTSRaw(raw json.RawMessage) time.Time {
 		return time.Unix(n, 0).UTC()
 	}
 	return time.Time{}
-}
-
-func parseTS(s string) time.Time {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return time.Time{}
-	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t.UTC()
-	}
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UTC()
-	}
-	return time.Time{}
-}
-
-func clamp0(n int64) int64 {
-	if n < 0 {
-		return 0
-	}
-	return n
 }

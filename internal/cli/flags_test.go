@@ -345,12 +345,12 @@ func TestParseTodayOfflineCursor(t *testing.T) {
 	}
 }
 
-func TestUsageAlias(t *testing.T) {
+func TestIsUsage(t *testing.T) {
 	err := usageError{msg: "nope"}
-	if !IsUsage(err) || !Usage(err) {
+	if !IsUsage(err) {
 		t.Fatal(err)
 	}
-	if IsUsage(nil) || Usage(nil) {
+	if IsUsage(nil) {
 		t.Fatal("nil")
 	}
 }

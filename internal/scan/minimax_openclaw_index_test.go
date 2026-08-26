@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -185,7 +186,7 @@ VALUES (?, 's1', 'mavis', 'pi-agent', 't', 'minimax/MiniMax-M3', 1786267148269, 
 }
 
 func lineOpenClaw(id string, miss int) string {
-	return `{"type":"message","timestamp":"2026-07-26T11:03:33Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"` + id + `","usage":{"input":` + itoa(miss) + `,"output":1}}}` + "\n"
+	return `{"type":"message","timestamp":"2026-07-26T11:03:33Z","message":{"role":"assistant","model":"MiniMax-M2.1","responseId":"` + id + `","usage":{"input":` + strconv.Itoa(miss) + `,"output":1}}}` + "\n"
 }
 
 func writeOpenClawSession(t *testing.T, dir, body string) string {

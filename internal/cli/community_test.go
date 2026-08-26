@@ -169,9 +169,16 @@ func TestRunNoCommunityAndOfflineRank(t *testing.T) {
 
 func TestRunCommunityServeUsesHook(t *testing.T) {
 	app, _, errb := testApp([]string{"community", "serve"})
-	app.Serve = func(string, adapter.Home, bool) error { return nil }
+	called := false
+	app.Serve = func(string, adapter.Home, bool) error {
+		called = true
+		return nil
+	}
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !called {
+		t.Fatal("community serve must invoke the injected Serve hook")
 	}
 	if !strings.Contains(errb.String(), "community rank http://127.0.0.1:8798") {
 		t.Fatalf("stderr=%s", errb.String())

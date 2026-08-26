@@ -152,6 +152,11 @@ func CostSlice(events []event.UsageEvent) Slice {
 }
 
 func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
+	return AggregateAt(events, turns, time.Now(), time.Local)
+}
+
+// AggregateAt is Aggregate with an explicit clock for the calendar window.
+func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Time, loc *time.Location) Summary {
 	merged := mergeByRequest(events)
 
 	all := Slice{ID: "all", Label: "合计"}
@@ -196,10 +201,10 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 		toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 		ch := price.Event(e)
 		if ch.OK {
-			cross.CostMicro += ch.Micro
-			cross.PricedTokens += toks
+			cross.CostMicro = satAdd(cross.CostMicro, ch.Micro)
+			cross.PricedTokens = satAdd(cross.PricedTokens, toks)
 		} else if toks > 0 {
-			cross.UnpricedTokens += toks
+			cross.UnpricedTokens = satAdd(cross.UnpricedTokens, toks)
 		}
 	}
 
@@ -229,7 +234,7 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	sort.Slice(sum.BySource, func(i, j int) bool { return sum.BySource[i].Total() > sum.BySource[j].Total() })
 	sort.Slice(sum.ByVendor, func(i, j int) bool { return sum.ByVendor[i].Total() > sum.ByVendor[j].Total() })
 	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
-	sum.Calendar = BuildCalendar(merged, time.Local, time.Now())
+	sum.Calendar = BuildCalendar(merged, loc, now)
 	sum.DrillAll, sum.DrillBySource, sum.DrillByVendor = buildDrill(merged, turns)
 	return sum
 }
@@ -322,16 +327,16 @@ func addSlice(s *Slice, e event.UsageEvent) {
 	toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 	ch := price.Event(e)
 	if ch.OK {
-		s.CostMicro += ch.Micro
-		s.MissCostMicro += ch.Miss
-		s.CacheReadCostMicro += ch.CacheRead
-		s.CacheCreateCostMicro += ch.CacheCreate
-		s.OutputCostMicro += ch.Output
-		s.PricedTokens += toks
+		s.CostMicro = satAdd(s.CostMicro, ch.Micro)
+		s.MissCostMicro = satAdd(s.MissCostMicro, ch.Miss)
+		s.CacheReadCostMicro = satAdd(s.CacheReadCostMicro, ch.CacheRead)
+		s.CacheCreateCostMicro = satAdd(s.CacheCreateCostMicro, ch.CacheCreate)
+		s.OutputCostMicro = satAdd(s.OutputCostMicro, ch.Output)
+		s.PricedTokens = satAdd(s.PricedTokens, toks)
 		return
 	}
 	if toks > 0 {
-		s.UnpricedTokens += toks
+		s.UnpricedTokens = satAdd(s.UnpricedTokens, toks)
 	}
 }
 

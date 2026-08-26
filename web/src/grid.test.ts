@@ -102,7 +102,6 @@ describe('layoutCells', () => {
       windowFrom: '2026-08-10',
       windowTo: '2026-08-16',
       today: '2026-08-15',
-      weekStart: 'monday',
       days: [lit],
     })
     const byDate = Object.fromEntries(cells.map((c) => [c.date, c.kind]))
@@ -116,7 +115,6 @@ describe('layoutCells', () => {
       windowFrom: '2026-08-10',
       windowTo: '2026-08-15',
       today: '2026-08-15',
-      weekStart: 'monday',
       days: [],
     })
     expect(cells.at(-1)?.date).toBe('2026-08-16')
@@ -219,7 +217,7 @@ describe('selectSeries / wallCells', () => {
     const stale = { ...payload } as SummaryPayload
     delete (stale as { calendar?: Calendar }).calendar
     const series = selectSeries(stale, { kind: 'all', id: 'all' })
-    expect(series.stats.peak_total_m).toBe('0.00 M')
+    expect(series.stats.peak_total_m).toBe('')
     const cells = wallCells(stale, { kind: 'all', id: 'all' }, '2026-08-15')
     expect(cells.length).toBe(371)
     expect(cells.every((c) => c.kind !== 'lit')).toBe(true)

@@ -176,7 +176,7 @@ export type CalendarStats = {
   longest_streak: number
 }
 
-export type AxisKind = 'all' | 'source' | 'vendor'
+type AxisKind = 'all' | 'source' | 'vendor'
 
 export type AxisSel = {
   kind: AxisKind

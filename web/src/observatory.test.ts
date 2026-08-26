@@ -159,7 +159,7 @@ describe('observatoryEmptyHint', () => {
         by_vendor: [],
       }),
     ).toBe(
-      '本机没有找到账本。Claude / Kimi / Codex / OpenCode / MiniMax / OpenClaw 有本地记录才会出数；Cursor / Trae 需要已登录。',
+      '本机没有找到账本。装好任一受支持的工具并跑一次就会有数；Cursor / Trae 需要已登录。wheretoken sources 列出全部受支持的工具。',
     )
   })
 

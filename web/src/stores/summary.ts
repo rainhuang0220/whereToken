@@ -37,12 +37,16 @@ export const useSummaryStore = defineStore('summary', {
     },
     async setPeriod(period: PeriodId) {
       if (this.period === period && this.payload) return
-      this.period = period
       const n = ++this.periodSeq
-      if (!this.payload?.scanned_at) return
+      if (!this.payload?.scanned_at) {
+        this.period = period
+        await this.hydrate()
+        return
+      }
       try {
         const next = await fetchSummary(period)
         if (!acceptPeriod(this.periodSeq, n)) return
+        this.period = period
         this.payload = next
         this.error = ''
       } catch (err) {
@@ -80,6 +84,7 @@ export const useSummaryStore = defineStore('summary', {
         this.error = err instanceof Error ? err.message : String(err)
       } finally {
         this.loading = false
+        this.progress = null
       }
     },
     setRankPeriod(period: RankPeriod) {

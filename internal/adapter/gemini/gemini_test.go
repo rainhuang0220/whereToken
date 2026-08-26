@@ -124,10 +124,6 @@ func TestConfigDirWithoutChatsIsNotUsage(t *testing.T) {
 	if len(roots) != 1 {
 		t.Fatalf("config dir should be discovered: %+v", roots)
 	}
-	p := (Adapter{}).Probe(roots[0])
-	if !p.Detected || p.Ledger || p.Caps.Usage != adapter.LevelUnavailable {
-		t.Fatalf("config-only must be usage unavailable: %+v", p)
-	}
 	if err := (Adapter{}).Parse(roots[0], func(event.UsageEvent) {
 		t.Fatal("no events from empty gemini home")
 	}, func(event.TurnEvent) {}); err != nil {

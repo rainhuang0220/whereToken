@@ -64,10 +64,7 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		Vendors:     jsonRows(snap.Vendors, false),
 		Notes:       snap.Notes,
 		CostStatus:  snap.CostStatus,
-		CostUSD:     omitZeroUSD(snap.CostUSD),
-	}
-	if snap.CostStatus == "unavailable" {
-		out.CostUSD = ""
+		CostUSD:     costUSDFor(snap.CostStatus, snap.CostUSD),
 	}
 	if snap.ShowStreaks {
 		max := snap.MaxStreak
@@ -107,6 +104,14 @@ func omitZeroUSD(usd string) string {
 	}
 }
 
+// costUSDFor keeps a cost string only when pricing exists for the slice.
+func costUSDFor(status, usd string) string {
+	if status == "unavailable" {
+		return ""
+	}
+	return omitZeroUSD(usd)
+}
+
 func jsonRows(rows []Row, turns bool) []jsonRow {
 	if rows == nil {
 		return []jsonRow{}
@@ -122,10 +127,7 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			HitRateText: r.HitRateText,
 			Requests:    r.Requests,
 			CostStatus:  r.CostStatus,
-			CostUSD:     omitZeroUSD(r.CostUSD),
-		}
-		if r.CostStatus == "unavailable" {
-			item.CostUSD = ""
+			CostUSD:     costUSDFor(r.CostStatus, r.CostUSD),
 		}
 		if turns {
 			item.UserTurns = r.UserTurns

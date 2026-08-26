@@ -148,7 +148,7 @@ func (s *Store) LoadOrReplay(source, path string, parse ParseFunc) ([]event.Usag
 func (s *Store) load(source, path string, parse ParseFunc, incremental bool) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	st, err := os.Stat(path)
 	if err != nil {
-		return nil, nil, ModeFull, err
+		return nil, nil, ModeFull, fmt.Errorf("stat: %w", PathFree(err))
 	}
 	cur := identOf(path, st)
 	prev, ok, err := s.getFile(path)
@@ -174,7 +174,7 @@ func (s *Store) load(source, path string, parse ParseFunc, incremental bool) ([]
 		}
 		f, err := os.Open(path)
 		if err != nil {
-			return nil, nil, ModeFull, err
+			return nil, nil, ModeFull, fmt.Errorf("open: %w", PathFree(err))
 		}
 		if _, err := f.Seek(prev.Offset, 0); err != nil {
 			f.Close()
@@ -201,7 +201,7 @@ func (s *Store) load(source, path string, parse ParseFunc, incremental bool) ([]
 func (s *Store) full(source, path string, cur fileRow, parse ParseFunc, replay bool) ([]event.UsageEvent, []event.TurnEvent, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, nil, ModeFull, err
+		return nil, nil, ModeFull, fmt.Errorf("open: %w", PathFree(err))
 	}
 	evs, turns, consumed, err := parse(f)
 	f.Close()

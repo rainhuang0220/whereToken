@@ -75,19 +75,11 @@ export type FlipState = ReturnType<typeof Flip.getState>
 export type MotionHandle = {
   revert: () => void
   kill: () => void
-  reverse: () => Promise<void>
-  play: () => void
-  isActive: () => boolean
-  canReverse: () => boolean
 }
 
 const idleHandle = (): MotionHandle => ({
   revert() {},
   kill() {},
-  async reverse() {},
-  play() {},
-  isActive: () => false,
-  canReverse: () => false,
 })
 
 export function prefersReducedMotion(
@@ -205,31 +197,6 @@ function bindTimeline(
       tl.eventCallback('onReverseComplete', null)
       tl.eventCallback('onInterrupt', null)
       tl.kill()
-    },
-    play() {
-      tl.eventCallback('onReverseComplete', null)
-      tl.play()
-    },
-    isActive() {
-      return tl.isActive()
-    },
-    canReverse() {
-      return tl.progress() > 0
-    },
-    reverse() {
-      return new Promise<void>((resolve) => {
-        const done = () => {
-          clearMotionStyles(involved)
-          resolve()
-        }
-        if (tl.progress() === 0) {
-          done()
-          return
-        }
-        tl.eventCallback('onReverseComplete', done)
-        tl.eventCallback('onInterrupt', done)
-        tl.reverse()
-      })
     },
   }
 }

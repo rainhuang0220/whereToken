@@ -171,6 +171,7 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Cline | 完整 | 不需要 |
 | Roo Code | 完整 | 不需要 |
 | Kilo Code（旧版 VS Code + CLI `kilo.db`） | 完整 | 不需要 |
+| ZCode（Z.ai ADE） | 完整 | 不需要 |
 | Cursor | 部分 | token 列需要 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 

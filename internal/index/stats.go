@@ -45,8 +45,6 @@ func note(source, mode string, added int) {
 					deltas[i].Mode = mode
 				}
 				deltas[i].Added += added
-			} else if deltas[i].Mode == "" {
-				deltas[i].Mode = ModeUnchanged
 			}
 			return
 		}

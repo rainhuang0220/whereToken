@@ -9,11 +9,11 @@ package gemini
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -80,7 +80,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 }
 
 func parseSession(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	if strings.HasSuffix(path, ".json") && !strings.HasSuffix(path, ".jsonl") {
+	if strings.HasSuffix(path, ".json") {
 		evs, turns, _, err := index.LoadOrReplay("gemini", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 			return parseJSONFile(f, path, root)
 		})
@@ -142,11 +142,11 @@ func parseJSONLFile(f *os.File, path string, root adapter.SourceRoot) ([]event.U
 func parseJSONFile(f *os.File, path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 	st, err := f.Stat()
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, index.PathFree(err)
 	}
-	raw, err := os.ReadFile(path)
+	raw, err := io.ReadAll(f)
 	if err != nil {
-		return nil, nil, st.Size(), err
+		return nil, nil, st.Size(), index.PathFree(err)
 	}
 	var wrap struct {
 		SessionID string `json:"sessionId"`
@@ -177,17 +177,17 @@ func parseJSONFile(f *os.File, path string, root adapter.SourceRoot) ([]event.Us
 }
 
 func emitFromRec(r rec, path string, root adapter.SourceRoot, sess string, at int64) (event.UsageEvent, event.TurnEvent, bool) {
-	ts := parseTS(r.Timestamp)
+	ts := adapter.ParseTS(r.Timestamp)
 	if r.Type == "user" {
 		return event.UsageEvent{}, event.TurnEvent{Source: "gemini", SessionID: sess, Timestamp: ts}, true
 	}
 	if r.Type != "gemini" || r.Tokens == nil {
 		return event.UsageEvent{}, event.TurnEvent{}, false
 	}
-	in := clamp0(r.Tokens.Input)
-	cached := clamp0(r.Tokens.Cached)
-	out := clamp0(r.Tokens.Output)
-	thoughts := clamp0(r.Tokens.Thoughts)
+	in := adapter.Clamp0(r.Tokens.Input)
+	cached := adapter.Clamp0(r.Tokens.Cached)
+	out := adapter.Clamp0(r.Tokens.Output)
+	thoughts := adapter.Clamp0(r.Tokens.Thoughts)
 	miss := in - cached
 	if miss < 0 {
 		miss = 0
@@ -234,53 +234,4 @@ func sessionFromPath(path string) string {
 	base = strings.TrimSuffix(base, ".jsonl")
 	base = strings.TrimSuffix(base, ".json")
 	return strings.TrimPrefix(base, "session-")
-}
-
-func parseTS(s string) time.Time {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return time.Time{}
-	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t.UTC()
-	}
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UTC()
-	}
-	return time.Time{}
-}
-
-func clamp0(n int64) int64 {
-	if n < 0 {
-		return 0
-	}
-	return n
-}
-
-func (Adapter) Probe(root adapter.SourceRoot) adapter.Probe {
-	return adapter.InferProbe(true, hasChatLedger(root.Path), adapter.Caps{
-		Discovery: adapter.LevelYes, Usage: adapter.LevelYes,
-		Model: adapter.LevelYes, Timestamp: adapter.LevelYes, Session: adapter.LevelYes,
-		Cache: adapter.LevelYes, Reasoning: adapter.LevelYes, Incremental: adapter.LevelYes,
-	})
-}
-
-func hasChatLedger(root string) bool {
-	tmp := filepath.Join(root, "tmp")
-	found := false
-	_ = filepath.WalkDir(tmp, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		if !underChats(path) {
-			return nil
-		}
-		name := d.Name()
-		if strings.HasSuffix(name, ".jsonl") || strings.HasSuffix(name, ".json") {
-			found = true
-			return fs.SkipAll
-		}
-		return nil
-	})
-	return found
 }

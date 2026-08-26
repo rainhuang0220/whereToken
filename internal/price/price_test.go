@@ -51,6 +51,59 @@ func TestGLM53DoesNotInheritGLM5(t *testing.T) {
 	}
 }
 
+func TestGLMAirAndXRows(t *testing.T) {
+	air := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-4.5-air", Miss: 1_000_000, Output: 1_000_000})
+	if !air.OK || air.Micro != 1_300_000 { // $0.2+$1.1
+		t.Fatalf("glm-4.5-air %+v", air)
+	}
+	airx := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-4.5-airx", Miss: 1_000_000})
+	if !airx.OK || airx.Micro != 1_100_000 {
+		t.Fatalf("airx must use its own row, not the air prefix %+v", airx)
+	}
+	x := Event(event.UsageEvent{Vendor: "zhipu", Model: "GLM-4.5-X", Output: 1_000_000})
+	if !x.OK || x.Micro != 8_900_000 {
+		t.Fatalf("glm-4.5-x %+v", x)
+	}
+	flashx := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-4.7-flashx", Miss: 1_000_000, CacheRead: 1_000_000})
+	if !flashx.OK || flashx.Micro != 80_000 { // $0.07+$0.01
+		t.Fatalf("glm-4.7-flashx %+v", flashx)
+	}
+}
+
+func TestGLMFreeFlashStaysUnpriced(t *testing.T) {
+	flash := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-4.5-flash", Miss: 1_000_000})
+	if flash.OK {
+		t.Fatal("list-free Flash rows must not render as $0")
+	}
+}
+
+func TestZaiCacheWriteIsListedFree(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "zhipu", Model: "glm-4.6", Miss: 1_000_000, CacheCreate: 1_000_000})
+	if !c.OK || c.Micro != 600_000 { // $0.6 miss + $0 listed-free write
+		t.Fatalf("glm-4.6 with cache write %+v", c)
+	}
+	// Moonshot lists no cache-write rate at all: stays unpriced, never $0.
+	k := Event(event.UsageEvent{Vendor: "moonshot", Model: "kimi-k2.6", Miss: 1_000_000, CacheCreate: 1_000_000})
+	if k.OK {
+		t.Fatal("moonshot cache write is unlisted, not free")
+	}
+}
+
+func TestDeepSeekPeakCard(t *testing.T) {
+	c := Event(event.UsageEvent{Vendor: "deepseek", Model: "deepseek-v4-flash", Miss: 1_000_000, CacheRead: 1_000_000, Output: 1_000_000})
+	if !c.OK || c.Micro != 1_774_000 { // $0.44+$0.014+$1.32
+		t.Fatalf("deepseek-v4-flash %+v", c)
+	}
+	pro := Event(event.UsageEvent{Vendor: "deepseek", Model: "DeepSeek-V4-Pro", Output: 1_000_000})
+	if !pro.OK || pro.Micro != 3_960_000 {
+		t.Fatalf("deepseek-v4-pro %+v", pro)
+	}
+	vision := Event(event.UsageEvent{Vendor: "deepseek", Model: "deepseek-v4-flash-vision-exp", Miss: 1_000_000})
+	if !vision.OK || vision.Micro != 440_000 {
+		t.Fatalf("vision-exp must use its own row %+v", vision)
+	}
+}
+
 func TestGeminiFlashPricedProUnpriced(t *testing.T) {
 	flash := Event(event.UsageEvent{Vendor: "google", Model: "gemini-2.5-flash", Miss: 1_000_000, Output: 1_000_000})
 	if !flash.OK || flash.Micro != 2_800_000 { // $0.30+$2.50

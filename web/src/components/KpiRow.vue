@@ -23,6 +23,12 @@ const emit = defineEmits<{
 const standing = computed(() =>
   props.rankPeriod === 'all' ? props.community?.all : props.community?.today,
 )
+// A scan that found nothing is "—", never a fake 0.00 M.
+const totalText = computed(() =>
+  !props.all.quality && !props.all.total && !props.all.requests && !props.all.user_turns
+    ? '—'
+    : tokenCell(props.all.total_m, props.all.quality, props.all),
+)
 const hint = computed(() => rankHint(props.community, standing.value))
 const honesty = computed(() => costHonestyNote(props.all))
 const canJoin = computed(() => standing.value?.status === 'opted_out')
@@ -32,7 +38,7 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
   <section class="readout" aria-label="合计">
     <div class="read-lead">
       <span class="read-k">合计</span>
-      <strong>{{ tokenCell(all.total_m, all.quality, all) }}</strong>
+      <strong>{{ totalText }}</strong>
     </div>
     <div class="read-cell" :data-hit="hitBand(all.hit_rate_text)">
       <span class="read-k">命中率</span>

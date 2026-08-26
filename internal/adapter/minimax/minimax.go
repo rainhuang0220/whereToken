@@ -77,7 +77,7 @@ func parseDBOpen(path string, root adapter.SourceRoot, emit func(event.UsageEven
 	}
 	defer db.Close()
 
-	if !hasTable(db, "local_runtime_token_usage") {
+	if !adapter.HasTable(db, "local_runtime_token_usage") {
 		return nil
 	}
 	ws := loadWorkspaces(db)
@@ -87,19 +87,13 @@ func parseDBOpen(path string, root adapter.SourceRoot, emit func(event.UsageEven
 	return emitTurns(db, emitTurn)
 }
 
-func hasTable(db *sql.DB, name string) bool {
-	var n int
-	err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&n)
-	return err == nil && n > 0
-}
-
 type sessionMeta struct {
 	WorkspaceDir string `json:"workspaceDir"`
 }
 
 func loadWorkspaces(db *sql.DB) map[string]string {
 	out := map[string]string{}
-	if !hasTable(db, "local_runtime_sessions") {
+	if !adapter.HasTable(db, "local_runtime_sessions") {
 		return out
 	}
 	rows, err := db.Query(`SELECT session_id, record_json FROM local_runtime_sessions`)
@@ -142,11 +136,11 @@ func emitUsage(db *sql.DB, root adapter.SourceRoot, ws map[string]string, emit f
 		if err := rows.Scan(&id, &sessionID, &model, &ts, &miss, &out, &reason, &cr, &cw); err != nil {
 			return err
 		}
-		miss = clamp0(miss)
-		out = clamp0(out)
-		reason = clamp0(reason)
-		cr = clamp0(cr)
-		cw = clamp0(cw)
+		miss = adapter.Clamp0(miss)
+		out = adapter.Clamp0(out)
+		reason = adapter.Clamp0(reason)
+		cr = adapter.Clamp0(cr)
+		cw = adapter.Clamp0(cw)
 		if miss+out+reason+cr+cw == 0 {
 			continue
 		}
@@ -176,7 +170,7 @@ func emitUsage(db *sql.DB, root adapter.SourceRoot, ws map[string]string, emit f
 }
 
 func emitTurns(db *sql.DB, emitTurn func(event.TurnEvent)) error {
-	if !hasTable(db, "local_runtime_message_rows") {
+	if !adapter.HasTable(db, "local_runtime_message_rows") {
 		return nil
 	}
 	rows, err := db.Query(`SELECT session_id, created_at_ms FROM local_runtime_message_rows WHERE role = 'user'`)
@@ -197,11 +191,4 @@ func emitTurns(db *sql.DB, emitTurn func(event.TurnEvent)) error {
 		emitTurn(event.TurnEvent{Source: "minimax", SessionID: sessionID, Timestamp: stamp})
 	}
 	return rows.Err()
-}
-
-func clamp0(n int64) int64 {
-	if n < 0 {
-		return 0
-	}
-	return n
 }

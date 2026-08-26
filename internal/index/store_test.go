@@ -1,9 +1,12 @@
 package index
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -441,5 +444,67 @@ func TestWipeClearsIndex(t *testing.T) {
 	})
 	if err != nil || mode != ModeFull || parsed != 1 {
 		t.Fatalf("after wipe mode=%s parsed=%d err=%v", mode, parsed, err)
+	}
+}
+
+// TestReplayParseErrorKeepsCacheUntouched pins the replay-source failure
+// semantics: a failed full parse surfaces the parse error (cached events are
+// not replayed for that scan), does not pollute the cache, and the next
+// successful parse self-heals.
+func TestReplayParseErrorKeepsCacheUntouched(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(dir, "a.db")
+	if err := os.WriteFile(path, []byte("v1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err = store.LoadOrReplay("zcode", path, fixed([]event.UsageEvent{{RequestID: "old", Miss: 9}})); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("v1v2"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	evs, _, _, err := store.LoadOrReplay("zcode", path, func(*os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return nil, nil, 0, fmt.Errorf("corrupt db")
+	})
+	if err == nil {
+		t.Fatal("want parse error")
+	}
+	if len(evs) != 0 {
+		t.Fatalf("failed full parse must not serve cached events this scan: %+v", evs)
+	}
+	evs, _, mode, err := store.LoadOrReplay("zcode", path, fixed([]event.UsageEvent{{RequestID: "new", Miss: 3}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode != ModeFull || len(evs) != 1 || evs[0].RequestID != "new" || evs[0].Miss != 3 {
+		t.Fatalf("next successful parse must self-heal: mode=%s %+v", mode, evs)
+	}
+}
+
+// TestFullOpenErrorIsPathFree pins the full-parse open failure: the user
+// visible error must not carry the file path, while the underlying errno
+// still survives for errors.Is.
+func TestFullOpenErrorIsPathFree(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	missing := filepath.Join(dir, "ledger", "rollout.jsonl")
+	_, _, _, err = store.full("codex", missing, fileRow{}, nil, false)
+	if err == nil {
+		t.Fatal("want open error")
+	}
+	if strings.Contains(err.Error(), "rollout.jsonl") || strings.Contains(err.Error(), dir) {
+		t.Fatalf("error leaks path: %v", err)
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("errno must survive PathFree: %v", err)
 	}
 }

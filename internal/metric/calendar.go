@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"math"
 	"sort"
 	"time"
 
@@ -153,11 +154,7 @@ func quantileNearest(sorted []int64, p float64) int64 {
 }
 
 func ceilFloat(x float64) int {
-	i := int(x)
-	if float64(i) < x {
-		return i + 1
-	}
-	return i
+	return int(math.Ceil(x))
 }
 
 func computeStats(days []Day, today time.Time) CalendarStats {
@@ -255,13 +252,13 @@ func bucketDays(events []event.UsageEvent, loc *time.Location, keep func(event.U
 			continue
 		}
 		date := e.Timestamp.In(loc).Format("2006-01-02")
-		total := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		total := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 		if i, ok := index[date]; ok {
-			days[i].Miss += e.Miss
-			days[i].CacheRead += e.CacheRead
-			days[i].CacheCreate += e.CacheCreate
-			days[i].Output += e.Output
-			days[i].Total += total
+			days[i].Miss = satAdd(days[i].Miss, e.Miss)
+			days[i].CacheRead = satAdd(days[i].CacheRead, e.CacheRead)
+			days[i].CacheCreate = satAdd(days[i].CacheCreate, e.CacheCreate)
+			days[i].Output = satAdd(days[i].Output, e.Output)
+			days[i].Total = satAdd(days[i].Total, total)
 			continue
 		}
 		index[date] = len(days)

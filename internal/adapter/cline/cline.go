@@ -35,7 +35,3 @@ func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	return vsctask.Parse(root, opts(), emit, emitTurn)
 }
-
-func (Adapter) Probe(root adapter.SourceRoot) adapter.Probe {
-	return vsctask.Probe(root)
-}

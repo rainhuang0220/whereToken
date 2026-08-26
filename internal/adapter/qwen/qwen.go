@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -98,10 +97,10 @@ func parseJSONL(f *os.File, path string, root adapter.SourceRoot) ([]event.Usage
 		if json.Unmarshal(raw, &r) != nil {
 			return nil
 		}
-		in := clamp0(r.InputTokens)
-		cached := clamp0(r.CachedTokens)
-		out := clamp0(r.OutputTokens)
-		thoughts := clamp0(r.ThoughtsTokens)
+		in := adapter.Clamp0(r.InputTokens)
+		cached := adapter.Clamp0(r.CachedTokens)
+		out := adapter.Clamp0(r.OutputTokens)
+		thoughts := adapter.Clamp0(r.ThoughtsTokens)
 		miss := in - cached
 		if miss < 0 {
 			miss = 0
@@ -121,7 +120,7 @@ func parseJSONL(f *os.File, path string, root adapter.SourceRoot) ([]event.Usage
 			SessionID:  r.SessionID,
 			Model:      r.Model,
 			Provider:   "dashscope",
-			Timestamp:  parseTS(r.Timestamp),
+			Timestamp:  adapter.ParseTS(r.Timestamp),
 			Miss:       miss,
 			CacheRead:  cached,
 			Output:     out,
@@ -132,48 +131,4 @@ func parseJSONL(f *os.File, path string, root adapter.SourceRoot) ([]event.Usage
 		return nil
 	})
 	return evs, nil, consumed, err
-}
-
-func parseTS(s string) time.Time {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return time.Time{}
-	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t.UTC()
-	}
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UTC()
-	}
-	return time.Time{}
-}
-
-func clamp0(n int64) int64 {
-	if n < 0 {
-		return 0
-	}
-	return n
-}
-
-func (Adapter) Probe(root adapter.SourceRoot) adapter.Probe {
-	return adapter.InferProbe(true, hasUsageLedger(root.Path), adapter.Caps{
-		Discovery: adapter.LevelYes, Usage: adapter.LevelYes,
-		Model: adapter.LevelYes, Timestamp: adapter.LevelYes, Session: adapter.LevelYes,
-		Cache: adapter.LevelYes, Reasoning: adapter.LevelYes, Incremental: adapter.LevelYes,
-	})
-}
-
-func hasUsageLedger(root string) bool {
-	dir := filepath.Join(root, "usage")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
-	}
-	for _, e := range entries {
-		name := e.Name()
-		if !e.IsDir() && strings.HasPrefix(name, "token-usage-") && strings.HasSuffix(name, ".jsonl") {
-			return true
-		}
-	}
-	return false
 }

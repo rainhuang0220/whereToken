@@ -162,7 +162,7 @@ func splitDisplay(s string, width int) (string, string) {
 				}
 			}
 			if i == 0 {
-				i = len(string(r))
+				i = utf8.RuneLen(r)
 			}
 			return s[:i], s[i:]
 		}

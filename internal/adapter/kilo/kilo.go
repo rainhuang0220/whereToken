@@ -51,13 +51,3 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 	}
 	return vsctask.Parse(root, vscodeOpts(), emit, emitTurn)
 }
-
-func (Adapter) Probe(root adapter.SourceRoot) adapter.Probe {
-	if _, ok := dbFile(root.Path); ok {
-		return adapter.InferProbe(true, true, adapter.Caps{
-			Discovery: adapter.LevelYes, Usage: adapter.LevelYes,
-			Cache: adapter.LevelYes, Incremental: adapter.LevelUnavailable,
-		})
-	}
-	return vsctask.Probe(root)
-}

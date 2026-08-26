@@ -13,10 +13,8 @@ func FS() (fs.FS, bool) {
 	if err != nil {
 		return nil, false
 	}
-	f, err := sub.Open("index.html")
-	if err != nil {
+	if _, err := fs.Stat(sub, "index.html"); err != nil {
 		return nil, false
 	}
-	_ = f.Close()
 	return sub, true
 }

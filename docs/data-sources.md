@@ -476,6 +476,35 @@ Skip `auth.json` and credential tables.
 
 ---
 
+## ZCode (Z.ai ADE)
+
+### Location
+
+`~/.zcode/cli/db/db.sqlite` (`ZCODE_DB` override), table `model_usage` — one
+row per request. Workspace labels join the `session` table. Sign-in state and
+settings are never read.
+
+Legacy `~/.zcode/projects/*.jsonl` transcripts are not read: lines without a
+usage block would need token estimates, and whereToken does not estimate.
+
+### Token mapping
+
+| whereToken | ZCode field | Kind |
+| ---------- | ----------- | ---- |
+| Miss | `input_tokens − cache_read − cache_creation` | derived |
+| Cache Read | `cache_read_input_tokens` | raw |
+| Cache Create | `cache_creation_input_tokens` | raw |
+| Output | `output_tokens − reasoning_tokens` | derived |
+| Reasoning | `reasoning_tokens` | raw |
+
+ZCode's `input_tokens` absorbs both cache buckets and `output_tokens` absorbs
+reasoning. Newer stores carry `computed_total_tokens`: when it equals
+`input + output` the row is inclusive and the overlap comes out; when it
+equals the fully additive sum the row passes through. Older stores without
+that column are always inclusive. Quality `authoritative`.
+
+---
+
 ## Incremental index
 
 JSONL adapters (Claude, Kimi, Grok, OpenClaw) cache normalized events by path / size / mtime / inode / offset. Appends parse only the new tail. Truncation or a new inode is a full rescan of that file.
