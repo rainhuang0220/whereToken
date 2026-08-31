@@ -153,6 +153,12 @@ wheretoken serve
   <img src="docs/media/dash-kiln.png" alt="窑，whereToken 的吉祥物" width="900">
 </p>
 
+## 在线演示
+
+**<https://rainhuang0220.github.io/whereToken/>** —— 项目主页与可直接把玩的[仪表盘演示](https://rainhuang0220.github.io/whereToken/demo/)（内置合成样例账本，无需安装，无后端）。
+
+公网站点是 GitHub Pages 纯静态部署：不读取你的机器，只展示虚构演示数据。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
+
 ## 支持的 coding agent
 
 whereToken 读取各 coding agent 提供的用量信息。完整程度因工具而异，有时取决于应用是否已登录。
@@ -249,6 +255,7 @@ whereToken 目前处于 **alpha**。
 - Token 账本：[`docs/token-accounting.md`](docs/token-accounting.md)
 - 估价：[`docs/cost.md`](docs/cost.md)
 - 社区排名：[`docs/community.md`](docs/community.md)
+- 公网部署：[`docs/deployment.md`](docs/deployment.md)
 - 增加适配器：[`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON 输出格式：[`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - 补全：[`completions/`](completions/)

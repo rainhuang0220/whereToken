@@ -153,6 +153,12 @@ The dashboard runs locally on your machine. It provides a visual overview of tok
   <img src="docs/media/dash-kiln.png" alt="窑, the whereToken mascot" width="900">
 </p>
 
+## Live Demo
+
+**<https://rainhuang0220.github.io/whereToken/>** — landing page and a hands-on [dashboard demo](https://rainhuang0220.github.io/whereToken/demo/) running on a synthetic sample ledger (no install, no backend).
+
+The public site is a static GitHub Pages deployment: it reads nothing from your machine and shows fabricated demo data only. The **local dashboard** (`wheretoken serve`) is a different thing: it binds `127.0.0.1`, reads your real local ledgers, and never leaves your machine. Deployment details: [`docs/deployment.md`](docs/deployment.md).
+
 ## Supported coding agents
 
 whereToken reads usage information from data made available by supported coding agents. Completeness varies by tool and may depend on whether the application is signed in.
@@ -249,6 +255,7 @@ whereToken is currently in **alpha**.
 - Token accounting: [`docs/token-accounting.md`](docs/token-accounting.md)
 - Cost estimate: [`docs/cost.md`](docs/cost.md)
 - Community Rank: [`docs/community.md`](docs/community.md)
+- Public deployment: [`docs/deployment.md`](docs/deployment.md)
 - Adding an adapter: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)
