@@ -20,10 +20,12 @@ import {
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
+import { isDemo } from '../demo'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
 const store = useSummaryStore()
+const demo = isDemo()
 const payload = computed(() => store.payload)
 const periods: { id: PeriodId; label: string }[] = [
   { id: 'today', label: '今日' },
@@ -119,6 +121,7 @@ const todayUsageM = computed(() => {
 const statusKind = computed(() => {
   if (emptyHint.value) return '空窑'
   if (!payload.value) return '未煅烧'
+  if (demo) return '演示数据'
   if (payload.value.offline) return 'offline'
   return '本机账本'
 })
@@ -147,6 +150,7 @@ onMounted(() => {
         <div class="rail-actions">
           <router-link class="lever" to="/themes">主题</router-link>
           <button
+            v-if="!demo"
             type="button"
             class="lever"
             :class="{ busy: store.loading }"

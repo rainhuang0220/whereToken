@@ -18,6 +18,9 @@ function themeCss(): Plugin {
 }
 
 export default defineConfig({
+  // The embedded dashboard is served at root by `wheretoken serve`; the
+  // public demo build (VITE_DEMO=1) lives under the project Pages path.
+  base: process.env.VITE_DEMO === '1' ? '/whereToken/demo/' : '/',
   plugins: [vue(), themeCss()],
   server: {
     proxy: {

@@ -1,4 +1,5 @@
 import type { SummaryPayload } from './types'
+import { isDemo } from './demo'
 import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
 export async function waitWhileScanning(opts?: {
@@ -29,6 +30,7 @@ export async function waitWhileScanning(opts?: {
 }
 
 export async function setCommunity(enabled: boolean): Promise<void> {
+  if (isDemo()) return
   const res = await fetch('/api/community', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,6 +43,16 @@ export async function setCommunity(enabled: boolean): Promise<void> {
 }
 
 export async function fetchSummary(since?: string): Promise<SummaryPayload> {
+  if (isDemo()) {
+    const period = since && since !== 'all' ? since : 'all'
+    const res = await fetch(`${import.meta.env.BASE_URL}sample/${period}.json`, {
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      throw new Error(`sample ${res.status}`)
+    }
+    return res.json() as Promise<SummaryPayload>
+  }
   const q = since && since !== 'all' ? `?since=${encodeURIComponent(since)}` : ''
   const res = await fetch(`/api/summary${q}`, { cache: 'no-store' })
   if (!res.ok) {
@@ -50,6 +62,9 @@ export async function fetchSummary(since?: string): Promise<SummaryPayload> {
 }
 
 export async function rescan(onProgress: (p: ScanProgress) => void): Promise<SummaryPayload> {
+  if (isDemo()) {
+    return fetchSummary('all')
+  }
   const res = await fetch('/api/scan', {
     method: 'POST',
     headers: { Accept: 'text/event-stream' },
