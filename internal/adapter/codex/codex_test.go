@@ -178,6 +178,9 @@ func TestDiscoverDefaultDotDir(t *testing.T) {
 }
 
 func TestOneUnreadableRolloutDoesNotDropSibling(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod 000 makes a file read-only on Windows but still readable")
+	}
 	dir := t.TempDir()
 	sess := filepath.Join(dir, "sessions", "2026", "01", "01")
 	if err := os.MkdirAll(sess, 0o755); err != nil {

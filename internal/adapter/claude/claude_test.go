@@ -294,6 +294,9 @@ func TestDiscoverXDGConfigClaude(t *testing.T) {
 }
 
 func TestOneUnreadableFileDoesNotDropSibling(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod 000 makes a file read-only on Windows but still readable")
+	}
 	dir := t.TempDir()
 	line := `{"type":"assistant","requestId":"ok","message":{"model":"claude-opus-4.6","usage":{"input_tokens":3,"output_tokens":1}}}` + "\n"
 	if err := os.WriteFile(filepath.Join(dir, "good.jsonl"), []byte(line), 0o644); err != nil {
