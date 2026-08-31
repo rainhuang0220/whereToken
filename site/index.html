@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>whereToken — local-first token accounting for AI coding agents</title>
+<meta name="description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. Nothing uploads unless you opt in.">
+<link rel="icon" type="image/svg+xml" href="./assets/logo.svg">
+<style>
+  :root {
+    --bg: #0c0a09;
+    --panel: #171210;
+    --line: #292019;
+    --ink: #f5efe6;
+    --muted: #a8a29e;
+    --ember: #f97316;
+    --ember-deep: #c2410c;
+    --gold: #fbbf24;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--gold); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.25rem; }
+
+  header.nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 0; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: .6rem; font-family: var(--mono); font-weight: 700; }
+  .brand img { width: 28px; height: 28px; }
+  .brand span { color: var(--ink); }
+  nav.links { display: flex; gap: 1.4rem; font-family: var(--mono); font-size: .85rem; }
+
+  .hero { padding: 4.5rem 0 3rem; }
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    line-height: 1.05; margin: 0 0 1.1rem;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 em { color: var(--ember); font-style: normal; }
+  .hero p.lede { font-size: 1.15rem; color: var(--muted); max-width: 44rem; margin: 0 0 1.8rem; }
+  .hero p.lede b { color: var(--ink); font-weight: 600; }
+  .cta { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 2.2rem; }
+  .btn {
+    font-family: var(--mono); font-size: .95rem;
+    padding: .7rem 1.3rem; border: 1px solid var(--line);
+    border-radius: 6px; color: var(--ink); background: var(--panel);
+  }
+  .btn:hover { text-decoration: none; border-color: var(--ember); }
+  .btn.primary { background: var(--ember); border-color: var(--ember); color: #1c0f04; font-weight: 700; }
+  .btn.primary:hover { background: var(--gold); border-color: var(--gold); }
+
+  pre.install {
+    font-family: var(--mono); font-size: .9rem;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 1rem 1.2rem; overflow-x: auto;
+    color: var(--ink);
+  }
+  pre.install .c { color: var(--muted); }
+
+  figure.shot { margin: 3rem 0; }
+  figure.shot img {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; display: block;
+  }
+  figure.shot figcaption { color: var(--muted); font-size: .85rem; margin-top: .6rem; font-family: var(--mono); }
+
+  section { padding: 2.6rem 0; border-top: 1px solid var(--line); }
+  h2 { font-family: var(--mono); font-size: 1.4rem; margin: 0 0 1.4rem; letter-spacing: -0.01em; }
+  h2::before { content: "· "; color: var(--ember); }
+
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 1.1rem 1.2rem;
+  }
+  .card h3 { margin: 0 0 .45rem; font-size: 1rem; font-family: var(--mono); color: var(--gold); }
+  .card p { margin: 0; color: var(--muted); font-size: .92rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip {
+    font-family: var(--mono); font-size: .82rem;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: .28rem .8rem; color: var(--muted);
+  }
+  .chip.cloud { border-color: var(--ember-deep); color: var(--ink); }
+
+  ul.privacy { list-style: none; padding: 0; margin: 0; }
+  ul.privacy li { padding: .45rem 0 .45rem 1.6rem; position: relative; color: var(--muted); }
+  ul.privacy li::before { content: "✕"; position: absolute; left: .2rem; color: var(--ember); font-family: var(--mono); }
+  ul.privacy li.ok::before { content: "✓"; color: var(--gold); }
+  ul.privacy li b { color: var(--ink); font-weight: 600; }
+
+  footer { border-top: 1px solid var(--line); padding: 2rem 0 3rem; color: var(--muted); font-size: .85rem; font-family: var(--mono); }
+  footer .cols { display: flex; flex-wrap: wrap; gap: 2rem; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <div class="brand"><img src="./assets/logo.svg" alt=""><span>whereToken</span></div>
+    <nav class="links">
+      <a href="./demo/">Demo</a>
+      <a href="https://github.com/rainhuang0220/whereToken">GitHub</a>
+      <a href="https://github.com/rainhuang0220/whereToken/releases">Releases</a>
+      <a href="https://github.com/rainhuang0220/whereToken#readme">Docs</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="border-top:0">
+    <h1>Your agents keep the receipts.<br><em>whereToken</em> fires them into one kiln. <span lang="zh">一窑烧出真账。</span></h1>
+    <p class="lede">
+      A <b>local-first</b> CLI that reads the usage ledgers your AI coding agents already write
+      on your machine — Claude Code, Kimi Code, Codex, Cursor, ZCode and ten more — and answers
+      three questions honestly: <b>how many tokens</b>, <b>how much cache reuse</b>, and
+      <b>what it would cost at public list prices</b>. Missing usage is shown as unavailable,
+      never as a fake zero.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="./demo/">Live demo — no install</a>
+      <a class="btn" href="https://github.com/rainhuang0220/whereToken/releases/latest">Download v0.4.6</a>
+    </div>
+    <pre class="install"><span class="c"># macOS / Linux</span>
+brew tap rainhuang0220/wheretoken && brew install wheretoken
+
+<span class="c"># or with Go</span>
+go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
+
+wheretoken          <span class="c"># the kiln table</span>
+wheretoken serve    <span class="c"># dashboard at http://127.0.0.1:8787</span></pre>
+  </section>
+
+  <figure class="shot">
+    <img src="./assets/dash-kiln.png" alt="whereToken dashboard in the kiln theme: a wall of ember bricks, one per day, sized by token burn">
+    <figcaption>the kiln wall — one brick per day, heat = tokens burned (demo data)</figcaption>
+  </figure>
+
+  <section>
+    <h2>What it counts</h2>
+    <div class="grid">
+      <div class="card"><h3>Every tool, one table</h3><p>CLI table, JSON and a local dashboard across 15 agents: per tool, vendor, model, workspace and session.</p></div>
+      <div class="card"><h3>Cache honesty</h3><p>Total = miss + cache read + cache write + output. Hit rate never includes output. Reasoning is tracked, never double-charged.</p></div>
+      <div class="card"><h3>Price from public lists</h3><p>Estimates come only from vendors' public price cards — Anthropic, OpenAI, Moonshot, Z.ai, DeepSeek, xAI, Google, MiniMax. Unknown rate = “unavailable”, never $0.</p></div>
+      <div class="card"><h3>Streaks, not guilt</h3><p>Daily kiln wall, longest and current streaks, peak day — the foundry view of how you actually burn.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Supported ledgers</h2>
+    <div class="chips">
+      <span class="chip">Claude Code</span><span class="chip">Kimi Code</span><span class="chip">Codex</span>
+      <span class="chip cloud">Cursor · account API</span><span class="chip">Trae</span><span class="chip">OpenCode</span>
+      <span class="chip">Kilo Code</span><span class="chip">Gemini CLI</span><span class="chip">Qwen Code</span>
+      <span class="chip">Grok</span><span class="chip">MiniMax Agent</span><span class="chip">OpenClaw</span>
+      <span class="chip">Cline</span><span class="chip">Roo Code</span><span class="chip">ZCode</span>
+    </div>
+    <p style="color:var(--muted);font-size:.9rem;margin-top:1rem">
+      Local JSONL / SQLite ledgers are read read-only; Cursor usage comes from its account API with your local login.
+      The full capability matrix lives in
+      <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/provider-matrix.md">docs/provider-matrix.md</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Privacy model</h2>
+    <ul class="privacy">
+      <li><b>Everything stays on your machine</b> — events, paths, prompts, sessions, the SQLite index.</li>
+      <li>No prompts, conversations, file paths, auth tokens, cookies or keychain items are ever read into output.</li>
+      <li>The dashboard binds <b>127.0.0.1 only</b>; this public site cannot see your ledger.</li>
+      <li class="ok"><b>Community Rank is opt-in and self-hosted</b>: nothing crosses the network unless you set <span style="font-family:var(--mono)">WHERETOKEN_COMMUNITY_URL</span>, and then only a daily aggregate {UUID, day, tokens, optional cost}.</li>
+      <li class="ok">There is deliberately <b>no public rank server</b> — see
+        <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/community.md">docs/community.md</a>.</li>
+    </ul>
+  </section>
+
+  <figure class="shot">
+    <img src="./assets/cli-kpi.png" alt="whereToken CLI KPI table: total usage, hit rate, streaks, today's burn">
+    <figcaption>the CLI kiln table (Chinese UI) — 合计 / 命中率 / 连烧 / 当日用量</figcaption>
+  </figure>
+
+  <footer>
+    <div class="cols">
+      <span>whereToken — MIT licensed</span>
+      <a href="https://github.com/rainhuang0220/whereToken/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">Token accounting</a>
+      <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/cost.md">Cost model</a>
+      <a href="./demo/">Demo</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
