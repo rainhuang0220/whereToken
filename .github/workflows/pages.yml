@@ -36,12 +36,10 @@ jobs:
 
       - name: Test and build the dashboard demo
         working-directory: web
-        env:
-          VITE_DEMO: "1"
         run: |
           npm ci
           npm test
-          npm run build
+          VITE_DEMO=1 npm run build
 
       - name: Assemble the Pages tree
         run: |

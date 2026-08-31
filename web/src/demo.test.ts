@@ -18,7 +18,7 @@ describe('demo mode', () => {
       )
     })
     const p = await fetchSummary('7d')
-    expect(seen).toEqual(['/sample/7d.json'])
+    expect(seen).toEqual([`${import.meta.env.BASE_URL}sample/7d.json`])
     expect(p.all.total).toBe(7)
   })
 
@@ -30,11 +30,12 @@ describe('demo mode', () => {
       return new Response(JSON.stringify({ all: { total: 1 }, scanned_at: 'x' }), { status: 200 })
     })
     const p = await rescan(() => {})
-    expect(seen).toEqual(['/sample/all.json'])
+    expect(seen).toEqual([`${import.meta.env.BASE_URL}sample/all.json`])
     expect(p.all.total).toBe(1)
   })
 
   it('fetchSummary without VITE_DEMO still hits /api', async () => {
+    vi.stubEnv('VITE_DEMO', '')
     const seen: string[] = []
     vi.stubGlobal('fetch', async (url: RequestInfo | URL) => {
       seen.push(String(url))
