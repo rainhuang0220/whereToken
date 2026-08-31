@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.6 — 2026-08-31 (Alpha)
 
 - ZCode (Z.ai ADE) adapter: `~/.zcode/cli/db/db.sqlite` `model_usage` rows, cache/reasoning-inclusive buckets split out, `computed_total_tokens` disambiguation, legacy schema without the column still counts
 - Price: DeepSeek v4-flash / v4-pro at the public peak list; Z.ai `glm-4.5-air` / `glm-4.5-x` / `glm-4.5-airx` / `glm-4.7-flashx` rows; Z.ai cache write is listed free and bills $0 instead of going unavailable
@@ -8,6 +8,8 @@
 - Dashboard: period switch during the first load no longer dead-ends on 尚未扫描; a failed refetch keeps the old period highlighted; malformed scan-stream frames are skipped
 - Codex keeps scanning sibling rollouts when one file fails
 - Scan/index errors no longer embed filesystem paths
+- ZCode still reports usage when the session table loses workspace columns, `turn_id` is absent, or `model_usage` ids are NULL
+- Provider API numeric strings parse strictly: no partial prefixes, scientific notation counts
 
 - OpenClaw honors `OPENCLAW_STATE_DIR` / `OPENCLAW_HOME`, skips `identity/`, and does not parse `.zst` delete archives as JSONL
 - Same-size JSONL rewrite with a pending tail is a full rescan. Oversize incomplete lines no longer grow the read buffer to EOF. Complementary RequestID merge keeps the dated timestamp
