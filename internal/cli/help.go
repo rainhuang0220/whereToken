@@ -12,6 +12,7 @@ USAGE
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] community [status|on|off|serve]
+  wheretoken [flags] pricing     built-in model price card with official sources
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -103,6 +104,9 @@ EXAMPLES
   wheretoken --model=k3
   wheretoken sources
   wheretoken doctor
+  wheretoken pricing
+  wheretoken pricing --vendor anthropic
+  wheretoken pricing --model opus --json
   wheretoken --offline --quiet
   wheretoken serve
   wheretoken community off

@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -78,6 +78,17 @@ _wheretoken() {
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '1:shell:(bash zsh fish powershell)'
       ;;
+    pricing)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--json[price card as JSON]' \
+        '--ascii[ASCII box drawing]' \
+        '--no-color[disable ANSI]' \
+        '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
+        '--model[model id]:model:' \
+        '--width[table width]:cols:'
+      ;;
     *)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -108,7 +119,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing completion help version)'
       ;;
   esac
 }

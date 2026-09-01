@@ -23,6 +23,7 @@ const (
 	CommandUninstall  = "uninstall"
 	CommandCompletion = "completion"
 	CommandCommunity  = "community"
+	CommandPricing    = "pricing"
 )
 
 const (
@@ -156,6 +157,9 @@ func Parse(args []string) (Flags, error) {
 	f.Model = strings.TrimSpace(tf.model)
 	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
+	}
+	if f.Command == CommandPricing && (f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Tool != "" || f.Offline || f.NoCommunity) {
+		return Flags{}, usageError{msg: "pricing reads the built-in price card; only --vendor/--model/--json/--width apply\ntry `wheretoken --help`"}
 	}
 	if f.Today && (f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "use only one of --today, --since, or --from/--to\ntry `wheretoken --help`"}
@@ -342,6 +346,8 @@ func applyCommandWord(f *Flags, word string) bool {
 		f.Command = CommandCompletion
 	case "community":
 		f.Command = CommandCommunity
+	case "pricing":
+		f.Command = CommandPricing
 	default:
 		return false
 	}

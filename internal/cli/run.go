@@ -110,6 +110,8 @@ func (a *App) Run() int {
 		return ExitOK
 	case CommandCommunity:
 		return a.runCommunity(flags, home)
+	case CommandPricing:
+		return a.runPricing(flags)
 	default:
 		return a.runReport(flags, home)
 	}
