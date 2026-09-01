@@ -553,3 +553,21 @@ func TestResolveHistoricalWindow(t *testing.T) {
 		t.Fatalf("undated must use open card %+v ok=%v", r, ok)
 	}
 }
+
+func TestEventPricesVersionFirstID(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	e := event.UsageEvent{
+		Vendor: "anthropic", Model: "claude-4.6-opus-high-thinking",
+		Miss: 1_000_000, CacheRead: 2_000_000, Output: 100_000,
+		Timestamp: now,
+	}
+	ch := Event(e)
+	if !ch.OK {
+		t.Fatal("version-first id must price through normalization")
+	}
+	// opus-4.6 card: 5 / 0.5 / 6.25 / 25 USD per 1M.
+	want := int64(1_000_000*5 + 2_000_000*0.5 + 100_000*25)
+	if ch.Micro != want {
+		t.Fatalf("Micro = %d, want %d", ch.Micro, want)
+	}
+}

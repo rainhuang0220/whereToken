@@ -82,7 +82,7 @@ func FormatUSD(micro int64) string {
 }
 
 func Event(e event.UsageEvent) Charge {
-	r, ok := Lookup(e.Vendor, e.Model, e.Timestamp)
+	r, ok := Lookup(e.Vendor, Normalize(e.Vendor, e.Model), e.Timestamp)
 	if !ok {
 		return Charge{}
 	}
