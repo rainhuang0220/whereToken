@@ -696,3 +696,73 @@ func TestWindowedEvaluationFollowsTheWindow(t *testing.T) {
 		t.Fatalf("all-time window must not inherit today's intensity: %s", levelAll)
 	}
 }
+
+func TestMarshalSummaryIncludesByModel(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	r := Result{
+		Summary: metric.AggregateAt([]event.UsageEvent{
+			{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "a",
+				Miss: 1_000_000, Output: 1_000_000, Timestamp: now},
+			{Source: "cursor", Vendor: "cursor", Model: "auto", RequestID: "b",
+				Miss: 100, Timestamp: now},
+		}, nil, now, time.UTC),
+		Errors: []string{},
+	}
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		ByModel []struct {
+			Label      string `json:"label"`
+			Vendor     string `json:"vendor"`
+			CostStatus string `json:"cost_status"`
+			CostUSD    string `json:"cost_usd"`
+			UnitPrices struct {
+				Miss        *float64 `json:"miss"`
+				CacheRead   *float64 `json:"cache_read"`
+				CacheCreate *float64 `json:"cache_create"`
+				Output      *float64 `json:"output"`
+			} `json:"unit_prices"`
+		} `json:"by_model"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload.ByModel) != 2 {
+		t.Fatalf("by_model rows=%d: %s", len(payload.ByModel), raw)
+	}
+	// Sorted by total desc: the 2M opus row leads the 100-token unknown row.
+	opus, unknown := payload.ByModel[0], payload.ByModel[1]
+	if opus.Label != "claude-opus-4.6" || opus.Vendor != "anthropic" {
+		t.Fatalf("opus row %+v", opus)
+	}
+	if opus.CostUSD != "$30.0000" || opus.CostStatus != "complete" {
+		t.Fatalf("opus cost %+v", opus)
+	}
+	if opus.UnitPrices.Miss == nil || *opus.UnitPrices.Miss != 5 {
+		t.Fatalf("opus miss unit %+v", opus.UnitPrices.Miss)
+	}
+	if opus.UnitPrices.CacheCreate == nil || *opus.UnitPrices.CacheCreate != 6.25 {
+		t.Fatalf("opus cache_create unit %+v", opus.UnitPrices.CacheCreate)
+	}
+	if unknown.Label != "(未知模型)" || unknown.Vendor != "cursor" {
+		t.Fatalf("unknown row %+v", unknown)
+	}
+	if unknown.CostUSD != "" || unknown.CostStatus != "unavailable" {
+		t.Fatalf("unknown must omit $0: %+v", unknown)
+	}
+	if unknown.UnitPrices.Miss != nil || unknown.UnitPrices.Output != nil {
+		t.Fatalf("unknown unit prices must be nil: %+v", unknown.UnitPrices)
+	}
+}
+
+func TestMarshalSummaryOmitsByModelWhenEmpty(t *testing.T) {
+	raw, err := MarshalSummary(Result{Errors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "by_model") {
+		t.Fatalf("empty summary must omit by_model: %s", raw)
+	}
+}

@@ -360,6 +360,7 @@ type summaryJSON struct {
 	BySource       []metric.SliceView `json:"by_source"`
 	ByVendor       []metric.SliceView `json:"by_vendor"`
 	BySourceVendor []sourceVendorView `json:"by_source_vendor"`
+	ByModel        []metric.ModelView `json:"by_model,omitempty"`
 	Calendar       metric.Calendar    `json:"calendar"`
 	Drill          drillJSON          `json:"drill"`
 	Errors         []string           `json:"errors"`
@@ -487,6 +488,9 @@ func buildSummaryJSON(r Result) summaryJSON {
 	}
 	if out.BySourceVendor == nil {
 		out.BySourceVendor = []sourceVendorView{}
+	}
+	for _, m := range r.Summary.ByModel {
+		out.ByModel = append(out.ByModel, metric.ViewModel(m))
 	}
 	for id, pack := range r.Summary.DrillBySource {
 		out.Drill.BySource[id] = metric.ViewDrill(pack)

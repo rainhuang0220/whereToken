@@ -49,10 +49,61 @@ type Summary struct {
 	BySource       []Slice
 	ByVendor       []Slice
 	BySourceVendor []SourceVendor
+	ByModel        []ModelSlice
 	Calendar       Calendar
 	DrillAll       DrillPack
 	DrillBySource  map[string]DrillPack
 	DrillByVendor  map[string]DrillPack
+}
+
+// ModelSlice aggregates one pricing-normalized model id within one vendor.
+// Model is the id price.Resolve matched (claude-opus-4.6); events no card
+// matches group under Model == "" with Label (未知模型) and a nil Rate.
+// Rate points at the list card from the first successful Resolve for the
+// key; it identifies the card, it does not claim every event was priced.
+type ModelSlice struct {
+	Slice
+	Vendor, Model string
+	Rate          *price.Rate
+}
+
+// UnitPriceView lists the card rates behind a model row, USD per 1M tokens.
+// A nil component is unlisted on the card — distinct from a listed 0 (free,
+// e.g. Z.ai cache-write storage).
+type UnitPriceView struct {
+	Miss        *float64 `json:"miss,omitempty"`
+	CacheRead   *float64 `json:"cache_read,omitempty"`
+	CacheCreate *float64 `json:"cache_create,omitempty"`
+	Output      *float64 `json:"output,omitempty"`
+}
+
+type ModelView struct {
+	SliceView
+	Vendor     string        `json:"vendor"`
+	UnitPrices UnitPriceView `json:"unit_prices"`
+}
+
+func ViewModel(m ModelSlice) ModelView {
+	v := ModelView{SliceView: View(m.Slice), Vendor: m.Vendor}
+	if r := m.Rate; r != nil {
+		v.UnitPrices.Miss = listedRate(r.Miss)
+		v.UnitPrices.CacheRead = listedRate(r.CacheRead)
+		v.UnitPrices.Output = listedRate(r.Output)
+		if r.CacheCreate > 0 || r.CreateFree {
+			cc := r.CacheCreate
+			v.UnitPrices.CacheCreate = &cc
+		}
+	}
+	return v
+}
+
+// listedRate exposes a listed (>0) card rate; an unlisted component stays
+// nil so the UI never mistakes missing pricing for free.
+func listedRate(usdPerM float64) *float64 {
+	if usdPerM <= 0 {
+		return nil
+	}
+	return &usdPerM
 }
 
 type SliceView struct {
@@ -163,6 +214,7 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 	bySource := map[string]*Slice{}
 	byVendor := map[string]*Slice{}
 	byCross := map[string]*SourceVendor{}
+	byModel := map[string]*ModelSlice{}
 	srcDerive := map[string]map[string]struct{}{}
 	allDerive := map[string]struct{}{}
 
@@ -206,6 +258,8 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 		} else if toks > 0 {
 			cross.UnpricedTokens = satAdd(cross.UnpricedTokens, toks)
 		}
+		model := modelSlice(byModel, e)
+		addSlice(&model.Slice, e, ch)
 	}
 
 	for _, t := range turns {
@@ -231,9 +285,14 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 		s.CostStatus = price.Status(s.PricedTokens, s.UnpricedTokens)
 		sum.BySourceVendor = append(sum.BySourceVendor, *s)
 	}
+	for _, s := range byModel {
+		finishCost(&s.Slice)
+		sum.ByModel = append(sum.ByModel, *s)
+	}
 	sort.Slice(sum.BySource, func(i, j int) bool { return sum.BySource[i].Total() > sum.BySource[j].Total() })
 	sort.Slice(sum.ByVendor, func(i, j int) bool { return sum.ByVendor[i].Total() > sum.ByVendor[j].Total() })
 	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
+	sort.Slice(sum.ByModel, func(i, j int) bool { return sum.ByModel[i].Total() > sum.ByModel[j].Total() })
 	sum.Calendar = BuildCalendar(merged, loc, now)
 	sum.DrillAll, sum.DrillBySource, sum.DrillByVendor = buildDrill(merged, turns)
 	return sum
@@ -351,6 +410,38 @@ func getSlice(m map[string]*Slice, id, label string) *Slice {
 	}
 	s := &Slice{ID: id, Label: label}
 	m[id] = s
+	return s
+}
+
+// unknownModelLabel labels the per-vendor bucket of events whose model no
+// list card matches. Distinct from drill's (未标模型): here the model id may
+// be present but unpriced, and it stays unavailable — never free.
+const unknownModelLabel = "(未知模型)"
+
+// modelSlice returns the ByModel bucket for e. price.Resolve runs once per
+// event (memoized): a resolved event groups under its normalized model id
+// and keeps the first card Resolve matched; an unresolved event groups
+// under Model "" with a nil Rate. Cost comes from the shared per-event
+// charge, so ByModel totals reconcile with All.
+func modelSlice(m map[string]*ModelSlice, e event.UsageEvent) *ModelSlice {
+	rate, norm, ok := price.Resolve(e.Vendor, e.Model, e.Timestamp)
+	key := e.Vendor + "\x00" + norm
+	if !ok {
+		key = e.Vendor + "\x00"
+	}
+	if s, ok := m[key]; ok {
+		return s
+	}
+	s := &ModelSlice{Vendor: e.Vendor}
+	if ok {
+		r := rate
+		s.Model = norm
+		s.Slice = Slice{ID: norm, Label: norm}
+		s.Rate = &r
+	} else {
+		s.Slice = Slice{ID: "", Label: unknownModelLabel}
+	}
+	m[key] = s
 	return s
 }
 
