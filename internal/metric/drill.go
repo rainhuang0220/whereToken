@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/price"
 )
 
 const (
@@ -89,18 +90,19 @@ func buildDrill(events []event.UsageEvent, turns []event.TurnEvent) (DrillPack, 
 	vendSess := map[string]map[string]*SessionSlice{}
 
 	for _, e := range events {
+		ch := price.Event(e)
 		modelID := nz(e.Model, unlabeledModel)
 		wsID := nz(e.Workspace, unlabeledWorkspace)
 		sessID := sessionID(e)
-		addSlice(getSlice(allModels, modelID, modelID), e)
-		addSlice(getSlice(allWS, wsID, wsID), e)
-		addSession(allSess, sessID, e)
-		addSlice(getSlice(nested(srcModels, e.Source), modelID, modelID), e)
-		addSlice(getSlice(nested(srcWS, e.Source), wsID, wsID), e)
-		addSession(nestedSess(srcSess, e.Source), sessID, e)
-		addSlice(getSlice(nested(vendModels, e.Vendor), modelID, modelID), e)
-		addSlice(getSlice(nested(vendWS, e.Vendor), wsID, wsID), e)
-		addSession(nestedSess(vendSess, e.Vendor), sessID, e)
+		addSlice(getSlice(allModels, modelID, modelID), e, ch)
+		addSlice(getSlice(allWS, wsID, wsID), e, ch)
+		addSession(allSess, sessID, e, ch)
+		addSlice(getSlice(nested(srcModels, e.Source), modelID, modelID), e, ch)
+		addSlice(getSlice(nested(srcWS, e.Source), wsID, wsID), e, ch)
+		addSession(nestedSess(srcSess, e.Source), sessID, e, ch)
+		addSlice(getSlice(nested(vendModels, e.Vendor), modelID, modelID), e, ch)
+		addSlice(getSlice(nested(vendWS, e.Vendor), wsID, wsID), e, ch)
+		addSession(nestedSess(vendSess, e.Vendor), sessID, e, ch)
 	}
 
 	for _, t := range turns {
@@ -167,7 +169,7 @@ func nestedSess(m map[string]map[string]*SessionSlice, key string) map[string]*S
 	return inner
 }
 
-func addSession(m map[string]*SessionSlice, id string, e event.UsageEvent) {
+func addSession(m map[string]*SessionSlice, id string, e event.UsageEvent, ch price.Charge) {
 	s := m[id]
 	if s == nil {
 		s = &SessionSlice{
@@ -179,7 +181,7 @@ func addSession(m map[string]*SessionSlice, id string, e event.UsageEvent) {
 		}
 		m[id] = s
 	}
-	addSlice(&s.Slice, e)
+	addSlice(&s.Slice, e, ch)
 	if e.Model != "" {
 		s.Model = e.Model
 	}

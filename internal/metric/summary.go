@@ -145,7 +145,7 @@ func CostSlice(events []event.UsageEvent) Slice {
 	merged := mergeByRequest(events)
 	all := Slice{ID: "all", Label: "合计"}
 	for _, e := range merged {
-		addSlice(&all, e)
+		addSlice(&all, e, price.Event(e))
 	}
 	finishCost(&all)
 	return all
@@ -167,9 +167,10 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 	allDerive := map[string]struct{}{}
 
 	for _, e := range merged {
-		addSlice(&all, e)
+		ch := price.Event(e)
+		addSlice(&all, e, ch)
 		src := getSlice(bySource, e.Source, sourceLabel(e.Source))
-		addSlice(src, e)
+		addSlice(src, e, ch)
 		src.Records++
 		if e.Derivation != "" {
 			if srcDerive[e.Source] == nil {
@@ -179,7 +180,7 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 			allDerive[e.Derivation] = struct{}{}
 		}
 		vend := getSlice(byVendor, e.Vendor, vendor.Label(e.Vendor))
-		addSlice(vend, e)
+		addSlice(vend, e, ch)
 		key := e.Source + "\x00" + e.Vendor
 		cross := byCross[key]
 		if cross == nil {
@@ -199,7 +200,6 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 			cross.Requests++
 		}
 		toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
-		ch := price.Event(e)
 		if ch.OK {
 			cross.CostMicro = satAdd(cross.CostMicro, ch.Micro)
 			cross.PricedTokens = satAdd(cross.PricedTokens, toks)
@@ -313,7 +313,9 @@ func qualityRank(q event.Quality) int {
 	}
 }
 
-func addSlice(s *Slice, e event.UsageEvent) {
+// addSlice folds one merged event into s. ch must be price.Event(e) for the
+// same event; callers price once per event and share the charge across axes.
+func addSlice(s *Slice, e event.UsageEvent, ch price.Charge) {
 	s.Miss = satAdd(s.Miss, e.Miss)
 	s.CacheRead = satAdd(s.CacheRead, e.CacheRead)
 	s.CacheCreate = satAdd(s.CacheCreate, e.CacheCreate)
@@ -325,7 +327,6 @@ func addSlice(s *Slice, e event.UsageEvent) {
 		s.Quality = e.Quality
 	}
 	toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
-	ch := price.Event(e)
 	if ch.OK {
 		s.CostMicro = satAdd(s.CostMicro, ch.Micro)
 		s.MissCostMicro = satAdd(s.MissCostMicro, ch.Miss)
