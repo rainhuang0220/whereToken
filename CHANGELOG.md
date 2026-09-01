@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-09-01 (Alpha)
 
 - Dashboard: the KPI row is a fixed 2×4 grid again; the fourth column is 估价 over 用量评价. 用量评价 is a local, deterministic profile of the selected period (高强度使用 / 成本偏高 / 多模型探索 / 单模型集中 / 高缓存复用 / 稳定使用 / 轻量使用) with a one-line reason; empty data is — and too little data is 暂无评价, never 轻量使用. It follows the selected period and rides the summary payload (`evaluation`)
 - Dashboard: the Community Rank cell leaves the KPI row (no public rank backend exists to back a podium). The community package, `wheretoken community`, and the rank insight line stay
