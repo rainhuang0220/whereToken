@@ -1,4 +1,4 @@
-.TH WHERETOKEN 1 "August 2026" "whereToken" "User Commands"
+.TH WHERETOKEN 1 "September 2026" "whereToken" "User Commands"
 .SH NAME
 wheretoken \- local coding-agent token usage as a character table
 .SH SYNOPSIS
@@ -38,6 +38,11 @@ wheretoken \- local coding-agent token usage as a character table
 [\fIflags\fR]
 .B community
 [\fIstatus\fR|\fIon\fR|\fIoff\fR|\fIserve\fR]
+.br
+.B wheretoken
+[\fIflags\fR]
+.B pricing
+[\fB--vendor\fR \fINAME\fR] [\fB--model\fR \fINAME\fR] [\fB--json\fR]
 .br
 .B wheretoken
 [\fIflags\fR]
@@ -185,6 +190,19 @@ Anonymous Community Rank participation. Default on when
 is set.
 .B serve
 binds 127.0.0.1 for a self-hosted rank service.
+.TP
+.B pricing
+The built-in model price card the cost estimate uses, with each vendor's
+official source page and the date a maintainer last verified the rates.
+An unlisted component is
+.B \(em
+(unknown, never $0); a card-listed free component is $0.00 限免.
+.B --vendor
+and
+.B --model
+filter rows;
+.B --json
+emits the card as JSON (null = unlisted). No time-window or tool flags.
 .SH EXIT STATUS
 .TP
 .B 0
@@ -274,6 +292,12 @@ Remove this install. Homebrew installs run
 .TP
 .B wheretoken --model=k3 --json
 Schema 1 JSON for that model.
+.TP
+.B wheretoken pricing
+The model price card with official sources and verification dates.
+.TP
+.B wheretoken pricing --model opus
+Only rows whose canonical id matches, using the calculator's own rules.
 .SH PRIVACY
 Local-first remains the core. Never prints JWTs or access tokens.
 Community Rank uploads only when

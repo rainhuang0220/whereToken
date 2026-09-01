@@ -13,9 +13,30 @@ miss_cost + cache_read_cost + cache_create_cost + output_cost
 ```
 
 Reasoning is never charged as its own line. If an adapter already folded
-reasoning into `Output` (Codex, OpenCode), only `Output` is priced. Grok and
-MiniMax store reasoning beside output and do **not** add it to `Total`; that
-reasoning is also not priced (it is not treated as a second output line).
+reasoning into `Output` (Codex, OpenCode, Kilo CLI, ZCode), only `Output`
+is priced. Grok and MiniMax store reasoning beside output and do **not** add
+it to `Total`; that reasoning is also not priced (it is not treated as a
+second output line).
+
+## Inspect the card
+
+`wheretoken pricing` prints the same table the calculator reads — there is
+no second copy to drift. Each vendor block shows the official source page
+and the date a maintainer last verified the rates against it (a verification
+date, not the program's run date).
+
+```bash
+wheretoken pricing                      # full card
+wheretoken pricing --vendor anthropic   # one vendor
+wheretoken pricing --model opus         # fuzzy / canonicalized match
+wheretoken pricing --json               # stable schema for scripts
+```
+
+An unlisted component renders as `—` (unknown, never `$0`); a card-listed
+free component renders as `$0.00 限免`. In JSON those are `null` and
+`0` + `"cache_create_free": true`. `--model` uses the calculator's own
+normalization: `claude-opus-4-1` finds the `opus-4.1` row, while a dated
+suffix like `claude-opus-4-1-20250805` intentionally matches nothing.
 
 ## Status
 
@@ -92,9 +113,17 @@ added. Coding-agent subscriptions are not treated as API list prices.
 
 ## Sources
 
-- Anthropic: https://platform.claude.com/docs/en/about-claude/pricing
-- xAI short-context tier: https://docs.x.ai/developers/pricing
-- OpenAI: https://developers.openai.com/api/docs/pricing
-- MiniMax pay-as-you-go: https://platform.minimax.io/docs/guides/pricing-paygo
-- Z.ai: https://docs.z.ai/guides/overview/pricing
-- DeepSeek (peak rates): https://api-docs.deepseek.com/quick_start/pricing
+- Anthropic: https://platform.claude.com/docs/en/about-claude/pricing (verified 2026-08-19)
+- xAI short-context tier: https://docs.x.ai/developers/pricing (verified 2026-08-19)
+- OpenAI: https://developers.openai.com/api/docs/pricing (verified 2026-08-19)
+- Moonshot: https://platform.kimi.ai/docs/pricing (verified 2026-08-20)
+- MiniMax pay-as-you-go: https://platform.minimax.io/docs/guides/pricing-paygo (verified 2026-08-19)
+- Z.ai: https://docs.z.ai/guides/overview/pricing (verified 2026-08-25)
+- Google: https://ai.google.dev/gemini-api/docs/pricing (verified 2026-08-13)
+- DeepSeek (peak rates): https://api-docs.deepseek.com/quick_start/pricing (verified 2026-08-25)
+
+Official vendor pages only — no aggregators. A 2026-09-01 re-audit against
+public snapshots of those pages found no conflicting official prices; the
+few component rates that snapshots did not re-confirm (MiniMax cache write,
+DeepSeek cache read) were kept unchanged rather than guessed. The CLI prints
+the same metadata: `wheretoken pricing`.

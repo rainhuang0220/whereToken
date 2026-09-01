@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Dashboard: the KPI row is a fixed 2×4 grid again; the fourth column is 估价 over 用量评价. 用量评价 is a local, deterministic profile of the selected period (高强度使用 / 成本偏高 / 多模型探索 / 单模型集中 / 高缓存复用 / 稳定使用 / 轻量使用) with a one-line reason; empty data is — and too little data is 暂无评价, never 轻量使用. It follows the selected period and rides the summary payload (`evaluation`)
+- Dashboard: the Community Rank cell leaves the KPI row (no public rank backend exists to back a podium). The community package, `wheretoken community`, and the rank insight line stay
+- New command: `wheretoken pricing` prints the built-in price card the estimator actually uses — per-vendor rows with input / cache-read / cache-write / output rates, the official source page, and the maintainer verification date. `--vendor` / `--model` filter (model match uses the calculator's normalization), `--json` emits a stable schema. Unlisted components are `—` / `null` (never `$0`); card-listed free cache write is `$0.00 限免` / `cache_create_free`. Report-only flags are rejected
+- Price card gains provenance metadata (`price.Sources`); docs/cost.md lists every official source with verification dates and the pricing command
+- Demo payloads regenerate through the real pipeline, so the public demo's 用量评价 is computed by the evaluator
+
 ## 0.4.6 — 2026-08-31 (Alpha)
 
 - ZCode (Z.ai ADE) adapter: `~/.zcode/cli/db/db.sqlite` `model_usage` rows, cache/reasoning-inclusive buckets split out, `computed_total_tokens` disambiguation, legacy schema without the column still counts

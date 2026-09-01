@@ -54,13 +54,13 @@
 
 ### 本机仪表盘
 
-在浏览器中查看同一份数据，服务只跑在这台电脑上。
+在浏览器中查看同一份数据，服务只跑在这台电脑上。指标行末尾是当前周期的估价和一句可解释的用量评价（高强度使用、多模型探索……），完全由本机数据按确定规则算出——不联网、不调模型，没有数据不会假装「轻量使用」。
 
 ### 命令行与 JSON
 
 在终端查询，或导出归一化后的 JSON 供脚本使用。
 
-whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，不是订阅账单；没有标价不会写成 $0。
+whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，不是订阅账单；没有标价不会写成 $0。`wheretoken pricing` 打印完整价目卡，含各厂家官方来源页和最近核验日期。
 
 ## 安装
 
@@ -130,6 +130,7 @@ wheretoken --since 7d
 wheretoken --json
 wheretoken serve
 wheretoken doctor
+wheretoken pricing
 wheretoken rebuild
 wheretoken update
 wheretoken uninstall

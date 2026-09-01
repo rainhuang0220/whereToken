@@ -8,7 +8,7 @@ Local-first token usage accounting. Read these before changing parsers or totals
 - Adapter contract: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md), [`docs/data-sources.md`](docs/data-sources.md)
 - Register a tool in `internal/adapter/<id>/`, `adapter.Catalog`, and `scan.Adapters` only. Completions rewrite `--tool` from Catalog.
 - Global research table: [`docs/provider-matrix.md`](docs/provider-matrix.md)
-- Cost: [`docs/cost.md`](docs/cost.md)
+- Cost: [`docs/cost.md`](docs/cost.md); the estimator and `wheretoken pricing` read one table — rates in `internal/price/table.go`, official sources + verification dates in `internal/price/catalog.go`
 - Community Rank: [`docs/community.md`](docs/community.md)
 
 ## Hard rules

@@ -24,7 +24,8 @@ Total =
 ```
 
 Reasoning is **not** a sixth addend. If an adapter already included reasoning
-inside `Output` (Codex, OpenCode), adding `Reasoning` again would double-count.
+inside `Output` (Codex, OpenCode, Kilo CLI, ZCode), adding `Reasoning` again
+would double-count.
 
 Cache hit rate (when defined):
 

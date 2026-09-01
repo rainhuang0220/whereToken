@@ -54,13 +54,16 @@ Inspect daily totals, streaks, and cache hit rate.
 
 ### Local dashboard
 
-Explore the same data in a browser interface that runs on your machine.
+Explore the same data in a browser interface that runs on your machine. The
+KPI row ends with the period's estimated cost and a short, explainable usage
+profile (高强度使用, 多模型探索, …) computed locally from your own numbers —
+no ML, no network, and "no data" is never called "light usage".
 
 ### CLI and JSON
 
 Query usage from the terminal, or export a normalized JSON report for scripts.
 
-whereToken reports token counts. When a public list price exists, it also shows an API-equivalent estimate. That is not a subscription bill, and a missing price is not written as $0.
+whereToken reports token counts. When a public list price exists, it also shows an API-equivalent estimate. That is not a subscription bill, and a missing price is not written as $0. `wheretoken pricing` prints the full price card with each vendor's official source page and the date the rates were last verified.
 
 ## Installation
 
@@ -130,6 +133,7 @@ wheretoken --since 7d
 wheretoken --json
 wheretoken serve
 wheretoken doctor
+wheretoken pricing
 wheretoken rebuild
 wheretoken update
 wheretoken uninstall
