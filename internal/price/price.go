@@ -9,7 +9,10 @@ package price
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
@@ -198,6 +201,88 @@ func Canonical(model string) string {
 	}
 	s = strings.ReplaceAll(s, "_", "-")
 	return foldVersionDots(s)
+}
+
+var claudeFamily = map[string]bool{
+	"opus": true, "sonnet": true, "haiku": true, "fable": true, "mythos": true,
+}
+
+// effortSuffix is the trailing effort/thinking token some APIs append
+// (gpt-5-high). It is not part of the list id.
+var effortSuffix = map[string]bool{
+	"high": true, "low": true, "medium": true, "minimal": true, "thinking": true,
+}
+
+var modelVersionRe = regexp.MustCompile(`^\d+(\.\d+)?(\.\d+)?$`)
+
+// Normalize maps a provider model id to the family-first id the rate table
+// patterns use. Version-first ids (claude-4.6-opus-high-thinking) become
+// claude-opus-4.6; one trailing effort token is dropped when the rest still
+// names a version (gpt-5-high → gpt-5). Anything else passes Canonical
+// through unchanged. vendor is reserved; matching is id-shape only.
+func Normalize(vendor, model string) string {
+	canon := Canonical(model)
+	tokens := strings.Split(canon, "-")
+	if tokens[0] == "claude" {
+		family, version := "", ""
+		for _, tok := range tokens[1:] {
+			if family == "" && claudeFamily[tok] {
+				family = tok
+			}
+			if version == "" {
+				version = versionToken(tok)
+			}
+		}
+		if family != "" && version != "" {
+			return "claude-" + family + "-" + version
+		}
+	}
+	if i := strings.LastIndex(canon, "-"); i >= 0 && effortSuffix[canon[i+1:]] {
+		if rest := canon[:i]; strings.ContainsAny(rest, "0123456789") {
+			return rest
+		}
+	}
+	return canon
+}
+
+// versionToken reads the version carried by one token: "4.6" as-is, the
+// leading "4.5" of a dated "4.5.20250929". Non-version tokens return "".
+func versionToken(tok string) string {
+	if !modelVersionRe.MatchString(tok) {
+		return ""
+	}
+	if parts := strings.Split(tok, "."); len(parts) == 3 {
+		return parts[0] + "." + parts[1]
+	}
+	return tok
+}
+
+// resolveMemo caches Lookup results keyed vendor|normalized|tsDay, where
+// tsDay is ts.Unix()/86400 and -1 marks undated events.
+var resolveMemo sync.Map
+
+type resolvedRate struct {
+	rate Rate
+	ok   bool
+}
+
+// Resolve looks up the list card for model after Normalize. The second
+// return value is the normalized id actually priced. ok=false means no card
+// matches: cost stays unavailable, never zero.
+func Resolve(vendor, model string, ts time.Time) (Rate, string, bool) {
+	norm := Normalize(vendor, model)
+	day := int64(-1)
+	if !ts.IsZero() {
+		day = ts.Unix() / 86400
+	}
+	key := vendor + "|" + norm + "|" + strconv.FormatInt(day, 10)
+	if hit, ok := resolveMemo.Load(key); ok {
+		r := hit.(resolvedRate)
+		return r.rate, norm, r.ok
+	}
+	rate, ok := Lookup(vendor, norm, ts)
+	resolveMemo.Store(key, resolvedRate{rate, ok})
+	return rate, norm, ok
 }
 
 func foldVersionDots(s string) string {

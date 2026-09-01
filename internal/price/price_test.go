@@ -442,3 +442,114 @@ func TestDuplicateMergeThenPrice(t *testing.T) {
 		t.Fatalf("complementary %d vs %d+%d", merged.Micro, ca.Micro, cb.Micro)
 	}
 }
+
+func TestNormalize(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"claude-4.6-opus-high-thinking", "claude-opus-4.6"},
+		{"claude-3.7-sonnet", "claude-sonnet-3.7"},
+		{"claude-4.5-sonnet", "claude-sonnet-4.5"},
+		{"claude-opus-4-6", "claude-opus-4.6"},
+		{"claude-sonnet-4.5-20250929", "claude-sonnet-4.5"},
+		{"gpt-5-high", "gpt-5"},
+		{"gpt-5", "gpt-5"},
+		{"gpt-5.3-codex", "gpt-5.3-codex"},
+		{"gemini-2.5-pro", "gemini-2.5-pro"},
+		{"grok-4.6-build", "grok-4.6-build"},
+		{"grok-4-fast", "grok-4-fast"},
+		{"o3-deep", "o3-deep"},
+		{"auto", "auto"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := Normalize("cursor", c.in); got != c.want {
+			t.Errorf("Normalize(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestResolveVersionFirstIDs(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	r, norm, ok := Resolve("anthropic", "claude-4.6-opus-high-thinking", now)
+	if !ok || norm != "claude-opus-4.6" {
+		t.Fatalf("resolve opus norm=%q ok=%v", norm, ok)
+	}
+	if r.Miss != 5 || r.CacheRead != 0.5 || r.CacheCreate != 6.25 || r.Output != 25 {
+		t.Fatalf("opus-4.6 card %+v", r)
+	}
+	r, norm, ok = Resolve("openai", "gpt-5-high", now)
+	if !ok || norm != "gpt-5" {
+		t.Fatalf("resolve gpt-5 norm=%q ok=%v", norm, ok)
+	}
+	if r.Miss != 1.25 || r.CacheRead != 0.125 || r.CacheCreate != 0 || r.Output != 10 {
+		t.Fatalf("gpt-5 card %+v", r)
+	}
+}
+
+func TestResolveUnknownStaysUnavailable(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	if r, norm, ok := Resolve("acme", "mystery-9000", now); ok {
+		t.Fatalf("unknown must not invent a price: %+v norm=%q", r, norm)
+	}
+	// version-first id that normalizes to an unlisted model: no haiku-4 row.
+	if _, norm, ok := Resolve("anthropic", "claude-4-haiku", now); ok {
+		t.Fatalf("%s must stay unpriced (no haiku-4 list row)", norm)
+	}
+}
+
+func TestResolveMemoConsistent(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	r1, n1, ok1 := Resolve("anthropic", "claude-4.6-opus-high-thinking", now)
+	r2, n2, ok2 := Resolve("anthropic", "claude-4.6-opus-high-thinking", now)
+	if r1 != r2 || n1 != n2 || ok1 != ok2 {
+		t.Fatalf("memo mismatch %+v/%q/%v vs %+v/%q/%v", r1, n1, ok1, r2, n2, ok2)
+	}
+	if !ok1 {
+		t.Fatal("expected priced")
+	}
+}
+
+func TestResolveMatchesLookupSemantics(t *testing.T) {
+	dated := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	for _, ts := range []time.Time{{}, dated} {
+		r, norm, ok := Resolve("anthropic", "claude-4.6-opus-high-thinking", ts)
+		want, wantOK := Lookup("anthropic", norm, ts)
+		if ok != wantOK || r != want {
+			t.Fatalf("ts=%v Resolve %+v/%v vs Lookup %+v/%v", ts, r, ok, want, wantOK)
+		}
+		if !ok {
+			t.Fatalf("ts=%v opus-4.6 must price", ts)
+		}
+	}
+}
+
+func TestResolveHistoricalWindow(t *testing.T) {
+	old := Rate{
+		Vendor: "anthropic", Model: "res-hist",
+		Miss: 9, Output: 9,
+		From:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		To:      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Version: "old",
+	}
+	cur := Rate{
+		Vendor: "anthropic", Model: "res-hist",
+		Miss: 1, Output: 1,
+		From:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Version: "new",
+	}
+	prev := table
+	table = []Rate{old, cur}
+	defer func() { table = prev }()
+
+	r, _, ok := Resolve("anthropic", "res-hist", time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC))
+	if !ok || r.Version != "old" || r.Miss != 9 {
+		t.Fatalf("old window %+v ok=%v", r, ok)
+	}
+	r, _, ok = Resolve("anthropic", "res-hist", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC))
+	if !ok || r.Version != "new" || r.Miss != 1 {
+		t.Fatalf("new window %+v ok=%v", r, ok)
+	}
+	r, _, ok = Resolve("anthropic", "res-hist", time.Time{})
+	if !ok || r.Version != "new" {
+		t.Fatalf("undated must use open card %+v ok=%v", r, ok)
+	}
+}
