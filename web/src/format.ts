@@ -1,4 +1,4 @@
-import type { RankStanding, SliceView } from './types'
+import type { SliceView } from './types'
 
 export function formatCount(n: number): string {
   const neg = n < 0
@@ -113,16 +113,6 @@ export function costCaption(view: Pick<SliceView, 'cost_usd' | 'cost_status' | '
   return ''
 }
 
-export function optionalDay(formatted?: string, quality?: string): string {
-  if (quality === 'absent') {
-    return '不可用'
-  }
-  if (!formatted) {
-    return '—'
-  }
-  return formatted
-}
-
 export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
   const usd = usableCostUSD(view.cost_usd)
   if (usd) return usd
@@ -141,27 +131,4 @@ export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status'
     default:
       return ''
   }
-}
-
-export const MIN_RANK_PARTICIPANTS = 20
-const displayCrowd = /#\d+\s*\/\s*(\d+)/
-
-export function rankCaption(st?: Pick<RankStanding, 'status' | 'display' | 'rank' | 'participants'>): string {
-  if (st?.participants != null && st.participants > 0 && st.participants < MIN_RANK_PARTICIPANTS) {
-    return '—'
-  }
-  if (st?.status && st.status !== 'ok') {
-    return '—'
-  }
-  const crowd = st?.display?.match(displayCrowd)
-  if (crowd) {
-    const n = Number(crowd[1])
-    if (Number.isFinite(n) && n > 0 && n < MIN_RANK_PARTICIPANTS) {
-      return '—'
-    }
-  }
-  if (st?.rank && st.rank > 0 && st.display && !st.display.includes('#0')) {
-    return st.display
-  }
-  return '—'
 }

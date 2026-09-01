@@ -92,27 +92,29 @@ describe('cross table', () => {
   })
 })
 
-describe('kpi fifth cell', () => {
+describe('kpi fourth column', () => {
   const vue = readFileSync(join(SRC, 'components/KpiRow.vue'), 'utf8')
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8')
   const fmt = readFileSync(join(SRC, 'format.ts'), 'utf8')
 
-  it('stacks 估价 over 排名 in .read-col5', () => {
-    expect(vue).toMatch(/class="read-cell read-col5"/)
-    const col5 = vue.slice(vue.indexOf('read-col5'), vue.indexOf('当前连烧'))
-    expect(col5.indexOf('估价')).toBeGreaterThan(-1)
-    expect(col5.indexOf('排名')).toBeGreaterThan(col5.indexOf('估价'))
-    expect(css).toMatch(/\.read-col5\s*\{[^}]*grid-row:\s*1\s*\/\s*span\s*2/)
+  it('is a 2×4 grid with 估价 over 用量评价, no rank cell', () => {
+    expect(css).toMatch(/\.readout\s*\{[^}]*grid-template-columns:\s*repeat\(4,/)
+    expect(css).not.toMatch(/read-col5/)
+    expect(vue).not.toMatch(/read-col5|排名|rankCaption|rankHint|rank-toggle/)
+    const est = vue.indexOf('估价')
+    const eva = vue.indexOf('用量评价')
+    expect(est).toBeGreaterThan(-1)
+    expect(eva).toBeGreaterThan(est)
+    expect(vue.slice(eva)).toMatch(/\{\{\s*evalSummary\s*\}\}/)
+    expect(vue.slice(eva)).toMatch(/\{\{\s*evalReason\s*\}\}/)
   })
 
-  it('shows rankHint and never invents #0 or $0', () => {
-    expect(vue).toMatch(/rankHint/)
-    expect(vue).toMatch(/\{\{\s*hint\s*\}\}/)
-    expect(vue).toMatch(/rankCaption\(standing\)/)
+  it('points 估价 at the pricing command and never invents #0 or $0', () => {
+    expect(vue).toMatch(/wheretoken pricing/)
     expect(vue).not.toMatch(/#0/)
     expect(vue).toMatch(/costHonestyNote/)
     expect(vue).toMatch(/honesty/)
-    expect(fmt).toMatch(/includes\('#0'\)/)
+    expect(fmt).toMatch(/includes\('#0'\)|\$0\.0000/)
     expect(fmt).toMatch(/case 'unavailable'/)
     expect(fmt).toMatch(/不会写成 \$0/)
     expect(fmt).toMatch(/不是订阅账单/)

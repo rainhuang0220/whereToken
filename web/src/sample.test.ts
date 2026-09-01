@@ -35,6 +35,30 @@ describe('committed demo sample payloads', () => {
     }
   })
 
+  it('every period carries an evaluation computed by the real evaluator', () => {
+    const levels = new Set([
+      'none',
+      'insufficient',
+      'high_cost',
+      'high_usage',
+      'multi_model',
+      'single_model',
+      'cache_reuse',
+      'steady',
+      'light',
+    ])
+    for (const [name, p] of Object.entries(payloads)) {
+      expect(p.evaluation, name).toBeTruthy()
+      expect(levels.has(p.evaluation?.level ?? ''), name).toBe(true)
+      expect(p.evaluation?.summary, name).toBeTruthy()
+      expect(p.evaluation?.reason, name).toBeTruthy()
+    }
+    // The synthetic ledger is a heavy multi-vendor one; the flagship
+    // all-period page must profile it as such, not as a hardcoded string.
+    expect(payloads.all.evaluation?.level).toBe('high_usage')
+    expect(payloads.all.evaluation?.summary).toBe('高强度使用')
+  })
+
   it('today lands on the real calendar date', () => {
     const days = selectSeries(payloads.today, { kind: 'all', id: '' }).days
     expect(days.some((d) => d.date === todayISO() && d.total > 0)).toBe(true)

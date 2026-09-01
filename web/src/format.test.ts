@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, optionalDay, qualityCaption, rankCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -67,12 +67,6 @@ describe('tokenCell', () => {
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 0, user_turns: 0 })).toBe('不可用')
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('0.00 M')
   })
-
-  it('does not invent a measured 0.00 M for a missing day', () => {
-    expect(optionalDay(undefined, 'authoritative')).toBe('—')
-    expect(optionalDay(undefined, 'absent')).toBe('不可用')
-    expect(optionalDay('0.00 M', 'authoritative')).toBe('0.00 M')
-  })
 })
 
 describe('costCaption', () => {
@@ -83,24 +77,6 @@ describe('costCaption', () => {
     expect(costCaption({ cost_status: 'unavailable', total: 0 })).toBe('')
     expect(costCaption({ cost_usd: '$0.0000', cost_status: 'complete', total: 10 })).toBe('')
     expect(costKPI({ cost_usd: '$0.00', cost_status: 'complete', total: 1 })).toBe('—')
-  })
-})
-
-describe('rankCaption', () => {
-  it('never prints #0 for unknown rank', () => {
-    expect(rankCaption(undefined)).toBe('—')
-    expect(rankCaption({ status: 'unavailable' })).toBe('—')
-    expect(rankCaption({ status: 'ok', rank: 0, display: '#0 / 20' })).toBe('—')
-    expect(rankCaption({ status: 'ok', rank: 37, display: '#37 / 842' })).toBe('#37 / 842')
-    expect(rankCaption({ status: 'insufficient_participants', rank: 1, display: '#1 / 3', participants: 3 })).toBe('—')
-  })
-
-  it('never prints a remote podium below 20 participants', () => {
-    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 3' })).toBe('—')
-    expect(rankCaption({ status: 'ok', rank: 1, display: '#1/3' })).toBe('—')
-    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 19' })).toBe('—')
-    expect(rankCaption({ status: 'ok', rank: 1, display: '#1 / 20' })).toBe('#1 / 20')
-    expect(rankCaption({ status: 'ok', rank: 1, display: '#1', participants: 3 })).toBe('—')
   })
 })
 

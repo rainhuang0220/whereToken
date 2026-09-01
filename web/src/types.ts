@@ -72,6 +72,12 @@ export type SourceVendorView = {
   cost_usd?: string
 }
 
+export type UsageEvaluation = {
+  level: string
+  summary: string
+  reason?: string
+}
+
 export type SummaryPayload = {
   scanned_at?: string
   offline?: boolean
@@ -86,13 +92,12 @@ export type SummaryPayload = {
   why?: WhyRow[]
   compare?: CompareView
   insights?: { kind: string; text: string }[]
+  evaluation?: UsageEvaluation
   by_model?: SliceView[]
   by_workspace?: SliceView[]
   by_session?: SessionView[]
   community?: CommunityView
 }
-
-export type RankPeriod = 'today' | 'all'
 
 export type RankStanding = {
   status: string

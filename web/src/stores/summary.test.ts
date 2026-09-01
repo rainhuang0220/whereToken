@@ -7,7 +7,6 @@ import { useSummaryStore } from './summary'
 vi.mock('../api', () => ({
   fetchSummary: vi.fn(),
   rescan: vi.fn(),
-  setCommunity: vi.fn(),
 }))
 
 const fetchSummaryMock = vi.mocked(fetchSummary)

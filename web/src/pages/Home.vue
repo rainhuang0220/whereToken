@@ -113,11 +113,6 @@ const mouthLines = computed(() =>
   }),
 )
 
-const todayUsageM = computed(() => {
-  const day = series.value.days.find((d) => d.date === todayISO())
-  return day?.total_m ?? ''
-})
-
 const statusKind = computed(() => {
   if (emptyHint.value) return '空窑'
   if (!payload.value) return '未煅烧'
@@ -213,15 +208,10 @@ onMounted(() => {
     <template v-if="payload">
       <KpiRow
         :all="payload.all"
-        :today-m="todayUsageM"
-        :peak-m="series.stats.peak_total ? series.stats.peak_total_m : ''"
         :max-streak="series.stats.longest_streak"
         :current-streak="series.stats.current_streak"
         :compare-text="compareText"
-        :community="payload.community"
-        :rank-period="store.rankPeriod"
-        @update:rank-period="store.setRankPeriod($event)"
-        @toggle-community="store.toggleCommunity($event)"
+        :evaluation="payload.evaluation"
       />
       <p v-if="compareSources.length && store.period !== 'all'" class="period-delta">
         <span v-for="row in compareSources" :key="row.id">

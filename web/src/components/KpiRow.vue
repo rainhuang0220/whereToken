@@ -1,37 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { rankHint } from '../community'
-import { costHonestyNote, costKPI, formatCount, hitBand, optionalDay, rankCaption, tokenCell } from '../format'
-import type { CommunityView, RankPeriod, SliceView } from '../types'
+import { costHonestyNote, costKPI, formatCount, hitBand, tokenCell } from '../format'
+import type { SliceView, UsageEvaluation } from '../types'
 
 const props = defineProps<{
   all: SliceView
-  todayM?: string
-  peakM?: string
   maxStreak?: number
   currentStreak?: number
   compareText?: string
-  community?: CommunityView
-  rankPeriod?: RankPeriod
+  evaluation?: UsageEvaluation
 }>()
 
-const emit = defineEmits<{
-  'update:rankPeriod': [period: RankPeriod]
-  'toggle-community': [enabled: boolean]
-}>()
-
-const standing = computed(() =>
-  props.rankPeriod === 'all' ? props.community?.all : props.community?.today,
-)
 // A scan that found nothing is "—", never a fake 0.00 M.
 const totalText = computed(() =>
   !props.all.quality && !props.all.total && !props.all.requests && !props.all.user_turns
     ? '—'
     : tokenCell(props.all.total_m, props.all.quality, props.all),
 )
-const hint = computed(() => rankHint(props.community, standing.value))
 const honesty = computed(() => costHonestyNote(props.all))
-const canJoin = computed(() => standing.value?.status === 'opted_out')
+const evalSummary = computed(() => props.evaluation?.summary || '—')
+const evalReason = computed(() => props.evaluation?.reason || '')
 </script>
 
 <template>
@@ -48,55 +36,13 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
       <span class="read-k">最长连烧</span>
       <strong>{{ formatCount(maxStreak || 0) }} 天</strong>
     </div>
-    <div class="read-cell">
-      <span class="read-k">当日用量</span>
-      <strong>{{ optionalDay(todayM, all.quality) }}</strong>
-    </div>
     <div
-      class="read-cell read-col5"
-      title="Estimated API-equivalent cost based on public model pricing. This is not your actual subscription bill."
+      class="read-cell"
+      title="Estimated API-equivalent cost based on public model pricing. This is not your actual subscription bill. Run `wheretoken pricing` to see the rate card and where each price comes from."
     >
       <span class="read-k">估价</span>
       <strong>{{ costKPI(all) }}</strong>
-      <span class="read-k rank-k">排名</span>
-      <strong class="rank-v">{{ rankCaption(standing) }}</strong>
-      <div class="rank-toggle" role="group" aria-label="社区排名范围">
-        <button
-          type="button"
-          class="rank-btn"
-          :class="{ on: rankPeriod !== 'all' }"
-          :aria-pressed="rankPeriod !== 'all'"
-          @click="emit('update:rankPeriod', 'today')"
-        >
-          今日
-        </button>
-        <button
-          type="button"
-          class="rank-btn"
-          :class="{ on: rankPeriod === 'all' }"
-          :aria-pressed="rankPeriod === 'all'"
-          title="已同步的每日合计，不是窑墙「全部」"
-          @click="emit('update:rankPeriod', 'all')"
-        >
-          累计
-        </button>
-      </div>
-      <button
-        v-if="community?.enabled"
-        type="button"
-        class="rank-opt"
-        @click="emit('toggle-community', false)"
-      >
-        退出社区
-      </button>
-      <button
-        v-else-if="canJoin"
-        type="button"
-        class="rank-opt"
-        @click="emit('toggle-community', true)"
-      >
-        参加社区
-      </button>
+      <span class="read-sub">价目与来源见 wheretoken pricing</span>
     </div>
     <div class="read-cell">
       <span class="read-k">当前连烧</span>
@@ -110,12 +56,12 @@ const canJoin = computed(() => standing.value?.status === 'opted_out')
       <span class="read-k">用户回合</span>
       <strong>{{ formatCount(all.user_turns) }}</strong>
     </div>
-    <div class="read-cell">
-      <span class="read-k">单日最高</span>
-      <strong>{{ optionalDay(peakM, all.quality) }}</strong>
+    <div class="read-cell" :title="evalReason || undefined">
+      <span class="read-k">用量评价</span>
+      <strong>{{ evalSummary }}</strong>
+      <span v-if="evalReason" class="read-sub">{{ evalReason }}</span>
     </div>
     <p v-if="compareText" class="read-compare">{{ compareText }}</p>
     <p v-if="honesty" class="read-compare">{{ honesty }}</p>
-    <p v-if="hint" class="read-compare">{{ hint }}</p>
   </section>
 </template>
