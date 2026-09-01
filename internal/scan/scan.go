@@ -369,6 +369,7 @@ type summaryJSON struct {
 	Why            []whyJSON          `json:"why,omitempty"`
 	Compare        *metric.Compare    `json:"compare,omitempty"`
 	Insights       []insight.Line     `json:"insights,omitempty"`
+	Evaluation     insight.Evaluation `json:"evaluation"`
 	Community      *community.View    `json:"community,omitempty"`
 }
 
@@ -425,12 +426,13 @@ func buildSummaryJSON(r Result) summaryJSON {
 			BySource: map[string]metric.DrillTablesView{},
 			ByVendor: map[string]metric.DrillTablesView{},
 		},
-		Errors:    redactErrors(r.Errors),
-		Offline:   r.Offline,
-		Scanning:  r.Scanning,
-		Compare:   r.Compare,
-		Insights:  insight.Lines(r.Summary),
-		Community: r.Community,
+		Errors:     redactErrors(r.Errors),
+		Offline:    r.Offline,
+		Scanning:   r.Scanning,
+		Compare:    r.Compare,
+		Insights:   insight.Lines(r.Summary),
+		Evaluation: insight.Evaluate(r.Summary),
+		Community:  r.Community,
 	}
 	if r.Community != nil {
 		v := *r.Community

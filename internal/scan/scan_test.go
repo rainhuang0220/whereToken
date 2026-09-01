@@ -623,3 +623,76 @@ func writeScanCursorDB(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 }
+
+func summaryEvaluationLevel(t *testing.T, r Result) (string, string) {
+	t.Helper()
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Evaluation struct {
+			Level   string `json:"level"`
+			Summary string `json:"summary"`
+			Reason  string `json:"reason"`
+		} `json:"evaluation"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	return payload.Evaluation.Level, payload.Evaluation.Summary + "|" + payload.Evaluation.Reason
+}
+
+func TestMarshalSummaryIncludesEvaluation(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	r := Result{
+		Summary: metric.AggregateAt([]event.UsageEvent{
+			{Source: "kimi", Vendor: "moonshot", Model: "k3", Miss: 5_000_000, Timestamp: now},
+		}, nil, now, time.UTC),
+		Errors: []string{},
+	}
+	level, detail := summaryEvaluationLevel(t, r)
+	if level != "high_usage" || !strings.Contains(detail, "高强度使用") {
+		t.Fatalf("level=%s detail=%s", level, detail)
+	}
+	if !strings.Contains(detail, "5.00 M") {
+		t.Fatalf("evaluation must explain itself: %s", detail)
+	}
+}
+
+func TestMarshalSummaryEmptyEvaluationIsDash(t *testing.T) {
+	level, detail := summaryEvaluationLevel(t, Result{Errors: []string{}})
+	if level != "none" || !strings.HasPrefix(detail, "—") {
+		t.Fatalf("empty window is —, never light: level=%s detail=%s", level, detail)
+	}
+}
+
+func TestWindowedEvaluationFollowsTheWindow(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	evs := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", Model: "k3", Miss: 6_000_000, Timestamp: now},
+	}
+	for i := 1; i <= 4; i++ {
+		evs = append(evs, event.UsageEvent{
+			Source: "kimi", Vendor: "moonshot", Model: "k3",
+			Miss: 400_000, Timestamp: now.AddDate(0, 0, -i),
+		})
+	}
+	r := Result{
+		Summary: metric.AggregateAt(evs, nil, now, time.UTC),
+		Events:  evs,
+		Errors:  []string{},
+	}
+	win, err := metric.ParseWindow(true, "", "", "", now, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	levelToday, _ := summaryEvaluationLevel(t, ApplyWindow(r, win, time.UTC))
+	if levelToday != "high_usage" {
+		t.Fatalf("today window: %s", levelToday)
+	}
+	levelAll, _ := summaryEvaluationLevel(t, r)
+	if levelAll == "high_usage" {
+		t.Fatalf("all-time window must not inherit today's intensity: %s", levelAll)
+	}
+}
