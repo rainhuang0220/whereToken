@@ -108,6 +108,8 @@ const emptySeries: CalendarSeries = {
     peak_date: '',
     peak_total: 0,
     peak_total_m: '',
+    today_total: 0,
+    today_total_m: '',
     current_streak: 0,
     longest_streak: 0,
   },

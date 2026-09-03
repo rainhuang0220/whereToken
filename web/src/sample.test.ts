@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import all from '../public/sample/all.json'
 import d30 from '../public/sample/30d.json'
@@ -62,5 +65,42 @@ describe('committed demo sample payloads', () => {
   it('today lands on the real calendar date', () => {
     const days = selectSeries(payloads.today, { kind: 'all', id: '' }).days
     expect(days.some((d) => d.date === todayISO() && d.total > 0)).toBe(true)
+  })
+
+  it('gendemo pins the demo portrait seed', () => {
+    const SRC = dirname(fileURLToPath(import.meta.url))
+    const src = readFileSync(join(SRC, '..', '..', 'scripts', 'gendemo', 'main.go'), 'utf8')
+    expect(src).toContain('PortraitSeed')
+    expect(src).toContain('"demo-v1"')
+  })
+
+  it('every period carries a demo-seeded portrait and a model breakdown', () => {
+    for (const [name, p] of Object.entries(payloads)) {
+      expect(p.portrait?.state, name).toBe('ok')
+      expect(p.portrait?.primary, name).toBeTruthy()
+      expect(p.portrait?.primary, name).not.toBe('—')
+      expect(p.portrait?.primary, name).not.toBe('数据不足')
+      expect(p.portrait?.detail, name).toContain('tokens')
+      expect(p.portrait?.tags?.length ?? 0, name).toBeLessThanOrEqual(2)
+      expect(p.by_model?.length, name).toBeGreaterThan(0)
+      for (const m of p.by_model ?? []) {
+        expect(m.vendor, name).toBeTruthy()
+        expect(m.unit_prices, name).toBeTruthy()
+        expect(m.total_m, name).toBeTruthy()
+      }
+    }
+  })
+
+  it('exposes today totals and never a rank insight line', () => {
+    for (const [name, p] of Object.entries(payloads)) {
+      expect(typeof p.calendar?.all.stats.today_total, name).toBe('number')
+      expect(p.calendar?.all.stats.today_total_m, name).toBeTruthy()
+      for (const line of p.insights ?? []) {
+        expect(line.kind, name).not.toBe('community')
+        expect(line.text, name).not.toContain('社区排名')
+      }
+    }
+    // The today window is exactly today's bucket.
+    expect(payloads.today.calendar?.all.stats.today_total).toBe(payloads.today.all.total)
   })
 })

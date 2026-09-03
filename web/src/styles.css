@@ -604,14 +604,14 @@ h1 {
 
 .readout {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   margin: 0 0 1.6rem;
   border-top: 1px solid var(--copper);
   border-bottom: 1px solid var(--copper);
 }
 
-.readout .read-cell:nth-child(4n + 1) {
+.readout .read-cell:nth-child(5n + 1) {
   border-left: 0;
 }
 
@@ -634,6 +634,153 @@ h1 {
 
 .read-cell {
   border-left: 1px solid var(--mortar);
+}
+
+/* The 估价 cell is a button (click / Enter / Space opens the estimate
+   detail modal); reset chrome without touching the grid border-left. */
+button.read-btn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+button.read-btn:disabled {
+  cursor: default;
+}
+
+button.read-btn:not(:disabled):hover strong {
+  color: var(--ember-4);
+}
+
+button.read-btn:focus-visible {
+  outline: 2px solid var(--ember-4);
+  outline-offset: -2px;
+}
+
+.est-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(7, 5, 4, 0.65);
+}
+
+.est-modal {
+  width: min(44rem, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  background: var(--void);
+  border: 1px solid var(--copper);
+  padding: 1rem 1.2rem 1.2rem;
+}
+
+.est-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.est-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.est-close {
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--ash);
+  background: none;
+  border: 1px solid var(--mortar);
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+}
+
+.est-close:hover {
+  color: var(--ember-4);
+  border-color: var(--copper);
+}
+
+.est-note {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.est-group {
+  margin-top: 1rem;
+}
+
+.est-group h3 {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--copper);
+}
+
+.est-group table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.est-group th,
+.est-group td {
+  padding: 0.3rem 0.4rem;
+  border-top: 1px solid var(--mortar);
+  font-size: 0.78rem;
+}
+
+.est-group th {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--ash);
+  text-align: left;
+}
+
+.est-group .num,
+.est-total strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.est-prices {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.est-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--copper);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.est-total strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--ember-4);
 }
 
 .read-k {

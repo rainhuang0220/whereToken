@@ -78,6 +78,28 @@ export type UsageEvaluation = {
   reason?: string
 }
 
+// UnitPriceView mirrors metric.UnitPriceView: card rates in USD per 1M
+// tokens. A missing component is unlisted on the card — never read it as 0.
+export type UnitPriceView = {
+  miss?: number
+  cache_read?: number
+  cache_create?: number
+  output?: number
+}
+
+export type ModelView = SliceView & {
+  vendor: string
+  unit_prices: UnitPriceView
+}
+
+// UsagePortrait mirrors profile.Portrait: none | insufficient | ok.
+export type UsagePortrait = {
+  state: string
+  primary: string
+  tags?: string[]
+  detail?: string
+}
+
 export type SummaryPayload = {
   scanned_at?: string
   offline?: boolean
@@ -93,7 +115,8 @@ export type SummaryPayload = {
   compare?: CompareView
   insights?: { kind: string; text: string }[]
   evaluation?: UsageEvaluation
-  by_model?: SliceView[]
+  portrait?: UsagePortrait
+  by_model?: ModelView[]
   by_workspace?: SliceView[]
   by_session?: SessionView[]
   community?: CommunityView
@@ -177,6 +200,8 @@ export type CalendarStats = {
   peak_date: string
   peak_total: number
   peak_total_m: string
+  today_total: number
+  today_total_m: string
   current_streak: number
   longest_streak: number
 }

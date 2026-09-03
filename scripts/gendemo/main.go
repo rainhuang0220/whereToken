@@ -149,6 +149,9 @@ func main() {
 	}
 	loc := time.Local
 	now := time.Now()
+	// Pin the portrait seed so demo phrasing is deterministic across rebuilds
+	// and never touches a real install identity.
+	scan.PortraitSeed = func(adapter.Home) string { return "demo-v1" }
 	evs, turns := fabricate(now, loc)
 	unconfigured := community.EmptyView(community.StatusServiceUnconfigured, "")
 	base := scan.Result{

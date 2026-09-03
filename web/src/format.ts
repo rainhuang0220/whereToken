@@ -119,6 +119,31 @@ export function costKPI(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'tota
   return '—'
 }
 
+// formatCost2 renders the KPI-level estimate with 2 decimals and thousands
+// separators ($2,291.41). The raw server string keeps micro precision
+// everywhere else. Unpriced or rounds-to-zero stays '' so callers show '—'
+// instead of a fake $0.00.
+export function formatCost2(usd?: string): string {
+  const s = usableCostUSD(usd)
+  if (!s) return ''
+  const n = Number.parseFloat(s.replace(/^\$/, '').replace(/,/g, ''))
+  if (!Number.isFinite(n)) return ''
+  const neg = n < 0
+  const fixed = Math.abs(n).toFixed(2)
+  if (Number.parseFloat(fixed) === 0) return ''
+  const dot = fixed.indexOf('.')
+  const intPart = dot === -1 ? fixed : fixed.slice(0, dot)
+  const frac = dot === -1 ? '00' : fixed.slice(dot + 1)
+  let grouped = ''
+  for (let i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 === 0) {
+      grouped += ','
+    }
+    grouped += intPart[i]
+  }
+  return `${neg ? '-' : ''}$${grouped}.${frac}`
+}
+
 export function costHonestyNote(view: Pick<SliceView, 'cost_usd' | 'cost_status' | 'total'>): string {
   const usd = usableCostUSD(view.cost_usd)
   switch (view.cost_status) {

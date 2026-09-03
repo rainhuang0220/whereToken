@@ -211,7 +211,12 @@ onMounted(() => {
         :max-streak="series.stats.longest_streak"
         :current-streak="series.stats.current_streak"
         :compare-text="compareText"
-        :evaluation="payload.evaluation"
+        :today-total-m="payload.calendar?.all.stats.today_total_m"
+        :peak-total-m="payload.calendar?.all.stats.peak_total_m"
+        :peak-date="payload.calendar?.all.stats.peak_date"
+        :portrait="payload.portrait"
+        :by-model="payload.by_model"
+        :by-vendor="payload.by_vendor"
       />
       <p v-if="compareSources.length && store.period !== 'all'" class="period-delta">
         <span v-for="row in compareSources" :key="row.id">

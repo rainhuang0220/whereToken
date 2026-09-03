@@ -92,32 +92,70 @@ describe('cross table', () => {
   })
 })
 
-describe('kpi fourth column', () => {
+describe('kpi 2×5 grid', () => {
   const vue = readFileSync(join(SRC, 'components/KpiRow.vue'), 'utf8')
   const css = readFileSync(join(SRC, 'styles.css'), 'utf8')
   const fmt = readFileSync(join(SRC, 'format.ts'), 'utf8')
+  const modal = readFileSync(join(SRC, 'components/EstimateModal.vue'), 'utf8')
+  const home = readFileSync(join(SRC, 'pages/Home.vue'), 'utf8')
 
-  it('is a 2×4 grid with 估价 over 用量评价, no rank cell', () => {
-    expect(css).toMatch(/\.readout\s*\{[^}]*grid-template-columns:\s*repeat\(4,/)
+  it('is exactly 2 rows × 5 columns with the ten v0.6.0 labels in order', () => {
+    expect(css).toMatch(/\.readout\s*\{[^}]*grid-template-columns:\s*repeat\(5,/)
+    expect(css).not.toMatch(/\.readout\s*\{[^}]*grid-template-columns:\s*repeat\(4,/)
     expect(css).not.toMatch(/read-col5/)
-    expect(vue).not.toMatch(/read-col5|排名|rankCaption|rankHint|rank-toggle/)
-    const est = vue.indexOf('估价')
-    const eva = vue.indexOf('用量评价')
-    expect(est).toBeGreaterThan(-1)
-    expect(eva).toBeGreaterThan(est)
-    expect(vue.slice(eva)).toMatch(/\{\{\s*evalSummary\s*\}\}/)
-    expect(vue.slice(eva)).toMatch(/\{\{\s*evalReason\s*\}\}/)
+    const labels = [
+      '总用量',
+      '命中率',
+      '最长连烧',
+      '当日用量',
+      '估价',
+      '当前连烧',
+      '请求',
+      '用户回合',
+      '单日最高',
+      '用户画像',
+    ]
+    let at = -1
+    for (const label of labels) {
+      const i = vue.indexOf(`<span class="read-k">${label}</span>`)
+      expect(i, label).toBeGreaterThan(at)
+      at = i
+    }
   })
 
-  it('points 估价 at the pricing command and never invents #0 or $0', () => {
+  it('has no rank UI and no evaluation cell', () => {
+    expect(vue).not.toMatch(/read-col5|排名|rankCaption|rankHint|rank-toggle/)
+    expect(vue).not.toMatch(/用量评价|evaluation|evalSummary|evalReason/)
+    expect(home).not.toMatch(/:evaluation/)
+  })
+
+  it('估价 opens the model detail modal and never invents #0 or $0', () => {
     expect(vue).toMatch(/wheretoken pricing/)
-    expect(vue).not.toMatch(/#0/)
+    expect(vue).toMatch(/formatCost2/)
+    expect(vue).toMatch(/当前周期总估价 · API 等价估算，非实际账单/)
+    expect(vue).toMatch(/EstimateModal/)
     expect(vue).toMatch(/costHonestyNote/)
-    expect(vue).toMatch(/honesty/)
-    expect(fmt).toMatch(/includes\('#0'\)|\$0\.0000/)
+    expect(vue).not.toMatch(/#0/)
+    expect(modal).toMatch(/role="dialog"/)
+    expect(modal).toMatch(/aria-modal="true"/)
+    expect(modal).toMatch(/aria-label="估价明细"/)
+    expect(modal).toMatch(/aria-label="关闭估价明细"/)
+    expect(modal).toMatch(/@click\.self/)
+    expect(modal).toMatch(/Escape/)
+    expect(modal).toMatch(/Tab/)
+    expect(modal).toMatch(/部分用量无价/)
+    expect(fmt).toMatch(/formatCost2/)
+    expect(fmt).toMatch(/\$0\.0000/)
     expect(fmt).toMatch(/case 'unavailable'/)
     expect(fmt).toMatch(/不会写成 \$0/)
     expect(fmt).toMatch(/不是订阅账单/)
+  })
+
+  it('portrait cell renders the server states without inventing phrasing', () => {
+    expect(vue).toMatch(/数据不足/)
+    expect(vue).toMatch(/portraitTags/)
+    expect(vue).toMatch(/portraitTitle/)
+    expect(vue).not.toMatch(/超过\s*\d+\s*%\s*用户/)
   })
 })
 

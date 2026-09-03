@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCount, hitBand, qualityCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCost2, formatCount, hitBand, qualityCaption, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -97,6 +97,23 @@ describe('costHonestyNote', () => {
     )
     expect(costHonestyNote({ cost_status: 'unavailable', total: 10 })).toBe('估价不可用 · 不会写成 $0')
     expect(costHonestyNote({ cost_usd: '$0.0000', cost_status: 'complete', total: 10 })).toBe('')
+  })
+})
+
+describe('formatCost2', () => {
+  it('renders 2-decimals with thousands separators for the KPI card', () => {
+    expect(formatCost2('$2291.4117')).toBe('$2,291.41')
+    expect(formatCost2('$418.4881')).toBe('$418.49')
+    expect(formatCost2('$12.0000')).toBe('$12.00')
+    expect(formatCost2('$1234567.891')).toBe('$1,234,567.89')
+  })
+
+  it('never prints a fake $0.00', () => {
+    expect(formatCost2(undefined)).toBe('')
+    expect(formatCost2('')).toBe('')
+    expect(formatCost2('$0.0000')).toBe('')
+    expect(formatCost2('$0.0049')).toBe('')
+    expect(formatCost2('not-a-price')).toBe('')
   })
 })
 
