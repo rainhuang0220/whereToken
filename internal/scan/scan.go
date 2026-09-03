@@ -30,6 +30,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/insight"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/report"
 )
 
@@ -45,6 +46,28 @@ type Result struct {
 	Deltas    []index.Delta
 	Compare   *metric.Compare
 	Community *community.View
+
+	// home is the scanned home, carried so buildSummaryJSON can seed the
+	// portrait with the install identity. Unexported: it identifies the
+	// machine, so it never enters the JSON. Struct copies keep it.
+	home adapter.Home
+}
+
+// PortraitSeed resolves the anonymous install identity that seeds the
+// dashboard portrait. The default reads the community participant_id or
+// creates ~/.config/wheretoken/install-id. It is a seam for tests and the
+// demo generator (which pins "demo-v1"); an override must return a
+// non-empty, PII-free string.
+var PortraitSeed = profile.IdentityFor
+
+// portraitSeed runs the seam and enforces its never-empty contract.
+func portraitSeed(home adapter.Home) string {
+	if PortraitSeed != nil {
+		if seed := PortraitSeed(home); seed != "" {
+			return seed
+		}
+	}
+	return profile.FallbackSeed
 }
 
 const (
@@ -221,6 +244,7 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		Turns:     turns,
 		ScannedAt: time.Now(),
 		Deltas:    index.Deltas(),
+		home:      home,
 	}
 }
 
@@ -371,6 +395,7 @@ type summaryJSON struct {
 	Compare        *metric.Compare    `json:"compare,omitempty"`
 	Insights       []insight.Line     `json:"insights,omitempty"`
 	Evaluation     insight.Evaluation `json:"evaluation"`
+	Portrait       profile.Portrait   `json:"portrait"`
 	Community      *community.View    `json:"community,omitempty"`
 }
 
@@ -433,6 +458,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 		Compare:    r.Compare,
 		Insights:   insight.Lines(r.Summary),
 		Evaluation: insight.Evaluate(r.Summary),
+		Portrait:   profile.Evaluate(r.Summary, portraitSeed(r.home)),
 		Community:  r.Community,
 	}
 	if r.Community != nil {

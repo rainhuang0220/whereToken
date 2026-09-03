@@ -12,6 +12,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/adapter/trae"
@@ -764,5 +765,98 @@ func TestMarshalSummaryOmitsByModelWhenEmpty(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "by_model") {
 		t.Fatalf("empty summary must omit by_model: %s", raw)
+	}
+}
+
+func summaryPortrait(t *testing.T, r Result) (state, primary string, tags []string, detail string) {
+	t.Helper()
+	raw, err := MarshalSummary(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Portrait struct {
+			State   string   `json:"state"`
+			Primary string   `json:"primary"`
+			Tags    []string `json:"tags"`
+			Detail  string   `json:"detail"`
+		} `json:"portrait"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	return payload.Portrait.State, payload.Portrait.Primary, payload.Portrait.Tags, payload.Portrait.Detail
+}
+
+func TestMarshalSummaryIncludesPortrait(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	r := Result{
+		Summary: metric.AggregateAt([]event.UsageEvent{
+			{Source: "kimi", Vendor: "unknown", Model: "test-model-x", Miss: 5_000_000, Timestamp: now},
+		}, nil, now, time.UTC),
+		Errors: []string{},
+	}
+	state, primary, tags, detail := summaryPortrait(t, r)
+	if state != "ok" {
+		t.Fatalf("state=%q", state)
+	}
+	if primary == "" || primary == "—" || primary == "数据不足" {
+		t.Fatalf("primary=%q", primary)
+	}
+	if len(tags) > 2 {
+		t.Fatalf("tags=%v (max 2)", tags)
+	}
+	if !strings.Contains(detail, "5.00 M") || !strings.Contains(detail, "活跃 1 天") {
+		t.Fatalf("detail must carry window stats: %q", detail)
+	}
+	// Same in-memory result marshals the identical portrait twice.
+	_, primary2, tags2, detail2 := summaryPortrait(t, r)
+	if primary != primary2 || detail != detail2 || strings.Join(tags, "|") != strings.Join(tags2, "|") {
+		t.Fatalf("portrait must be deterministic: %q/%v vs %q/%v", primary, tags, primary2, tags2)
+	}
+}
+
+func TestMarshalSummaryEmptyPortraitIsNone(t *testing.T) {
+	state, primary, _, _ := summaryPortrait(t, Result{Errors: []string{}})
+	if state != "none" || primary != "—" {
+		t.Fatalf("empty window portrait: state=%q primary=%q", state, primary)
+	}
+}
+
+func TestPortraitSeedSeamReceivesScanHome(t *testing.T) {
+	dir := t.TempDir()
+	home := testhome.New(dir)
+	old := PortraitSeed
+	defer func() { PortraitSeed = old }()
+	var got adapter.Home
+	PortraitSeed = func(h adapter.Home) string {
+		got = h
+		return "x-test-seed"
+	}
+	r := Run(home, AllAdapters())
+	// The seam fires when the summary is marshaled, not during the scan.
+	state, primary, _, _ := summaryPortrait(t, r)
+	if got == nil || got.XDGConfig("wheretoken") != home.XDGConfig("wheretoken") {
+		t.Fatalf("seam received %v, want the scanned home", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".config", "wheretoken", "install-id")); !os.IsNotExist(err) {
+		t.Fatalf("overridden seam must not create install-id: %v", err)
+	}
+	// The portrait must be present even on an empty scan.
+	if state != "none" || primary != "—" {
+		t.Fatalf("empty scan portrait: state=%q primary=%q", state, primary)
+	}
+}
+
+func TestPortraitSeedDefaultsToInstallIdentity(t *testing.T) {
+	t.Setenv("WHERETOKEN_COMMUNITY_FILE", "")
+	dir := t.TempDir()
+	r := Run(testhome.New(dir), AllAdapters())
+	state, _, _, _ := summaryPortrait(t, r)
+	if _, err := os.Stat(filepath.Join(dir, ".config", "wheretoken", "install-id")); err != nil {
+		t.Fatalf("default seam should create install-id on first marshal: %v", err)
+	}
+	if state != "none" {
+		t.Fatalf("empty scan portrait state=%q", state)
 	}
 }
