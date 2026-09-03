@@ -2,6 +2,7 @@ package cursor
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -68,43 +70,34 @@ func resolveDB(p string) string {
 }
 
 func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
-	db, err := adapter.OpenRO(path)
+	localEvs, localTurns, _, err := index.LoadOrReplay("cursor", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return parseLocalDB(f.Name(), root)
+	})
 	if err != nil {
-		return err
+		return index.Forward(localEvs, localTurns, err, emit, emitTurn)
 	}
-	defer db.Close()
 
-	composers, err := loadComposers(db)
+	token, refresh, err := authTokens(path, !a.Offline)
 	if err != nil {
 		return err
-	}
-	if err := loadHeaders(db, composers); err != nil {
-		return err
-	}
-	bubbles, err := loadBubbles(db)
-	if err != nil {
-		return err
-	}
-	token, err := readItem(db, authAccessTokenKey)
-	if err != nil {
-		return err
-	}
-	if token == "" {
-		token = readStorageJSONToken(path)
 	}
 
 	var apiEvents []event.UsageEvent
 	var apiErr error
 	if token != "" && !a.Offline {
-		refresh, rerr := readItem(db, authRefreshTokenKey)
-		if rerr != nil {
-			return rerr
-		}
 		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)
 	}
 
 	useAPI := hasTokenTotals(apiEvents)
-	emitLocal(composers, bubbles, root, emit, emitTurn, useAPI)
+	for _, e := range localEvs {
+		if useAPI {
+			e = stripLocalTokens(e)
+		}
+		emit(e)
+	}
+	for _, t := range localTurns {
+		emitTurn(t)
+	}
 	if useAPI {
 		for _, e := range apiEvents {
 			emit(e)
@@ -119,14 +112,79 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 	return apiErr
 }
 
-func localDerivation(q event.Quality, stripTokens bool) string {
-	if stripTokens || q == "" {
+// parseLocalDB is the sqlite half of the source, and the unit LoadOrReplay
+// caches: composer models, workspaces, and bubble tokens. Auth rows and the
+// account API stay outside on purpose — credentials never enter the index
+// cache, and the API stays authoritative for tokens on every scan.
+func parseLocalDB(path string, root adapter.SourceRoot) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+	db, err := adapter.OpenRO(path)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	defer db.Close()
+
+	composers, err := loadComposers(db)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	if err := loadHeaders(db, composers); err != nil {
+		return nil, nil, 0, err
+	}
+	bubbles, err := loadBubbles(db)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	var evs []event.UsageEvent
+	var turns []event.TurnEvent
+	emitLocal(composers, bubbles, root, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(t event.TurnEvent) {
+		turns = append(turns, t)
+	})
+	return evs, turns, 0, nil
+}
+
+// authTokens reads the keyed Cursor auth rows. needRefresh gates the refresh
+// row so offline scans never touch it.
+func authTokens(path string, needRefresh bool) (access, refresh string, err error) {
+	db, err := adapter.OpenRO(path)
+	if err != nil {
+		return "", "", err
+	}
+	defer db.Close()
+	access, err = readItem(db, authAccessTokenKey)
+	if err != nil {
+		return "", "", err
+	}
+	if access == "" {
+		access = readStorageJSONToken(path)
+	}
+	if access != "" && needRefresh {
+		if refresh, err = readItem(db, authRefreshTokenKey); err != nil {
+			return "", "", err
+		}
+	}
+	return access, refresh, nil
+}
+
+// stripLocalTokens zeroes local bubble tokens once the API supplied account
+// totals: the event stays for request/turn counting only. Same shape the old
+// strip-at-parse path produced.
+func stripLocalTokens(e event.UsageEvent) event.UsageEvent {
+	e.Miss, e.CacheRead, e.CacheCreate, e.Output = 0, 0, 0, 0
+	e.Quality = ""
+	e.Derivation = ""
+	return e
+}
+
+func localDerivation(q event.Quality) string {
+	if q == "" {
 		return ""
 	}
 	return event.DeriveRaw
 }
 
-func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent), stripTokens bool) {
+func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
 	bySess := map[string][]bubbleRow{}
 	for _, b := range bubbles {
 		bySess[b.composerID] = append(bySess[b.composerID], b)
@@ -167,10 +225,7 @@ func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root ada
 			}
 			miss, cacheRead, cacheCreate, out := b.miss, b.cacheRead, b.cacheCreate, b.output
 			q := event.QualityDegraded
-			if stripTokens {
-				miss, cacheRead, cacheCreate, out = 0, 0, 0, 0
-				q = ""
-			} else if miss != 0 || cacheRead != 0 || cacheCreate != 0 || out != 0 {
+			if miss != 0 || cacheRead != 0 || cacheCreate != 0 || out != 0 {
 				q = event.QualityAuthoritative
 			}
 			emit(event.UsageEvent{
@@ -187,7 +242,7 @@ func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root ada
 				CacheCreate: cacheCreate,
 				Output:      out,
 				Quality:     q,
-				Derivation:  localDerivation(q, stripTokens),
+				Derivation:  localDerivation(q),
 			})
 		}
 	}
@@ -276,19 +331,20 @@ FROM composerHeaders`)
 	return rows.Err()
 }
 
+// loadBubbles reads usage-bearing bubbles. Each blob is parsed once into a
+// json_extract array instead of one extract per field, and the type filter
+// runs SQL-side so non-usage bubbles never get decoded or cross the wire.
+// The capability (thinking) filter stays in emitLocal; the array carries it.
 func loadBubbles(db *sql.DB) ([]bubbleRow, error) {
 	rows, err := db.Query(`
 SELECT key,
-  json_extract(value, '$.type'),
-  json_extract(value, '$.createdAt'),
-  json_extract(value, '$.tokenCount.inputTokens'),
-  json_extract(value, '$.tokenCount.outputTokens'),
-  json_extract(value, '$.tokenCount.cacheReadTokens'),
-  json_extract(value, '$.tokenCount.cacheWriteTokens'),
-  json_extract(value, '$.modelInfo.modelName'),
-  json_extract(value, '$.capabilityType')
+  json_extract(value, '$.type', '$.createdAt',
+    '$.tokenCount.inputTokens', '$.tokenCount.outputTokens',
+    '$.tokenCount.cacheReadTokens', '$.tokenCount.cacheWriteTokens',
+    '$.modelInfo.modelName', '$.capabilityType')
 FROM cursorDiskKV
-WHERE key LIKE 'bubbleId:%'`)
+WHERE key LIKE 'bubbleId:%'
+  AND CAST(json_extract(value, '$.type') AS INTEGER) IN (1, 2)`)
 	if err != nil {
 		return nil, err
 	}
@@ -296,28 +352,46 @@ WHERE key LIKE 'bubbleId:%'`)
 	var out []bubbleRow
 	for rows.Next() {
 		var key string
-		var typ, created, inn, output, cr, cw, model, cap sql.NullString
-		if err := rows.Scan(&key, &typ, &created, &inn, &output, &cr, &cw, &model, &cap); err != nil {
+		var fields sql.NullString
+		if err := rows.Scan(&key, &fields); err != nil {
 			return nil, err
 		}
 		composerID, bubbleID, ok := splitBubbleKey(key)
+		if !ok || !fields.Valid {
+			continue
+		}
+		b, ok := decodeBubbleFields(fields.String)
 		if !ok {
 			continue
 		}
-		out = append(out, bubbleRow{
-			composerID:  composerID,
-			bubbleID:    bubbleID,
-			model:       model.String,
-			typ:         atoi(typ.String),
-			capability:  atoi(cap.String),
-			ts:          parseTime(created.String),
-			miss:        atoi64(inn.String),
-			cacheRead:   atoi64(cr.String),
-			cacheCreate: atoi64(cw.String),
-			output:      atoi64(output.String),
-		})
+		b.composerID = composerID
+		b.bubbleID = bubbleID
+		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// decodeBubbleFields unpacks the json_extract array loadBubbles selects, in
+// path order: type, createdAt, input, output, cacheRead, cacheWrite, model,
+// capability. It keeps the old per-column tolerance: numbers, numeric
+// strings, and nulls all decode the same way.
+func decodeBubbleFields(raw string) (bubbleRow, bool) {
+	var arr [8]any
+	dec := json.NewDecoder(strings.NewReader(raw))
+	dec.UseNumber()
+	if err := dec.Decode(&arr); err != nil {
+		return bubbleRow{}, false
+	}
+	return bubbleRow{
+		model:       adapter.FlexString(arr[6]),
+		typ:         int(adapter.FlexInt(arr[0])),
+		capability:  int(adapter.FlexInt(arr[7])),
+		ts:          parseTime(adapter.FlexString(arr[1])),
+		miss:        adapter.FlexInt(arr[2]),
+		cacheRead:   adapter.FlexInt(arr[4]),
+		cacheCreate: adapter.FlexInt(arr[5]),
+		output:      adapter.FlexInt(arr[3]),
+	}, true
 }
 
 func splitBubbleKey(key string) (composerID, bubbleID string, ok bool) {
@@ -352,22 +426,4 @@ func parseTime(s string) time.Time {
 		}
 	}
 	return time.Time{}
-}
-
-func atoi(s string) int {
-	return int(atoi64(s))
-}
-
-func atoi64(s string) int64 {
-	s = strings.TrimSpace(s)
-	if s == "" || s == "null" {
-		return 0
-	}
-	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return n
-	}
-	if f, err := strconv.ParseFloat(s, 64); err == nil {
-		return int64(f)
-	}
-	return 0
 }
