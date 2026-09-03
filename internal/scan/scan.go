@@ -465,12 +465,9 @@ func buildSummaryJSON(r Result) summaryJSON {
 		v := *r.Community
 		v.Today = community.SanitizeStanding(v.Today)
 		v.All = community.SanitizeStanding(v.All)
+		// The community block stays for API compat, but the dashboard no
+		// longer surfaces rank lines: no AppendStanding into insights.
 		out.Community = &v
-		// All-time observatory may mention 累计 rank (uploaded days), never
-		// today's podium. A 7d/today window has different totals; skip rank.
-		if r.Compare == nil {
-			out.Insights = insight.AppendStanding(out.Insights, v.All.Status, v.All.Display, v.All.Rank)
-		}
 	}
 	if !r.ScannedAt.IsZero() {
 		out.ScannedAt = r.ScannedAt.Format(time.RFC3339)

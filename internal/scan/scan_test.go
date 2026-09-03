@@ -150,7 +150,7 @@ func TestWindowedSummaryDoesNotPasteTodayRankOntoInsights(t *testing.T) {
 	}
 }
 
-func TestAllTimeSummaryAttachesRealRankInsight(t *testing.T) {
+func TestAllTimeSummaryDropsRankInsight(t *testing.T) {
 	view := community.EmptyView(community.StatusOK, community.DisclaimerEN)
 	view.Today.Rank = 1
 	view.Today.Display = "#1 / 20"
@@ -162,14 +162,27 @@ func TestAllTimeSummaryAttachesRealRankInsight(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(raw)
-	if !strings.Contains(s, "社区排名 #37 / 842") || !strings.Contains(s, "不是全球榜") {
-		t.Fatalf("%s", s)
+	if strings.Contains(s, "社区排名") {
+		t.Fatalf("dashboard insights must not carry rank lines:\n%s", s)
 	}
-	if strings.Contains(s, "社区排名 #1 / 20") {
-		t.Fatal("all-time 用量说明 must not paste today's podium")
+	var payload struct {
+		Insights []struct {
+			Kind string `json:"kind"`
+			Text string `json:"text"`
+		} `json:"insights"`
+		Community *community.View `json:"community"`
 	}
-	if strings.Contains(s, "#0") {
-		t.Fatal(s)
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range payload.Insights {
+		if line.Kind == "community" {
+			t.Fatalf("rank insight leaked: %+v", line)
+		}
+	}
+	// The community block itself stays for API compat, sanitized.
+	if payload.Community == nil || payload.Community.All.Display != "#37 / 842" {
+		t.Fatalf("community field must survive: %s", s)
 	}
 }
 
@@ -208,8 +221,13 @@ func TestMarshalSummaryCommunityInsightNeverZeroRank(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(raw)
-	if !strings.Contains(s, "#37 / 842") || !strings.Contains(s, "不是全球榜") {
-		t.Fatalf("missing real standing insight: %s", s)
+	// The standing stays inside the community block (API compat); the
+	// dashboard insight list stays rank-free.
+	if !strings.Contains(s, "#37 / 842") {
+		t.Fatalf("community block must keep the sanitized standing: %s", s)
+	}
+	if strings.Contains(s, "社区排名") {
+		t.Fatalf("insights must not carry rank lines: %s", s)
 	}
 	if strings.Contains(s, `"events"`) || strings.Contains(s, "prompt") {
 		t.Fatal("raw payload leaked")
