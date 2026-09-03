@@ -62,9 +62,14 @@ describe('committed demo sample payloads', () => {
     expect(payloads.all.evaluation?.summary).toBe('高强度使用')
   })
 
-  it('today lands on the real calendar date', () => {
+  it('today lands on the sample calendar date', () => {
+    // Samples are committed artifacts regenerated at build time: their
+    // "today" is the payload's own scanned_at day, not the wall clock —
+    // asserting wall-clock today would fail one day after generation.
     const days = selectSeries(payloads.today, { kind: 'all', id: '' }).days
-    expect(days.some((d) => d.date === todayISO() && d.total > 0)).toBe(true)
+    const sampleDay = (payloads.today.scanned_at ?? '').slice(0, 10)
+    expect(sampleDay).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(days.some((d) => d.date === sampleDay && d.total > 0)).toBe(true)
   })
 
   it('gendemo pins the demo portrait seed', () => {
