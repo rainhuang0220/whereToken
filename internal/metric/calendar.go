@@ -27,6 +27,8 @@ type CalendarStats struct {
 	PeakDate      string `json:"peak_date"`
 	PeakTotal     int64  `json:"peak_total"`
 	PeakTotalM    string `json:"peak_total_m"`
+	TodayTotal    int64  `json:"today_total"`
+	TodayTotalM   string `json:"today_total_m"`
 	CurrentStreak int    `json:"current_streak"`
 	LongestStreak int    `json:"longest_streak"`
 }
@@ -98,6 +100,7 @@ func finishSeries(days []Day, today time.Time) CalendarSeries {
 	}
 	stats := computeStats(days, today)
 	stats.PeakTotalM = FormatM(stats.PeakTotal)
+	stats.TodayTotalM = FormatM(stats.TodayTotal)
 	return CalendarSeries{Days: days, Stats: stats}
 }
 
@@ -170,6 +173,8 @@ func computeStats(days []Day, today time.Time) CalendarStats {
 	if stats.PeakTotal == 0 {
 		stats.PeakDate = ""
 	}
+	// Today is a measured bucket: 0 when nothing burned today, never omitted.
+	stats.TodayTotal = used[today.Format("2006-01-02")]
 	stats.CurrentStreak = currentStreak(used, today)
 	stats.LongestStreak = longestStreak(used, today)
 	return stats

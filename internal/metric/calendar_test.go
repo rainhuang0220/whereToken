@@ -92,6 +92,32 @@ func TestBuildCalendarPeakPicksMaxTotalDay(t *testing.T) {
 	}
 }
 
+func TestBuildCalendarTodayTotal(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 15, 12, 0)
+	events := []event.UsageEvent{
+		{Source: "kimi", Vendor: "moonshot", RequestID: "a", Timestamp: ts(loc, 2026, 8, 14, 10, 0), Miss: 30},
+		{Source: "kimi", Vendor: "moonshot", RequestID: "b", Timestamp: ts(loc, 2026, 8, 15, 9, 0), Miss: 2_000_000},
+		{Source: "claude", Vendor: "anthropic", RequestID: "c", Timestamp: ts(loc, 2026, 8, 15, 10, 0), Miss: 1_000_000, Output: 500_000},
+	}
+	cal := BuildCalendar(events, loc, now)
+	if cal.All.Stats.TodayTotal != 3_500_000 {
+		t.Fatalf("today=%d", cal.All.Stats.TodayTotal)
+	}
+	if cal.All.Stats.TodayTotalM != "3.50 M" {
+		t.Fatalf("today_m=%q", cal.All.Stats.TodayTotalM)
+	}
+	// Per-vendor series see only their own today bucket.
+	if got := cal.ByVendor["moonshot"].Stats.TodayTotal; got != 2_000_000 {
+		t.Fatalf("moonshot today=%d", got)
+	}
+	// A window with no usage today reports a real measured 0, not "—".
+	silent := BuildCalendar(events[:1], loc, now)
+	if silent.All.Stats.TodayTotal != 0 || silent.All.Stats.TodayTotalM != "0.00 M" {
+		t.Fatalf("silent today=%d %q", silent.All.Stats.TodayTotal, silent.All.Stats.TodayTotalM)
+	}
+}
+
 func TestBuildCalendarCurrentStreakIncludesTodayWhenUsed(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 15, 12, 0)
