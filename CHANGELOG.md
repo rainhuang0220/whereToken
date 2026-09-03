@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0 — 2026-09-04 (Alpha)
+
+- Model-level pricing: usage and API-equivalent cost aggregate per (vendor, normalized model). `/api/summary` gains `by_model` with per-category unit prices (USD per 1M tokens, `null` = unlisted); the dashboard 估价 cell opens a per-vendor per-model estimate detail modal with a TOTAL row; pricing resolution is memoized per vendor/model/day
+- Price: version-first model ids (Cursor's `claude-4.6-opus-high-thinking`, `claude-4.5-sonnet`, `gpt-5-high`) normalize to the family-first card rows and trailing effort/thinking suffixes are stripped, so Cursor usage prices against the Opus / Sonnet / GPT cards instead of falling through unmatched. A pinned regression ledger (3.6B synthetic tokens) computes $14,190.50, not ~$6; on real data the maintainer's ~7.9B-token Cursor ledger moved from $6.90 to $864.00. Raw ids stay on events for drill display
+- Cursor observed spend stays unavailable: the usage-events API exposes token columns but no spend field, so the Cursor estimate remains API-equivalent list cost only (docs/cost.md)
+- Cursor scan performance: `loadBubbles` decodes one JSON array per row with a SQL-side bubble-type filter instead of eight `json_extract` calls per blob, and the local sqlite rides `index.LoadOrReplay` so warm scans skip unchanged blobs. API pages stay sequential (rate-limited)
+- Dashboard: the KPI readout is a fixed 2×5 grid — 总用量 / 命中率 / 最长连烧 / 当日用量 / 估价 over 当前连烧 / 请求 / 用户回合 / 单日最高 / 用户画像. 估价 shows the 2-decimal period total with an API-equivalent tooltip
+- Dashboard: 用户画像 is a deterministic local usage portrait (`internal/profile`): eight bucketed trait dimensions (intensity / cost / model+vendor diversity / cache reuse / consistency / burstiness / concentration) and a ~200-phrase Chinese bank, seeded by the anonymous local install id (community participant_id when present, else `~/.config/wheretoken/install-id`, UUIDv4, 0600). No LLM, no network, no PII in the seed; bucket-based selection keeps small fluctuations from rewording. No records is `—`, under 100k window tokens is `数据不足`
+- Dashboard: the rank insight line leaves the summary payload; the community package, `wheretoken community`, and the JSON field are untouched
+- New CLI: `wheretoken pricing --usage` prices the local ledger per model against the same public card — per-category tokens and unit rates, unavailable components stay `—`, TOTAL matches the dashboard 估价. Takes the report window flags (`--today` / `--since` / `--from` / `--to`) and `--offline`; `--json` adds an additive `usage` block
+- CLI: the report footer prints `Web: https://rainhuang0220.github.io/whereToken/` (human output only); `serve` prints the Local dashboard URL plus the Public site with a privacy note (公网仅展示公开/演示数据，本地账本不会因此上传。)
+- Calendar stats expose today's totals (`TodayTotal`) for the 当日用量 cell
+
 ## 0.5.0 — 2026-09-01 (Alpha)
 
 - Dashboard: the KPI row is a fixed 2×4 grid again; the fourth column is 估价 over 用量评价. 用量评价 is a local, deterministic profile of the selected period (高强度使用 / 成本偏高 / 多模型探索 / 单模型集中 / 高缓存复用 / 稳定使用 / 轻量使用) with a one-line reason; empty data is — and too little data is 暂无评价, never 轻量使用. It follows the selected period and rides the summary payload (`evaluation`)

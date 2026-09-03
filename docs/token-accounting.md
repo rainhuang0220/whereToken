@@ -185,6 +185,34 @@ Token totals never become USD by a single global price. See [`cost.md`](cost.md)
 Estimated API-equivalent cost is optional, never a bill, and never `$0` when
 the price is unknown.
 
+## User portrait
+
+The dashboard's 用户画像 cell (`internal/profile`) summarizes the selected
+window as a short Chinese phrase plus up to two tags. It is a deterministic
+function of the summary metrics — no LLM, no embeddings, no network.
+
+Eight dimensions of the window are each bucketed low / mid / high against
+documented thresholds: intensity (tokens per active day), API-equivalent cost
+per active day, model diversity, vendor diversity, cache reuse (hit rate),
+consistency (active days over the window span), burstiness (peak day over
+mean day), and concentration (top model's share of tokens). A fixed priority
+chain picks the primary trait and up to two supporting traits; unmeasurable
+dimensions (unpriced cost, no cache traffic, no labeled model) are skipped,
+never treated as zero.
+
+Wording comes from a ~200-phrase Chinese bank grouped by trait. The pick is
+seeded by a local anonymous install identity — the community participant id
+when present, otherwise a random UUIDv4 in
+`~/.config/wheretoken/install-id` (0600) created on first use. The id is a
+random UUID, contains no PII, and never leaves the device; username, HOME,
+hostname, and IP are never read into the seed. Selection is bucket-based:
+same data + same seed gives the same portrait, and small metric fluctuations
+inside a bucket never change the wording — only crossing a bucket boundary
+can.
+
+With no records in the window the cell is `—`; below 100k window tokens it
+is `数据不足`. Neither state invents a phrase.
+
 ## What Total is not
 
 Total is not USD, not a provider invoice, and not “context window used”.

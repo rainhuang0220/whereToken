@@ -54,13 +54,13 @@
 
 ### 本机仪表盘
 
-在浏览器中查看同一份数据，服务只跑在这台电脑上。指标行末尾是当前周期的估价和一句可解释的用量评价（高强度使用、多模型探索……），完全由本机数据按确定规则算出——不联网、不调模型，没有数据不会假装「轻量使用」。
+在浏览器中查看同一份数据，服务只跑在这台电脑上。2×5 指标行末尾是当前周期的估价——点一下就能看到分厂家、分模型的明细——以及一句确定性的用户画像（高强度使用、多模型探索……），完全由本机数据按确定规则算出：分桶特征加固定短语库，不联网、不调模型，没有数据不会假装「轻量使用」。
 
 ### 命令行与 JSON
 
 在终端查询，或导出归一化后的 JSON 供脚本使用。
 
-whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，不是订阅账单；没有标价不会写成 $0。`wheretoken pricing` 打印完整价目卡，含各厂家官方来源页和最近核验日期。
+whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，不是订阅账单；没有标价不会写成 $0。`wheretoken pricing` 打印完整价目卡，含各厂家官方来源页和最近核验日期；`wheretoken pricing --usage` 把本机账本按模型对着同一张价目卡估价——分档 tokens 与单价逐行列出，未定价模型显示不可用，绝不写成 $0。
 
 ## 安装
 
@@ -131,6 +131,7 @@ wheretoken --json
 wheretoken serve
 wheretoken doctor
 wheretoken pricing
+wheretoken pricing --usage
 wheretoken rebuild
 wheretoken update
 wheretoken uninstall
@@ -158,7 +159,7 @@ wheretoken serve
 
 **<https://rainhuang0220.github.io/whereToken/>** —— 项目主页与可直接把玩的[仪表盘演示](https://rainhuang0220.github.io/whereToken/demo/)（内置合成样例账本，无需安装，无后端）。
 
-公网站点是 GitHub Pages 纯静态部署：不读取你的机器，只展示虚构演示数据。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
+公网站点是 GitHub Pages 纯静态部署：不读取你的机器，只展示虚构演示数据。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。命令行报表页脚和 `wheretoken serve` 启动时会打印这个公网地址；公网仅展示公开/演示数据，本地账本不会因此上传。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
 
 ## 支持的 coding agent
 

@@ -18,6 +18,35 @@ is priced. Grok and MiniMax store reasoning beside output and do **not** add
 it to `Total`; that reasoning is also not priced (it is not treated as a
 second output line).
 
+## Per-model estimate
+
+Since v0.6.0 the estimate is aggregated per **(vendor, normalized model)**:
+each event's model id is normalized to the pricing card's canonical id,
+priced against that card row, and summed per token category:
+
+```text
+model_cost = miss × miss_rate / 1M
+           + cache_read × cache_read_rate / 1M
+           + cache_create × cache_create_rate / 1M
+           + output × output_rate / 1M
+```
+
+Unit prices are always displayed as **USD per 1M tokens**. A component with
+no list rate stays unavailable (`—` / `null`), never `$0`; a card-listed
+free component bills `$0` and is marked 限免. The dashboard 估价 cell shows
+the two-decimal total and opens a per-vendor, per-model breakdown with a
+TOTAL row; `wheretoken pricing --usage` prints the same rows in the
+terminal; `/api/summary` exposes them as `by_model`.
+
+Model ids that arrive **version-first** are normalized to the card's
+family-first ids before matching: Cursor's API sends
+`claude-4.6-opus-high-thinking` / `claude-4.5-sonnet` / `gpt-5-high`, which
+price against the `opus-4.6` / `sonnet-4.5` / `gpt-5` rows. Trailing
+effort/thinking suffixes (`-high`, `-low`, `-medium`, `-thinking`) are
+stripped. The raw id stays on the event for drill-down display; only pricing
+sees the normalized form, and resolution is memoized per
+vendor/model/day so the aggregation cost does not scale with event count.
+
 ## Inspect the card
 
 `wheretoken pricing` prints the same table the calculator reads — there is
@@ -30,7 +59,16 @@ wheretoken pricing                      # full card
 wheretoken pricing --vendor anthropic   # one vendor
 wheretoken pricing --model opus         # fuzzy / canonicalized match
 wheretoken pricing --json               # stable schema for scripts
+wheretoken pricing --usage              # your ledger, priced per model
+wheretoken pricing --usage --since 7d   # report window flags apply
 ```
+
+`--usage` runs a scan and prices each (vendor, model) against the same card:
+per-category tokens (M), per-category unit rates (`—` when unlisted), model
+cost, and a TOTAL row that matches the dashboard 估价. Unpriced models keep
+their tokens visible with an unavailable cost, never a fake total. `--usage`
+takes the report's window flags (`--today` / `--since` / `--from` / `--to`)
+and `--offline`; `--usage --json` adds a `usage` block to the card payload.
 
 An unlisted component renders as `—` (unknown, never `$0`); a card-listed
 free component renders as `$0.00 限免`. In JSON those are `null` and
@@ -104,6 +142,22 @@ charge, so `CacheCreate>0` stays unpriced.
 ByteDance / Doubao (CNY / length bands) stays
 unavailable. There is no Anthropic **Haiku 4** list row (only 4.5). xAI
 coding list id is **`grok-build-0.1`**.
+
+## Cursor reconciliation
+
+Cursor's usage API exposes token columns per model but **no spend field**:
+the amount Cursor actually billed is unavailable through the current API
+surface. whereToken's Cursor estimate is therefore API-equivalent list cost
+only — what the same tokens would cost on the public API card, not what the
+subscription or plan charged.
+
+The v0.6.0 normalization matters most here. v0.5.0 matched Cursor's
+version-first ids against family-first card rows and priced almost nothing:
+on the maintainer's own ~7.9B-token Cursor ledger the estimate moved from
+**$6.90** (v0.5.0, ids unmatched) to **$864.00** (v0.6.0, model-level) on
+the same ledger and the same card. A pinned synthetic fixture (3.6B tokens
+of version-first ids) computes **$14,190.50** so this cannot silently
+regress.
 
 ## What is not priced
 
