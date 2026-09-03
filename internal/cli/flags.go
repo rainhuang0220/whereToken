@@ -40,6 +40,7 @@ type Flags struct {
 	NoColor         bool
 	Quiet           bool
 	Offline         bool
+	Usage           bool
 	Tool, Vendor    string
 	Model, Home     string
 	Since, From, To string
@@ -158,8 +159,11 @@ func Parse(args []string) (Flags, error) {
 	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
 	}
-	if f.Command == CommandPricing && (f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Tool != "" || f.Offline || f.NoCommunity) {
-		return Flags{}, usageError{msg: "pricing reads the built-in price card; only --vendor/--model/--json/--width apply\ntry `wheretoken --help`"}
+	if f.Command == CommandPricing && (f.Tool != "" || f.NoCommunity) {
+		return Flags{}, usageError{msg: "pricing does not take --tool or --no-community\ntry `wheretoken --help`"}
+	}
+	if f.Command == CommandPricing && !f.Usage && (f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Offline) {
+		return Flags{}, usageError{msg: "pricing reads the built-in price card; only --vendor/--model/--json/--width apply (pricing --usage also takes --today/--since/--from/--to/--offline)\ntry `wheretoken --help`"}
 	}
 	if f.Today && (f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "use only one of --today, --since, or --from/--to\ntry `wheretoken --help`"}
@@ -252,6 +256,7 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.BoolVar(&f.Quiet, "quiet", f.Quiet, "")
 	fs.BoolVar(&f.Quiet, "q", f.Quiet, "")
 	fs.BoolVar(&f.Offline, "offline", f.Offline, "")
+	fs.BoolVar(&f.Usage, "usage", f.Usage, "")
 	fs.StringVar(&f.Home, "home", f.Home, "")
 	fs.IntVar(&f.Port, "port", f.Port, "")
 	fs.IntVar(&f.Width, "width", f.Width, "")
