@@ -23,6 +23,11 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
+// PublicSiteURL is the public demo site. It shows public/demo data only;
+// the local ledger is never uploaded there. One constant serves the report
+// footer, the serve banner, and --help.
+const PublicSiteURL = "https://rainhuang0220.github.io/whereToken/"
+
 type App struct {
 	Args       []string
 	Stdout     io.Writer
@@ -228,6 +233,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	color := table.UseColor(flags.NoColor, a.StdoutTTY, a.LookupEnv)
 	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv, a.termWidth)})
 	fmt.Fprint(a.Stdout, out)
+	fmt.Fprintf(a.Stdout, "\nWeb: %s\n", PublicSiteURL)
 	return ExitOK
 }
 
@@ -334,7 +340,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 }
 
 func ServeStartedMessage(addr string) string {
-	return fmt.Sprintf("http://%s\n页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。\n", addr)
+	return fmt.Sprintf("http://%s\n页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。\nPublic: %s\n公网仅展示公开/演示数据，本地账本不会因此上传。\n", addr, PublicSiteURL)
 }
 
 func resolveWidth(flag int, getenv func(string) string, size func() int) int {

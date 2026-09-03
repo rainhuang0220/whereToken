@@ -793,3 +793,45 @@ func TestCompletionShells(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+func TestRunReportPrintsPublicSiteFooter(t *testing.T) {
+	app, out, errb := testApp(nil)
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "Web: https://rainhuang0220.github.io/whereToken/\n") {
+		t.Fatalf("human report must carry the public site footer:\n%s", s)
+	}
+	if !strings.HasSuffix(strings.TrimRight(s, "\n"), "Web: https://rainhuang0220.github.io/whereToken/") {
+		t.Fatalf("footer should be the last line:\n%s", s)
+	}
+}
+
+func TestRunJSONOmitsPublicSiteFooter(t *testing.T) {
+	app, out, errb := testApp([]string{"--json"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	s := out.String()
+	if strings.Contains(s, "rainhuang0220.github.io") || strings.Contains(s, "Web:") {
+		t.Fatalf("schema 1 JSON must stay clean of the footer:\n%s", s)
+	}
+}
+
+func TestServeStartedMessageShowsLocalAndPublic(t *testing.T) {
+	msg := ServeStartedMessage("127.0.0.1:8787")
+	for _, want := range []string{
+		"http://127.0.0.1:8787",
+		"Public: https://rainhuang0220.github.io/whereToken/",
+		"公网仅展示公开/演示数据，本地账本不会因此上传。",
+	} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("serve message missing %q:\n%s", want, msg)
+		}
+	}
+	// The local line stays first and untouched.
+	if !strings.HasPrefix(msg, "http://127.0.0.1:8787\n") {
+		t.Fatalf("local URL line must lead:\n%s", msg)
+	}
+}
