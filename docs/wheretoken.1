@@ -42,7 +42,7 @@ wheretoken \- local coding-agent token usage as a character table
 .B wheretoken
 [\fIflags\fR]
 .B pricing
-[\fB--vendor\fR \fINAME\fR] [\fB--model\fR \fINAME\fR] [\fB--json\fR]
+[\fB--vendor\fR \fINAME\fR] [\fB--model\fR \fINAME\fR] [\fB--json\fR] [\fB--usage\fR]
 .br
 .B wheretoken
 [\fIflags\fR]
@@ -202,7 +202,25 @@ and
 .B --model
 filter rows;
 .B --json
-emits the card as JSON (null = unlisted). No time-window or tool flags.
+emits the card as JSON (null = unlisted).
+.B --usage
+instead scans the local ledgers and prices your own usage by model:
+per-category tokens (M) beside the card rate per category, a cost per model,
+and a
+.B 总计
+row matching the dashboard estimate. Rows with unpriced tokens are marked
+.B 部分用量无公开价
+rather than rounded to $0.
+.B --usage
+accepts the report window flags
+.BR --today ", " --since ", " --from "/" --to
+and
+.BR --offline ;
+with
+.B --json
+the card payload gains a
+.B usage
+block (period, vendors with per-model unit_prices, total).
 .SH EXIT STATUS
 .TP
 .B 0
@@ -298,6 +316,9 @@ The model price card with official sources and verification dates.
 .TP
 .B wheretoken pricing --model opus
 Only rows whose canonical id matches, using the calculator's own rules.
+.TP
+.B wheretoken pricing --usage --since 30d
+Your last 30 days of usage priced by the card, per model.
 .SH PRIVACY
 Local-first remains the core. Never prints JWTs or access tokens.
 Community Rank uploads only when

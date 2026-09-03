@@ -22,3 +22,4 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
+complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage

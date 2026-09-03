@@ -287,3 +287,41 @@ func TestPricingUsageOnRealFixtureHome(t *testing.T) {
 		t.Fatalf("unpriced is never $0:\n%s", s)
 	}
 }
+
+func TestHelpDocumentsPricingUsageAndPublicSite(t *testing.T) {
+	h := HelpText()
+	if !strings.Contains(h, "pricing --usage") {
+		t.Fatalf("help must document pricing --usage:\n%s", h)
+	}
+	if !strings.Contains(h, "https://rainhuang0220.github.io/whereToken/") {
+		t.Fatalf("help must point at the public demo site:\n%s", h)
+	}
+}
+
+func TestCompletionPricingOffersUsage(t *testing.T) {
+	for _, sh := range []string{"bash", "zsh", "fish", "powershell"} {
+		s, err := Completion(sh)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch sh {
+		case "bash":
+			if !strings.Contains(s, `pricing) opts="--vendor --model --json --usage `) {
+				t.Fatalf("bash pricing must offer --usage:\n%s", s)
+			}
+		case "zsh":
+			i, j := strings.Index(s, "    pricing)"), strings.Index(s, "    *)")
+			if i < 0 || j <= i || !strings.Contains(s[i:j], "'--usage[") {
+				t.Fatalf("zsh pricing must offer --usage:\n%s", s[i:j])
+			}
+		case "fish":
+			if !strings.Contains(s, `__fish_seen_subcommand_from pricing" -l usage`) {
+				t.Fatalf("fish pricing must offer --usage:\n%s", s)
+			}
+		case "powershell":
+			if !strings.Contains(s, `'--usage'`) {
+				t.Fatalf("powershell pricing must offer --usage:\n%s", s)
+			}
+		}
+	}
+}

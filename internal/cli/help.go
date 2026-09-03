@@ -13,6 +13,7 @@ USAGE
   wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] community [status|on|off|serve]
   wheretoken [flags] pricing     built-in model price card with official sources
+  wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL
@@ -107,6 +108,7 @@ EXAMPLES
   wheretoken pricing
   wheretoken pricing --vendor anthropic
   wheretoken pricing --model opus --json
+  wheretoken pricing --usage --since 30d
   wheretoken --offline --quiet
   wheretoken serve
   wheretoken community off
@@ -114,6 +116,7 @@ EXAMPLES
   wheretoken completion zsh
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
+Public:    ` + PublicSiteURL + `（公开/演示数据，本地账本不上传）
 页内「刷新」重新扫描本机；浏览器重载只会显示上次结果。
 `
 

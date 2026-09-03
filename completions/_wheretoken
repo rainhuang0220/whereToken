@@ -83,6 +83,7 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--json[price card as JSON]' \
+        '--usage[your usage priced by the card]' \
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \

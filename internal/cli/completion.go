@@ -56,7 +56,7 @@ _wheretoken() {
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
-    pricing) opts="--vendor --model --json --width --ascii --no-color --quiet -q --help" ;;
+    pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     *) opts="serve scan sources doctor rebuild update uninstall community pricing completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
@@ -150,6 +150,7 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--json[price card as JSON]' \
+        '--usage[your usage priced by the card]' \
         '--ascii[ASCII box drawing]' \
         '--no-color[disable ANSI]' \
         '--vendor[vendor id]:vendor:(anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown)' \
@@ -217,6 +218,7 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
+complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 `
 
 const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
@@ -250,7 +252,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
-    'pricing' { @('--vendor','--model','--json','--width','--ascii','--no-color','--quiet','--help') }
+    'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
