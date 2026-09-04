@@ -24,22 +24,30 @@ func versionConsistencyRoot(t *testing.T) string {
 	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
-func latestChangelogVersion(t *testing.T, root string) string {
+func changelogVersions(t *testing.T, root string) []string {
 	t.Helper()
 	body, err := os.ReadFile(filepath.Join(root, "CHANGELOG.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile(`(?m)^## (\d+\.\d+\.\d+) —`).FindStringSubmatch(string(body))
-	if m == nil {
+	ms := regexp.MustCompile(`(?m)^## (\d+\.\d+\.\d+) —`).FindAllStringSubmatch(string(body), -1)
+	if len(ms) == 0 {
 		t.Fatal("CHANGELOG.md has no `## X.Y.Z —` version heading")
 	}
-	return m[1]
+	out := make([]string, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, m[1])
+	}
+	return out
+}
+
+func latestChangelogVersion(t *testing.T, root string) string {
+	t.Helper()
+	return changelogVersions(t, root)[0]
 }
 
 func TestHomebrewFormulaTracksLatestRelease(t *testing.T) {
 	root := versionConsistencyRoot(t)
-	latest := latestChangelogVersion(t, root)
 	body, err := os.ReadFile(filepath.Join(root, "Formula", "wheretoken.rb"))
 	if err != nil {
 		t.Fatal(err)
@@ -48,9 +56,19 @@ func TestHomebrewFormulaTracksLatestRelease(t *testing.T) {
 	if m == nil {
 		t.Fatal("Formula/wheretoken.rb has no url")
 	}
-	if !strings.Contains(m[1], "v"+latest) {
-		t.Errorf("Formula/wheretoken.rb url %q is stale: CHANGELOG.md top release is %s; bump url + sha256 per docs/releasing.md", m[1], latest)
+	// The formula builds from the tag tarball, whose sha256 exists only after
+	// the tag — so docs/releasing.md bumps it right after release. It may lag
+	// the CHANGELOG top by exactly one release, never more.
+	allowed := changelogVersions(t, root)
+	if len(allowed) > 2 {
+		allowed = allowed[:2]
 	}
+	for _, v := range allowed {
+		if strings.Contains(m[1], "v"+v) {
+			return
+		}
+	}
+	t.Errorf("Formula/wheretoken.rb url %q is stale: CHANGELOG.md recent releases are %v; bump url + sha256 per docs/releasing.md", m[1], allowed)
 }
 
 func TestNpmPackageVersionTracksLatestRelease(t *testing.T) {
