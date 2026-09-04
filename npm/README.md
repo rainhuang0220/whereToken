@@ -2,7 +2,7 @@
 
 Installs the [whereToken](https://github.com/rainhuang0220/whereToken) CLI without requiring Go. The postinstall script downloads the GitHub Release binary for this OS/arch.
 
-This package is **not on the npm registry** yet. Until it is published, install with:
+This package is **experimental** — it is not the primary install channel and is **not yet published to the npm registry** (installing from the registry does not work today). The primary channels are the install script, Homebrew, and `go install`. Until this package is published, install with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
