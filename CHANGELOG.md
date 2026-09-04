@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 — 2026-09-04 (Alpha)
+
+- Fix: `serve` releases the scan-in-progress flag before writing the response, so a fast follow-up refresh no longer races into a spurious 煅烧进行中 (409)
+- Fix: community config reads/writes are serialized — concurrent dashboard toggles could fail on Windows where a rename cannot replace an open file
+- Tests: install-id path assertions follow the platform config dir (XDG / AppData) instead of assuming a unix layout
+
 ## 0.6.1 — 2026-09-04 (Alpha)
 
 - Production domain: the public site moves to https://wheretoken.plainlist.space (GitHub Pages custom domain). The CLI report footer and `serve` output print it; the demo lives at /demo/ and the old github.io project URL redirects once the domain is active
