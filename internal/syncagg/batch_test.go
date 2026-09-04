@@ -60,7 +60,7 @@ func testBuildInput(t *testing.T) BuildInput {
 				SourceRoot: "/Users/rainhuang/Library/Application Support/Cursor",
 				SessionID:  "bubble-1", Workspace: "/Users/rainhuang/proj",
 				Timestamp: ts(3, 12),
-				Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw,
+				Quality:   event.QualityAuthoritative, Derivation: event.DeriveRaw,
 			},
 		},
 		Turns: []event.TurnEvent{

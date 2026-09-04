@@ -9,9 +9,9 @@ import (
 type SourceScope string
 
 const (
-	ScopeDeviceLocal    SourceScope = "device_local"
-	ScopeAccountGlobal  SourceScope = "account_global"
-	SchemaVersion       = 1
+	ScopeDeviceLocal   SourceScope = "device_local"
+	ScopeAccountGlobal SourceScope = "account_global"
+	SchemaVersion                  = 1
 )
 
 func ParseScope(s string) (SourceScope, error) {

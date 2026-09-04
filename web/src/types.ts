@@ -120,6 +120,11 @@ export type SummaryPayload = {
   by_workspace?: SliceView[]
   by_session?: SessionView[]
   community?: CommunityView
+  hosted?: {
+    never_synced?: boolean
+    last_sync_at?: string
+    devices?: { id: string; label: string; os: string; arch: string; last_seen?: string; last_sync?: string }[]
+  }
 }
 
 export type RankStanding = {

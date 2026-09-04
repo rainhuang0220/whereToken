@@ -33,6 +33,7 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/pair/status", s.pairStatus)
 	mux.HandleFunc("/api/v1/pair/confirm", s.pairConfirm)
 	mux.HandleFunc("/api/v1/devices/self/revoke", s.revokeSelf)
+	mux.HandleFunc("/api/v1/devices/", s.deviceRoutes)
 	mux.HandleFunc("/api/v1/sync/batch", s.putSyncBatch)
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
 	return withSecurityHeaders(mux)
@@ -65,12 +66,4 @@ func (s *server) getHealth(w http.ResponseWriter, r *http.Request) {
 		"status":  "ok",
 		"version": s.opts.Version,
 	})
-}
-
-func (s *server) getDashboard(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.Error(w, "unauthorized", http.StatusUnauthorized)
 }

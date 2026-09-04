@@ -72,6 +72,9 @@ func (s *server) startGitHub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setCookie(w, cookieOAuthState, stateStr+":"+verStr, oauthTTL)
+	if next := r.URL.Query().Get("next"); strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") {
+		s.setCookie(w, "wt_next", next, oauthTTL)
+	}
 	g := s.github()
 	q := url.Values{}
 	q.Set("client_id", s.opts.Config.GitHubClientID)
@@ -127,7 +130,12 @@ func (s *server) callbackGitHub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setCookie(w, cookieSession, raw, sessionTTL)
-	http.Redirect(w, r, s.opts.Config.PublicURL+"/app", http.StatusFound)
+	next := "/app"
+	if c, err := r.Cookie("wt_next"); err == nil && strings.HasPrefix(c.Value, "/") && !strings.HasPrefix(c.Value, "//") {
+		next = c.Value
+	}
+	s.setCookie(w, "wt_next", "", -time.Hour)
+	http.Redirect(w, r, s.opts.Config.PublicURL+next, http.StatusFound)
 }
 
 func (s *server) exchangeGitHub(ctx context.Context, code, verifier string) (string, error) {

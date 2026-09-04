@@ -57,6 +57,26 @@ func (s *server) putSyncBatch(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *server) deviceRoutes(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1/devices/")
+	if strings.HasSuffix(path, "/revoke") && r.Method == http.MethodPost {
+		id := strings.TrimSuffix(path, "/revoke")
+		id = strings.Trim(id, "/")
+		user, _, err := s.currentUser(r)
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if err := s.opts.Store.RevokeDevice(r.Context(), user.ID, id); err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	http.NotFound(w, r)
+}
+
 func (s *server) revokeSelf(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

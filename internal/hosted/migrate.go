@@ -11,6 +11,7 @@ var migrations = []string{
   avatar_url VARCHAR(1024) NOT NULL DEFAULT '',
   profile_seed CHAR(36) NOT NULL,
   source_hmac_key BINARY(32) NOT NULL,
+  timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted_at DATETIME NULL,

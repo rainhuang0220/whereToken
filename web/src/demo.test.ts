@@ -44,4 +44,19 @@ describe('demo mode', () => {
     await fetchSummary('today')
     expect(seen).toEqual(['/api/summary?since=today'])
   })
+
+  it('hosted fetchSummary never reads sample JSON', async () => {
+    vi.stubEnv('VITE_DEMO', '')
+    vi.stubEnv('VITE_HOSTED', '1')
+    const seen: string[] = []
+    vi.stubGlobal('fetch', async (url: RequestInfo | URL) => {
+      seen.push(String(url))
+      return new Response(JSON.stringify({ all: { total: 1 }, hosted: { never_synced: true } }), {
+        status: 200,
+      })
+    })
+    await fetchSummary('today')
+    expect(seen.some((u) => u.includes('sample/'))).toBe(false)
+    expect(seen).toEqual(['/api/v1/dashboard/summary?since=today'])
+  })
 })

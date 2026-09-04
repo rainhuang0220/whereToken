@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_DEMO?: string
+  readonly VITE_HOSTED?: string
+}
+
 declare module 'virtual:wheretoken-themes.css'
 
 declare module '*.vue' {

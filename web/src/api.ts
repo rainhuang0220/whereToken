@@ -1,5 +1,5 @@
 import type { SummaryPayload } from './types'
-import { isDemo } from './demo'
+import { isDemo, isHosted } from './mode'
 import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
 export async function waitWhileScanning(opts?: {
@@ -40,6 +40,22 @@ export async function fetchSummary(since?: string): Promise<SummaryPayload> {
     }
     return res.json() as Promise<SummaryPayload>
   }
+  if (isHosted()) {
+    const q = since && since !== 'all' ? `?since=${encodeURIComponent(since)}` : ''
+    const res = await fetch(`/api/v1/dashboard/summary${q}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    })
+    if (res.status === 401) {
+      const next = encodeURIComponent(window.location.pathname || '/app')
+      window.location.assign(`/login?next=${next}`)
+      throw new Error('unauthorized')
+    }
+    if (!res.ok) {
+      throw new Error('无法加载数据')
+    }
+    return res.json() as Promise<SummaryPayload>
+  }
   const q = since && since !== 'all' ? `?since=${encodeURIComponent(since)}` : ''
   const res = await fetch(`/api/summary${q}`, { cache: 'no-store' })
   if (!res.ok) {
@@ -50,6 +66,9 @@ export async function fetchSummary(since?: string): Promise<SummaryPayload> {
 
 export async function rescan(onProgress: (p: ScanProgress) => void): Promise<SummaryPayload> {
   if (isDemo()) {
+    return fetchSummary('all')
+  }
+  if (isHosted()) {
     return fetchSummary('all')
   }
   const res = await fetch('/api/scan', {

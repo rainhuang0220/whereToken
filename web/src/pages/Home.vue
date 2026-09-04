@@ -20,13 +20,15 @@ import {
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
-import { isDemo } from '../demo'
+import { isDemo, isHosted } from '../mode'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
 const store = useSummaryStore()
 const demo = isDemo()
+const hosted = isHosted()
 const payload = computed(() => store.payload)
+const neverSynced = computed(() => hosted && Boolean(payload.value?.hosted?.never_synced))
 const periods: { id: PeriodId; label: string }[] = [
   { id: 'today', label: '今日' },
   { id: '7d', label: '7 天' },
@@ -161,6 +163,14 @@ onMounted(() => {
 
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
+    <section v-if="neverSynced" class="cold-kiln">
+      <div>
+        <p class="cold-kicker">尚未同步数据</p>
+        <p class="cold-copy">1. 安装 / 更新 whereToken</p>
+        <p class="cold-copy">2. 运行 <code>wheretoken login</code></p>
+        <p class="cold-copy">3. 运行 <code>wheretoken sync</code></p>
+      </div>
+    </section>
 
     <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
       <KilnKid pose="blink" size="md" />

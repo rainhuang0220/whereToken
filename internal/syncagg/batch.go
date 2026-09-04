@@ -47,30 +47,30 @@ type Batch struct {
 }
 
 type Source struct {
-	Tool           string      `json:"tool"`
-	Detected       bool        `json:"detected"`
-	Status         string      `json:"status"`
-	Quality        string      `json:"quality"`
-	SourceScope    SourceScope `json:"source_scope"`
-	SourceKeyHash  string      `json:"source_key_hash"`
+	Tool          string      `json:"tool"`
+	Detected      bool        `json:"detected"`
+	Status        string      `json:"status"`
+	Quality       string      `json:"quality"`
+	SourceScope   SourceScope `json:"source_scope"`
+	SourceKeyHash string      `json:"source_key_hash"`
 }
 
 type DailyModel struct {
-	Date           string      `json:"date"`
-	Tool           string      `json:"tool"`
-	SourceScope    SourceScope `json:"source_scope"`
-	SourceKeyHash  string      `json:"source_key_hash"`
-	Vendor         string      `json:"vendor"`
-	Model          string      `json:"model"`
-	Miss           int64       `json:"miss"`
-	CacheRead      int64       `json:"cache_read"`
-	CacheCreate    int64       `json:"cache_create"`
-	Output         int64       `json:"output"`
-	Requests       int64       `json:"requests"`
-	UserTurns      int64       `json:"user_turns"`
-	Quality        string      `json:"quality"`
-	Derivation     string      `json:"derivation"`
-	Revision       int64       `json:"revision"`
+	Date          string      `json:"date"`
+	Tool          string      `json:"tool"`
+	SourceScope   SourceScope `json:"source_scope"`
+	SourceKeyHash string      `json:"source_key_hash"`
+	Vendor        string      `json:"vendor"`
+	Model         string      `json:"model"`
+	Miss          int64       `json:"miss"`
+	CacheRead     int64       `json:"cache_read"`
+	CacheCreate   int64       `json:"cache_create"`
+	Output        int64       `json:"output"`
+	Requests      int64       `json:"requests"`
+	UserTurns     int64       `json:"user_turns"`
+	Quality       string      `json:"quality"`
+	Derivation    string      `json:"derivation"`
+	Revision      int64       `json:"revision"`
 }
 
 type rowKey struct {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/syncagg"
@@ -60,6 +61,9 @@ type Device struct {
 	OS            string
 	Arch          string
 	ClientVersion string
+	LastSeenAt    time.Time
+	LastSyncAt    time.Time
+	Revoked       bool
 }
 
 type Store struct {
@@ -274,9 +278,84 @@ func (s *Store) SyncBatch(ctx context.Context, userID, deviceID int64, batch syn
 	if err := s.ApplyUsage(ctx, userID, deviceID, batch.DailyModelUsage); err != nil {
 		return err
 	}
+	if tz := strings.TrimSpace(batch.Timezone); tz != "" {
+		_, _ = s.db.ExecContext(ctx, `UPDATE users SET timezone=? WHERE id=?`, tz, userID)
+	}
+	if len(batch.Sources) > 0 {
+		now := s.clock()
+		for _, src := range batch.Sources {
+			_, _ = s.db.ExecContext(ctx, `INSERT INTO source_states (user_id, device_id, tool, source_scope, source_key_hash, status, quality, detected, updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status), quality=VALUES(quality), detected=VALUES(detected), updated_at=VALUES(updated_at)`,
+				userID, deviceID, src.Tool, string(src.SourceScope), src.SourceKeyHash, src.Status, src.Quality, boolToInt(src.Detected), now)
+		}
+	}
 	_, err = s.db.ExecContext(ctx, `INSERT INTO sync_revisions (user_id, device_id, idempotency_key, body_hash, schema_version, created_at) VALUES (?,?,?,?,?,?)`,
 		userID, deviceID, batch.IdempotencyKey, sum[:], batch.SchemaVersion, s.clock())
 	return err
+}
+
+func boolToInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func (s *Store) ListUsage(ctx context.Context, userID int64, from, to string) ([]syncagg.DailyModel, error) {
+	q := `SELECT device_id, source_scope, tool, source_key_hash, date, vendor, model, miss, cache_read, cache_create, output, requests, user_turns, quality, derivation, revision FROM usage_daily_model WHERE user_id=? AND date>=? AND date<=?`
+	rows, err := s.db.QueryContext(ctx, q, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []syncagg.DailyModel
+	for rows.Next() {
+		var deviceID int64
+		var date time.Time
+		var row syncagg.DailyModel
+		var scope string
+		if err := rows.Scan(&deviceID, &scope, &row.Tool, &row.SourceKeyHash, &date, &row.Vendor, &row.Model, &row.Miss, &row.CacheRead, &row.CacheCreate, &row.Output, &row.Requests, &row.UserTurns, &row.Quality, &row.Derivation, &row.Revision); err != nil {
+			return nil, err
+		}
+		row.SourceScope = syncagg.SourceScope(scope)
+		row.Date = date.Format("2006-01-02")
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) HasUsage(ctx context.Context, userID int64) (bool, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM usage_daily_model WHERE user_id=?`, userID).Scan(&n)
+	return n > 0, err
+}
+
+func (s *Store) UserTimezone(ctx context.Context, userID int64) string {
+	var tz string
+	if err := s.db.QueryRowContext(ctx, `SELECT timezone FROM users WHERE id=?`, userID).Scan(&tz); err != nil || tz == "" {
+		return "UTC"
+	}
+	return tz
+}
+
+func (s *Store) ListDevices(ctx context.Context, userID int64) ([]Device, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, public_id, label, os, arch, client_version, last_seen_at, last_sync_at, revoked_at FROM devices WHERE user_id=? ORDER BY created_at`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Device
+	for rows.Next() {
+		var d Device
+		var seen, syncAt, rev sql.NullTime
+		if err := rows.Scan(&d.ID, &d.UserID, &d.PublicID, &d.Label, &d.OS, &d.Arch, &d.ClientVersion, &seen, &syncAt, &rev); err != nil {
+			return nil, err
+		}
+		d.LastSeenAt = seen.Time
+		d.LastSyncAt = syncAt.Time
+		d.Revoked = rev.Valid
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) SumUsage(ctx context.Context, userID int64, from, to string) (map[string]int64, error) {

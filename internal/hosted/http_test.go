@@ -44,6 +44,21 @@ func TestHealthJSONOmitsSecrets(t *testing.T) {
 	}
 }
 
+func TestDashboardNeverSyncedOnboarding(t *testing.T) {
+	h := testMux(t, githubStub())
+	sess := loginSession(t, h)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/summary", nil)
+	req.AddCookie(sess)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"never_synced":true`) && !strings.Contains(rec.Body.String(), `"never_synced": true`) {
+		t.Fatalf("want never_synced: %s", rec.Body.String())
+	}
+}
+
 func TestDashboardRequiresSession(t *testing.T) {
 	h := NewMux(MuxOptions{Version: "dev"})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/summary", nil)
