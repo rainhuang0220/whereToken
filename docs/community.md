@@ -46,8 +46,12 @@ The local file is `~/.config/wheretoken/community.json` on Unix and
 
 ## KPI
 
-The fifth CLI / dashboard column is **估价** (row 1) and **排名** (row 2).
-`--rank today` (default) or `--rank all` selects the standing. Rank is
+The default report's fifth column is **估价** (row 1) and **用户画像** (row 2);
+community rank no longer appears in the terminal report or the dashboard.
+Your standing is still available from `wheretoken community` and the
+`--json` community block. (`--rank today|all` is still accepted for
+compatibility, but nothing in the default report prints rank anymore.)
+Rank is
 competition ranking (ties share a place and skip). Below 20 participants
 the product shows "not available yet" instead of a three-person podium.
 **累计 / `--rank all` is the sum of days this client uploaded**, not the

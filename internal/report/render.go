@@ -2,10 +2,11 @@ package report
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
@@ -94,7 +95,7 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 	hit := table.PaintHit(snap.HitRateText, color)
 	total := table.Bold(snap.TotalM, color)
 	cost := costKPI(snap)
-	rank := community.Caption(rankStanding(snap))
+	portrait := portraitCell(snap.Portrait)
 	if snap.ShowStreaks {
 		return [2][]table.KPI{
 			{
@@ -109,7 +110,7 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 				{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 				{Label: "用户回合", Value: turnKPI(snap)},
 				{Label: "单日最高", Value: snap.PeakDayM},
-				{Label: "排名", Value: rank},
+				{Label: "用户画像", Value: portrait},
 			},
 		}
 	}
@@ -124,24 +125,71 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 			{Label: "用户回合", Value: turnKPI(snap)},
 			{Label: "工具数", Value: metric.FormatCount(int64(len(snap.Tools)))},
 			{Label: "厂家数", Value: metric.FormatCount(int64(len(snap.Vendors)))},
-			{Label: "排名", Value: rank},
+			{Label: "用户画像", Value: portrait},
 		},
 	}
 }
 
+// portraitCell is the bottom-right KPI: the primary phrase of the existing
+// deterministic portrait (profile.Evaluate owns the none/insufficient
+// wording — never a rank fallback).
+func portraitCell(p profile.Portrait) string {
+	if strings.TrimSpace(p.Primary) == "" {
+		return "—"
+	}
+	return p.Primary
+}
+
+// portraitNote spells out the full portrait (primary + tags) under the table
+// when the cell only has room for the primary phrase.
+func portraitNote(p profile.Portrait) string {
+	if p.State != profile.StateOK {
+		return ""
+	}
+	return "画像 · " + strings.Join(append([]string{p.Primary}, p.Tags...), " · ")
+}
+
+// costKPI renders the headline estimate with 2 decimals and thousands
+// separators ($3,670.69). Detail rows, notes, pricing --usage and JSON keep
+// the raw micro-precision string; this is presentation-only.
 func costKPI(snap Snapshot) string {
-	if usd := omitZeroUSD(snap.CostUSD); usd != "" {
-		return usd
+	usd := omitZeroUSD(snap.CostUSD)
+	if usd == "" {
+		return "—"
+	}
+	if short := usdGrouped2(usd); short != "" {
+		return short
 	}
 	return "—"
 }
 
-func rankStanding(snap Snapshot) community.Standing {
-	st := snap.Community.Today
-	if snap.RankPeriod == community.PeriodAll {
-		st = snap.Community.All
+// usdGrouped2 turns "$3670.6920" into "$3,670.69". A value that rounds to
+// zero returns "" so callers show — instead of a fake $0.00.
+func usdGrouped2(usd string) string {
+	s := strings.TrimSpace(usd)
+	neg := strings.HasPrefix(s, "-")
+	s = strings.TrimPrefix(strings.TrimPrefix(s, "-"), "$")
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return ""
 	}
-	return community.SanitizeStanding(st)
+	fixed := strconv.FormatFloat(v, 'f', 2, 64)
+	if f, err := strconv.ParseFloat(fixed, 64); err != nil || f == 0 {
+		return ""
+	}
+	intPart, frac, _ := strings.Cut(fixed, ".")
+	var grouped strings.Builder
+	for i, r := range intPart {
+		if i > 0 && (len(intPart)-i)%3 == 0 {
+			grouped.WriteByte(',')
+		}
+		grouped.WriteRune(r)
+	}
+	out := "$" + grouped.String() + "." + frac
+	if neg {
+		return "-" + out
+	}
+	return out
 }
 
 func days(n int) string {
@@ -280,40 +328,17 @@ func offlineBanner(snap Snapshot) string {
 }
 
 func footnotes(snap Snapshot) []string {
-	out := make([]string, 0, len(snap.Notes))
+	out := make([]string, 0, len(snap.Notes)+1)
 	for _, n := range snap.Notes {
 		if strings.HasPrefix(n, "offline ·") {
 			continue
 		}
 		out = append(out, n)
 	}
-	return appendRankNotes(out, snap)
-}
-
-func appendRankNotes(notes []string, snap Snapshot) []string {
-	st := rankStanding(snap)
-	switch st.Status {
-	case community.StatusOK:
-		period := "今日"
-		if snap.RankPeriod == community.PeriodAll {
-			period = "累计已同步日"
-		}
-		return append(notes, "社区排名 "+st.Display+" · "+period+" · 匿名聚合，不是审计榜")
-	case community.StatusInsufficientParticipants:
-		return append(notes, "社区排名暂不可用 · 参与者还不够")
-	case community.StatusOptedOut, community.StatusDisabled:
-		return append(notes, "社区排名已关闭 · wheretoken community on 重新参加")
-	case community.StatusOffline:
-		return append(notes, "社区排名未上传 · --offline")
-	case community.StatusNetworkError:
-		return append(notes, "社区排名暂不可用 · 服务连不上")
-	case community.StatusServiceUnconfigured:
-		return append(notes, "社区排名暂不可用 · 未配置远程服务")
-	case community.StatusNoUsage, community.StatusNotRanked:
-		return append(notes, "尚未进入社区排名")
-	case community.StatusUnavailable:
-		return append(notes, "社区排名暂不可用")
-	default:
-		return notes
+	// Community rank stays in `wheretoken community` and the JSON community
+	// block; the default report's bottom-right cell is the usage portrait.
+	if note := portraitNote(snap.Portrait); note != "" {
+		out = append(out, note)
 	}
+	return out
 }

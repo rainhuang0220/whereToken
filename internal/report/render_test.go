@@ -29,8 +29,11 @@ func TestRenderP0LabelsAndValues(t *testing.T) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
 	}
-	if !strings.Contains(out, "估价") || !strings.Contains(out, "排名") {
+	if !strings.Contains(out, "估价") || !strings.Contains(out, "用户画像") {
 		t.Fatalf("fifth column missing:\n%s", out)
+	}
+	if strings.Contains(out, "排名") {
+		t.Fatalf("rank must not appear in the default report:\n%s", out)
 	}
 	if strings.Contains(out, "#0") {
 		t.Fatalf("unknown rank must not print #0:\n%s", out)
@@ -77,7 +80,10 @@ func TestRenderRankingCostNeverZeroForUnknown(t *testing.T) {
 	}
 }
 
-func TestRenderRankCaptionNeverZero(t *testing.T) {
+// The bottom-right KPI is the usage portrait; community rank stays in
+// `wheretoken community` and the JSON community block, never in the terminal
+// table — even when a real standing exists.
+func TestRenderPortraitReplacesRank(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
 	events, turns := fixture(loc)
@@ -90,8 +96,11 @@ func TestRenderRankCaptionNeverZero(t *testing.T) {
 	snap.Community.Today.Participants = 842
 	snap.Community.Today.Display = "#37 / 842"
 	out := Render(snap, Options{})
-	if !strings.Contains(out, "#37 / 842") {
-		t.Fatalf("missing display:\n%s", out)
+	if !strings.Contains(out, "用户画像") {
+		t.Fatalf("missing portrait cell:\n%s", out)
+	}
+	if strings.Contains(out, "排名") || strings.Contains(out, "#37 / 842") {
+		t.Fatalf("rank leaked into the report:\n%s", out)
 	}
 	if strings.Contains(out, "#0") {
 		t.Fatal(out)

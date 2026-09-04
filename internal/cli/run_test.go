@@ -62,6 +62,7 @@ func testApp(args []string) (*App, *bytes.Buffer, *bytes.Buffer) {
 		Scan: func(adapter.Home) scan.Result {
 			return fixtureResult()
 		},
+		PortraitSeed: func(adapter.Home) string { return "test-seed" },
 	}
 	return app, out, errb
 }

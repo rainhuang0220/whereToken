@@ -18,6 +18,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/report"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/table"
@@ -42,10 +43,14 @@ type App struct {
 	Executable func() (string, error)
 	HTTPGet    func(url string) ([]byte, error)
 	RunCmd     func(name string, args ...string) error
-	GOOS       string
-	GOARCH     string
-	StdoutTTY  bool
-	StderrTTY  bool
+	// PortraitSeed resolves the anonymous install identity that seeds the
+	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
+	// pin a constant so runs stay hermetic.
+	PortraitSeed func(adapter.Home) string
+	GOOS         string
+	GOARCH       string
+	StdoutTTY    bool
+	StderrTTY    bool
 }
 
 func (a *App) Run() int {
@@ -72,6 +77,9 @@ func (a *App) Run() int {
 	}
 	if a.Version == "" {
 		a.Version = ResolveVersion("dev")
+	}
+	if a.PortraitSeed == nil {
+		a.PortraitSeed = profile.IdentityFor
 	}
 
 	flags, err := Parse(a.Args)
@@ -206,6 +214,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		Vendor:     flags.Vendor,
 		Model:      flags.Model,
 		Discovered: res.Summary.BySource,
+		Seed:       a.PortraitSeed(home),
 	}
 	snap, err := report.Build(res.Events, res.Turns, res.Errors, fil, a.Now(), a.Loc)
 	if err != nil {

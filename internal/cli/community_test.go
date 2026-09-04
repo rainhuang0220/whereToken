@@ -122,25 +122,30 @@ func TestRunCommunityStatusAndOptOut(t *testing.T) {
 	}
 }
 
-func TestRunReportFifthKPINeverZeroRank(t *testing.T) {
+func TestRunReportFifthKPIShowsPortraitNotRank(t *testing.T) {
 	dir := t.TempDir()
 	app, out, errb := testApp([]string{"--home", dir, "--quiet"})
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
 	s := out.String()
-	if !strings.Contains(s, "估价") || !strings.Contains(s, "排名") {
+	if !strings.Contains(s, "估价") || !strings.Contains(s, "用户画像") {
 		t.Fatalf("missing fifth column:\n%s", s)
+	}
+	if strings.Contains(s, "排名") {
+		t.Fatalf("rank must not appear in the default report:\n%s", s)
 	}
 	if strings.Contains(s, "#0") || strings.Contains(s, "Rank 0") {
 		t.Fatalf("claimed rank zero:\n%s", s)
 	}
-	if !strings.Contains(s, "$12.0000") {
-		t.Fatalf("priced fixture should print estimate:\n%s", s)
+	if !strings.Contains(s, "$12.00") {
+		t.Fatalf("priced fixture should print the 2-decimal KPI estimate:\n%s", s)
 	}
 }
 
-func TestRunNoCommunityAndOfflineRank(t *testing.T) {
+// --no-community / --offline keep working; the default report just no longer
+// spends a note on community rank either way.
+func TestRunNoCommunityAndOfflineShowPortrait(t *testing.T) {
 	dir := t.TempDir()
 	app, out, errb := testApp([]string{"--home", dir, "--no-community", "--quiet"})
 	if code := app.Run(); code != ExitOK {
@@ -150,8 +155,11 @@ func TestRunNoCommunityAndOfflineRank(t *testing.T) {
 	if strings.Contains(s, "#0") {
 		t.Fatal(s)
 	}
-	if !strings.Contains(s, "社区排名已关闭") {
-		t.Fatalf("opt-out note:\n%s", s)
+	if !strings.Contains(s, "用户画像") {
+		t.Fatalf("missing portrait:\n%s", s)
+	}
+	if strings.Contains(s, "排名") {
+		t.Fatalf("rank note must be gone:\n%s", s)
 	}
 
 	app, out, errb = testApp([]string{"--home", dir, "--offline", "--quiet"})
@@ -159,8 +167,11 @@ func TestRunNoCommunityAndOfflineRank(t *testing.T) {
 		t.Fatalf("offline code=%d %s", code, errb.String())
 	}
 	s = out.String()
-	if !strings.Contains(s, "社区排名未上传") {
-		t.Fatalf("offline note:\n%s", s)
+	if !strings.Contains(s, "用户画像") {
+		t.Fatalf("offline missing portrait:\n%s", s)
+	}
+	if strings.Contains(s, "排名") {
+		t.Fatalf("offline rank note must be gone:\n%s", s)
 	}
 	if strings.Contains(s, "#0") {
 		t.Fatal(s)

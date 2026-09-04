@@ -10,6 +10,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -21,6 +22,9 @@ type Filter struct {
 	Tool, Vendor string
 	Model        string
 	Discovered   []metric.Slice
+	// Seed feeds the deterministic usage portrait (the anonymous install
+	// identity, see profile.IdentityFor). Empty falls back to a constant.
+	Seed string
 }
 
 type Row struct {
@@ -62,8 +66,8 @@ type Snapshot struct {
 	Quality       event.Quality
 	CostStatus    string
 	CostUSD       string
+	Portrait      profile.Portrait
 	Community     community.View
-	RankPeriod    string
 }
 
 type usageErr struct{ msg string }
@@ -142,6 +146,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		Quality:       sum.All.Quality,
 		CostStatus:    view.CostStatus,
 		CostUSD:       view.CostUSD,
+		Portrait:      profile.Evaluate(sum, f.Seed),
 	}
 
 	for _, s := range sum.BySource {

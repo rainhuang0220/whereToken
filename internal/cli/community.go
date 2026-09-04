@@ -16,7 +16,6 @@ import (
 )
 
 func (a *App) attachCommunity(snap *report.Snapshot, flags Flags, home adapter.Home, events []event.UsageEvent) {
-	snap.RankPeriod = flags.RankPeriod
 	snap.Community = community.Resolve(community.Request{
 		Home:    home,
 		Getenv:  a.LookupEnv,

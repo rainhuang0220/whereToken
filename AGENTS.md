@@ -10,7 +10,7 @@ Local-first token usage accounting. Read these before changing parsers or totals
 - Global research table: [`docs/provider-matrix.md`](docs/provider-matrix.md)
 - Cost: [`docs/cost.md`](docs/cost.md); the estimator and `wheretoken pricing` read one table — rates in `internal/price/table.go`, official sources + verification dates in `internal/price/catalog.go`
 - Model-level estimate: `by_model` (`/api/summary`, dashboard 估价 modal, `wheretoken pricing --usage`) prices through `price.Resolve`; model ids normalize (version-first → family-first) for matching only, raw ids stay on events.
-- User portrait: `internal/profile` — deterministic bucketed trait vector + Chinese phrase bank, seeded by the local anonymous install id only (never username/HOME/hostname/IP/credentials). No LLM, no wall-clock randomness, no rank claims.
+- User portrait: `internal/profile` — deterministic bucketed trait vector + Chinese phrase bank, seeded by the local anonymous install id only (never username/HOME/hostname/IP/credentials). No LLM, no wall-clock randomness, no rank claims. Web reads it from the summary JSON; the CLI report renders the same engine via `report.Snapshot.Portrait` (bottom-right KPI). Rank never appears in the default report — community rank lives in `wheretoken community` and the `--json` community block only.
 - Community Rank: [`docs/community.md`](docs/community.md)
 
 ## Hard rules

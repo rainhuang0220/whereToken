@@ -187,7 +187,8 @@ the price is unknown.
 
 ## User portrait
 
-The dashboard's 用户画像 cell (`internal/profile`) summarizes the selected
+The 用户画像 cell (`internal/profile`) — bottom-right of the web dashboard and
+of the CLI 2×5 report alike — summarizes the selected
 window as a short Chinese phrase plus up to two tags. It is a deterministic
 function of the summary metrics — no LLM, no embeddings, no network.
 
