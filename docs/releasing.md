@@ -73,4 +73,20 @@ bash scripts/verify-cli.sh
    ./wheretoken             # runs against your real ledger
    ```
 
+   `--version` alone is not enough — the terminal KPI is the product surface
+   that once shipped stale while the web dashboard passed. Assert it on the
+   unpacked binary (web tests never cover the CLI renderer):
+
+   ```bash
+   out="$(./wheretoken --quiet)"
+   echo "$out" | grep -q '用户画像'                  # bottom-right KPI cell
+   ! echo "$out" | grep -q '排名'                   # rank is gone from the report
+   ! echo "$out" | grep -q '社区排名暂不可用'        # and so is its note
+   echo "$out" | grep -Eq '\$[0-9]{1,3}(,[0-9]{3})*\.[0-9]{2}'   # 2-dec grouped estimate (when priced)
+   ```
+
+   `bash scripts/verify-cli.sh` makes the same assertions against a fresh
+   `go build` of `./cmd/wheretoken`, so CI gates catch this before the tag;
+   the dogfood catches a packaging drift after it.
+
 Stop if any check fails. Do not delete failing tests to ship.

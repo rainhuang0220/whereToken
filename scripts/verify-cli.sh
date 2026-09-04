@@ -41,7 +41,17 @@ echo "$out" | grep -q '0.0012 M'
 echo "$out" | grep -q 'Kimi'
 echo "$out" | grep -q '占比'
 echo "$out" | grep -q '估价'
-echo "$out" | grep -q '排名'
+# The bottom-right KPI is the usage portrait; community rank never prints in
+# the default report (it lives in `wheretoken community` and --json).
+echo "$out" | grep -q '用户画像'
+if echo "$out" | grep -q '排名'; then
+  echo "table still prints rank" >&2
+  exit 1
+fi
+if echo "$out" | grep -q '社区排名暂不可用'; then
+  echo "table still prints the community-rank note" >&2
+  exit 1
+fi
 if echo "$out" | grep -q '#0'; then
   echo "table printed #0" >&2
   exit 1
@@ -91,7 +101,11 @@ if echo "$st" | grep -E '\$0\.00' >/dev/null; then
 fi
 
 nc="$("$dir/wheretoken" --home "$dir" --no-community --ascii --quiet)"
-echo "$nc" | grep -q '社区排名已关闭'
+echo "$nc" | grep -q '用户画像'
+if echo "$nc" | grep -q '排名'; then
+  echo "--no-community still prints rank" >&2
+  exit 1
+fi
 if echo "$nc" | grep -q '#0'; then
   echo "--no-community printed #0" >&2
   exit 1
@@ -152,6 +166,11 @@ zeros="$("$dir/wheretoken" --home "$empty" --ascii --quiet)"
 echo "$zeros" | grep -q '0.00 M'
 echo "$zeros" | grep -q '本机没有找到账本'
 echo "$zeros" | grep -q '估价'
+echo "$zeros" | grep -q '用户画像'
+if echo "$zeros" | grep -q '排名'; then
+  echo "empty home printed rank" >&2
+  exit 1
+fi
 if echo "$zeros" | grep -q '#0'; then
   echo "empty home printed #0" >&2
   exit 1
@@ -217,6 +236,11 @@ echo "$modjson" | grep -q '"hide_turns": true'
 today_kimi="$("$dir/wheretoken" --home "$dir" --today --kimi --ascii --quiet)"
 echo "$today_kimi" | grep -q '今天'
 echo "$today_kimi" | grep -q 'Kimi'
+echo "$today_kimi" | grep -q '用户画像'
+if echo "$today_kimi" | grep -q '排名'; then
+  echo "--today still prints rank" >&2
+  exit 1
+fi
 if echo "$today_kimi" | grep -q '0.0012 M'; then
   echo "--today --kimi mixed all-time rows" >&2
   exit 1
@@ -237,6 +261,10 @@ fi
 
 narrow="$(COLUMNS=40 "$dir/wheretoken" --home "$dir" --ascii --quiet)"
 echo "$narrow" | grep -q 'Kimi'
+if echo "$narrow" | grep -q '排名'; then
+  echo "narrow output still prints rank" >&2
+  exit 1
+fi
 narrow_flag="$("$dir/wheretoken" --home "$dir" --width 40 --ascii --quiet)"
 echo "$narrow_flag" | grep -q 'Kimi'
 if echo "$narrow" | grep -q 'K\.\.\.'; then
