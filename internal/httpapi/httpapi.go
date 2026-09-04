@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -197,14 +198,21 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 			writeSSE(w, flush, "error", `{"error":"encode"}`)
 			return
 		}
+		s.endScan() // release before the final flush: clients may act on the complete event while the handler is still returning
 		writeSSE(w, flush, "complete", string(raw))
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if err := scan.EncodeSummary(w, res); err != nil {
+	// Encode before endScan so a fast client cannot observe the response and
+	// immediately POST a follow-up scan while the flag is still held.
+	var buf bytes.Buffer
+	if err := scan.EncodeSummary(&buf, res); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	s.endScan()
+	_, _ = w.Write(buf.Bytes())
 }
 
 func writeSSE(w http.ResponseWriter, flush http.Flusher, event, data string) {

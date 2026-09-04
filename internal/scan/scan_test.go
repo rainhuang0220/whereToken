@@ -857,7 +857,8 @@ func TestPortraitSeedSeamReceivesScanHome(t *testing.T) {
 	if got == nil || got.XDGConfig("wheretoken") != home.XDGConfig("wheretoken") {
 		t.Fatalf("seam received %v, want the scanned home", got)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".config", "wheretoken", "install-id")); !os.IsNotExist(err) {
+	installIDPath := filepath.Join(filepath.Dir(community.ConfigPath(home)), "install-id")
+	if _, err := os.Stat(installIDPath); !os.IsNotExist(err) {
 		t.Fatalf("overridden seam must not create install-id: %v", err)
 	}
 	// The portrait must be present even on an empty scan.
@@ -869,9 +870,11 @@ func TestPortraitSeedSeamReceivesScanHome(t *testing.T) {
 func TestPortraitSeedDefaultsToInstallIdentity(t *testing.T) {
 	t.Setenv("WHERETOKEN_COMMUNITY_FILE", "")
 	dir := t.TempDir()
-	r := Run(testhome.New(dir), AllAdapters())
+	home := testhome.New(dir)
+	r := Run(home, AllAdapters())
 	state, _, _, _ := summaryPortrait(t, r)
-	if _, err := os.Stat(filepath.Join(dir, ".config", "wheretoken", "install-id")); err != nil {
+	installIDPath := filepath.Join(filepath.Dir(community.ConfigPath(home)), "install-id")
+	if _, err := os.Stat(installIDPath); err != nil {
 		t.Fatalf("default seam should create install-id on first marshal: %v", err)
 	}
 	if state != "none" {

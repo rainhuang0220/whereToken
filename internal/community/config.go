@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 )
@@ -60,7 +61,14 @@ func LoadOrCreate(path, joinedAt string) (*File, error) {
 	return f, nil
 }
 
+// configMu serializes config-file access process-wide: Save renames over the
+// live path, which Windows refuses while a concurrent Load holds it open, and
+// interleaved writers could otherwise rename over each other's tmp file.
+var configMu sync.Mutex
+
 func Load(path string) (*File, error) {
+	configMu.Lock()
+	defer configMu.Unlock()
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -76,6 +84,8 @@ func Load(path string) (*File, error) {
 }
 
 func (f *File) Save(path string) error {
+	configMu.Lock()
+	defer configMu.Unlock()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}

@@ -21,7 +21,9 @@ func TestIdentityCreatesStableInstallID(t *testing.T) {
 	if !installIDRe.MatchString(id1) {
 		t.Fatalf("install id %q is not a UUIDv4-shaped string", id1)
 	}
-	path := filepath.Join(dir, ".config", "wheretoken", "install-id")
+	// The config dir follows community.ConfigPath (XDG on unix, AppData on
+	// Windows) — derive it instead of hardcoding a unix layout.
+	path := filepath.Join(filepath.Dir(community.ConfigPath(testhome.New(dir))), "install-id")
 	st, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("install-id not written: %v", err)
