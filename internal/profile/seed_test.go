@@ -3,6 +3,7 @@ package profile
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -28,7 +29,8 @@ func TestIdentityCreatesStableInstallID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("install-id not written: %v", err)
 	}
-	if perm := st.Mode().Perm(); perm != 0o600 {
+	if perm := st.Mode().Perm(); runtime.GOOS != "windows" && perm != 0o600 {
+		// Windows maps write modes to 0666/0444; the 0600 intent is posix-only.
 		t.Fatalf("install-id mode=%o, want 0600", perm)
 	}
 	if id2 := Identity(dir); id2 != id1 {
