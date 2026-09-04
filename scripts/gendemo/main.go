@@ -56,12 +56,19 @@ func fabricate(now time.Time, loc *time.Location) ([]event.UsageEvent, []event.T
 	for d := 45; d >= 0; d-- {
 		day := today.AddDate(0, 0, -d)
 		weekend := day.Weekday() == time.Saturday || day.Weekday() == time.Sunday
-		for _, p := range profiles {
+		for pi, p := range profiles {
 			prob := p.weekday
 			if weekend {
 				prob = p.weekend
 			}
-			if rng.Float64() > prob {
+			// The demo "today" tab must always look alive: the first four
+			// tools burn on day 0 regardless of the probability draw (the
+			// sample test floors today's source count at 4).
+			active := rng.Float64() <= prob
+			if d == 0 && pi < 4 {
+				active = true
+			}
+			if !active {
 				continue
 			}
 			sess := fmt.Sprintf("demo-%s-%d", p.source, rng.Intn(4)+1)
