@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.4 — 2026-09-04 (Alpha)
+
+- Fix: the CLI 2×5 report now ends with **用户画像**, matching the v0.6.0 product definition the web dashboard already shipped. v0.6.0 wired the deterministic portrait only into the summary JSON (`scan.buildSummaryJSON`); the terminal renderer kept the pre-v0.6.0 rank cell, so release binaries still printed 排名 + a 社区排名暂不可用 footnote. `report.Snapshot` gains a `Portrait` field fed by the same `profile.Evaluate` engine (seeded by the anonymous install id; windowed reports profile the window) — no second portrait implementation
+- Fix: the default report drops the community-rank footnote entirely. Community rank stays available in `wheretoken community` and the `--json` community block; `--rank` is still accepted for compatibility
+- CLI: the headline 估价 KPI renders 2-decimal with thousands separators ($3,670.69). Detail rows, notes, `--json`, and `pricing --usage` keep micro precision; the cost math is untouched
+- Tests: semantic guards pin the terminal report — 用户画像 present, 排名 / 社区排名暂不可用 absent across default, today, 7d/30d, custom range, scoped, no-data, ASCII, and narrow widths. `scripts/verify-cli.sh` asserted the *old* rank cell before; it now asserts the portrait and rejects rank, and docs/releasing.md dogfood gained the same packaged-binary KPI assertions
+
 ## 0.6.3 — 2026-09-04 (Alpha)
 
 - Revert the GitHub Pages custom-domain cutover: the project site stays at `https://rainhuang0220.github.io/whereToken/` and the demo at `/whereToken/demo/` again (the domain-root demo base had broken the demo on the old URL). `wheretoken.plainlist.space` is a separate nginx host reserved for a possible future hosted app, not GitHub Pages
