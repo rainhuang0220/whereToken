@@ -2,6 +2,7 @@ package hosted
 
 import (
 	"crypto/hmac"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -14,6 +15,7 @@ type pairPending struct {
 	rawToken string
 	login    string
 	deviceID string
+	hmacKey  []byte
 }
 
 func (s *server) pairStart(w http.ResponseWriter, r *http.Request) {
@@ -99,10 +101,11 @@ func (s *server) pairStatus(w http.ResponseWriter, r *http.Request) {
 	case ch.ConsumedAt.Valid:
 		if v, ok := s.takePending(code); ok {
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status":       "approved",
-				"device_token": v.rawToken,
-				"user_login":   v.login,
-				"device_id":    v.deviceID,
+				"status":          "approved",
+				"device_token":    v.rawToken,
+				"user_login":      v.login,
+				"device_id":       v.deviceID,
+				"source_hmac_key": base64.RawURLEncoding.EncodeToString(v.hmacKey),
 			})
 			return
 		}
@@ -158,7 +161,7 @@ func (s *server) pairConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	s.putPending(code, pairPending{rawToken: raw, login: user.Login, deviceID: dev.PublicID})
+	s.putPending(code, pairPending{rawToken: raw, login: user.Login, deviceID: dev.PublicID, hmacKey: user.SourceHMACKey})
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"status":    "approved",

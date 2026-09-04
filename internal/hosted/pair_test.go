@@ -75,6 +75,9 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 	if !strings.HasPrefix(tok, "wtd_1.") {
 		t.Fatalf("token %v", m["device_token"])
 	}
+	if m["source_hmac_key"] == nil || m["source_hmac_key"] == "" {
+		t.Fatal("approved poll must return the user HMAC key once")
+	}
 	_, m2 := status()
 	if m2["status"] != "consumed" {
 		t.Fatalf("second poll %+v", m2)

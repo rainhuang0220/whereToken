@@ -14,6 +14,9 @@ USAGE
   wheretoken [flags] community [status|on|off|serve]
   wheretoken [flags] pricing     built-in model price card with official sources
   wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
+  wheretoken [flags] login       pair this device with the hosted web app
+  wheretoken [flags] logout      revoke the device token
+  wheretoken [flags] sync        upload privacy-safe daily usage to the hosted app
   wheretoken [flags] completion bash|zsh|fish|powershell
 
 INSTALL

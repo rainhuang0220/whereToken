@@ -32,6 +32,8 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/pair/start", s.pairStart)
 	mux.HandleFunc("/api/v1/pair/status", s.pairStatus)
 	mux.HandleFunc("/api/v1/pair/confirm", s.pairConfirm)
+	mux.HandleFunc("/api/v1/devices/self/revoke", s.revokeSelf)
+	mux.HandleFunc("/api/v1/sync/batch", s.putSyncBatch)
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
 	return withSecurityHeaders(mux)
 }

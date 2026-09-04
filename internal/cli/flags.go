@@ -24,6 +24,9 @@ const (
 	CommandCompletion = "completion"
 	CommandCommunity  = "community"
 	CommandPricing    = "pricing"
+	CommandLogin      = "login"
+	CommandLogout     = "logout"
+	CommandSync       = "sync"
 )
 
 const (
@@ -353,6 +356,12 @@ func applyCommandWord(f *Flags, word string) bool {
 		f.Command = CommandCommunity
 	case "pricing":
 		f.Command = CommandPricing
+	case "login":
+		f.Command = CommandLogin
+	case "logout":
+		f.Command = CommandLogout
+	case "sync":
+		f.Command = CommandSync
 	default:
 		return false
 	}

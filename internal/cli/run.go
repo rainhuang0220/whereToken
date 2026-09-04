@@ -15,6 +15,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/community"
+	"github.com/rainhuang0220/whereToken/internal/credstore"
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
@@ -42,6 +43,10 @@ type App struct {
 	Serve      func(addr string, home adapter.Home, offline bool) error
 	Executable func() (string, error)
 	HTTPGet    func(url string) ([]byte, error)
+	HTTPDo     func(req *http.Request) (*http.Response, error)
+	OpenURL    func(string) error
+	Sleep      func(time.Duration)
+	Creds      credstore.Store
 	RunCmd     func(name string, args ...string) error
 	// PortraitSeed resolves the anonymous install identity that seeds the
 	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
@@ -125,6 +130,12 @@ func (a *App) Run() int {
 		return a.runCommunity(flags, home)
 	case CommandPricing:
 		return a.runPricing(flags, home)
+	case CommandLogin:
+		return a.runLogin(flags, home)
+	case CommandLogout:
+		return a.runLogout(flags, home)
+	case CommandSync:
+		return a.runSync(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}

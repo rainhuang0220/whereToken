@@ -4,7 +4,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -19,7 +19,8 @@ _wheretoken() {
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    login|logout|sync) opts="--quiet -q --offline --home --help" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }

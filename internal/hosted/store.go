@@ -298,6 +298,50 @@ func (s *Store) SumUsage(ctx context.Context, userID int64, from, to string) (ma
 	return out, rows.Err()
 }
 
+func (s *Store) DeviceByToken(ctx context.Context, raw string) (Device, User, error) {
+	if raw == "" {
+		return Device{}, User{}, ErrUnauthorized
+	}
+	hash := hashBytes([]byte(raw))
+	var d Device
+	var revoked sql.NullTime
+	err := s.db.QueryRowContext(ctx, `SELECT id, user_id, public_id, label, os, arch, client_version, revoked_at FROM devices WHERE token_hash=?`, hash).Scan(
+		&d.ID, &d.UserID, &d.PublicID, &d.Label, &d.OS, &d.Arch, &d.ClientVersion, &revoked,
+	)
+	if err == sql.ErrNoRows {
+		return Device{}, User{}, ErrUnauthorized
+	}
+	if err != nil {
+		return Device{}, User{}, err
+	}
+	if revoked.Valid {
+		return Device{}, User{}, ErrUnauthorized
+	}
+	u, err := s.UserByID(ctx, d.UserID)
+	if err != nil {
+		return Device{}, User{}, ErrUnauthorized
+	}
+	_, _ = s.db.ExecContext(ctx, `UPDATE devices SET last_seen_at=? WHERE id=?`, s.clock(), d.ID)
+	return d, u, nil
+}
+
+func (s *Store) TouchSync(ctx context.Context, deviceID int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE devices SET last_sync_at=?, last_seen_at=? WHERE id=?`, s.clock(), s.clock(), deviceID)
+	return err
+}
+
+func (s *Store) RevokeDevice(ctx context.Context, userID int64, publicID string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE devices SET revoked_at=? WHERE user_id=? AND public_id=? AND revoked_at IS NULL`, s.clock(), userID, publicID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (s *Store) UserByID(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := s.db.QueryRowContext(ctx, `SELECT id, public_id, github_id, github_login, avatar_url, profile_seed, source_hmac_key FROM users WHERE id=? AND deleted_at IS NULL`, id).Scan(

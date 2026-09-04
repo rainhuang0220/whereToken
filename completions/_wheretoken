@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -120,7 +120,7 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version)'
       ;;
   esac
 }

@@ -191,6 +191,16 @@ is set.
 .B serve
 binds 127.0.0.1 for a self-hosted rank service.
 .TP
+.B login
+Pair this device with the hosted web app (device code + browser confirm).
+.TP
+.B logout
+Revoke the hosted device token, then delete the local credential.
+.TP
+.B sync
+Scan once and upload privacy-safe daily model usage to the hosted app.
+Does not run unless this device is paired.
+.TP
 .B pricing
 The built-in model price card the cost estimate uses, with each vendor's
 official source page and the date a maintainer last verified the rates.
