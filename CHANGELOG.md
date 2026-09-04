@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1 — 2026-09-04 (Alpha)
+
+- Production domain: the public site moves to https://wheretoken.plainlist.space (GitHub Pages custom domain). The CLI report footer and `serve` output print it; the demo lives at /demo/ and the old github.io project URL redirects once the domain is active
+- Distribution: the in-repo Homebrew formula and the `rainhuang0220/homebrew-wheretoken` tap leave v0.3.0 and track the current release; a version-consistency test pins Formula / npm / site metadata to the CHANGELOG so they cannot silently drift again
+- npm wrapper: metadata aligned to the CLI version and marked experimental — it is not published to the npm registry and is not the primary install channel; Homebrew, the install scripts, and `wheretoken update` are
+- Site: version-free Download button (href already tracks releases/latest), canonical/og metadata, and refreshed dashboard + CLI screenshots rendered from synthetic demo data
+- docs: new docs/releasing.md checklist covering gates, tag, goreleaser, Formula/tap/npm bumps, Pages smoke, and release-binary dogfood
+
 ## 0.6.0 — 2026-09-04 (Alpha)
 
 - Model-level pricing: usage and API-equivalent cost aggregate per (vendor, normalized model). `/api/summary` gains `by_model` with per-category unit prices (USD per 1M tokens, `null` = unlisted); the dashboard 估价 cell opens a per-vendor per-model estimate detail modal with a TOTAL row; pricing resolution is memoized per vendor/model/day
