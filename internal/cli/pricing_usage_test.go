@@ -293,7 +293,7 @@ func TestHelpDocumentsPricingUsageAndPublicSite(t *testing.T) {
 	if !strings.Contains(h, "pricing --usage") {
 		t.Fatalf("help must document pricing --usage:\n%s", h)
 	}
-	if !strings.Contains(h, "https://rainhuang0220.github.io/whereToken/") {
+	if !strings.Contains(h, "https://wheretoken.plainlist.space/") {
 		t.Fatalf("help must point at the public demo site:\n%s", h)
 	}
 }
