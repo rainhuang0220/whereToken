@@ -329,7 +329,7 @@ created_ip_hash BINARY(32) NULL      -- hash, not raw IP as user data
 
 -- usage_daily_model
 user_id         BIGINT NOT NULL
-device_id       BIGINT NULL          -- NULL for account_global canonical row
+device_id       BIGINT NOT NULL      -- 0 = account_global canonical row (MySQL 5.7 UNIQUE treats NULL as distinct)
 source_scope    ENUM('device_local','account_global') NOT NULL
 tool            VARCHAR(32) NOT NULL
 source_key_hash CHAR(64) NOT NULL

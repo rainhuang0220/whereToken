@@ -1,0 +1,62 @@
+package hosted
+
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+)
+
+type MuxOptions struct {
+	Version string
+	Store   *Store
+	Config  Config
+	Now     func() time.Time
+}
+
+func NewMux(opts MuxOptions) http.Handler {
+	if opts.Version == "" {
+		opts.Version = "dev"
+	}
+	if opts.Now == nil {
+		opts.Now = time.Now
+	}
+	s := &server{opts: opts}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/health", s.getHealth)
+	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
+	return withSecurityHeaders(mux)
+}
+
+type server struct {
+	opts MuxOptions
+}
+
+func withSecurityHeaders(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self'")
+		h.ServeHTTP(w, r)
+	})
+}
+
+func (s *server) getHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ok",
+		"version": s.opts.Version,
+	})
+}
+
+func (s *server) getDashboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	http.Error(w, "unauthorized", http.StatusUnauthorized)
+}
