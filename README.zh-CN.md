@@ -157,7 +157,7 @@ wheretoken serve
 
 ## 在线演示
 
-**<https://wheretoken.plainlist.space/>** —— 项目主页与可直接把玩的[仪表盘演示](https://wheretoken.plainlist.space/demo/)（内置合成样例账本，无需安装，无后端）。
+**<https://rainhuang0220.github.io/whereToken/>** —— 项目主页与可直接把玩的[仪表盘演示](https://rainhuang0220.github.io/whereToken/demo/)（内置合成样例账本，无需安装，无后端）。
 
 公网站点是 GitHub Pages 纯静态部署：不读取你的机器，只展示虚构演示数据。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。命令行报表页脚和 `wheretoken serve` 启动时会打印这个公网地址；公网仅展示公开/演示数据，本地账本不会因此上传。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
 

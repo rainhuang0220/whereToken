@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.3 — 2026-09-04 (Alpha)
+
+- Revert the GitHub Pages custom-domain cutover: the project site stays at `https://rainhuang0220.github.io/whereToken/` and the demo at `/whereToken/demo/` again (the domain-root demo base had broken the demo on the old URL). `wheretoken.plainlist.space` is a separate nginx host reserved for a possible future hosted app, not GitHub Pages
+- CLI footer and `serve` output again point at the GitHub Pages project site
+
 ## 0.6.2 — 2026-09-04 (Alpha)
 
 - Fix: `serve` releases the scan-in-progress flag before writing the response, so a fast follow-up refresh no longer races into a spurious 煅烧进行中 (409)

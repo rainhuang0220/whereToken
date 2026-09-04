@@ -5,7 +5,7 @@ whereToken has two surfaces that must never be conflated:
 | Surface | Where it runs | What it can see |
 | --- | --- | --- |
 | Local CLI + dashboard (`wheretoken`, `wheretoken serve`) | The user's machine, `127.0.0.1` only | Real local ledgers, paths, workspaces — everything stays local |
-| Public site (<https://wheretoken.plainlist.space/>) | GitHub Pages, static only | Nothing. Landing page + fabricated demo data |
+| Public site (<https://rainhuang0220.github.io/whereToken/>) | GitHub Pages, static only | Nothing. Landing page + fabricated demo data |
 
 The local scanner is never exposed as a public server, and there is deliberately
 **no public Community Rank cluster** (see `docs/community.md` — a public URL is a
@@ -19,8 +19,8 @@ documented non-goal of the v1 threat model).
     `web/public/sample/{all,today,7d,30d}.json` instead of `/api/*`;
   - community actions are inert; the refresh control is hidden;
   - the status line reads 演示数据.
-- Everything is served from `https://wheretoken.plainlist.space/`
-  (`/demo/` for the dashboard). There is no public API, no upload endpoint,
+- Everything is served from `https://rainhuang0220.github.io/whereToken/`
+  (`/whereToken/demo/` for the dashboard). There is no public API, no upload endpoint,
   no server-side state.
 
 ## Demo sample data
@@ -59,27 +59,11 @@ secrets are involved — Pages uses the automatic `GITHUB_TOKEN` plus the
 
 ## Custom domain
 
-Production is served from the custom domain
-`https://wheretoken.plainlist.space/`, set as the GitHub Pages custom domain
-in the repository settings. DNS is a `CNAME` record from
-`wheretoken.plainlist.space` to `rainhuang0220.github.io`.
+There is no Pages custom domain: the project site stays on its GitHub Pages
+project URL, `https://rainhuang0220.github.io/whereToken/`, and the demo lives
+under `/whereToken/demo/` (the `VITE_DEMO=1` build bakes that base).
 
-At flip time the artifact also carries a `CNAME` file: committing
-`site/CNAME` (contents: `wheretoken.plainlist.space`) is enough — the
-assembly step copies `site/` wholesale into the artifact root, so the
-workflow needs no extra step. Once the custom domain is active, GitHub
-301-redirects the old project URL
-`https://rainhuang0220.github.io/whereToken/<path>` to
-`https://wheretoken.plainlist.space/<path>` (path preserved), so old links
-keep working.
-
-## Privacy posture of the deploy
-
-- The artifact is pure static HTML/JS/JSON; GitHub Pages adds no server logic.
-- Sample payloads contain only invented `demo/*` workspace names and UUIDs-free
-  identifiers (`demo-<source>-<n>`); no absolute paths, prompts, credentials,
-  or real usage ever enter them (grep-checked before every release of the
-  site, and the generator has no code path that reads the host).
-- The demo build cannot upload anything: the community POST path is a no-op
-  under `VITE_DEMO=1` and the sample's community view is the honest
-  `service_unconfigured` state.
+`wheretoken.plainlist.space` is a separate host (an nginx server), reserved
+for a possible future hosted app. It is not wired to GitHub Pages, and no
+`CNAME` file belongs in the Pages artifact — committing one would redirect
+the project site away from GitHub.

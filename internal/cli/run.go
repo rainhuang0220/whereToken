@@ -26,7 +26,7 @@ import (
 // PublicSiteURL is the public demo site. It shows public/demo data only;
 // the local ledger is never uploaded there. One constant serves the report
 // footer, the serve banner, and --help.
-const PublicSiteURL = "https://wheretoken.plainlist.space/"
+const PublicSiteURL = "https://rainhuang0220.github.io/whereToken/"
 
 type App struct {
 	Args       []string

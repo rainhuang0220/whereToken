@@ -162,7 +162,7 @@ The dashboard runs locally on your machine. It provides a visual overview of tok
 
 ## Live Demo
 
-**<https://wheretoken.plainlist.space/>** — landing page and a hands-on [dashboard demo](https://wheretoken.plainlist.space/demo/) running on a synthetic sample ledger (no install, no backend).
+**<https://rainhuang0220.github.io/whereToken/>** — landing page and a hands-on [dashboard demo](https://rainhuang0220.github.io/whereToken/demo/) running on a synthetic sample ledger (no install, no backend).
 
 The public site is a static GitHub Pages deployment: it reads nothing from your machine and shows fabricated demo data only. The **local dashboard** (`wheretoken serve`) is a different thing: it binds `127.0.0.1`, reads your real local ledgers, and never leaves your machine. The CLI report footer and `wheretoken serve` startup print the public URL; it only ever shows public/demo data — your local ledger is never uploaded because of it. Deployment details: [`docs/deployment.md`](docs/deployment.md).
 
