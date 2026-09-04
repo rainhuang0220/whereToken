@@ -3,6 +3,7 @@ package hosted
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -11,6 +12,7 @@ type MuxOptions struct {
 	Store   *Store
 	Config  Config
 	Now     func() time.Time
+	GitHub  GitHubEndpoints
 }
 
 func NewMux(opts MuxOptions) http.Handler {
@@ -20,15 +22,25 @@ func NewMux(opts MuxOptions) http.Handler {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
-	s := &server{opts: opts}
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", s.getHealth)
+	mux.HandleFunc("/api/v1/auth/github", s.startGitHub)
+	mux.HandleFunc("/api/v1/auth/github/callback", s.callbackGitHub)
+	mux.HandleFunc("/api/v1/auth/logout", s.logout)
+	mux.HandleFunc("/api/v1/session", s.getSession)
+	mux.HandleFunc("/api/v1/pair/start", s.pairStart)
+	mux.HandleFunc("/api/v1/pair/status", s.pairStatus)
+	mux.HandleFunc("/api/v1/pair/confirm", s.pairConfirm)
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
 	return withSecurityHeaders(mux)
 }
 
 type server struct {
-	opts MuxOptions
+	opts    MuxOptions
+	pending sync.Map
+	limiter map[string][]time.Time
+	limMu   sync.Mutex
 }
 
 func withSecurityHeaders(h http.Handler) http.Handler {

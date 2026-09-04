@@ -298,6 +298,122 @@ func (s *Store) SumUsage(ctx context.Context, userID int64, from, to string) (ma
 	return out, rows.Err()
 }
 
+func (s *Store) UserByID(ctx context.Context, id int64) (User, error) {
+	var u User
+	err := s.db.QueryRowContext(ctx, `SELECT id, public_id, github_id, github_login, avatar_url, profile_seed, source_hmac_key FROM users WHERE id=? AND deleted_at IS NULL`, id).Scan(
+		&u.ID, &u.PublicID, &u.GitHubID, &u.Login, &u.AvatarURL, &u.ProfileSeed, &u.SourceHMACKey,
+	)
+	if err == sql.ErrNoRows {
+		return User{}, ErrNotFound
+	}
+	return u, err
+}
+
+func (s *Store) PutOAuthState(ctx context.Context, stateHash, verifierHash []byte, exp time.Time) error {
+	_, err := s.db.ExecContext(ctx, `INSERT INTO oauth_states (state_hash, code_verifier_hash, expires_at, created_at) VALUES (?,?,?,?)`,
+		stateHash, verifierHash, exp, s.clock())
+	return err
+}
+
+func (s *Store) TakeOAuthState(ctx context.Context, stateHash, verifierHash []byte) error {
+	var stored []byte
+	var exp time.Time
+	err := s.db.QueryRowContext(ctx, `SELECT code_verifier_hash, expires_at FROM oauth_states WHERE state_hash=?`, stateHash).Scan(&stored, &exp)
+	if err == sql.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM oauth_states WHERE state_hash=?`, stateHash); err != nil {
+		return err
+	}
+	if !exp.After(s.clock()) || !hmacEqual(stored, verifierHash) {
+		return ErrNotFound
+	}
+	return nil
+}
+
+type pairRow struct {
+	SecretHash []byte
+	Meta       DeviceMeta
+	ExpiresAt  time.Time
+	ConsumedAt sql.NullTime
+	DeniedAt   sql.NullTime
+}
+
+func (s *Store) CreatePairChallenge(ctx context.Context, code string, secretHash []byte, meta DeviceMeta, exp time.Time) error {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `INSERT INTO pairing_challenges (display_code, secret_hash, device_meta, expires_at, created_at) VALUES (?,?,?,?,?)`,
+		code, secretHash, raw, exp, s.clock())
+	return err
+}
+
+func (s *Store) GetPairChallenge(ctx context.Context, code string) (pairRow, error) {
+	var row pairRow
+	var meta []byte
+	err := s.db.QueryRowContext(ctx, `SELECT secret_hash, device_meta, expires_at, consumed_at, denied_at FROM pairing_challenges WHERE display_code=?`, code).Scan(
+		&row.SecretHash, &meta, &row.ExpiresAt, &row.ConsumedAt, &row.DeniedAt,
+	)
+	if err == sql.ErrNoRows {
+		return pairRow{}, ErrNotFound
+	}
+	if err != nil {
+		return pairRow{}, err
+	}
+	_ = json.Unmarshal(meta, &row.Meta)
+	return row, nil
+}
+
+func (s *Store) DenyPair(ctx context.Context, code string, userID int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE pairing_challenges SET denied_at=?, user_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
+		s.clock(), userID, code)
+	return err
+}
+
+func (s *Store) ConsumePair(ctx context.Context, code string, userID int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE pairing_challenges SET consumed_at=?, user_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
+		s.clock(), userID, code)
+	return err
+}
+
+func (s *Store) newDisplayCode(ctx context.Context) (string, error) {
+	for i := 0; i < 16; i++ {
+		b, err := randomBytes(8)
+		if err != nil {
+			return "", err
+		}
+		var code [8]byte
+		alpha := pairAlphabet
+		for j := 0; j < 8; j++ {
+			code[j] = alpha[int(b[j])%len(alpha)]
+		}
+		cs := string(code[:])
+		var n int
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pairing_challenges WHERE display_code=?`, cs).Scan(&n); err != nil {
+			return "", err
+		}
+		if n == 0 {
+			return cs, nil
+		}
+	}
+	return "", fmt.Errorf("display code exhausted")
+}
+
+func hmacEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	var v byte
+	for i := range a {
+		v |= a[i] ^ b[i]
+	}
+	return v == 0
+}
+
 func (s *Store) Ping(ctx context.Context) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("store unavailable")
