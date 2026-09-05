@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { csrfHeaders } from '../csrf'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,7 +22,7 @@ async function decide(accept: boolean) {
   const res = await fetch('/api/v1/pair/confirm', {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify({ display_code: code, accept }),
   })
   if (!res.ok) {

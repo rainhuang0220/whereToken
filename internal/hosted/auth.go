@@ -16,6 +16,7 @@ import (
 const (
 	cookieSession    = "wt_session"
 	cookieOAuthState = "wt_oauth"
+	cookieCSRF       = "wt_csrf"
 	sessionTTL       = 30 * 24 * time.Hour
 	oauthTTL         = 10 * time.Minute
 )
@@ -124,12 +125,13 @@ func (s *server) callbackGitHub(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	raw, _, err := s.opts.Store.CreateSession(r.Context(), user.ID, sessionTTL)
+	raw, sess, err := s.opts.Store.CreateSession(r.Context(), user.ID, sessionTTL)
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 	s.setCookie(w, cookieSession, raw, sessionTTL)
+	s.setCSRFCookie(w, sess.CSRFToken)
 	next := "/app"
 	if c, err := r.Cookie("wt_next"); err == nil && strings.HasPrefix(c.Value, "/") && !strings.HasPrefix(c.Value, "//") {
 		next = c.Value
@@ -203,17 +205,43 @@ func (s *server) getSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	u, _, err := s.currentUser(r)
+	u, sess, err := s.currentUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
+	}
+	csrf := ""
+	if c, err := r.Cookie(cookieCSRF); err == nil && sess.ValidCSRF(c.Value) {
+		csrf = c.Value
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"login":      u.Login,
 		"avatar_url": u.AvatarURL,
 		"public_id":  u.PublicID,
+		"csrf":       csrf,
 	})
+}
+
+func (sess Session) ValidCSRF(token string) bool {
+	if token == "" || len(sess.CSRFHash) == 0 {
+		return false
+	}
+	return hmacEqual(sess.CSRFHash, hashBytes([]byte(token)))
+}
+
+func (s *server) requireCSRF(w http.ResponseWriter, r *http.Request, sess Session) bool {
+	token := r.Header.Get("X-CSRF-Token")
+	if token == "" {
+		if c, err := r.Cookie(cookieCSRF); err == nil {
+			token = c.Value
+		}
+	}
+	if !sess.ValidCSRF(token) {
+		http.Error(w, "csrf", http.StatusForbidden)
+		return false
+	}
+	return true
 }
 
 func (s *server) logout(w http.ResponseWriter, r *http.Request) {
@@ -221,10 +249,16 @@ func (s *server) logout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if _, sess, err := s.currentUser(r); err == nil {
+		if !s.requireCSRF(w, r, sess) {
+			return
+		}
+	}
 	if c, err := r.Cookie(cookieSession); err == nil {
 		_ = s.opts.Store.DeleteSession(r.Context(), c.Value)
 	}
 	s.setCookie(w, cookieSession, "", -time.Hour)
+	s.setCSRFCookie(w, "")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -257,6 +291,23 @@ func (s *server) setCookie(w http.ResponseWriter, name, value string, ttl time.D
 		c.MaxAge = -1
 	} else {
 		c.Expires = s.opts.Now().Add(ttl)
+	}
+	http.SetCookie(w, c)
+}
+
+func (s *server) setCSRFCookie(w http.ResponseWriter, value string) {
+	c := &http.Cookie{
+		Name:     cookieCSRF,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   s.opts.Config.CookieSecure,
+		SameSite: http.SameSiteLaxMode,
+	}
+	if value == "" {
+		c.MaxAge = -1
+	} else {
+		c.Expires = s.opts.Now().Add(sessionTTL)
 	}
 	http.SetCookie(w, c)
 }

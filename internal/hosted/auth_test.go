@@ -180,14 +180,21 @@ func TestLogoutRevokesSession(t *testing.T) {
 	cb.AddCookie(sc)
 	cbRec := httptest.NewRecorder()
 	h.ServeHTTP(cbRec, cb)
-	var sess *http.Cookie
+	var sess, csrf *http.Cookie
 	for _, c := range cbRec.Result().Cookies() {
-		if c.Name == cookieSession {
+		switch c.Name {
+		case cookieSession:
 			sess = c
+		case cookieCSRF:
+			csrf = c
 		}
 	}
 	lo := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
 	lo.AddCookie(sess)
+	if csrf != nil {
+		lo.AddCookie(csrf)
+		lo.Header.Set("X-CSRF-Token", csrf.Value)
+	}
 	loRec := httptest.NewRecorder()
 	h.ServeHTTP(loRec, lo)
 	if loRec.Code != http.StatusNoContent && loRec.Code != http.StatusOK {

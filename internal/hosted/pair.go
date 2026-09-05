@@ -120,9 +120,12 @@ func (s *server) pairConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	user, _, err := s.currentUser(r)
+	user, sess, err := s.currentUser(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if !s.requireCSRF(w, r, sess) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)

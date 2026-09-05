@@ -17,7 +17,7 @@ func decodeHMACKey(s string) ([]byte, error) {
 
 func TestSyncBatchRequiresDeviceBearerAndIsIdempotent(t *testing.T) {
 	h := testMux(t, githubStub())
-	sess := loginSession(t, h)
+	auth := loginAuth(t, h)
 	startReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/start", bytes.NewReader([]byte(`{"os":"darwin","arch":"arm64","client_version":"0.7.0","label":"Mac"}`)))
 	startReq.Header.Set("Content-Type", "application/json")
 	startRec := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestSyncBatchRequiresDeviceBearerAndIsIdempotent(t *testing.T) {
 	confirm, _ := json.Marshal(map[string]any{"display_code": started["display_code"], "accept": true})
 	cr := httptest.NewRequest(http.MethodPost, "/api/v1/pair/confirm", bytes.NewReader(confirm))
 	cr.Header.Set("Content-Type", "application/json")
-	cr.AddCookie(sess)
+	auth.apply(cr)
 	h.ServeHTTP(httptest.NewRecorder(), cr)
 	stBody, _ := json.Marshal(map[string]any{"display_code": started["display_code"], "device_secret": started["device_secret"]})
 	stReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/status", bytes.NewReader(stBody))
@@ -86,7 +86,7 @@ func TestSyncBatchRequiresDeviceBearerAndIsIdempotent(t *testing.T) {
 
 func TestSyncRejectsForeignDeviceID(t *testing.T) {
 	h := testMux(t, githubStub())
-	sess := loginSession(t, h)
+	auth := loginAuth(t, h)
 	startReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/start", bytes.NewReader([]byte(`{"os":"darwin","arch":"arm64","client_version":"0.7.0"}`)))
 	startReq.Header.Set("Content-Type", "application/json")
 	startRec := httptest.NewRecorder()
@@ -96,7 +96,7 @@ func TestSyncRejectsForeignDeviceID(t *testing.T) {
 	confirm, _ := json.Marshal(map[string]any{"display_code": started["display_code"], "accept": true})
 	cr := httptest.NewRequest(http.MethodPost, "/api/v1/pair/confirm", bytes.NewReader(confirm))
 	cr.Header.Set("Content-Type", "application/json")
-	cr.AddCookie(sess)
+	auth.apply(cr)
 	h.ServeHTTP(httptest.NewRecorder(), cr)
 	stBody, _ := json.Marshal(map[string]any{"display_code": started["display_code"], "device_secret": started["device_secret"]})
 	stReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/status", bytes.NewReader(stBody))

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { fetchSummary } from '../api'
+import { csrfHeaders } from '../csrf'
 import type { SummaryPayload } from '../types'
 
 const rows = ref<NonNullable<NonNullable<SummaryPayload['hosted']>['devices']>>([])
@@ -19,6 +20,7 @@ async function revoke(id: string) {
   const res = await fetch(`/api/v1/devices/${encodeURIComponent(id)}/revoke`, {
     method: 'POST',
     credentials: 'same-origin',
+    headers: csrfHeaders(),
   })
   if (!res.ok) {
     error.value = '撤销失败'

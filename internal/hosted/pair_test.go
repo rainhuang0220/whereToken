@@ -12,7 +12,7 @@ import (
 
 func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 	h := testMux(t, githubStub())
-	sess := loginSession(t, h)
+	auth := loginAuth(t, h)
 
 	startReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/start", strings.NewReader(`{"os":"darwin","arch":"arm64","client_version":"0.7.0","label":"MacBook Pro"}`))
 	startReq.Header.Set("Content-Type", "application/json")
@@ -60,7 +60,7 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 	confirm, _ := json.Marshal(map[string]any{"display_code": code, "accept": true})
 	cr := httptest.NewRequest(http.MethodPost, "/api/v1/pair/confirm", bytes.NewReader(confirm))
 	cr.Header.Set("Content-Type", "application/json")
-	cr.AddCookie(sess)
+	auth.apply(cr)
 	crRec := httptest.NewRecorder()
 	h.ServeHTTP(crRec, cr)
 	if crRec.Code != http.StatusOK {
@@ -89,7 +89,7 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 
 func TestPairReject(t *testing.T) {
 	h := testMux(t, githubStub())
-	sess := loginSession(t, h)
+	auth := loginAuth(t, h)
 	startReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/start", strings.NewReader(`{"os":"linux","arch":"amd64","client_version":"0.7.0"}`))
 	startReq.Header.Set("Content-Type", "application/json")
 	startRec := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestPairReject(t *testing.T) {
 	confirm, _ := json.Marshal(map[string]any{"display_code": code, "accept": false})
 	cr := httptest.NewRequest(http.MethodPost, "/api/v1/pair/confirm", bytes.NewReader(confirm))
 	cr.Header.Set("Content-Type", "application/json")
-	cr.AddCookie(sess)
+	auth.apply(cr)
 	crRec := httptest.NewRecorder()
 	h.ServeHTTP(crRec, cr)
 	if crRec.Code != http.StatusOK {
@@ -135,7 +135,26 @@ func ioWrite(w http.ResponseWriter, s string) {
 	_, _ = w.Write([]byte(s))
 }
 
+type authCookies struct {
+	Session, CSRF *http.Cookie
+}
+
+func (a authCookies) apply(req *http.Request) {
+	if a.Session != nil {
+		req.AddCookie(a.Session)
+	}
+	if a.CSRF != nil {
+		req.AddCookie(a.CSRF)
+		req.Header.Set("X-CSRF-Token", a.CSRF.Value)
+	}
+}
+
 func loginSession(t *testing.T, h http.Handler) *http.Cookie {
+	t.Helper()
+	return loginAuth(t, h).Session
+}
+
+func loginAuth(t *testing.T, h http.Handler) authCookies {
 	t.Helper()
 	start := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
 	startRec := httptest.NewRecorder()
@@ -155,11 +174,17 @@ func loginSession(t *testing.T, h http.Handler) *http.Cookie {
 	cb.AddCookie(oc)
 	cbRec := httptest.NewRecorder()
 	h.ServeHTTP(cbRec, cb)
+	out := authCookies{}
 	for _, c := range cbRec.Result().Cookies() {
-		if c.Name == cookieSession {
-			return c
+		switch c.Name {
+		case cookieSession:
+			out.Session = c
+		case cookieCSRF:
+			out.CSRF = c
 		}
 	}
-	t.Fatalf("login failed %d %s", cbRec.Code, cbRec.Body.String())
-	return nil
+	if out.Session == nil {
+		t.Fatalf("login failed %d %s", cbRec.Code, cbRec.Body.String())
+	}
+	return out
 }

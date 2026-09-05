@@ -36,6 +36,8 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/devices/", s.deviceRoutes)
 	mux.HandleFunc("/api/v1/sync/batch", s.putSyncBatch)
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
+	mux.HandleFunc("/api/v1/account/usage", s.deleteUsage)
+	mux.HandleFunc("/api/v1/account", s.deleteAccount)
 	return withSecurityHeaders(mux)
 }
 

@@ -43,6 +43,7 @@ type Session struct {
 	ID        int64
 	UserID    int64
 	CSRFToken string
+	CSRFHash  []byte
 	ExpiresAt time.Time
 }
 
@@ -167,7 +168,7 @@ func (s *Store) LookupSession(ctx context.Context, raw string) (Session, error) 
 	}
 	hash := hashBytes([]byte(raw))
 	var sess Session
-	err := s.db.QueryRowContext(ctx, `SELECT id, user_id, expires_at FROM web_sessions WHERE token_hash=?`, hash).Scan(&sess.ID, &sess.UserID, &sess.ExpiresAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id, user_id, expires_at, csrf_hash FROM web_sessions WHERE token_hash=?`, hash).Scan(&sess.ID, &sess.UserID, &sess.ExpiresAt, &sess.CSRFHash)
 	if err == sql.ErrNoRows {
 		return Session{}, ErrNotFound
 	}
@@ -535,6 +536,46 @@ func hmacEqual(a, b []byte) bool {
 		v |= a[i] ^ b[i]
 	}
 	return v == 0
+}
+
+func (s *Store) DeleteUsage(ctx context.Context, userID int64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM usage_daily_model WHERE user_id=?`, userID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM source_states WHERE user_id=?`, userID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM sync_revisions WHERE user_id=?`, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Store) DeleteAccount(ctx context.Context, userID int64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, q := range []string{
+		`DELETE FROM usage_daily_model WHERE user_id=?`,
+		`DELETE FROM source_states WHERE user_id=?`,
+		`DELETE FROM sync_revisions WHERE user_id=?`,
+		`DELETE FROM pairing_challenges WHERE user_id=?`,
+		`DELETE FROM web_sessions WHERE user_id=?`,
+		`DELETE FROM devices WHERE user_id=?`,
+		`DELETE FROM users WHERE id=?`,
+	} {
+		if _, err := tx.ExecContext(ctx, q, userID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *Store) Ping(ctx context.Context) error {

@@ -62,9 +62,12 @@ func (s *server) deviceRoutes(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(path, "/revoke") && r.Method == http.MethodPost {
 		id := strings.TrimSuffix(path, "/revoke")
 		id = strings.Trim(id, "/")
-		user, _, err := s.currentUser(r)
+		user, sess, err := s.currentUser(r)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if !s.requireCSRF(w, r, sess) {
 			return
 		}
 		if err := s.opts.Store.RevokeDevice(r.Context(), user.ID, id); err != nil {
