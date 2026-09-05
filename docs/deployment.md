@@ -63,7 +63,11 @@ There is no Pages custom domain: the project site stays on its GitHub Pages
 project URL, `https://rainhuang0220.github.io/whereToken/`, and the demo lives
 under `/whereToken/demo/` (the `VITE_DEMO=1` build bakes that base).
 
-`wheretoken.plainlist.space` is a separate host (an nginx server), reserved
-for a possible future hosted app. It is not wired to GitHub Pages, and no
-`CNAME` file belongs in the Pages artifact — committing one would redirect
-the project site away from GitHub.
+`wheretoken.plainlist.space` is the hosted web app (login, device pairing,
+privacy-safe sync). It is not GitHub Pages. Do not add a `CNAME` to the Pages
+artifact.
+
+Build the hosted API and SPA with `scripts/build-hosted.sh`. The SPA must be
+compiled with `VITE_HOSTED=1` and **not** `VITE_DEMO=1`. nginx serves the SPA
+at `/` and reverse-proxies `/api/` to `127.0.0.1:3400`. Environment lives in
+`/home/ubuntu/wheretoken/shared/.env` (mode 0600).

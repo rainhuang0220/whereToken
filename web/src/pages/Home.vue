@@ -20,13 +20,12 @@ import {
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
-import { isDemo, isHosted } from '../mode'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
 const store = useSummaryStore()
-const demo = isDemo()
-const hosted = isHosted()
+const demo = import.meta.env.VITE_DEMO === '1'
+const hosted = import.meta.env.VITE_HOSTED === '1'
 const payload = computed(() => store.payload)
 const neverSynced = computed(() => hosted && Boolean(payload.value?.hosted?.never_synced))
 const periods: { id: PeriodId; label: string }[] = [
