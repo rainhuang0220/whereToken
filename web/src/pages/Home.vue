@@ -20,6 +20,9 @@ import {
   observatoryScanErrorHint,
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
+import CopyCommand from '../components/CopyCommand.vue'
+import HostedShell from '../components/HostedShell.vue'
+import { neverSyncedTitle, onboardTitle } from '../hosted/copy'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
@@ -115,6 +118,7 @@ const mouthLines = computed(() =>
 )
 
 const statusKind = computed(() => {
+  if (hosted) return '云端账本'
   if (emptyHint.value) return '空窑'
   if (!payload.value) return '未煅烧'
   if (demo) return '演示数据'
@@ -122,19 +126,24 @@ const statusKind = computed(() => {
   return '本机账本'
 })
 
+const hostedDevice = computed(() => payload.value?.hosted?.devices?.[0])
+const hostedSync = computed(() => payload.value?.hosted?.last_sync_at || hostedDevice.value?.last_sync)
+const hostedSources = computed(() => payload.value?.by_source?.length ?? 0)
+
 onMounted(() => {
   void store.hydrate()
 })
 </script>
 
 <template>
+  <component :is="hosted ? HostedShell : 'div'">
   <div class="forge">
     <header class="rail">
       <div class="rail-brand">
         <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
         <div class="rail-name">
           <h1>whereToken</h1>
-          <p class="whisper">本机 token 窑</p>
+          <p class="whisper">{{ hosted ? '云端账本' : '本机 token 窑' }}</p>
         </div>
       </div>
       <div class="rail-meta">
@@ -144,7 +153,7 @@ onMounted(() => {
           <span>{{ statusKind }}</span>
         </p>
         <div class="rail-actions">
-          <router-link class="lever" to="/themes">主题</router-link>
+          <router-link v-if="!hosted" class="lever" to="/themes">主题</router-link>
           <button
             v-if="!demo"
             type="button"
@@ -160,15 +169,24 @@ onMounted(() => {
       </div>
     </header>
 
+    <p v-if="hosted" class="hosted-status">
+      <span>{{ hostedDevice?.label || '尚未连接设备' }}</span>
+      <span class="status-dot" aria-hidden="true">·</span>
+      <span>{{ hostedSync && !hostedSync.startsWith('0001') ? 'Synced ' + hostedSync : '尚未同步' }}</span>
+      <span class="status-dot" aria-hidden="true">·</span>
+      <span>{{ hostedSources }} sources</span>
+    </p>
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
-    <section v-if="neverSynced" class="cold-kiln">
-      <div>
-        <p class="cold-kicker">尚未同步数据</p>
-        <p class="cold-copy">1. 安装 / 更新 whereToken</p>
-        <p class="cold-copy">2. 运行 <code>wheretoken login</code></p>
-        <p class="cold-copy">3. 运行 <code>wheretoken sync</code></p>
-      </div>
+    <section v-if="neverSynced" class="hosted-card onboard">
+      <p class="cold-kicker">Onboarding</p>
+      <h2>{{ neverSyncedTitle }}</h2>
+      <p class="hosted-lede">{{ onboardTitle }}。本地数据在你明确 sync 之前不会离开这台机器。</p>
+      <ol class="hosted-steps">
+        <li>Install / update whereToken</li>
+        <li><CopyCommand command="wheretoken login" /></li>
+        <li>在这对设备确认，然后 <CopyCommand command="wheretoken sync" /></li>
+      </ol>
     </section>
 
     <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
@@ -322,4 +340,5 @@ onMounted(() => {
       <p v-if="payload.errors.length" class="err">{{ payload.errors.join(' · ') }}</p>
     </template>
   </div>
+  </component>
 </template>

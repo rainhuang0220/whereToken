@@ -123,7 +123,15 @@ export type SummaryPayload = {
   hosted?: {
     never_synced?: boolean
     last_sync_at?: string
-    devices?: { id: string; label: string; os: string; arch: string; last_seen?: string; last_sync?: string }[]
+    devices?: {
+      id: string
+      label: string
+      os: string
+      arch: string
+      client_version?: string
+      last_seen?: string
+      last_sync?: string
+    }[]
   }
 }
 

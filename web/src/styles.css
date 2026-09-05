@@ -1425,3 +1425,262 @@ body:has(.glaze-hall.is-open) {
     animation: none;
   }
 }
+
+.hosted-shell {
+  min-height: 100%;
+}
+
+.hosted-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0.85rem 1.4rem;
+  border-bottom: 1px solid var(--copper);
+}
+
+.hosted-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--bone);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+}
+
+.hosted-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hosted-nav a {
+  color: var(--ash);
+  text-decoration: none;
+}
+
+.hosted-nav a.router-link-active,
+.hosted-nav a:hover {
+  color: var(--ember-4);
+}
+
+.hosted-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hosted-avatar {
+  border-radius: 2px;
+  border: 1px solid var(--copper);
+}
+
+.hosted-login {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ash);
+}
+
+.hosted-gate {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2.2rem 1.4rem 4rem;
+}
+
+.hosted-login h1,
+.hosted-card h1,
+.hosted-card-page h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  letter-spacing: 0.02em;
+  margin: 0.35rem 0 0.7rem;
+}
+
+.hosted-lede {
+  margin: 0 0 1.2rem;
+  color: var(--ash);
+  line-height: 1.5;
+  max-width: 34rem;
+}
+
+.hosted-preview {
+  border: 1px solid var(--copper);
+  padding: 0.9rem 1rem 1rem;
+  margin: 0 0 1.4rem;
+}
+
+.hosted-preview-note {
+  margin: 0 0 0.8rem;
+  font-size: 0.88rem;
+  color: var(--ash);
+}
+
+.hosted-skel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+}
+
+.hosted-skel span {
+  height: 2.4rem;
+  background: color-mix(in srgb, var(--copper) 35%, var(--void));
+}
+
+.hosted-cta,
+.hosted-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1rem;
+  margin: 0.4rem 0 1rem;
+}
+
+.hosted-github {
+  min-height: 2.6rem;
+  font-size: 0.78rem;
+}
+
+.hosted-reassure {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ash);
+}
+
+.hosted-sync {
+  margin-top: 1.2rem;
+}
+
+.hosted-yes,
+.hosted-no {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--bone);
+}
+
+.hosted-no {
+  color: var(--ash);
+}
+
+.hosted-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hosted-foot a {
+  color: var(--ash);
+  text-decoration: none;
+}
+
+.hosted-foot a:hover {
+  color: var(--ember-4);
+}
+
+.hosted-error {
+  border: 1px solid var(--warn);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+
+.hosted-error h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+}
+
+.hosted-ref {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ash);
+}
+
+.hosted-card-page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.6rem 1.4rem 4rem;
+}
+
+.hosted-card {
+  border: 1px solid var(--copper);
+  padding: 1rem 1.1rem 1.15rem;
+  margin: 0 0 1rem;
+}
+
+.hosted-device {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.hosted-device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hosted-danger {
+  border-color: var(--warn);
+}
+
+.hosted-status {
+  margin: 0.7rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.hosted-steps {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.hosted-steps li {
+  margin: 0.45rem 0;
+}
+
+.copy-cmd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.25rem 0;
+}
+
+.copy-cmd code {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--copper);
+}
+
+@media (max-width: 768px) {
+  .hosted-top {
+    padding: 0.7rem 1rem;
+  }
+  .hosted-user {
+    margin-left: 0;
+  }
+  .hosted-skel {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 390px) {
+  .hosted-gate,
+  .hosted-card-page {
+    padding: 1.2rem 0.9rem 3rem;
+  }
+}
