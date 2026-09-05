@@ -8,7 +8,7 @@ function github() {
 
 <template>
   <main class="page">
-    <h1>whereToken</h1>
+    <h1>whereToken Hosted Login</h1>
     <p>登录后绑定本机 CLI，查看你自己的真实用量。这里不会塞试用样本。</p>
     <button type="button" class="btn" @click="github">使用 GitHub 登录</button>
   </main>
