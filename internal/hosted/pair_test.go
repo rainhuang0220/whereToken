@@ -34,6 +34,17 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 		t.Fatal("start must not issue device token")
 	}
 
+	peek := httptest.NewRequest(http.MethodGet, "/api/v1/pair/challenge?code="+url.QueryEscape(code), nil)
+	auth.apply(peek)
+	peekRec := httptest.NewRecorder()
+	h.ServeHTTP(peekRec, peek)
+	if peekRec.Code != http.StatusOK {
+		t.Fatalf("peek %d %s", peekRec.Code, peekRec.Body.String())
+	}
+	if !strings.Contains(peekRec.Body.String(), "MacBook Pro") || strings.Contains(peekRec.Body.String(), secret) {
+		t.Fatalf("peek body %s", peekRec.Body.String())
+	}
+
 	status := func() (int, map[string]any) {
 		body, _ := json.Marshal(map[string]string{"display_code": code, "device_secret": secret})
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/pair/status", bytes.NewReader(body))

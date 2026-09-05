@@ -47,3 +47,29 @@ func newDeviceToken() (raw string, hash []byte, err error) {
 	raw = "wtd_1." + base64.RawURLEncoding.EncodeToString(b)
 	return raw, hashBytes([]byte(raw)), nil
 }
+
+func newPKCE() (verifier, challenge string, err error) {
+	b, err := randomBytes(64)
+	if err != nil {
+		return "", "", err
+	}
+	verifier = base64.RawURLEncoding.EncodeToString(b)
+	if len(verifier) < 43 {
+		return "", "", fmt.Errorf("pkce verifier too short")
+	}
+	challenge = pkceChallenge(verifier)
+	return verifier, challenge, nil
+}
+
+func pkceChallenge(verifier string) string {
+	sum := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+func newRequestID() string {
+	b, err := randomBytes(8)
+	if err != nil {
+		return "unknown"
+	}
+	return fmt.Sprintf("%x", b)
+}

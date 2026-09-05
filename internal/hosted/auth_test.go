@@ -3,6 +3,7 @@ package hosted
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -59,6 +60,60 @@ func TestOAuthStartRedirectsWithState(t *testing.T) {
 	}
 	if rec.Header().Get("Set-Cookie") == "" {
 		t.Fatal("missing oauth state cookie")
+	}
+}
+
+func TestPKCEChallengeMatchesRFC7636(t *testing.T) {
+	got := pkceChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+	if got != "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" {
+		t.Fatalf("challenge %s", got)
+	}
+	if len(got) != 43 {
+		t.Fatalf("challenge len %d", len(got))
+	}
+	v, ch, err := newPKCE()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(v) < 43 {
+		t.Fatalf("verifier len %d", len(v))
+	}
+	if pkceChallenge(v) != ch {
+		t.Fatal("challenge must be S256 of the raw verifier")
+	}
+}
+
+func TestOAuthStartSendsS256AndLongVerifier(t *testing.T) {
+	h := testMux(t, http.NotFoundHandler())
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	u, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Get("code_challenge_method") != "S256" {
+		t.Fatalf("%s", rec.Header().Get("Location"))
+	}
+	ch := u.Query().Get("code_challenge")
+	if len(ch) != 43 {
+		t.Fatalf("challenge len %d", len(ch))
+	}
+	var oc *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == cookieOAuthState {
+			oc = c
+		}
+	}
+	if oc == nil {
+		t.Fatal("missing cookie")
+	}
+	parts := strings.SplitN(oc.Value, ":", 2)
+	if len(parts) != 2 || len(parts[1]) < 43 {
+		t.Fatalf("verifier cookie %q", oc.Value)
+	}
+	if pkceChallenge(parts[1]) != ch {
+		t.Fatal("authorize challenge must match cookie verifier")
 	}
 }
 
@@ -152,6 +207,147 @@ func TestOAuthCallbackSuccessSetsSessionAndDropsGitHubToken(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	if strings.Contains(strings.ToLower(string(raw)), "gho_") {
 		t.Fatalf("github token leaked: %s", raw)
+	}
+}
+
+func TestOAuthExchangeSendsRawVerifierNotChallenge(t *testing.T) {
+	var form url.Values
+	gh := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "access_token") {
+			_ = r.ParseForm()
+			form = r.PostForm
+			w.Header().Set("Content-Type", "application/json")
+			io.WriteString(w, `{"access_token":"gho_ok","token_type":"bearer"}`)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"id":1,"login":"pkce","avatar_url":""}`)
+	})
+	h := testMux(t, gh)
+	start := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
+	startRec := httptest.NewRecorder()
+	h.ServeHTTP(startRec, start)
+	loc, _ := url.Parse(startRec.Header().Get("Location"))
+	var oc *http.Cookie
+	for _, c := range startRec.Result().Cookies() {
+		if c.Name == cookieOAuthState {
+			oc = c
+		}
+	}
+	verifier := strings.SplitN(oc.Value, ":", 2)[1]
+	challenge := loc.Query().Get("code_challenge")
+	cb := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?code=ok&state="+url.QueryEscape(loc.Query().Get("state")), nil)
+	cb.AddCookie(oc)
+	cbRec := httptest.NewRecorder()
+	h.ServeHTTP(cbRec, cb)
+	if cbRec.Code != http.StatusFound {
+		t.Fatalf("callback %d %s", cbRec.Code, cbRec.Body.String())
+	}
+	if form.Get("code_verifier") != verifier {
+		t.Fatalf("verifier %q vs cookie", form.Get("code_verifier"))
+	}
+	if form.Get("code_verifier") == challenge {
+		t.Fatal("must not send the challenge as the verifier")
+	}
+	if form.Get("redirect_uri") != "https://wheretoken.plainlist.space/api/v1/auth/github/callback" {
+		t.Fatalf("redirect_uri %s", form.Get("redirect_uri"))
+	}
+}
+
+func TestOAuthMissingVerifierFails(t *testing.T) {
+	h := testMux(t, http.NotFoundHandler())
+	start := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
+	startRec := httptest.NewRecorder()
+	h.ServeHTTP(startRec, start)
+	loc, _ := url.Parse(startRec.Header().Get("Location"))
+	state := loc.Query().Get("state")
+	cb := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?code=ok&state="+url.QueryEscape(state), nil)
+	cb.AddCookie(&http.Cookie{Name: cookieOAuthState, Value: state})
+	cbRec := httptest.NewRecorder()
+	h.ServeHTTP(cbRec, cb)
+	if cbRec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", cbRec.Code)
+	}
+}
+
+func TestOAuthWrongVerifierFails(t *testing.T) {
+	h := testMux(t, http.NotFoundHandler())
+	start := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
+	startRec := httptest.NewRecorder()
+	h.ServeHTTP(startRec, start)
+	loc, _ := url.Parse(startRec.Header().Get("Location"))
+	state := loc.Query().Get("state")
+	cb := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?code=ok&state="+url.QueryEscape(state), nil)
+	cb.AddCookie(&http.Cookie{Name: cookieOAuthState, Value: state + ":not-the-verifier-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
+	cbRec := httptest.NewRecorder()
+	h.ServeHTTP(cbRec, cb)
+	if cbRec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", cbRec.Code)
+	}
+}
+
+func TestOAuthGitHubErrorRedirectsToLoginWithoutSecrets(t *testing.T) {
+	var logs strings.Builder
+	st := readyStore(t)
+	ghSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"error":"incorrect_client_credentials","error_description":"The client_id and/or client_secret passed are incorrect."}`)
+	}))
+	t.Cleanup(ghSrv.Close)
+	h := NewMux(MuxOptions{
+		Version: "0.7.0",
+		Store:   st,
+		Config: Config{
+			Listen:             "127.0.0.1:0",
+			GitHubClientID:     "cid",
+			GitHubClientSecret: "csecret",
+			PublicURL:          "https://wheretoken.plainlist.space",
+			CookieSecure:       false,
+		},
+		GitHub: GitHubEndpoints{
+			AuthorizeURL: ghSrv.URL + "/login/oauth/authorize",
+			TokenURL:     ghSrv.URL + "/login/oauth/access_token",
+			UserURL:      ghSrv.URL + "/user",
+			HTTPClient:   ghSrv.Client(),
+		},
+		Log: log.New(&logs, "", 0),
+	})
+	start := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github", nil)
+	startRec := httptest.NewRecorder()
+	h.ServeHTTP(startRec, start)
+	loc, _ := url.Parse(startRec.Header().Get("Location"))
+	var oc *http.Cookie
+	for _, c := range startRec.Result().Cookies() {
+		if c.Name == cookieOAuthState {
+			oc = c
+		}
+	}
+	cb := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?code=ok&state="+url.QueryEscape(loc.Query().Get("state")), nil)
+	cb.AddCookie(oc)
+	cbRec := httptest.NewRecorder()
+	h.ServeHTTP(cbRec, cb)
+	if cbRec.Code != http.StatusFound {
+		t.Fatalf("status %d %s", cbRec.Code, cbRec.Body.String())
+	}
+	redir := cbRec.Header().Get("Location")
+	if !strings.Contains(redir, "/login?err=oauth") {
+		t.Fatalf("redirect %s", redir)
+	}
+	if !strings.Contains(redir, "rid=") {
+		t.Fatalf("missing rid %s", redir)
+	}
+	body := cbRec.Body.String() + redir + logs.String()
+	if strings.Contains(body, "csecret") || strings.Contains(strings.ToLower(body), "gho_") {
+		t.Fatalf("secret leaked: %s", body)
+	}
+	if !strings.Contains(logs.String(), "stage=github_token_exchange") {
+		t.Fatalf("log %s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "error=incorrect_client_credentials") {
+		t.Fatalf("log %s", logs.String())
+	}
+	if strings.Contains(cbRec.Body.String(), "oauth exchange failed") {
+		t.Fatal("must not dump raw exchange text")
 	}
 }
 

@@ -115,6 +115,38 @@ func (s *server) pairStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *server) getPairChallenge(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if _, _, err := s.currentUser(r); err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	code := normalizeCode(r.URL.Query().Get("code"))
+	if code == "" {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	ch, err := s.opts.Store.GetPairChallenge(r.Context(), code)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"display_code":   formatCode(code),
+		"label":          ch.Meta.Label,
+		"os":             ch.Meta.OS,
+		"arch":           ch.Meta.Arch,
+		"client_version": ch.Meta.ClientVersion,
+		"expires_at":     ch.ExpiresAt.UTC().Format(time.RFC3339),
+		"consumed":       ch.ConsumedAt.Valid,
+		"denied":         ch.DeniedAt.Valid,
+	})
+}
+
 func (s *server) pairConfirm(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

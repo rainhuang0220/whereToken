@@ -94,13 +94,14 @@ func hostedMeta(devs []Device, never bool) map[string]any {
 			last = d.LastSyncAt
 		}
 		list = append(list, map[string]any{
-			"id":        d.PublicID,
-			"label":     d.Label,
-			"os":        d.OS,
-			"arch":      d.Arch,
-			"last_seen": d.LastSeenAt.UTC().Format(time.RFC3339),
-			"last_sync": d.LastSyncAt.UTC().Format(time.RFC3339),
-			"revoked":   d.Revoked,
+			"id":             d.PublicID,
+			"label":          d.Label,
+			"os":             d.OS,
+			"arch":           d.Arch,
+			"client_version": d.ClientVersion,
+			"last_seen":      d.LastSeenAt.UTC().Format(time.RFC3339),
+			"last_sync":      d.LastSyncAt.UTC().Format(time.RFC3339),
+			"revoked":        d.Revoked,
 		})
 	}
 	out := map[string]any{"never_synced": never, "devices": list}

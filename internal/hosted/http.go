@@ -2,7 +2,9 @@ package hosted
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -13,6 +15,7 @@ type MuxOptions struct {
 	Config  Config
 	Now     func() time.Time
 	GitHub  GitHubEndpoints
+	Log     *log.Logger
 }
 
 func NewMux(opts MuxOptions) http.Handler {
@@ -21,6 +24,9 @@ func NewMux(opts MuxOptions) http.Handler {
 	}
 	if opts.Now == nil {
 		opts.Now = time.Now
+	}
+	if opts.Log == nil {
+		opts.Log = log.New(os.Stderr, "", log.LstdFlags)
 	}
 	s := &server{opts: opts, limiter: map[string][]time.Time{}}
 	mux := http.NewServeMux()
@@ -32,6 +38,7 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/pair/start", s.pairStart)
 	mux.HandleFunc("/api/v1/pair/status", s.pairStatus)
 	mux.HandleFunc("/api/v1/pair/confirm", s.pairConfirm)
+	mux.HandleFunc("/api/v1/pair/challenge", s.getPairChallenge)
 	mux.HandleFunc("/api/v1/devices/self/revoke", s.revokeSelf)
 	mux.HandleFunc("/api/v1/devices/", s.deviceRoutes)
 	mux.HandleFunc("/api/v1/sync/batch", s.putSyncBatch)
@@ -46,6 +53,13 @@ type server struct {
 	pending sync.Map
 	limiter map[string][]time.Time
 	limMu   sync.Mutex
+}
+
+func (s *server) logf(format string, args ...any) {
+	if s.opts.Log == nil {
+		return
+	}
+	s.opts.Log.Printf(format, args...)
 }
 
 func withSecurityHeaders(h http.Handler) http.Handler {
