@@ -66,7 +66,11 @@ func (s *FileStore) Delete(key string) error {
 }
 
 func Open(configDir string) Store {
-	return DirStore(filepath.Join(configDir, "hosted"))
+	file := DirStore(filepath.Join(configDir, "hosted"))
+	if osb := osBackend(); osb != nil {
+		return &chain{os: osb, file: file}
+	}
+	return file
 }
 
 func IsUnix() bool { return runtime.GOOS != "windows" }
