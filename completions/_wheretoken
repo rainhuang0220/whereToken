@@ -118,6 +118,7 @@ _wheretoken() {
         '--cursor[slice Cursor]' \
         '--trae[slice Trae]' \
         '--home[fake home]:dir:_files -/' \
+        '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
         '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version)'

@@ -58,7 +58,8 @@ _wheretoken() {
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
-    login|logout|sync) opts="--quiet -q --offline --home --help" ;;
+    login) opts="--quiet -q --offline --home --help --no-sync" ;;
+    logout|sync) opts="--quiet -q --offline --home --help" ;;
     *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -186,6 +187,7 @@ _wheretoken() {
         '--cursor[slice Cursor]' \
         '--trae[slice Trae]' \
         '--home[fake home]:dir:_files -/' \
+        '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
         '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version)'
@@ -208,6 +210,7 @@ complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
+complete -c wheretoken -n "__fish_seen_subcommand_from login" -l no-sync
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l tool -r -a "claude kimi grok minimax openclaw codex opencode cursor trae"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l model -r
@@ -258,6 +261,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
+    'login' { @('--no-sync','--quiet','--offline','--home','--help') }
     default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {

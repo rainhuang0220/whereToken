@@ -311,6 +311,16 @@ func TestParseOffline(t *testing.T) {
 	}
 }
 
+func TestParseLoginNoSync(t *testing.T) {
+	f, err := Parse([]string{"login", "--no-sync"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandLogin || !f.NoSync {
+		t.Fatalf("%+v", f)
+	}
+}
+
 func TestParseWidth(t *testing.T) {
 	f, err := Parse([]string{"--width", "80"})
 	if err != nil {

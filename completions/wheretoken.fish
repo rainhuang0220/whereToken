@@ -11,6 +11,7 @@ complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
+complete -c wheretoken -n "__fish_seen_subcommand_from login" -l no-sync
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l tool -r -a "claude kimi grok minimax openclaw opencode codex cursor trae gemini qwen cline roo kilo zcode"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l model -r

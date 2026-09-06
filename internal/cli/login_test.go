@@ -79,6 +79,8 @@ func TestLoginStoresDeviceTokenAndDoesNotPrintSecret(t *testing.T) {
 				"device_id":       "dev-uuid",
 				"source_hmac_key": base64.RawURLEncoding.EncodeToString(make([]byte, 32)),
 			})
+		case req.Method == http.MethodPut && strings.HasSuffix(req.URL.Path, "/sync/batch"):
+			return jsonRes(200, map[string]any{"ok": true})
 		default:
 			return jsonRes(404, nil)
 		}
@@ -98,6 +100,98 @@ func TestLoginStoresDeviceTokenAndDoesNotPrintSecret(t *testing.T) {
 	}
 	if !strings.Contains(s, "rainhuang0220") {
 		t.Fatalf("login: %s", s)
+	}
+	if !strings.Contains(s, "Synced") || !strings.Contains(s, "Open:") {
+		t.Fatalf("auto-sync: %s", s)
+	}
+}
+
+func TestLoginNoSyncSkipsUpload(t *testing.T) {
+	creds := &memCreds{m: map[string]string{}}
+	var put bool
+	app, out, errb := testApp([]string{"login", "--no-sync"})
+	app.Creds = creds
+	app.OpenURL = func(string) error { return nil }
+	app.Sleep = func(time.Duration) {}
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_HOSTED_URL" {
+			return "https://wheretoken.plainlist.space"
+		}
+		return ""
+	}
+	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+		if strings.HasSuffix(req.URL.Path, "/pair/start") {
+			return jsonRes(200, map[string]any{
+				"display_code": "ABCD-EFGH", "device_secret": "sekrit",
+				"verification_url": "https://wheretoken.plainlist.space/pair/ABCD-EFGH",
+			})
+		}
+		if strings.HasSuffix(req.URL.Path, "/pair/status") {
+			return jsonRes(200, map[string]any{
+				"status": "approved", "device_token": "wtd_1.tok",
+				"user_login": "rainhuang0220", "device_id": "dev-uuid",
+				"source_hmac_key": base64.RawURLEncoding.EncodeToString(make([]byte, 32)),
+			})
+		}
+		if req.Method == http.MethodPut {
+			put = true
+			return jsonRes(200, map[string]any{"ok": true})
+		}
+		return jsonRes(404, nil)
+	}
+	if code := app.Run(); code != 0 {
+		t.Fatalf("exit %d %s", code, errb.String())
+	}
+	if put {
+		t.Fatal("login --no-sync uploaded a batch")
+	}
+	if creds.m[credstore.KeyDeviceToken] != "wtd_1.tok" {
+		t.Fatal("token missing")
+	}
+	if strings.Contains(out.String(), "Synced") {
+		t.Fatalf("%s", out.String())
+	}
+}
+
+func TestLoginKeepsCredsIfInitialSyncFails(t *testing.T) {
+	creds := &memCreds{m: map[string]string{}}
+	app, _, errb := testApp([]string{"login"})
+	app.Creds = creds
+	app.OpenURL = func(string) error { return nil }
+	app.Sleep = func(time.Duration) {}
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_HOSTED_URL" {
+			return "https://wheretoken.plainlist.space"
+		}
+		return ""
+	}
+	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+		if strings.HasSuffix(req.URL.Path, "/pair/start") {
+			return jsonRes(200, map[string]any{
+				"display_code": "ABCD-EFGH", "device_secret": "sekrit",
+				"verification_url": "https://wheretoken.plainlist.space/pair/X",
+			})
+		}
+		if strings.HasSuffix(req.URL.Path, "/pair/status") {
+			return jsonRes(200, map[string]any{
+				"status": "approved", "device_token": "wtd_1.tok",
+				"user_login": "rainhuang0220", "device_id": "dev-uuid",
+				"source_hmac_key": base64.RawURLEncoding.EncodeToString(make([]byte, 32)),
+			})
+		}
+		if req.Method == http.MethodPut {
+			return jsonRes(503, map[string]any{"error": "down"})
+		}
+		return jsonRes(404, nil)
+	}
+	if code := app.Run(); code == 0 {
+		t.Fatal("expected sync failure")
+	}
+	if creds.m[credstore.KeyDeviceToken] != "wtd_1.tok" {
+		t.Fatal("pairing was rolled back")
+	}
+	if !strings.Contains(errb.String(), "Initial sync failed") || !strings.Contains(errb.String(), "wheretoken sync") {
+		t.Fatalf("%s", errb.String())
 	}
 }
 

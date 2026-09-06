@@ -91,7 +91,18 @@ func (a *App) runLogin(flags Flags, home adapter.Home) int {
 			_ = cs.Set(credstore.KeyLogin, login)
 			_ = cs.Set(credstore.KeyDeviceID, dev)
 			_ = cs.Set(credstore.KeyHMAC, hmacKey)
-			fmt.Fprintf(a.Stdout, "✓ Signed in as %s\n✓ Device %q connected\n", login, label)
+			fmt.Fprintf(a.Stdout, "✓ Signed in as %s\n✓ Device connected\n", login)
+			if flags.NoSync {
+				fmt.Fprintf(a.Stdout, "\nOpen:\n%s\n", base)
+				return ExitOK
+			}
+			fmt.Fprintln(a.Stdout, "Syncing aggregated usage only — prompts, code and file paths are never uploaded.")
+			_, sources, syncErr := a.syncOnce(flags, home)
+			if syncErr != nil {
+				fmt.Fprintf(a.Stderr, "! Initial sync failed: %s\n\nRun:\n  wheretoken sync\n", syncErr.Error())
+				return ExitFail
+			}
+			fmt.Fprintf(a.Stdout, "✓ Scanned local usage\n✓ Synced %d sources\n\nOpen:\n%s\n", sources, base)
 			return ExitOK
 		}
 	}

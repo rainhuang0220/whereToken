@@ -53,6 +53,7 @@ type Flags struct {
 	RankPeriod      string
 	NoCommunity     bool
 	CommunityAction string
+	NoSync          bool
 }
 
 type usageError struct {
@@ -265,6 +266,7 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.IntVar(&f.Width, "width", f.Width, "")
 	fs.StringVar(&f.RankPeriod, "rank", f.RankPeriod, "")
 	fs.BoolVar(&f.NoCommunity, "no-community", f.NoCommunity, "")
+	fs.BoolVar(&f.NoSync, "no-sync", f.NoSync, "")
 	tf.bind(fs)
 	return fs
 }
