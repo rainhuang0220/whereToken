@@ -46,7 +46,7 @@ var migrations = []string{
   label VARCHAR(128) NOT NULL,
   os VARCHAR(32) NOT NULL,
   arch VARCHAR(32) NOT NULL,
-  client_version VARCHAR(32) NOT NULL,
+  client_version VARCHAR(64) NOT NULL,
   token_hash BINARY(32) NOT NULL,
   token_version INT NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL,
@@ -115,6 +115,7 @@ var migrations = []string{
   created_at DATETIME NOT NULL,
   PRIMARY KEY (device_id, idempotency_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`ALTER TABLE devices MODIFY client_version VARCHAR(64) NOT NULL`,
 }
 
 func (s *Store) Migrate(ctx context.Context) error {

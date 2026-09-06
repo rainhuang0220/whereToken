@@ -189,10 +189,12 @@ func (s *server) pairConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	dev, raw, err := s.opts.Store.InsertDevice(r.Context(), user.ID, ch.Meta)
 	if err != nil {
+		s.logf("pair confirm stage=insert_device error=%s", sanitizeOAuthLog(err.Error()))
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
 	if err := s.opts.Store.ConsumePair(r.Context(), code, user.ID); err != nil {
+		s.logf("pair confirm stage=consume_pair error=%s", sanitizeOAuthLog(err.Error()))
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}

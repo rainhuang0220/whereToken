@@ -68,6 +68,26 @@ func TestSessionHashRoundTripAndRevoke(t *testing.T) {
 	}
 }
 
+func TestInsertDeviceAcceptsGoPseudoVersion(t *testing.T) {
+	st := readyStore(t)
+	ctx := context.Background()
+	u, err := st.UpsertGitHubUser(ctx, GitHubIdentity{ID: uniqueGitHubID(t), Login: "ver"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ver := "v0.6.5-0.20260906020645-723001220861"
+	if len(ver) <= 32 {
+		t.Fatalf("fixture too short: %d", len(ver))
+	}
+	d, tok, err := st.InsertDevice(ctx, u.ID, DeviceMeta{Label: "Mac", OS: "darwin", Arch: "arm64", ClientVersion: ver})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.ClientVersion != ver || tok == "" {
+		t.Fatalf("%+v", d)
+	}
+}
+
 func TestAccountGlobalReplaceAndDeviceLocalSum(t *testing.T) {
 	st := readyStore(t)
 	ctx := context.Background()

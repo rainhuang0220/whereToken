@@ -200,6 +200,9 @@ func (s *Store) InsertDevice(ctx context.Context, userID int64, meta DeviceMeta)
 	if meta.Label == "" {
 		meta.Label = meta.OS + " " + meta.Arch
 	}
+	if len(meta.ClientVersion) > 64 {
+		meta.ClientVersion = meta.ClientVersion[:64]
+	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO devices (user_id, public_id, label, os, arch, client_version, token_hash, token_version, created_at, last_seen_at) VALUES (?,?,?,?,?,?,?,1,?,?)`,
 		userID, publicID, meta.Label, meta.OS, meta.Arch, meta.ClientVersion, hash, now, now)
 	if err != nil {
