@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — 2026-09-06 (Alpha)
+
+- Hosted Web: GitHub OAuth (PKCE S256, no extra scopes), signed-in sessions, device pairing, and privacy-safe daily×model sync. The CLI `wheretoken login` pairs, stores the device token in macOS Keychain (file fallback elsewhere), then runs the first sync automatically (`--no-sync` opt-out)
+- Hosted dashboard reuses the local `wheretoken serve` kiln UI (forge / rail / KilnKid / KPI 2×5 / tables / themes). Empty hosted states stay honest (no local “cold kiln” copy, no sample JSON). Account menu + Settings cover identity, appearance, devices, sync/privacy, and danger actions (delete synced data / delete account) without fake Auto Sync / Sync now controls
+- Sync contract: `account_global` sources REPLACE (Cursor cloud is one ledger, not N devices); `device_local` sources SUM. Serialized batches reject prompts, paths, credentials, and unknown fields. `devices.client_version` is VARCHAR(64) so Go pseudo-versions pair under MySQL 5.7 STRICT_TRANS_TABLES
+- CLI report footer `Web:` now points at https://wheretoken.plainlist.space. `--help` and the local `serve` banner keep the project site (https://rainhuang0220.github.io/whereToken/). The project site gains an Open Web App CTA
+- Production: `wheretoken.plainlist.space` SPA + `/api` → `wheretoken-hosted` on loopback. Neighbors (Foreshadow / PlainList / kiln) untouched
+
 ## 0.6.4 — 2026-09-04 (Alpha)
 
 - Fix: the CLI 2×5 report now ends with **用户画像**, matching the v0.6.0 product definition the web dashboard already shipped. v0.6.0 wired the deterministic portrait only into the summary JSON (`scan.buildSummaryJSON`); the terminal renderer kept the pre-v0.6.0 rank cell, so release binaries still printed 排名 + a 社区排名暂不可用 footnote. `report.Snapshot` gains a `Portrait` field fed by the same `profile.Evaluate` engine (seeded by the anonymous install id; windowed reports profile the window) — no second portrait implementation

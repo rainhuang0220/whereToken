@@ -22,7 +22,7 @@ Local-first token usage accounting. Read these before changing parsers or totals
 - Do not estimate USD. Price only from the public list card. Unknown / missing component rate = unavailable.
 - Do not add reasoning into Total. Grok / MiniMax reasoning is not a second output charge.
 - Do not open a public Community Rank URL. No HMAC theater; UUID is a bearer id for a self-hosted board.
-- Do not bump to v0.7.0 unless asked. Patch/minor on 0.6.x only.
+- Do not bump the minor or major version unless asked. Patch on 0.7.x only.
 
 ## Scan invariant
 
