@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import HostedShell from '../components/HostedShell.vue'
+import KilnKid from '../components/KilnKid.vue'
 import { csrfHeaders } from '../csrf'
 import { pairSuccessBody, pairSuccessTitle, pairTitle } from '../hosted/copy'
 
@@ -43,32 +43,47 @@ async function decide(accept: boolean) {
   }
   window.location.assign('/app')
 }
-
-const subtitle = () =>
-  [meta.value?.os, meta.value?.arch, meta.value?.client_version].filter(Boolean).join(' · ')
 </script>
 
 <template>
-  <HostedShell>
-    <main class="hosted-card-page">
-      <section v-if="done" class="hosted-card">
-        <p class="cold-kicker">Pair</p>
-        <h1>{{ pairSuccessTitle }}</h1>
-        <p class="hosted-lede">{{ pairSuccessBody }}</p>
+  <div class="forge">
+    <header class="rail">
+      <div class="rail-brand">
+        <KilnKid pose="grin" size="sm" />
+        <div class="rail-name">
+          <h1>whereToken</h1>
+          <p class="whisper">本机 token 窑</p>
+        </div>
+      </div>
+      <div class="rail-meta">
+        <p class="status-line">Pair</p>
+        <div class="rail-actions">
+          <router-link class="lever" to="/app">Dashboard</router-link>
+        </div>
+      </div>
+    </header>
+
+    <section v-if="done" class="cold-kiln">
+      <KilnKid pose="grin" size="md" />
+      <div>
+        <p class="cold-kicker">{{ pairSuccessTitle }}</p>
+        <p class="cold-copy">{{ pairSuccessBody }}</p>
         <router-link class="lever primary" to="/app">Open Dashboard</router-link>
-      </section>
-      <section v-else class="hosted-card">
-        <p class="cold-kicker">Pair</p>
-        <h1>{{ pairTitle }}</h1>
-        <p class="hosted-device">{{ meta?.label || 'whereToken CLI' }}</p>
-        <p class="muted">{{ subtitle() || code }}</p>
-        <p class="hosted-lede">这台设备将可以把聚合后的用量统计同步到你的账号。本地原文不会上传。</p>
+      </div>
+    </section>
+    <section v-else class="cold-kiln">
+      <KilnKid pose="blink" size="md" />
+      <div>
+        <p class="cold-kicker">{{ pairTitle }}</p>
+        <p class="cold-copy">{{ meta?.label || 'whereToken CLI' }}</p>
+        <p class="note">{{ [meta?.os, meta?.arch, meta?.client_version].filter(Boolean).join(' · ') || code }}</p>
+        <p class="cold-copy">这台设备将同步聚合用量。prompts、代码和路径不会上传。</p>
         <p v-if="error" class="err" role="alert">{{ error }}</p>
-        <div class="hosted-cta-row">
+        <div class="damper">
           <button type="button" class="lever primary" @click="decide(true)">Connect device</button>
           <button type="button" class="lever" @click="decide(false)">Cancel</button>
         </div>
-      </section>
-    </main>
-  </HostedShell>
+      </div>
+    </section>
+  </div>
 </template>

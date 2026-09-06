@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import HostedShell from '../components/HostedShell.vue'
+import KilnKid from '../components/KilnKid.vue'
 import { csrfHeaders } from '../csrf'
 import { neverSyncedItems, syncedItems } from '../hosted/copy'
 
@@ -35,45 +35,55 @@ async function del(path: string, okText: string) {
 </script>
 
 <template>
-  <HostedShell>
-    <main class="hosted-card-page">
-      <h1>Privacy</h1>
-      <section class="hosted-card">
-        <p class="cold-kicker">Synced</p>
-        <ul class="hosted-yes">
-          <li v-for="item in syncedItems" :key="item">{{ item }}</li>
-        </ul>
-      </section>
-      <section class="hosted-card">
-        <p class="cold-kicker">Never synced</p>
-        <ul class="hosted-no">
-          <li v-for="item in neverSyncedItems" :key="item">{{ item }}</li>
-        </ul>
-      </section>
-      <section class="hosted-card hosted-danger">
-        <p class="cold-kicker">Account controls</p>
-        <p v-if="msg" role="status">{{ msg }}</p>
-        <p>
-          <button
-            type="button"
-            class="lever"
-            :disabled="busy"
-            @click="del('/api/v1/account/usage', '已删除云端用量，账号仍保留')"
-          >
-            删除已同步数据
-          </button>
-        </p>
-        <p>
-          <button
-            type="button"
-            class="lever"
-            :disabled="busy"
-            @click="del('/api/v1/account', '账号已删除')"
-          >
-            删除账号
-          </button>
-        </p>
-      </section>
-    </main>
-  </HostedShell>
+  <div class="forge">
+    <header class="rail">
+      <div class="rail-brand">
+        <KilnKid pose="grin" size="sm" />
+        <div class="rail-name">
+          <h1>whereToken</h1>
+          <p class="whisper">本机 token 窑</p>
+        </div>
+      </div>
+      <div class="rail-meta">
+        <p class="status-line">Privacy</p>
+        <div class="rail-actions">
+          <router-link class="lever" to="/app">Dashboard</router-link>
+          <router-link class="lever" to="/settings/devices">设备</router-link>
+        </div>
+      </div>
+    </header>
+
+    <section class="why">
+      <p class="cold-kicker">Synced</p>
+      <ul>
+        <li v-for="item in syncedItems" :key="item">{{ item }}</li>
+      </ul>
+      <p class="cold-kicker">Never synced</p>
+      <ul>
+        <li v-for="item in neverSyncedItems" :key="item">{{ item }}</li>
+      </ul>
+    </section>
+    <section class="why">
+      <p class="cold-kicker">Account controls</p>
+      <p v-if="msg" role="status">{{ msg }}</p>
+      <div class="damper">
+        <button
+          type="button"
+          class="lever"
+          :disabled="busy"
+          @click="del('/api/v1/account/usage', '已删除云端用量，账号仍保留')"
+        >
+          删除已同步数据
+        </button>
+        <button
+          type="button"
+          class="lever"
+          :disabled="busy"
+          @click="del('/api/v1/account', '账号已删除')"
+        >
+          删除账号
+        </button>
+      </div>
+    </section>
+  </div>
 </template>

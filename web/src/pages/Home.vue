@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AxisDamper from '../components/AxisDamper.vue'
 import DrillPanel from '../components/DrillPanel.vue'
 import FiringVeil from '../components/FiringVeil.vue'
@@ -21,8 +21,17 @@ import {
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import CopyCommand from '../components/CopyCommand.vue'
-import HostedShell from '../components/HostedShell.vue'
-import { neverSyncedTitle, onboardTitle } from '../hosted/copy'
+import { csrfHeaders } from '../csrf'
+import {
+  connectTitle,
+  loginOnce,
+  neverSyncedBody,
+  neverSyncedTitle,
+  staleNote,
+  waitingSyncBody,
+  waitingSyncTitle,
+} from '../hosted/copy'
+import { hostedPhase } from '../hosted/state'
 import { useSummaryStore } from '../stores/summary'
 import type { AxisSel, CalendarSeries, DrillTables, PeriodId } from '../types'
 
@@ -30,7 +39,10 @@ const store = useSummaryStore()
 const demo = import.meta.env.VITE_DEMO === '1'
 const hosted = import.meta.env.VITE_HOSTED === '1'
 const payload = computed(() => store.payload)
-const neverSynced = computed(() => hosted && Boolean(payload.value?.hosted?.never_synced))
+const phase = computed(() => (hosted ? hostedPhase(payload.value) : ''))
+const showHostedWait = computed(
+  () => hosted && (phase.value === 'logged_in_no_device' || phase.value === 'paired_no_sync'),
+)
 const periods: { id: PeriodId; label: string }[] = [
   { id: 'today', label: '今日' },
   { id: '7d', label: '7 天' },
@@ -81,7 +93,9 @@ const loginHint = computed(() => {
 const degradedLines = computed(() =>
   payload.value ? observatoryDegradedLines(payload.value) : [],
 )
-const emptyHint = computed(() => (payload.value ? observatoryEmptyHint(payload.value) : ''))
+const emptyHint = computed(() =>
+  hosted || !payload.value ? '' : observatoryEmptyHint(payload.value),
+)
 const showSlices = computed(() => (payload.value ? observatoryHasSlice(payload.value) : false))
 const showDrill = computed(() => observatoryHasDrill(drill.value))
 const cursorWindowHint = computed(() =>
@@ -118,7 +132,10 @@ const mouthLines = computed(() =>
 )
 
 const statusKind = computed(() => {
-  if (hosted) return '云端账本'
+  if (hosted) {
+    if (phase.value === 'stale') return staleNote
+    return '云端账本'
+  }
   if (emptyHint.value) return '空窑'
   if (!payload.value) return '未煅烧'
   if (demo) return '演示数据'
@@ -126,24 +143,59 @@ const statusKind = computed(() => {
   return '本机账本'
 })
 
-const hostedDevice = computed(() => payload.value?.hosted?.devices?.[0])
+const hostedDevice = computed(() => payload.value?.hosted?.devices?.find((d) => !d.revoked))
 const hostedSync = computed(() => payload.value?.hosted?.last_sync_at || hostedDevice.value?.last_sync)
 const hostedSources = computed(() => payload.value?.by_source?.length ?? 0)
+const hostedLogin = ref('')
+const hostedAvatar = ref('')
+let pollTimer = 0
+
+function scheduleHostedPoll() {
+  window.clearTimeout(pollTimer)
+  if (!hosted) return
+  if (phase.value !== 'paired_no_sync' && phase.value !== 'logged_in_no_device') return
+  pollTimer = window.setTimeout(async () => {
+    await store.reloadQuiet()
+    scheduleHostedPoll()
+  }, document.hidden ? 8000 : 2500)
+}
+
+async function hostedLogout() {
+  await fetch('/api/v1/auth/logout', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: csrfHeaders(),
+  })
+  window.location.assign('/login')
+}
 
 onMounted(() => {
-  void store.hydrate()
+  void store.hydrate().then(() => scheduleHostedPoll())
+  if (hosted) {
+    void fetch('/api/v1/session', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: { login?: string; avatar_url?: string } | null) => {
+        if (!body) return
+        hostedLogin.value = body.login || ''
+        hostedAvatar.value = body.avatar_url || ''
+      })
+  }
+  document.addEventListener('visibilitychange', scheduleHostedPoll)
+})
+onUnmounted(() => {
+  window.clearTimeout(pollTimer)
+  document.removeEventListener('visibilitychange', scheduleHostedPoll)
 })
 </script>
 
 <template>
-  <component :is="hosted ? HostedShell : 'div'">
   <div class="forge">
     <header class="rail">
       <div class="rail-brand">
         <KilnKid :pose="store.loading ? 'fire' : emptyHint ? 'blink' : 'grin'" size="sm" />
         <div class="rail-name">
           <h1>whereToken</h1>
-          <p class="whisper">{{ hosted ? '云端账本' : '本机 token 窑' }}</p>
+          <p class="whisper">本机 token 窑</p>
         </div>
       </div>
       <div class="rail-meta">
@@ -151,9 +203,21 @@ onMounted(() => {
           <span>{{ store.scannedAt || '尚未扫描' }}</span>
           <span class="status-dot" aria-hidden="true">·</span>
           <span>{{ statusKind }}</span>
+          <template v-if="hosted && hostedDevice">
+            <span class="status-dot" aria-hidden="true">·</span>
+            <span>{{ hostedDevice.label }}</span>
+            <span class="status-dot" aria-hidden="true">·</span>
+            <span>{{
+              hostedSync && !hostedSync.startsWith('0001') ? hostedSync : waitingSyncTitle
+            }}</span>
+            <span class="status-dot" aria-hidden="true">·</span>
+            <span>{{ hostedSources }} 源</span>
+          </template>
         </p>
         <div class="rail-actions">
-          <router-link v-if="!hosted" class="lever" to="/themes">主题</router-link>
+          <router-link v-if="hosted" class="lever" to="/settings/devices">设备</router-link>
+          <router-link v-if="hosted" class="lever" to="/settings/privacy">隐私</router-link>
+          <router-link class="lever" to="/themes">主题</router-link>
           <button
             v-if="!demo"
             type="button"
@@ -165,28 +229,37 @@ onMounted(() => {
           >
             {{ store.loading ? '煅烧中…' : '刷新' }}
           </button>
+          <img
+            v-if="hosted && hostedAvatar"
+            class="hosted-avatar"
+            :src="hostedAvatar"
+            :alt="hostedLogin"
+            width="24"
+            height="24"
+          />
+          <button v-if="hosted" type="button" class="lever" @click="hostedLogout">退出</button>
         </div>
       </div>
     </header>
 
-    <p v-if="hosted" class="hosted-status">
-      <span>{{ hostedDevice?.label || '尚未连接设备' }}</span>
-      <span class="status-dot" aria-hidden="true">·</span>
-      <span>{{ hostedSync && !hostedSync.startsWith('0001') ? 'Synced ' + hostedSync : '尚未同步' }}</span>
-      <span class="status-dot" aria-hidden="true">·</span>
-      <span>{{ hostedSources }} sources</span>
-    </p>
     <p v-if="store.error" class="err">{{ store.error }}</p>
-    <p v-if="scanErrorHint" class="note">{{ scanErrorHint }}</p>
-    <section v-if="neverSynced" class="hosted-card onboard">
-      <p class="cold-kicker">Onboarding</p>
-      <h2>{{ neverSyncedTitle }}</h2>
-      <p class="hosted-lede">{{ onboardTitle }}。本地数据在你明确 sync 之前不会离开这台机器。</p>
-      <ol class="hosted-steps">
-        <li>Install / update whereToken</li>
-        <li><CopyCommand command="wheretoken login" /></li>
-        <li>在这对设备确认，然后 <CopyCommand command="wheretoken sync" /></li>
-      </ol>
+    <p v-if="scanErrorHint && !hosted" class="note">{{ scanErrorHint }}</p>
+    <section v-if="phase === 'logged_in_no_device'" class="cold-kiln" aria-live="polite">
+      <KilnKid pose="blink" size="md" />
+      <div>
+        <p class="cold-kicker">{{ connectTitle }}</p>
+        <p class="cold-copy">{{ neverSyncedTitle }}</p>
+        <p class="cold-copy">{{ neverSyncedBody }}</p>
+        <p class="cold-copy">{{ loginOnce }}</p>
+        <CopyCommand command="wheretoken login" />
+      </div>
+    </section>
+    <section v-else-if="phase === 'paired_no_sync'" class="cold-kiln" aria-live="polite">
+      <KilnKid pose="fire" size="md" />
+      <div>
+        <p class="cold-kicker">{{ waitingSyncTitle }}</p>
+        <p class="cold-copy">{{ waitingSyncBody }}</p>
+      </div>
     </section>
 
     <section v-if="emptyHint && !store.loading" class="cold-kiln" aria-live="polite">
@@ -197,11 +270,12 @@ onMounted(() => {
       </div>
     </section>
 
-    <details v-if="mouthLines.length" class="kiln-mouth">
+    <details v-if="mouthLines.length && !showHostedWait" class="kiln-mouth">
       <summary>窑口 · {{ mouthLines.length }}</summary>
       <p v-for="line in mouthLines" :key="line" class="note">{{ line }}</p>
     </details>
 
+    <template v-if="!showHostedWait">
     <div class="period" role="group" aria-label="时间范围">
       <button
         v-for="p in periods"
@@ -339,6 +413,6 @@ onMounted(() => {
 
       <p v-if="payload.errors.length" class="err">{{ payload.errors.join(' · ') }}</p>
     </template>
+    </template>
   </div>
-  </component>
 </template>

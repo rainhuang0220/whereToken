@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HostedShell from '../components/HostedShell.vue'
+import KilnKid from '../components/KilnKid.vue'
 import {
   loginCta,
   loginHeadline,
@@ -22,59 +22,54 @@ function github() {
 </script>
 
 <template>
-  <HostedShell bare>
-    <main class="hosted-gate">
-      <p class="whisper">Hosted</p>
-      <h1>{{ loginHeadline }}</h1>
-      <p class="hosted-lede">{{ loginLede }}</p>
+  <div class="forge">
+    <header class="rail">
+      <div class="rail-brand">
+        <KilnKid pose="grin" size="sm" />
+        <div class="rail-name">
+          <h1>whereToken</h1>
+          <p class="whisper">本机 token 窑</p>
+        </div>
+      </div>
+      <div class="rail-meta">
+        <p class="status-line">Hosted</p>
+        <div class="rail-actions">
+          <router-link class="lever" to="/themes">主题</router-link>
+        </div>
+      </div>
+    </header>
 
-      <section v-if="oauthFailed" class="hosted-error" role="alert">
-        <h2>{{ oauthErrorTitle }}</h2>
-        <p>{{ oauthErrorBody }}</p>
-        <p v-if="requestId" class="hosted-ref">Reference: <code>{{ requestId }}</code></p>
-        <div class="hosted-cta-row">
+    <p class="cold-copy">{{ loginHeadline }}</p>
+    <p class="note">{{ loginLede }}</p>
+
+    <section v-if="oauthFailed" class="cold-kiln" role="alert">
+      <div>
+        <p class="cold-kicker">{{ oauthErrorTitle }}</p>
+        <p class="cold-copy">{{ oauthErrorBody }}</p>
+        <p v-if="requestId" class="status-line">Reference: {{ requestId }}</p>
+        <div class="damper">
           <button type="button" class="lever primary" @click="github">重新登录</button>
           <a class="lever" href="https://rainhuang0220.github.io/whereToken/">返回首页</a>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <template v-else>
-        <section class="hosted-preview" aria-label="Preview">
-          <p class="cold-kicker">Preview</p>
-          <p class="hosted-preview-note">登录后看到的是你自己的账本，不是这段示意骨架。</p>
-          <div class="hosted-skel" aria-hidden="true">
-            <span /><span /><span /><span />
-          </div>
-        </section>
+    <template v-else>
+      <div class="damper">
+        <button type="button" class="lever primary" @click="github">{{ loginCta }}</button>
+      </div>
+      <p class="status-line">{{ loginPrivacy }} · {{ loginNoRepo }}</p>
+      <details class="kiln-mouth">
+        <summary>What gets synced?</summary>
+        <p class="note">✓ token counts · models &amp; vendors · request statistics</p>
+        <p class="note">✗ prompts · source code · file paths · API keys</p>
+      </details>
+    </template>
 
-        <div class="hosted-cta">
-          <button type="button" class="lever primary hosted-github" @click="github">
-            {{ loginCta }}
-          </button>
-          <p class="hosted-reassure">{{ loginPrivacy }} · {{ loginNoRepo }}</p>
-        </div>
-
-        <details class="kiln-mouth hosted-sync">
-          <summary>What gets synced?</summary>
-          <ul class="hosted-yes">
-            <li>token counts</li>
-            <li>models &amp; vendors</li>
-            <li>request statistics</li>
-          </ul>
-          <ul class="hosted-no">
-            <li>prompts</li>
-            <li>source code</li>
-            <li>file paths</li>
-            <li>API keys</li>
-          </ul>
-        </details>
-      </template>
-
-      <footer class="hosted-foot">
-        <a href="https://rainhuang0220.github.io/whereToken/">Project Site</a>
-        <a href="https://github.com/rainhuang0220/whereToken">GitHub</a>
-        <router-link to="/settings/privacy">Privacy</router-link>
-      </footer>
-    </main>
-  </HostedShell>
+    <p class="status-line">
+      <a href="https://rainhuang0220.github.io/whereToken/">Project Site</a>
+      <span class="status-dot" aria-hidden="true">·</span>
+      <a href="https://github.com/rainhuang0220/whereToken">GitHub</a>
+    </p>
+  </div>
 </template>

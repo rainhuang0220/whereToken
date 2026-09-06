@@ -9,10 +9,10 @@ import {
   neverSyncedTitle,
   oauthErrorBody,
   oauthErrorTitle,
-  onboardTitle,
   pairSuccessTitle,
   pairTitle,
   syncedItems,
+  waitingSyncBody,
 } from './copy'
 
 function page(name: string) {
@@ -31,8 +31,8 @@ describe('hosted copy', () => {
     expect(loginNoRepo).toMatch(/仓库/)
     expect(oauthErrorTitle).toBe('登录没有完成')
     expect(oauthErrorBody).toMatch(/重新尝试/)
-    expect(onboardTitle).toMatch(/设备/)
-    expect(neverSyncedTitle).toMatch(/同步/)
+    expect(neverSyncedTitle).toBe('尚未同步用量')
+    expect(waitingSyncBody).toMatch(/首次同步/)
     expect(pairTitle).toMatch(/设备/)
     expect(pairSuccessTitle).toMatch(/已连接/)
     expect(syncedItems).toContain('token counts')
@@ -47,9 +47,9 @@ describe('hosted pages', () => {
     expect(src).toContain('loginCta')
     expect(src).toContain('oauthFailed')
     expect(src).toContain('oauthErrorTitle')
-    expect(src).toContain('Preview')
     expect(src).toContain('What gets synced?')
     expect(src).toContain('Project Site')
+    expect(src).toContain('class="forge"')
     expect(src).not.toMatch(/Features|Testimonials|Newsletter/)
   })
 
@@ -78,11 +78,14 @@ describe('hosted pages', () => {
     expect(src).toContain('/api/v1/account/usage')
   })
 
-  it('home hosted onboarding and status row', () => {
+  it('home hosted wait states reuse kiln empty layout and skip local-ledger copy', () => {
     const src = home()
     expect(src).toContain('neverSyncedTitle')
-    expect(src).toContain('wheretoken sync')
-    expect(src).toContain('hosted-status')
-    expect(src).toContain('HostedShell')
+    expect(src).toContain('waitingSyncBody')
+    expect(src).toContain('wheretoken login')
+    expect(src).toContain('hosted || !payload')
+    expect(src).toContain('KpiRow')
+    expect(src).toContain('class="forge"')
+    expect(src).not.toContain('HostedShell')
   })
 })

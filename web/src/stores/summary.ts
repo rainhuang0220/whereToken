@@ -53,6 +53,16 @@ export const useSummaryStore = defineStore('summary', {
         this.error = err instanceof Error ? err.message : String(err)
       }
     },
+    async reloadQuiet() {
+      try {
+        const next = await fetchSummary(this.period)
+        this.payload = next
+        if (next.scanned_at) this.scannedAt = formatScannedAt(next.scanned_at)
+        this.error = ''
+      } catch {
+        /* keep last payload while waiting for first sync */
+      }
+    },
     async refresh() {
       if (this.loading) return
       this.loading = true

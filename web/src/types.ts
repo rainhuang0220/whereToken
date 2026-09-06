@@ -131,6 +131,7 @@ export type SummaryPayload = {
       client_version?: string
       last_seen?: string
       last_sync?: string
+      revoked?: boolean
     }[]
   }
 }
