@@ -1,3 +1,4 @@
+import { safeReturnPath } from './hosted/account'
 import type { SummaryPayload } from './types'
 import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
@@ -36,7 +37,7 @@ export async function fetchSummary(since?: string): Promise<SummaryPayload> {
       credentials: 'same-origin',
     })
     if (res.status === 401) {
-      const next = encodeURIComponent(window.location.pathname || '/app')
+      const next = encodeURIComponent(safeReturnPath(window.location.pathname || '/app'))
       window.location.assign(`/login?next=${next}`)
       throw new Error('unauthorized')
     }

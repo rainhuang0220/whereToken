@@ -21,7 +21,7 @@ import {
 } from '../observatory'
 import { selectDrill, selectSeries, todayISO, wallCells } from '../grid'
 import CopyCommand from '../components/CopyCommand.vue'
-import { csrfHeaders } from '../csrf'
+import HostedAccountMenu from '../components/HostedAccountMenu.vue'
 import {
   connectTitle,
   loginOnce,
@@ -146,8 +146,6 @@ const statusKind = computed(() => {
 const hostedDevice = computed(() => payload.value?.hosted?.devices?.find((d) => !d.revoked))
 const hostedSync = computed(() => payload.value?.hosted?.last_sync_at || hostedDevice.value?.last_sync)
 const hostedSources = computed(() => payload.value?.by_source?.length ?? 0)
-const hostedLogin = ref('')
-const hostedAvatar = ref('')
 let pollTimer = 0
 
 function scheduleHostedPoll() {
@@ -160,26 +158,8 @@ function scheduleHostedPoll() {
   }, document.hidden ? 8000 : 2500)
 }
 
-async function hostedLogout() {
-  await fetch('/api/v1/auth/logout', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: csrfHeaders(),
-  })
-  window.location.assign('/login')
-}
-
 onMounted(() => {
   void store.hydrate().then(() => scheduleHostedPoll())
-  if (hosted) {
-    void fetch('/api/v1/session', { credentials: 'same-origin' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body: { login?: string; avatar_url?: string } | null) => {
-        if (!body) return
-        hostedLogin.value = body.login || ''
-        hostedAvatar.value = body.avatar_url || ''
-      })
-  }
   document.addEventListener('visibilitychange', scheduleHostedPoll)
 })
 onUnmounted(() => {
@@ -215,8 +195,6 @@ onUnmounted(() => {
           </template>
         </p>
         <div class="rail-actions">
-          <router-link v-if="hosted" class="lever" to="/settings/devices">设备</router-link>
-          <router-link v-if="hosted" class="lever" to="/settings/privacy">隐私</router-link>
           <router-link class="lever" to="/themes">主题</router-link>
           <button
             v-if="!demo"
@@ -227,21 +205,17 @@ onUnmounted(() => {
             :aria-busy="store.loading"
             @click="store.refresh()"
           >
-            {{ store.loading ? '煅烧中…' : '刷新' }}
+            {{ hosted && store.loading ? '读取中…' : store.loading ? '煅烧中…' : '刷新' }}
           </button>
-          <img
-            v-if="hosted && hostedAvatar"
-            class="hosted-avatar"
-            :src="hostedAvatar"
-            :alt="hostedLogin"
-            width="24"
-            height="24"
-          />
-          <button v-if="hosted" type="button" class="lever" @click="hostedLogout">退出</button>
+          <HostedAccountMenu v-if="hosted" />
         </div>
       </div>
     </header>
 
+    <p v-if="phase === 'stale'" class="note">
+      {{ staleNote }}
+      <CopyCommand command="wheretoken sync" />
+    </p>
     <p v-if="store.error" class="err">{{ store.error }}</p>
     <p v-if="scanErrorHint && !hosted" class="note">{{ scanErrorHint }}</p>
     <section v-if="phase === 'logged_in_no_device'" class="cold-kiln" aria-live="polite">

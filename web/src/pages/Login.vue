@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import KilnKid from '../components/KilnKid.vue'
+import { safeReturnPath } from '../hosted/account'
 import {
   loginCta,
   loginHeadline,
@@ -11,7 +12,7 @@ import {
 } from '../hosted/copy'
 
 const params = new URLSearchParams(window.location.search)
-const next = params.get('next') || '/app'
+const next = safeReturnPath(params.get('next'))
 const oauthFailed = params.get('err') === 'oauth'
 const requestId = params.get('rid') || ''
 

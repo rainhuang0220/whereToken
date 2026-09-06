@@ -3,8 +3,7 @@ import Home from './pages/Home.vue'
 import Themes from './pages/Themes.vue'
 import Login from './pages/Login.vue'
 import Pair from './pages/Pair.vue'
-import Devices from './pages/Devices.vue'
-import Privacy from './pages/Privacy.vue'
+import Settings from './pages/Settings.vue'
 import { isHosted } from './mode'
 
 export const router = createRouter({
@@ -14,13 +13,17 @@ export const router = createRouter({
     { path: '/app', component: Home },
     { path: '/login', component: Login },
     { path: '/pair/:code', component: Pair },
-    { path: '/settings/devices', component: Devices },
-    { path: '/settings/privacy', component: Privacy },
+    { path: '/settings/:section?', component: Settings },
     { path: '/themes/:id?', component: Themes },
   ],
 })
 
 router.beforeEach((to) => {
-  if (!isHosted()) return
+  if (!isHosted()) {
+    if (to.path.startsWith('/settings') || to.path.startsWith('/login') || to.path.startsWith('/pair')) {
+      return { path: '/' }
+    }
+    return
+  }
   if (to.path === '/') return { path: '/app' }
 })

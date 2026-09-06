@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import HostedAccountMenu from '../components/HostedAccountMenu.vue'
 import KilnKid from '../components/KilnKid.vue'
 import { csrfHeaders } from '../csrf'
 import { pairSuccessBody, pairSuccessTitle, pairTitle } from '../hosted/copy'
@@ -59,6 +60,7 @@ async function decide(accept: boolean) {
         <p class="status-line">Pair</p>
         <div class="rail-actions">
           <router-link class="lever" to="/app">Dashboard</router-link>
+          <HostedAccountMenu />
         </div>
       </div>
     </header>

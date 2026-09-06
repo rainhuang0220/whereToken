@@ -62,20 +62,15 @@ describe('hosted pages', () => {
     expect(src).toContain('/api/v1/pair/challenge')
   })
 
-  it('devices lists last seen/sync and revoke', () => {
-    const src = page('Devices.vue')
-    expect(src).toContain('Last seen')
-    expect(src).toContain('Last sync')
-    expect(src).toContain('Revoke')
-    expect(src).toContain('wheretoken login')
-  })
-
-  it('privacy splits synced / never / danger zone', () => {
-    const src = page('Privacy.vue')
+  it('settings covers account appearance devices privacy and danger confirm', () => {
+    const src = page('Settings.vue')
+    expect(src).toContain('HostedAccountMenu')
+    expect(src).toContain('断开设备')
+    expect(src).toContain('删除已同步数据')
+    expect(src).toContain('删除账号')
     expect(src).toContain('syncedItems')
-    expect(src).toContain('neverSyncedItems')
-    expect(src).toContain('Account controls')
-    expect(src).toContain('/api/v1/account/usage')
+    expect(src).toContain('wheretoken sync')
+    expect(src).not.toContain('Sync now')
   })
 
   it('home hosted wait states reuse kiln empty layout and skip local-ledger copy', () => {
@@ -87,5 +82,20 @@ describe('hosted pages', () => {
     expect(src).toContain('KpiRow')
     expect(src).toContain('class="forge"')
     expect(src).not.toContain('HostedShell')
+    expect(src).toContain('HostedAccountMenu')
+    expect(src).not.toContain('to="/settings/privacy"')
+  })
+})
+
+describe('hosted account menu source', () => {
+  it('is a real menu button with fallback and keyboard hooks', () => {
+    const src = readFileSync(new URL('../components/HostedAccountMenu.vue', import.meta.url), 'utf8')
+    expect(src).toContain('role="menu"')
+    expect(src).toContain('aria-haspopup="menu"')
+    expect(src).toContain('acct-fallback')
+    expect(src).toContain('acct-name')
+    expect(src).toContain('退出登录')
+    expect(src).toContain('ArrowDown')
+    expect(src).toContain('Escape')
   })
 })

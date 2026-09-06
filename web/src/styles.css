@@ -1480,8 +1480,146 @@ body:has(.glaze-hall.is-open) {
 }
 
 .hosted-avatar {
-  border-radius: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.acct {
+  position: relative;
+}
+
+.acct-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  min-width: 2.75rem;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ember-4);
+  border-radius: var(--lever-radius, 0px);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.acct-trigger:hover,
+.acct-trigger[aria-expanded='true'] {
+  border-color: var(--copper);
+  background: var(--clay);
+}
+
+.acct-avatar {
+  width: 24px;
+  height: 24px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
   border: 1px solid var(--copper);
+  background: var(--clay);
+}
+
+.acct-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bone);
+  font-size: 0.7rem;
+}
+
+.acct-name {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.acct-caret {
+  color: var(--ash);
+  font-size: 0.62rem;
+}
+
+.acct-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  min-width: 14rem;
+  max-width: min(18rem, calc(100vw - 1.5rem));
+  padding: 0.35rem 0;
+  border: 1px solid var(--copper);
+  background: var(--void);
+}
+
+.acct-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem 0.55rem;
+}
+
+.acct-id.is-static {
+  position: static;
+  margin: 0.6rem 0;
+  padding: 0;
+}
+
+.acct-id-name {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--bone);
+}
+
+.acct-id-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  color: var(--ash);
+}
+
+.acct-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.45rem 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--ember-4);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.acct-item:hover,
+.acct-item:focus-visible {
+  background: var(--clay);
+}
+
+.acct-sep {
+  height: 1px;
+  margin: 0.3rem 0;
+  background: var(--copper);
+}
+
+@media (max-width: 768px) {
+  .acct-name {
+    display: none;
+  }
 }
 
 .hosted-login {
