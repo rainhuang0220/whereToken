@@ -230,6 +230,17 @@ h1 {
   border-color: var(--bone);
 }
 
+.lever.danger {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.lever.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--warn) 16%, var(--void));
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
 .lever:disabled {
   opacity: 0.45;
   cursor: wait;

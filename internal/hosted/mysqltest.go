@@ -36,9 +36,15 @@ func readyStore(t *testing.T) *Store {
 		sharedStore, sharedCleanup, sharedStoreErr = openTestStore()
 	})
 	if sharedStoreErr != nil {
+		if os.Getenv("WHERETOKEN_REQUIRE_MYSQL") != "" {
+			t.Fatal(sharedStoreErr)
+		}
 		t.Skip(sharedStoreErr.Error())
 	}
 	if sharedStore == nil {
+		if os.Getenv("WHERETOKEN_REQUIRE_MYSQL") != "" {
+			t.Fatal("mysql test store unavailable")
+		}
 		t.Skip("mysql test store unavailable")
 	}
 	t.Cleanup(func() {})
@@ -95,11 +101,14 @@ func startDockerMySQL() (string, func(), error) {
 	ln.Close()
 	name := fmt.Sprintf("wheretoken-mysql-%d", port)
 	cmd := exec.Command("docker", "run", "-d", "--rm", "--name", name,
+		"--platform", "linux/amd64",
 		"-e", "MYSQL_ROOT_PASSWORD=wttest",
 		"-e", "MYSQL_DATABASE=wheretoken",
 		"-p", fmt.Sprintf("127.0.0.1:%d:3306", port),
-		"mysql:8.0",
-		"--default-authentication-plugin=mysql_native_password",
+		"mysql:5.7",
+		"--character-set-server=utf8mb4",
+		"--collation-server=utf8mb4_unicode_ci",
+		"--sql-mode=STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

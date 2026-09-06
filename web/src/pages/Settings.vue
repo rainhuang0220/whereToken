@@ -257,10 +257,10 @@ async function del(kind: 'usage' | 'account') {
       </ul>
       <p class="cold-kicker">危险操作</p>
       <div class="period">
-        <button type="button" class="lever" :disabled="busy" @click="del('usage')">
+        <button type="button" class="lever danger" :disabled="busy" @click="del('usage')">
           {{ pending === 'usage' ? '确认删除用量' : '删除已同步数据' }}
         </button>
-        <button type="button" class="lever" :disabled="busy" @click="del('account')">
+        <button type="button" class="lever danger" :disabled="busy" @click="del('account')">
           {{ pending === 'account' ? '确认删除账号' : '删除账号' }}
         </button>
       </div>

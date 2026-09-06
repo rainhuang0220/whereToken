@@ -25,10 +25,12 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/table"
 )
 
-// PublicSiteURL is the public demo site. It shows public/demo data only;
-// the local ledger is never uploaded there. One constant serves the report
-// footer, the serve banner, and --help.
+// PublicSiteURL is the project site (landing + synthetic demo). --help and
+// the local serve banner point here. The local ledger is never uploaded there.
 const PublicSiteURL = "https://rainhuang0220.github.io/whereToken/"
+
+// HostedWebURL is the signed-in hosted app. The human report footer points here.
+const HostedWebURL = "https://wheretoken.plainlist.space"
 
 type App struct {
 	Args       []string
@@ -253,7 +255,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	color := table.UseColor(flags.NoColor, a.StdoutTTY, a.LookupEnv)
 	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv, a.termWidth)})
 	fmt.Fprint(a.Stdout, out)
-	fmt.Fprintf(a.Stdout, "\nWeb: %s\n", PublicSiteURL)
+	fmt.Fprintf(a.Stdout, "\nWeb: %s\n", HostedWebURL)
 	return ExitOK
 }
 

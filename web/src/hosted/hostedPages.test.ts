@@ -91,6 +91,7 @@ describe('hosted pages', () => {
     expect(src).not.toContain('Sync now')
     expect(src).not.toContain('pack.label')
     expect(src).not.toContain('Auto Sync')
+    expect(src).toContain('lever danger')
   })
 
   it('home hosted wait states reuse kiln empty layout and skip local-ledger copy', () => {

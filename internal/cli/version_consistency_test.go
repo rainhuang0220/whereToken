@@ -95,7 +95,11 @@ func TestSiteDownloadButtonIsVersionFree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m := regexp.MustCompile(`Download v\d+\.\d+\.\d+`).FindString(string(body)); m != "" {
+	s := string(body)
+	if m := regexp.MustCompile(`Download v\d+\.\d+\.\d+`).FindString(s); m != "" {
 		t.Errorf("site/index.html hardcodes %q: the href already points at releases/latest, keep the label version-free", m)
+	}
+	if !strings.Contains(s, "https://wheretoken.plainlist.space") || !strings.Contains(s, "Open Web App") {
+		t.Error("site/index.html must keep an Open Web App CTA to the hosted app")
 	}
 }
