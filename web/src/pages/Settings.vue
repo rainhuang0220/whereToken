@@ -6,7 +6,7 @@ import CopyCommand from '../components/CopyCommand.vue'
 import HostedAccountMenu from '../components/HostedAccountMenu.vue'
 import KilnKid from '../components/KilnKid.vue'
 import { csrfHeaders } from '../csrf'
-import { avatarInitial, displayHandle, safeReturnPath } from '../hosted/account'
+import { avatarInitial, displayHandle, isUnauthorized, safeReturnPath } from '../hosted/account'
 import { neverSyncedItems, syncedItems } from '../hosted/copy'
 import { STORAGE_KEY, applyTheme, resolveThemeId, themes, type ThemeId } from '../themes'
 import type { SummaryPayload } from '../types'
@@ -52,6 +52,7 @@ onMounted(async () => {
     rows.value = p.hosted?.devices ?? []
     lastSync.value = p.hosted?.last_sync_at || ''
   } catch (e) {
+    if (isUnauthorized(e)) return
     error.value = e instanceof Error ? e.message : '无法加载数据'
   }
 })
@@ -71,11 +72,15 @@ function when(iso?: string) {
 }
 
 async function logout() {
-  await fetch('/api/v1/auth/logout', {
+  const res = await fetch('/api/v1/auth/logout', {
     method: 'POST',
     credentials: 'same-origin',
     headers: csrfHeaders(),
   })
+  if (!res.ok) {
+    msg.value = '退出失败，请再试一次。不会断开 CLI 设备。'
+    return
+  }
   window.location.assign('/login')
 }
 
@@ -150,10 +155,10 @@ async function del(kind: 'usage' | 'account') {
     </header>
 
     <nav class="damper" aria-label="设置">
-      <button type="button" class="lever" :class="{ primary: tab === 'account' }" @click="go('account')">账户</button>
-      <button type="button" class="lever" :class="{ primary: tab === 'appearance' }" @click="go('appearance')">外观</button>
-      <button type="button" class="lever" :class="{ primary: tab === 'devices' }" @click="go('devices')">设备</button>
-      <button type="button" class="lever" :class="{ primary: tab === 'privacy' }" @click="go('privacy')">同步与隐私</button>
+      <button type="button" :class="{ on: tab === 'account' }" @click="go('account')">账户</button>
+      <button type="button" :class="{ on: tab === 'appearance' }" @click="go('appearance')">外观</button>
+      <button type="button" :class="{ on: tab === 'devices' }" @click="go('devices')">设备</button>
+      <button type="button" :class="{ on: tab === 'privacy' }" @click="go('privacy')">同步与隐私</button>
     </nav>
 
     <p v-if="error" class="err" role="alert">{{ error }}</p>
@@ -177,7 +182,7 @@ async function del(kind: 'usage' | 'account') {
           <p class="acct-id-note">通过 GitHub 识别，不能在 whereToken 里改名或换头像。</p>
         </div>
       </div>
-      <div class="damper">
+      <div class="period">
         <button type="button" class="lever" @click="logout">退出登录</button>
       </div>
       <p class="note">退出只结束这个浏览器会话，不会断开已配对的 CLI 设备。</p>
@@ -185,8 +190,8 @@ async function del(kind: 'usage' | 'account') {
 
     <section v-else-if="tab === 'appearance'" class="why">
       <p class="cold-kicker">外观</p>
-      <p class="note">使用现有釉色。完整预览在釉色厅。</p>
-      <div class="damper">
+      <p class="note">使用现有釉色。完整预览走顶部「主题」。没有额外外观开关。</p>
+      <div class="period">
         <button
           v-for="pack in themes"
           :key="pack.id"
@@ -195,10 +200,9 @@ async function del(kind: 'usage' | 'account') {
           :class="{ primary: themeId === pack.id }"
           @click="setTheme(pack.id)"
         >
-          {{ pack.label }}
+          {{ pack.name }}
         </button>
       </div>
-      <router-link class="lever" to="/themes">打开釉色厅</router-link>
     </section>
 
     <section v-else-if="tab === 'devices'" class="why">
@@ -215,15 +219,17 @@ async function del(kind: 'usage' | 'account') {
           <tr>
             <th class="name">设备</th>
             <th class="name">系统</th>
-            <th class="name">Last seen</th>
-            <th class="name">Last sync</th>
+            <th class="name">版本</th>
+            <th class="name">最近在线</th>
+            <th class="name">最近同步</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="d in rows" :key="d.id">
             <td class="name">{{ d.label || 'unnamed' }}</td>
-            <td class="name">{{ [d.os, d.arch, d.client_version].filter(Boolean).join(' · ') }}</td>
+            <td class="name">{{ [d.os, d.arch].filter(Boolean).join(' · ') || '—' }}</td>
+            <td class="name">{{ d.client_version || '—' }}</td>
             <td class="name">{{ when(d.last_seen) }}</td>
             <td class="name">{{ when(d.last_sync) }}</td>
             <td>
@@ -238,7 +244,7 @@ async function del(kind: 'usage' | 'account') {
 
     <section v-else class="why">
       <p class="cold-kicker">同步与隐私</p>
-      <p class="status-line">Last sync {{ when(lastSync) }}</p>
+      <p class="status-line">最近同步 {{ when(lastSync) }}</p>
       <p class="note">首次连接会自动同步。之后可运行 <code>wheretoken sync</code> 更新。浏览器不能替你扫描本机。</p>
       <CopyCommand command="wheretoken sync" />
       <p class="cold-kicker">会同步</p>
@@ -250,7 +256,7 @@ async function del(kind: 'usage' | 'account') {
         <li v-for="item in neverSyncedItems" :key="item">{{ item }}</li>
       </ul>
       <p class="cold-kicker">危险操作</p>
-      <div class="damper">
+      <div class="period">
         <button type="button" class="lever" :disabled="busy" @click="del('usage')">
           {{ pending === 'usage' ? '确认删除用量' : '删除已同步数据' }}
         </button>

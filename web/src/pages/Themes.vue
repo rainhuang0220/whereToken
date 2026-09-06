@@ -23,7 +23,11 @@ import {
   stopGalleryMotion,
   type MotionHandle,
 } from '../themes/galleryMotion'
+import HostedAccountMenu from '../components/HostedAccountMenu.vue'
+import { isHosted } from '../mode'
 import MockKeyboard from '../themes/MockKeyboard.vue'
+
+const hosted = isHosted()
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +237,7 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
         <p class="when">点一块看整页。应用才带走。</p>
         <div class="rail-actions">
           <router-link class="lever" to="/">返回</router-link>
+          <HostedAccountMenu v-if="hosted" />
         </div>
       </div>
     </header>

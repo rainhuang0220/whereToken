@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchSummary, rescan } from '../api'
+import { isUnauthorized } from '../hosted/account'
 import { formatScannedAt, type ScanProgress } from '../firing'
 import { acceptPeriod } from '../periodSeq'
 import type { PeriodId, SummaryPayload } from '../types'
@@ -27,6 +28,7 @@ export const useSummaryStore = defineStore('summary', {
         }
       } catch (err) {
         if (!acceptPeriod(this.periodSeq, n)) return
+        if (isUnauthorized(err)) return
         this.error = err instanceof Error ? err.message : String(err)
       }
       if (!acceptPeriod(this.periodSeq, n)) return
@@ -50,6 +52,7 @@ export const useSummaryStore = defineStore('summary', {
         this.error = ''
       } catch (err) {
         if (!acceptPeriod(this.periodSeq, n)) return
+        if (isUnauthorized(err)) return
         this.error = err instanceof Error ? err.message : String(err)
       }
     },
@@ -90,7 +93,9 @@ export const useSummaryStore = defineStore('summary', {
         }
       } catch (err) {
         if (!acceptPeriod(this.periodSeq, n)) return
-        this.error = err instanceof Error ? err.message : String(err)
+        if (!isUnauthorized(err)) {
+          this.error = err instanceof Error ? err.message : String(err)
+        }
       } finally {
         this.loading = false
         this.progress = null

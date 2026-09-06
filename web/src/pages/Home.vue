@@ -133,6 +133,8 @@ const mouthLines = computed(() =>
 
 const statusKind = computed(() => {
   if (hosted) {
+    if (phase.value === 'logged_in_no_device') return '未连接设备'
+    if (phase.value === 'paired_no_sync') return waitingSyncTitle
     if (phase.value === 'stale') return staleNote
     return '云端账本'
   }

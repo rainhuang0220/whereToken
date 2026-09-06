@@ -83,6 +83,7 @@ body {
 
 .rail {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
   gap: 1rem;
@@ -139,6 +140,7 @@ h1 {
 }
 
 .rail-meta {
+  margin-left: auto;
   text-align: right;
   display: flex;
   flex-direction: column;
@@ -308,6 +310,26 @@ h1 {
   padding: 0.2rem 0.15rem;
   cursor: pointer;
   border-bottom: 2px solid transparent;
+}
+
+.damper button.lever {
+  border: 1px solid var(--copper);
+  background: transparent;
+  color: var(--ember-4);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.9rem;
+  min-height: 2rem;
+  min-width: 2.75rem;
+  border-radius: var(--lever-radius, 0px);
+}
+
+.damper button.lever.primary {
+  background: var(--ember-4);
+  color: var(--void);
+  border-color: var(--ember-3);
 }
 
 .damper button:hover {
@@ -1561,6 +1583,10 @@ body:has(.glaze-hall.is-open) {
   background: var(--void);
 }
 
+.acct-menu.is-placed {
+  right: auto;
+}
+
 .acct-id {
   display: flex;
   align-items: center;
@@ -1579,6 +1605,8 @@ body:has(.glaze-hall.is-open) {
   font-family: var(--font-mono);
   font-size: 0.78rem;
   color: var(--bone);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .acct-id-note {
@@ -1591,6 +1619,7 @@ body:has(.glaze-hall.is-open) {
   display: block;
   width: 100%;
   box-sizing: border-box;
+  min-height: 2rem;
   margin: 0;
   padding: 0.45rem 0.8rem;
   border: 0;
@@ -1614,6 +1643,33 @@ body:has(.glaze-hall.is-open) {
   height: 1px;
   margin: 0.3rem 0;
   background: var(--copper);
+}
+
+.acct-fail {
+  margin: 0.2rem 0.8rem 0.4rem;
+  font-size: 0.68rem;
+  color: var(--warn);
+}
+
+.acct-trigger.is-skel {
+  pointer-events: none;
+  border-color: transparent;
+}
+
+.ext {
+  color: var(--ember-4);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.ext:hover,
+.ext:focus-visible {
+  color: var(--bone);
+}
+
+.login-foot {
+  margin-top: 1.2rem;
 }
 
 @media (max-width: 768px) {

@@ -2,13 +2,21 @@
 import KilnKid from '../components/KilnKid.vue'
 import { safeReturnPath } from '../hosted/account'
 import {
+  githubLabel,
+  githubRepoHref,
   loginCta,
   loginHeadline,
   loginLede,
   loginNoRepo,
   loginPrivacy,
+  loginStatus,
+  neverSyncedItems,
   oauthErrorBody,
   oauthErrorTitle,
+  projectSiteHref,
+  siteLabel,
+  syncedItems,
+  syncWhatTitle,
 } from '../hosted/copy'
 
 const params = new URLSearchParams(window.location.search)
@@ -33,7 +41,7 @@ function github() {
         </div>
       </div>
       <div class="rail-meta">
-        <p class="status-line">Hosted</p>
+        <p class="status-line">{{ loginStatus }}</p>
         <div class="rail-actions">
           <router-link class="lever" to="/themes">主题</router-link>
         </div>
@@ -50,7 +58,7 @@ function github() {
         <p v-if="requestId" class="status-line">Reference: {{ requestId }}</p>
         <div class="damper">
           <button type="button" class="lever primary" @click="github">重新登录</button>
-          <a class="lever" href="https://rainhuang0220.github.io/whereToken/">返回首页</a>
+          <a class="ext" :href="projectSiteHref" target="_blank" rel="noopener noreferrer">{{ siteLabel }} ↗</a>
         </div>
       </div>
     </section>
@@ -60,17 +68,15 @@ function github() {
         <button type="button" class="lever primary" @click="github">{{ loginCta }}</button>
       </div>
       <p class="status-line">{{ loginPrivacy }} · {{ loginNoRepo }}</p>
-      <details class="kiln-mouth">
-        <summary>What gets synced?</summary>
-        <p class="note">✓ token counts · models &amp; vendors · request statistics</p>
-        <p class="note">✗ prompts · source code · file paths · API keys</p>
-      </details>
+      <p class="cold-kicker">{{ syncWhatTitle }}</p>
+      <p class="note">✓ {{ syncedItems.join(' · ') }}</p>
+      <p class="note">✗ {{ neverSyncedItems.join(' · ') }}</p>
     </template>
 
-    <p class="status-line">
-      <a href="https://rainhuang0220.github.io/whereToken/">Project Site</a>
+    <p class="status-line login-foot">
+      <a class="ext" :href="projectSiteHref" target="_blank" rel="noopener noreferrer">{{ siteLabel }} ↗</a>
       <span class="status-dot" aria-hidden="true">·</span>
-      <a href="https://github.com/rainhuang0220/whereToken">GitHub</a>
+      <a class="ext" :href="githubRepoHref" target="_blank" rel="noopener noreferrer">{{ githubLabel }} ↗</a>
     </p>
   </div>
 </template>

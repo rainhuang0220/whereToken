@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import HostedAccountMenu from '../components/HostedAccountMenu.vue'
 import KilnKid from '../components/KilnKid.vue'
 import { csrfHeaders } from '../csrf'
-import { pairSuccessBody, pairSuccessTitle, pairTitle } from '../hosted/copy'
+import { pairCancel, pairConfirm, pairOpenDash, pairStatus, pairSuccessBody, pairSuccessTitle, pairTitle } from '../hosted/copy'
 
 const route = useRoute()
 const code = String(route.params.code || '')
@@ -57,9 +57,9 @@ async function decide(accept: boolean) {
         </div>
       </div>
       <div class="rail-meta">
-        <p class="status-line">Pair</p>
+        <p class="status-line">{{ pairStatus }}</p>
         <div class="rail-actions">
-          <router-link class="lever" to="/app">Dashboard</router-link>
+          <router-link class="lever" to="/app">仪表盘</router-link>
           <HostedAccountMenu />
         </div>
       </div>
@@ -70,7 +70,7 @@ async function decide(accept: boolean) {
       <div>
         <p class="cold-kicker">{{ pairSuccessTitle }}</p>
         <p class="cold-copy">{{ pairSuccessBody }}</p>
-        <router-link class="lever primary" to="/app">Open Dashboard</router-link>
+        <router-link class="lever primary" to="/app">{{ pairOpenDash }}</router-link>
       </div>
     </section>
     <section v-else class="cold-kiln">
@@ -82,8 +82,8 @@ async function decide(accept: boolean) {
         <p class="cold-copy">这台设备将同步聚合用量。prompts、代码和路径不会上传。</p>
         <p v-if="error" class="err" role="alert">{{ error }}</p>
         <div class="damper">
-          <button type="button" class="lever primary" @click="decide(true)">Connect device</button>
-          <button type="button" class="lever" @click="decide(false)">Cancel</button>
+          <button type="button" class="lever primary" @click="decide(true)">{{ pairConfirm }}</button>
+          <button type="button" class="lever" @click="decide(false)">{{ pairCancel }}</button>
         </div>
       </div>
     </section>

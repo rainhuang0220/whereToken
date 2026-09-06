@@ -108,4 +108,13 @@ describe('summary store', () => {
     expect(store.progress).toBeNull()
     expect(store.error).toBe('scan 500')
   })
+
+  it('does not paint unauthorized or kick a rescan after session expiry', async () => {
+    fetchSummaryMock.mockRejectedValue(new Error('unauthorized'))
+    const store = useSummaryStore()
+    await store.hydrate()
+    expect(store.error).toBe('')
+    expect(store.payload).toBeNull()
+    expect(rescanMock).not.toHaveBeenCalled()
+  })
 })

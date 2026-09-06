@@ -1,4 +1,4 @@
-import { safeReturnPath } from './hosted/account'
+import { UNAUTHORIZED, safeReturnPath } from './hosted/account'
 import type { SummaryPayload } from './types'
 import { parseSSEBlock, scanEventError, splitSSE, type ScanProgress } from './firing'
 
@@ -39,7 +39,7 @@ export async function fetchSummary(since?: string): Promise<SummaryPayload> {
     if (res.status === 401) {
       const next = encodeURIComponent(safeReturnPath(window.location.pathname || '/app'))
       window.location.assign(`/login?next=${next}`)
-      throw new Error('unauthorized')
+      throw new Error(UNAUTHORIZED)
     }
     if (!res.ok) {
       throw new Error('无法加载数据')
