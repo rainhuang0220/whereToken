@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rainhuang0220/whereToken/main/docs/public-profile.schema.json",
+  "title": "wheretoken.public-profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "generated_at", "as_of_date", "producer", "provenance", "data_status", "privacy", "periods", "activity", "notices", "links"],
+  "properties": {
+    "schema": { "type": "string", "const": "wheretoken.public-profile" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "as_of_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "producer": { "$ref": "#/$defs/producer" },
+    "owner": { "$ref": "#/$defs/owner" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "data_status": { "type": "string", "enum": ["available", "partial", "unavailable"] },
+    "privacy": { "$ref": "#/$defs/privacy" },
+    "periods": { "$ref": "#/$defs/periods" },
+    "activity": { "$ref": "#/$defs/activity" },
+    "notices": { "type": "array", "items": { "type": "string", "enum": ["partial_usage", "unpriced_cost"] } },
+    "links": { "$ref": "#/$defs/links" }
+  },
+  "$defs": {
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "token_accounting_version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "token_accounting_version": { "type": "string" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display_name": { "type": "string" },
+        "github_login": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "profile_url": { "type": "string" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "refresh_mode", "live_sync"],
+      "properties": {
+        "kind": { "type": "string", "const": "local_sanitized_snapshot" },
+        "refresh_mode": { "type": "string", "const": "manual_publish" },
+        "live_sync": { "type": "boolean", "const": false }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_events", "models_included", "cost_included", "daily_precision", "omitted_sections"],
+      "properties": {
+        "raw_events": { "type": "boolean", "const": false },
+        "models_included": { "type": "boolean" },
+        "cost_included": { "type": "boolean" },
+        "daily_precision": { "type": "boolean" },
+        "omitted_sections": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "periods": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all", "today", "7d", "30d", "53w"],
+      "properties": {
+        "all": { "$ref": "#/$defs/period" },
+        "today": { "$ref": "#/$defs/period" },
+        "7d": { "$ref": "#/$defs/period" },
+        "30d": { "$ref": "#/$defs/period" },
+        "53w": { "$ref": "#/$defs/period" }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["range", "totals", "hit_rate", "requests", "user_turns", "active_days", "current_streak", "longest_streak", "peak", "portrait", "by_agent", "by_vendor"],
+      "properties": {
+        "range": { "$ref": "#/$defs/range" },
+        "totals": { "$ref": "#/$defs/totals" },
+        "hit_rate": { "$ref": "#/$defs/hit_rate" },
+        "requests": { "$ref": "#/$defs/count" },
+        "user_turns": { "$ref": "#/$defs/count" },
+        "active_days": { "$ref": "#/$defs/count" },
+        "current_streak": { "$ref": "#/$defs/count" },
+        "longest_streak": { "$ref": "#/$defs/count" },
+        "peak": { "$ref": "#/$defs/peak" },
+        "portrait": { "$ref": "#/$defs/portrait" },
+        "by_agent": { "type": "array", "items": { "$ref": "#/$defs/breakdown" } },
+        "by_vendor": { "type": "array", "items": { "$ref": "#/$defs/breakdown" } },
+        "by_model": { "type": "array", "items": { "$ref": "#/$defs/breakdown" } },
+        "cost": { "$ref": "#/$defs/cost" }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "label"],
+      "properties": {
+        "from": { "type": ["string", "null"] },
+        "to": { "type": "string" },
+        "label": { "type": "string" }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["miss", "cache_read", "cache_create", "output", "total"],
+      "properties": {
+        "miss": { "$ref": "#/$defs/component" },
+        "cache_read": { "$ref": "#/$defs/component" },
+        "cache_create": { "$ref": "#/$defs/component" },
+        "output": { "$ref": "#/$defs/component" },
+        "total": { "$ref": "#/$defs/component" }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "display", "status"],
+      "properties": {
+        "value": { "type": ["integer", "null"] },
+        "display": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "partial", "unavailable"] }
+      }
+    },
+    "hit_rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "display"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "display": { "type": "string" }
+      }
+    },
+    "count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "display", "status"],
+      "properties": {
+        "value": { "type": ["integer", "null"] },
+        "display": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "partial", "unavailable"] }
+      }
+    },
+    "peak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "total", "scope"],
+      "properties": {
+        "date": { "type": "string" },
+        "total": { "$ref": "#/$defs/component" },
+        "scope": { "type": "string" }
+      }
+    },
+    "portrait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "primary", "tags"],
+      "properties": {
+        "state": { "type": "string" },
+        "primary": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "breakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "totals", "share", "hit_rate", "requests", "quality"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "totals": { "$ref": "#/$defs/totals" },
+        "share": { "type": "string" },
+        "hit_rate": { "$ref": "#/$defs/hit_rate" },
+        "requests": { "$ref": "#/$defs/count" },
+        "quality": { "type": "string" }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "usd_micro", "display", "priced_tokens", "unpriced_tokens", "price_card_id", "verified_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["complete", "partial", "unavailable"] },
+        "usd_micro": { "type": "integer" },
+        "display": { "type": "string" },
+        "priced_tokens": { "type": "integer" },
+        "unpriced_tokens": { "type": "integer" },
+        "price_card_id": { "type": "string" },
+        "verified_at": { "type": "string" }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["week_start", "from", "to", "dates", "series"],
+      "properties": {
+        "week_start": { "type": "string", "const": "monday" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "dates": { "type": "array", "items": { "type": "string" }, "minItems": 371, "maxItems": 371 },
+        "series": { "type": "array", "items": { "$ref": "#/$defs/series" } }
+      }
+    },
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "id", "label", "values", "levels", "states"],
+      "properties": {
+        "dimension": { "type": "string", "enum": ["all", "agent", "vendor", "model"] },
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "values": { "type": "array", "items": { "type": "integer" } },
+        "levels": { "type": "array", "items": { "type": "integer" } },
+        "states": { "type": "array", "items": { "type": "string", "enum": ["active", "empty", "unknown", "future"] } }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "token_accounting", "live_page"],
+      "properties": {
+        "project": { "type": "string" },
+        "token_accounting": { "type": "string" },
+        "live_page": { "type": "string" }
+      }
+    }
+  }
+}
