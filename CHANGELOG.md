@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 — 2026-09-13 (Alpha)
+
+- New command: `wheretoken card <path.svg>` writes a local 800×576 Vibe Coding Wall SVG for a GitHub Profile README (all-time tokens, last 53 weeks, streaks, API-equivalent cost, Monday-first 53×7 wall). Allowed flags: `--help` / `--version`, `--offline`, `--quiet`/`-q`, `--home`. An empty ledger still writes an honest SVG (exit 0). Unknown tool ids render as Other. Missing usage is —, never `$0`
+
 ## 0.7.0 — 2026-09-06 (Alpha)
 
 - Hosted Web: GitHub OAuth (PKCE S256, no extra scopes), signed-in sessions, device pairing, and privacy-safe daily×model sync. The CLI `wheretoken login` pairs, stores the device token in macOS Keychain (file fallback elsewhere), then runs the first sync automatically (`--no-sync` opt-out)
