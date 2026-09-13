@@ -25,5 +25,6 @@ fmt-check:
 	test -z "$$(gofmt -l .)"
 
 ci: fmt-check vet test race cli-fixture
+	cd profile-e2e && npm ci && npx playwright install chromium firefox webkit && npm test
 
 .PHONY: test vet race cli-fixture build-all install-script govulncheck fmt-check ci

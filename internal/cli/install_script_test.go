@@ -152,7 +152,7 @@ func TestGitHubWorkflowsPinActionSHAs(t *testing.T) {
 	root := filepath.Join(filepath.Dir(file), "..", "..", "ci", "github-workflows")
 	sha := regexp.MustCompile(`^[0-9a-f]{40}$`)
 	uses := regexp.MustCompile(`uses:\s+(\S+)`)
-	for _, name := range []string{"ci.yml", "release.yml"} {
+	for _, name := range []string{"ci.yml", "release.yml", "pages.yml"} {
 		body, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil {
 			t.Fatal(err)
@@ -201,7 +201,7 @@ func TestGitHubActionsWorkflowsAreInstalled(t *testing.T) {
 		t.Fatal("caller")
 	}
 	root := filepath.Join(filepath.Dir(file), "..", "..")
-	for _, name := range []string{"ci.yml", "release.yml"} {
+	for _, name := range []string{"ci.yml", "release.yml", "pages.yml"} {
 		want, err := os.ReadFile(filepath.Join(root, "ci", "github-workflows", name))
 		if err != nil {
 			t.Fatal(err)

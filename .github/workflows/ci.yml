@@ -47,11 +47,21 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            profile-e2e/package-lock.json
 
       - name: Web tests
         working-directory: web
         run: npm ci && npm test
+
+      - name: Public profile browser tests (Linux)
+        if: runner.os == 'Linux'
+        working-directory: profile-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+          npm test
 
       - name: npm wrapper tests
         working-directory: npm

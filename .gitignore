@@ -26,6 +26,8 @@ node_modules/
 /web/dist/
 /web/dist-ssr/
 coverage/
+test-results/
+playwright-report/
 /bin/
 tmp/
 # Gemini CLI fixtures use the official tmp/<project>/chats/ layout
