@@ -6,7 +6,7 @@ The **git tag** is the single source of truth for a version: goreleaser stamps
 `internal/cli/version_consistency_test.go` fails CI when the hand-edited
 copies (in-repo formula, npm wrapper, public site) drift from it.
 
-Ship `0.6.x` patches. Do not bump the minor or major version unless asked.
+Ship `0.7.x` patches. Do not bump the minor or major version unless asked.
 
 ## Gates (all green before tagging)
 
@@ -14,6 +14,7 @@ Ship `0.6.x` patches. Do not bump the minor or major version unless asked.
 go test ./...
 go vet ./...
 cd web && npm ci && npm test
+cd profile-e2e && npm ci && npx playwright install chromium firefox webkit && npm test
 bash scripts/verify-cli.sh
 ```
 

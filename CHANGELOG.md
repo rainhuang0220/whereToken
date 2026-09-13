@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2 — 2026-09-14 (Alpha)
+
+- New command: `wheretoken profile build <dir>` writes one sanitized public-profile bundle—schema-versioned JSON, independent GitHub light/dark SVG previews, and an offline-static interactive page with range, breakdown, filter, theme, keyboard tooltip, reduced-motion, and mobile support. Models and API-equivalent cost remain explicit opt-ins
+- `wheretoken profile validate` now executes the embedded Draft 2020-12 JSON Schema before semantic and privacy checks. Nested unknown properties, missing required fields, invalid enums/types, tampered snapshot IDs, unsafe owners, raw sources, and unresolved model names are rejected or allowlisted
+- Public artifacts have explicit provenance: synthetic documentation data is served only at `/profile-demo/`; Pages publishes `/profile/` only from the maintainer's committed `local_sanitized_snapshot` bundle and never falls back to demo data. A deterministic snapshot ID drives GitHub Camo cache-busting and ties JSON, manifest, previews, and the live page together
+- CLI report, dashboard, cards, and public profiles now use the same merged request calendar. Cross-midnight complementary rows, overlapping stream rows, and placeholder/final pairs preserve totals while assigning the complete request to its latest local date
+- Fixes from the independent release gate: empty `--include-cost` snapshots stay unavailable instead of failing or showing `$0`; cost metadata uses contributing vendors' verification dates; compatibility cards keep top three agents plus aggregated Rest; activity intensity continues to use full history
+
 ## 0.7.1 — 2026-09-13 (Alpha)
 
 - New command: `wheretoken card <path.svg>` writes a local 800×576 Vibe Coding Wall SVG for a GitHub Profile README (all-time tokens, last 53 weeks, streaks, API-equivalent cost, Monday-first 53×7 wall). Allowed flags: `--help` / `--version`, `--offline`, `--quiet`/`-q`, `--home`. An empty ledger still writes an honest SVG (exit 0). Unknown tool ids render as Other. Missing usage is —, never `$0`
