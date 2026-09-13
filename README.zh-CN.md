@@ -62,6 +62,28 @@
 
 whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，不是订阅账单；没有标价不会写成 $0。`wheretoken pricing` 打印完整价目卡，含各厂家官方来源页和最近核验日期；`wheretoken pricing --usage` 把本机账本按模型对着同一张价目卡估价——分档 tokens 与单价逐行列出，未定价模型显示不可用，绝不写成 $0。
 
+### Vibe Coding Wall
+
+把本机全部用量和 53 周活动墙渲染成静态 SVG，可放进 GitHub Profile README。SVG 在本机生成。whereToken 不会上传用户的用量账本。
+
+```bash
+wheretoken card ./wheretoken-wall.svg
+```
+
+```html
+<p align="center">
+  <img src="assets/wheretoken-wall.svg" width="800" alt="whereToken vibe coding wall">
+</p>
+```
+
+<p align="center">
+  <img src="docs/media/vibe-coding-wall-demo.svg" width="800" alt="whereToken Vibe Coding Wall（合成演示）">
+</p>
+
+<p align="center">
+  <sub>合成演示。你的卡片来自你自己的机器。</sub>
+</p>
+
 ## 安装
 
 ### 推荐：Homebrew

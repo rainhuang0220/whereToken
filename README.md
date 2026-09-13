@@ -67,6 +67,28 @@ Query usage from the terminal, or export a normalized JSON report for scripts.
 
 whereToken reports token counts. When a public list price exists, it also shows an API-equivalent estimate. That is not a subscription bill, and a missing price is not written as $0. `wheretoken pricing` prints the full price card with each vendor's official source page and the date the rates were last verified; `wheretoken pricing --usage` prices your own ledger per model against the same card — per-category tokens and unit rates, with unpriced models shown as unavailable, never $0.
 
+### Vibe Coding Wall
+
+Render a static SVG of all-time local usage and a 53-week activity wall for a GitHub Profile README. The SVG is generated locally. whereToken does not upload the user's usage ledger.
+
+```bash
+wheretoken card ./wheretoken-wall.svg
+```
+
+```html
+<p align="center">
+  <img src="assets/wheretoken-wall.svg" width="800" alt="whereToken vibe coding wall">
+</p>
+```
+
+<p align="center">
+  <img src="docs/media/vibe-coding-wall-demo.svg" width="800" alt="whereToken Vibe Coding Wall (synthetic demo)">
+</p>
+
+<p align="center">
+  <sub>Synthetic demo. Your card comes from your own machine.</sub>
+</p>
+
 ## Installation
 
 ### Recommended: Homebrew

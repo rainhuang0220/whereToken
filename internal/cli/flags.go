@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ const (
 	CommandLogin      = "login"
 	CommandLogout     = "logout"
 	CommandSync       = "sync"
+	CommandCard       = "card"
 )
 
 const (
@@ -54,6 +56,7 @@ type Flags struct {
 	NoCommunity     bool
 	CommunityAction string
 	NoSync          bool
+	CardPath        string
 }
 
 type usageError struct {
@@ -95,6 +98,12 @@ func Parse(args []string) (Flags, error) {
 		}
 		return f, nil
 	}
+	if f.Command == CommandCard {
+		if err := assignToolsAndVendor(&f, tf); err != nil {
+			return Flags{}, err
+		}
+		return finishCard(&f, fs.Args())
+	}
 	if extra := fs.Args(); len(extra) > 0 {
 		if f.Command == CommandCommunity {
 			return finishCommunity(&f, extra)
@@ -111,6 +120,12 @@ func Parse(args []string) (Flags, error) {
 				return Flags{}, err
 			}
 			return f, nil
+		}
+		if f.Command == CommandCard {
+			if err := assignToolsAndVendor(&f, tf); err != nil {
+				return Flags{}, err
+			}
+			return finishCard(&f, leftover)
 		}
 		if f.Help || f.Version {
 			if len(leftover) > 0 {
@@ -136,30 +151,9 @@ func Parse(args []string) (Flags, error) {
 		return Flags{}, err
 	}
 
-	tools := tf.selected()
-	if strings.TrimSpace(tf.tool) != "" {
-		id, ok := metric.LookupSource(tf.tool)
-		if !ok {
-			return Flags{}, unknownName("tool", tf.tool, suggestKnown(tf.tool, metric.KnownSourceIDs()), metric.KnownSourceIDs())
-		}
-		tools = append(tools, id)
+	if err := assignToolsAndVendor(&f, tf); err != nil {
+		return Flags{}, err
 	}
-	uniq := unique(tools)
-	if len(uniq) > 1 {
-		return Flags{}, usageError{msg: fmt.Sprintf("conflicting tools: %s", strings.Join(uniq, ", "))}
-	}
-	if len(uniq) == 1 {
-		f.Tool = uniq[0]
-	}
-
-	if strings.TrimSpace(tf.vendor) != "" {
-		id, ok := vendor.LookupName(tf.vendor)
-		if !ok {
-			return Flags{}, unknownName("vendor", tf.vendor, suggestKnown(tf.vendor, vendor.KnownIDs()), vendor.KnownIDs())
-		}
-		f.Vendor = id
-	}
-	f.Model = strings.TrimSpace(tf.model)
 	if f.Command == CommandScan && (f.Today || f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "") {
 		return Flags{}, usageError{msg: "scan --json is the observatory payload; table filters belong on `wheretoken --json`\ntry `wheretoken --help`"}
 	}
@@ -364,6 +358,8 @@ func applyCommandWord(f *Flags, word string) bool {
 		f.Command = CommandLogout
 	case "sync":
 		f.Command = CommandSync
+	case "card":
+		f.Command = CommandCard
 	default:
 		return false
 	}
@@ -410,6 +406,103 @@ func finishCommunity(f *Flags, extra []string) (Flags, error) {
 		return Flags{}, err
 	}
 	return *f, nil
+}
+
+func assignToolsAndVendor(f *Flags, tf toolFlags) error {
+	tools := tf.selected()
+	if strings.TrimSpace(tf.tool) != "" {
+		id, ok := metric.LookupSource(tf.tool)
+		if !ok {
+			return unknownName("tool", tf.tool, suggestKnown(tf.tool, metric.KnownSourceIDs()), metric.KnownSourceIDs())
+		}
+		tools = append(tools, id)
+	}
+	uniq := unique(tools)
+	if len(uniq) > 1 {
+		return usageError{msg: fmt.Sprintf("conflicting tools: %s", strings.Join(uniq, ", "))}
+	}
+	if len(uniq) == 1 {
+		f.Tool = uniq[0]
+	}
+	if strings.TrimSpace(tf.vendor) != "" {
+		id, ok := vendor.LookupName(tf.vendor)
+		if !ok {
+			return unknownName("vendor", tf.vendor, suggestKnown(tf.vendor, vendor.KnownIDs()), vendor.KnownIDs())
+		}
+		f.Vendor = id
+	}
+	if model := strings.TrimSpace(tf.model); model != "" {
+		f.Model = model
+	}
+	return nil
+}
+
+func finishCard(f *Flags, extra []string) (Flags, error) {
+	if f.Help || f.Version {
+		if len(extra) > 0 {
+			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", extra[0])}
+		}
+		return *f, nil
+	}
+	args := extra
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		f.CardPath = args[0]
+		args = args[1:]
+	}
+	if len(args) > 0 {
+		var tf toolFlags
+		fs := newFlagSet(f, &tf)
+		if err := parseFlagSet(fs, f, args); err != nil {
+			return Flags{}, err
+		}
+		leftover := fs.Args()
+		if f.CardPath == "" && len(leftover) > 0 && !strings.HasPrefix(leftover[0], "-") {
+			f.CardPath = leftover[0]
+			leftover = leftover[1:]
+		}
+		if len(leftover) > 0 {
+			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+		}
+		if err := assignToolsAndVendor(f, tf); err != nil {
+			return Flags{}, err
+		}
+	}
+	if strings.TrimSpace(f.CardPath) == "" {
+		return Flags{}, usageError{msg: "card requires an output path ending in .svg\ntry `wheretoken --help`"}
+	}
+	if err := validateCardPath(f.CardPath); err != nil {
+		return Flags{}, err
+	}
+	if err := rejectCardFlags(*f); err != nil {
+		return Flags{}, err
+	}
+	return *f, nil
+}
+
+func validateCardPath(p string) error {
+	if !strings.EqualFold(filepath.Ext(p), ".svg") {
+		return usageError{msg: fmt.Sprintf("card output path must end in .svg, got %q\ntry `wheretoken --help`", p)}
+	}
+	return nil
+}
+
+func rejectCardFlags(f Flags) error {
+	if f.JSON || f.Today || f.ASCII || f.NoColor || f.Usage || f.NoCommunity || f.NoSync {
+		return usageError{msg: "card writes an all-time SVG; it does not take --json/--today/--ascii/--no-color/--usage/--no-community/--no-sync\ntry `wheretoken --help`"}
+	}
+	if f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "" {
+		return usageError{msg: "card always uses all-time local usage; it does not take --tool/--vendor/--model/--since/--from/--to\ntry `wheretoken --help`"}
+	}
+	if f.Width != 0 {
+		return usageError{msg: "card writes a fixed 800×576 SVG; it does not take --width\ntry `wheretoken --help`"}
+	}
+	if f.Port != 8787 {
+		return usageError{msg: "card does not take --port\ntry `wheretoken --help`"}
+	}
+	if f.RankPeriod != "today" {
+		return usageError{msg: "card does not take --rank\ntry `wheretoken --help`"}
+	}
+	return nil
 }
 
 func unique(in []string) []string {

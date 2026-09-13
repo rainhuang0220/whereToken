@@ -18,6 +18,7 @@ USAGE
   wheretoken [flags] logout      revoke the device token
   wheretoken [flags] sync        upload privacy-safe daily usage to the hosted app
   wheretoken [flags] completion bash|zsh|fish|powershell
+  wheretoken [flags] card <path.svg>   all-time 53-week SVG (GitHub Profile README)
 
 INSTALL
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
@@ -91,6 +92,8 @@ PRIVACY
   worldwide, or all-AI-users rank. Unknown cost is omitted, never $0.
   Unavailable rank is omitted, never #0.
   wheretoken community off opts out. See docs/community.md.
+  card writes a static SVG from this machine's ledgers. It does not
+  upload the usage ledger, and it never calls Community Rank.
 
 EXAMPLES
   wheretoken
@@ -117,6 +120,8 @@ EXAMPLES
   wheretoken community off
   wheretoken community serve
   wheretoken completion zsh
+  wheretoken card ./wheretoken-wall.svg
+  wheretoken card profile.svg --offline
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
 Public:    ` + PublicSiteURL + `（公开/演示数据，本地账本不上传）
