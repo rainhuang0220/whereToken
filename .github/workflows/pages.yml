@@ -10,6 +10,9 @@ on:
       - "site/**"
       - "web/**"
       - "scripts/gendemo/**"
+      - "scripts/genprofiledemo/**"
+      - "docs/media/public-profile-demo/**"
+      - "internal/profilewebembed/**"
       - "ci/github-workflows/pages.yml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -43,11 +46,13 @@ jobs:
 
       - name: Assemble the Pages tree
         run: |
-          mkdir -p _pages/demo
+          mkdir -p _pages/demo _pages/profile
           cp -R site/. _pages/
           cp -R web/dist/. _pages/demo/
           # SPA fallback: deep links under /demo/ must serve the app shell.
           cp web/dist/index.html _pages/404.html
+          # Public profile is a static snapshot app, not the kiln dashboard.
+          cp -R docs/media/public-profile-demo/. _pages/profile/
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

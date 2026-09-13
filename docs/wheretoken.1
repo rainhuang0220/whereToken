@@ -53,6 +53,16 @@ wheretoken \- local coding-agent token usage as a character table
 [\fIflags\fR]
 .B card
 \fIpath.svg\fR
+.br
+.B wheretoken
+[\fIflags\fR]
+.B profile build
+\fIdir\fR
+.br
+.B wheretoken
+[\fIflags\fR]
+.B profile validate
+\fIpath\fR
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
 OpenClaw, Codex, OpenCode, Cursor, Trae) and prints token totals, cache hit rate, streaks, request and turn counts,
@@ -251,6 +261,21 @@ ledgers;
 does not upload usage and does not call Community Rank. Missing usage is
 .B \(em ,
 never $0.
+.TP
+.B profile build \fIdir\fR
+Write a public snapshot bundle (JSON, light/dark preview SVGs, static live
+page). The interactive page is live in the browser; the numbers are a locally
+generated public snapshot, not a live cloud sync. Optional
+.B --include-models
+and
+.B --include-cost .
+Does not take
+.BR --today " / " --since .
+.TP
+.B profile validate \fIpath\fR
+Check a
+.B profile.json
+or bundle directory.
 .SH EXIT STATUS
 .TP
 .B 0

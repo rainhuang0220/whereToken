@@ -67,27 +67,27 @@ Query usage from the terminal, or export a normalized JSON report for scripts.
 
 whereToken reports token counts. When a public list price exists, it also shows an API-equivalent estimate. That is not a subscription bill, and a missing price is not written as $0. `wheretoken pricing` prints the full price card with each vendor's official source page and the date the rates were last verified; `wheretoken pricing --usage` prices your own ledger per model against the same card — per-category tokens and unit rates, with unpriced models shown as unavailable, never $0.
 
-### Vibe Coding Wall
+### Public Profile
 
-Render a static SVG of all-time local usage and a 53-week activity wall for a GitHub Profile README. The SVG is generated locally. whereToken does not upload the user's usage ledger.
+Publish a sanitized snapshot of local usage: GitHub-light/dark preview SVGs plus a static interactive page. The page is live in the browser. The numbers are a locally generated public snapshot, not a live cloud sync.
 
 ```bash
-wheretoken card ./wheretoken-wall.svg
+wheretoken profile build ./public-profile
 ```
 
-```html
-<p align="center">
-  <img src="assets/wheretoken-wall.svg" width="800" alt="whereToken vibe coding wall">
-</p>
-```
+Point a GitHub Profile README at the previews and the live page (do not link the raw SVG as the destination). See `docs/public-profile.md`.
 
 <p align="center">
-  <img src="docs/media/vibe-coding-wall-demo.svg" width="800" alt="whereToken Vibe Coding Wall (synthetic demo)">
+  <img src="docs/media/public-profile-demo/preview-light.svg" width="800" alt="whereToken public profile preview (synthetic demo)">
 </p>
 
 <p align="center">
-  <sub>Synthetic demo. Your card comes from your own machine.</sub>
+  <sub>Synthetic demo. Your snapshot comes from your own machine.</sub>
 </p>
+
+#### Compatibility: `wheretoken card`
+
+`wheretoken card path.svg` still writes the 800×576 Vibe Coding Wall from the same snapshot. Prefer `profile build` for new READMEs.
 
 ## Installation
 
