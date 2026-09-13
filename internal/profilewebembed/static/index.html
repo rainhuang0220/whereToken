@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>whereToken public profile</title>
+  <link rel="stylesheet" href="./assets/profile.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <div class="brand">
+      <strong>whereToken</strong>
+      <span>Public coding-agent usage</span>
+    </div>
+    <p class="freshness" id="freshness">Public snapshot · generated locally</p>
+    <div class="theme" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="system">System</button>
+      <button type="button" data-theme-set="light">Light</button>
+      <button type="button" data-theme-set="dark">Dark</button>
+    </div>
+  </header>
+  <main id="main">
+    <p id="status" class="banner" hidden></p>
+    <section class="overview" aria-labelledby="overview-h">
+      <h1 id="overview-h">Overview</h1>
+      <p class="identity" id="identity"></p>
+      <dl class="kpis" id="kpis"></dl>
+      <div class="ranges" role="tablist" aria-label="Time range" id="ranges"></div>
+    </section>
+    <section class="activity" aria-labelledby="activity-h">
+      <h2 id="activity-h">Last 53 weeks</h2>
+      <div id="wall" class="wall" role="grid" aria-label="Activity wall"></div>
+      <div id="tip" class="tip" role="tooltip" hidden></div>
+    </section>
+    <section class="break" aria-labelledby="break-h">
+      <h2 id="break-h">Breakdown</h2>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div id="rows" class="rows"></div>
+    </section>
+    <section class="about" aria-labelledby="about-h">
+      <h2 id="about-h">About this data</h2>
+      <p>This page is live in the browser. The usage numbers are a locally generated public snapshot, not a live cloud sync. No prompts, paths, or transcripts are published.</p>
+      <ul>
+        <li>Total = miss + cache read + cache create + output. Reasoning is not added twice.</li>
+        <li>Missing usage is shown as unavailable (—), never $0.</li>
+        <li>Cost, if present, is an API list-price equivalent, not a subscription bill.</li>
+      </ul>
+      <p><a id="download" href="./profile.json" download>Download public snapshot</a>
+         · <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">Token accounting</a></p>
+    </section>
+  </main>
+  <script src="./assets/profile.js"></script>
+</body>
+</html>

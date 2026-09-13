@@ -4,7 +4,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -22,7 +22,8 @@ _wheretoken() {
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    profile) opts="build validate --include-models --include-cost --quiet -q --offline --home --help" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }

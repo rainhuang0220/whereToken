@@ -43,7 +43,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -61,7 +61,8 @@ _wheretoken() {
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    profile) opts="build validate --include-models --include-cost --quiet -q --offline --home --help" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -73,7 +74,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -157,6 +158,17 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '1:svg:_files -g "*.svg"'
       ;;
+    profile)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--home[fake home]:dir:_files -/' \
+        '--include-models[export model breakdown]' \
+        '--include-cost[export API list-price equivalent]' \
+        '1:action:(build validate)' \
+        '2:path:_files'
+      ;;
     pricing)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -200,7 +212,7 @@ _wheretoken() {
         '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version)'
       ;;
   esac
 }
@@ -208,7 +220,7 @@ _wheretoken "$@"
 `
 
 const fishCompletion = `complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
@@ -257,6 +269,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
       'sync' { $cmd = $t }
       'completion' { $cmd = $t }
       'card' { $cmd = $t }
+      'profile' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
     }
@@ -274,8 +287,9 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }
+    'profile' { @('build','validate','--include-models','--include-cost','--quiet','--offline','--home','--help') }
     'login' { @('--no-sync','--quiet','--offline','--home','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','profile','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

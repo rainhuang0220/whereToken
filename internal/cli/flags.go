@@ -29,6 +29,7 @@ const (
 	CommandLogout     = "logout"
 	CommandSync       = "sync"
 	CommandCard       = "card"
+	CommandProfile    = "profile"
 )
 
 const (
@@ -57,6 +58,10 @@ type Flags struct {
 	CommunityAction string
 	NoSync          bool
 	CardPath        string
+	ProfileAction   string
+	ProfilePath     string
+	IncludeModels   bool
+	IncludeCost     bool
 	seen            map[string]bool
 }
 
@@ -105,9 +110,15 @@ func Parse(args []string) (Flags, error) {
 		}
 		return finishCard(&f, fs.Args())
 	}
+	if f.Command == CommandProfile {
+		return finishProfile(&f, fs.Args())
+	}
 	if extra := fs.Args(); len(extra) > 0 {
 		if f.Command == CommandCommunity {
 			return finishCommunity(&f, extra)
+		}
+		if f.Command == CommandProfile {
+			return finishProfile(&f, extra)
 		}
 		leftover, err := applyTrailingCommand(&f, extra)
 		if err != nil {
@@ -127,6 +138,9 @@ func Parse(args []string) (Flags, error) {
 				return Flags{}, err
 			}
 			return finishCard(&f, leftover)
+		}
+		if f.Command == CommandProfile {
+			return finishProfile(&f, leftover)
 		}
 		if f.Help || f.Version {
 			if len(leftover) > 0 {
@@ -262,6 +276,8 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.StringVar(&f.RankPeriod, "rank", f.RankPeriod, "")
 	fs.BoolVar(&f.NoCommunity, "no-community", f.NoCommunity, "")
 	fs.BoolVar(&f.NoSync, "no-sync", f.NoSync, "")
+	fs.BoolVar(&f.IncludeModels, "include-models", f.IncludeModels, "")
+	fs.BoolVar(&f.IncludeCost, "include-cost", f.IncludeCost, "")
 	tf.bind(fs)
 	return fs
 }
@@ -380,6 +396,8 @@ func applyCommandWord(f *Flags, word string) bool {
 		f.Command = CommandSync
 	case "card":
 		f.Command = CommandCard
+	case "profile":
+		f.Command = CommandProfile
 	default:
 		return false
 	}
@@ -495,6 +513,53 @@ func finishCard(f *Flags, extra []string) (Flags, error) {
 	}
 	if err := rejectCardFlags(*f); err != nil {
 		return Flags{}, err
+	}
+	return *f, nil
+}
+
+func finishProfile(f *Flags, extra []string) (Flags, error) {
+	if f.Help || f.Version {
+		return *f, nil
+	}
+	var tf toolFlags
+	fs := newFlagSet(f, &tf)
+	if err := parseFlagSet(fs, f, extra); err != nil {
+		return Flags{}, err
+	}
+	args := fs.Args()
+	for len(args) > 0 {
+		a := args[0]
+		if strings.HasPrefix(a, "-") {
+			break
+		}
+		args = args[1:]
+		if f.ProfileAction == "" && (a == "build" || a == "validate") {
+			f.ProfileAction = a
+			continue
+		}
+		if f.ProfilePath == "" {
+			f.ProfilePath = a
+			continue
+		}
+		return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", a)}
+	}
+	if len(args) > 0 {
+		fs2 := newFlagSet(f, &tf)
+		if err := parseFlagSet(fs2, f, args); err != nil {
+			return Flags{}, err
+		}
+		if leftover := fs2.Args(); len(leftover) > 0 {
+			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+		}
+	}
+	if f.ProfileAction == "" {
+		return Flags{}, usageError{msg: "profile requires build or validate\ntry `wheretoken --help`"}
+	}
+	if strings.TrimSpace(f.ProfilePath) == "" {
+		return Flags{}, usageError{msg: "profile " + f.ProfileAction + " requires a path\ntry `wheretoken --help`"}
+	}
+	if f.Today || f.Since != "" || f.From != "" || f.To != "" {
+		return Flags{}, usageError{msg: "profile always publishes fixed periods; it does not take --today/--since/--from/--to\ntry `wheretoken --help`"}
 	}
 	return *f, nil
 }

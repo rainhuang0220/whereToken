@@ -18,7 +18,9 @@ USAGE
   wheretoken [flags] logout      revoke the device token
   wheretoken [flags] sync        upload privacy-safe daily usage to the hosted app
   wheretoken [flags] completion bash|zsh|fish|powershell
-  wheretoken [flags] card <path.svg>   all-time 53-week SVG (GitHub Profile README)
+  wheretoken [flags] profile build <dir>     public snapshot + light/dark preview + live page
+  wheretoken [flags] profile validate <path> check a profile.json or bundle
+  wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
 
 INSTALL
   curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
@@ -61,6 +63,8 @@ FLAGS
   --home DIR           fake home directory (tests)
   --port N             serve bind port (default 8787; tries 8787–8797 if busy)
   --width N            cap ranking width; drop 估价 then 回合/请求 before truncating names
+  --include-models     profile build: export model breakdown (off by default)
+  --include-cost       profile build: export API list-price equivalent (off by default)
 
 ENV
   NO_COLOR             disable ANSI (same as --no-color)

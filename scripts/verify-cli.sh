@@ -27,6 +27,7 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q 'uploaded days'
 "$dir/wheretoken" --help | grep -q community
 "$dir/wheretoken" --help | grep -q 'card <path.svg>'
+"$dir/wheretoken" --help | grep -q 'profile build'
 "$dir/wheretoken" --help | grep -q 'wheretoken-wall.svg'
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2
@@ -230,6 +231,17 @@ if grep -q 'data-state="empty"' "$empty_card"; then
 fi
 if grep -E '\$0\.00' "$empty_card" >/dev/null; then
   echo "empty-home card printed \$0.00" >&2
+  exit 1
+fi
+
+prof="$dir/profile-out"
+"$dir/wheretoken" --home "$dir" --quiet profile build "$prof"
+test -f "$prof/profile.json"
+test -f "$prof/preview-light.svg"
+test -f "$prof/index.html"
+"$dir/wheretoken" profile validate "$prof" | grep -q ok
+if grep -E '/api/summary|/api/v1/' "$prof/assets/profile.js"; then
+  echo "profile js talks to APIs" >&2
   exit 1
 fi
 

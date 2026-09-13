@@ -9,13 +9,25 @@ import (
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/card"
-	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
 func (a *App) runCard(flags Flags, home adapter.Home) int {
 	res := a.doScan(home, flags.Quiet, flags.Offline, false)
-	sum := metric.AggregateAt(res.Events, res.Turns, a.Now(), a.Loc)
-	view := card.NewView(sum, card.StatusOf(sum), a.Version)
+	snap, err := publicprofile.Build(publicprofile.Input{
+		Events:       res.Events,
+		Turns:        res.Turns,
+		Now:          a.Now(),
+		Loc:          a.Loc,
+		Version:      a.Version,
+		IncludeCost:  true,
+		PortraitSeed: a.PortraitSeed(home),
+	})
+	if err != nil {
+		fmt.Fprintln(a.Stderr, err.Error())
+		return ExitFail
+	}
+	view := card.FromSnapshot(snap)
 	var buf bytes.Buffer
 	if err := card.Render(&buf, view); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())

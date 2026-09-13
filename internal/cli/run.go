@@ -140,6 +140,8 @@ func (a *App) Run() int {
 		return a.runSync(flags, home)
 	case CommandCard:
 		return a.runCard(flags, home)
+	case CommandProfile:
+		return a.runProfile(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}
