@@ -221,7 +221,12 @@ the rest of the product. It does not re-bucket dates, recompute intensity, or
 re-estimate cost.
 
 - Source of truth: `metric.AggregateAt(events, turns, now, loc)`.
-- Calendar: `Summary.Calendar.All`. `WindowFrom` is this week's Monday minus 52
+- Calendar: `Summary.Calendar.All` (merged events). The default CLI report
+  rebuilds streaks / peak / last-7 from **unmerged** events so complementary
+  rows keep their log dates; that calendar can double-count overlapping stream
+  placeholders and need not match this wall. Dashboard `/api/summary` and
+  `wheretoken scan --json` use the same merged calendar as the card.
+- `WindowFrom` is this week's Monday minus 52
   weeks; `WindowTo` is today. The SVG wall is a Monday-first 53×7 = 371 cell
   projection of that window, extending through this week's Sunday. Future
   dates are `future`, not empty zeros. `Calendar.All.Days` stays a sparse
@@ -234,9 +239,10 @@ re-estimate cost.
 - Cost is `metric.View(Summary.All)`: complete / partial / unavailable. Partial
   amounts are the priced subset. Unavailable or formatter-suppressed amounts
   render as `—`, never `$0`.
-- Agent rows are `Summary.BySource` by token total (copy, then
-  `Total DESC, ID ASC`), top 3 plus `Rest`. Share denominator is
-  `Summary.All.Total()`.
+- Agent rows are `Summary.BySource` by token total, mapped through the
+  adapter catalog (`metric.LookupSource`). Unknown source ids coalesce to
+  `Other`. Then `Total DESC, ID ASC`, top 3 plus `Rest`. Share denominator
+  is `Summary.All.Total()`.
 - The public card is an allowlisted DTO. Paths, request/session ids, prompts,
   and scan errors do not enter the SVG.
 

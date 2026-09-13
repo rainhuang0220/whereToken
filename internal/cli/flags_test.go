@@ -524,10 +524,14 @@ func TestParseCardUsageErrors(t *testing.T) {
 		{"card", "--no-color", "out.svg"},
 		{"card", "--usage", "out.svg"},
 		{"card", "--width", "80", "out.svg"},
+		{"card", "--width", "0", "out.svg"},
+		{"card", "out.svg", "--width", "0"},
 		{"card", "--rank", "all", "out.svg"},
+		{"card", "out.svg", "--rank", "today"},
 		{"card", "--no-community", "out.svg"},
 		{"card", "--no-sync", "out.svg"},
 		{"card", "--port", "8790", "out.svg"},
+		{"card", "out.svg", "--port", "8787"},
 	}
 	for _, args := range cases {
 		_, err := Parse(args)

@@ -134,7 +134,7 @@ func TestRunCardReplacesExisting(t *testing.T) {
 	}
 }
 
-func TestReplaceCardFileKeepsOldOnRenameFailure(t *testing.T) {
+func TestReplaceCardFileKeepsDestOnRenameFailure(t *testing.T) {
 	dir := t.TempDir()
 	dest := filepath.Join(dir, "wall.svg")
 	if err := os.WriteFile(dest, []byte("KEEP-ME"), 0o644); err != nil {
@@ -158,6 +158,38 @@ func TestReplaceCardFileKeepsOldOnRenameFailure(t *testing.T) {
 	}
 	if string(got) != "KEEP-ME" {
 		t.Fatalf("old file lost: %q", got)
+	}
+	if _, statErr := os.Stat(dest + ".old"); !os.IsNotExist(statErr) {
+		t.Fatalf("unexpected .old: %v", statErr)
+	}
+}
+
+func TestReplaceCardFileLeavesPreexistingOldAlone(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "wall.svg")
+	backup := dest + ".old"
+	if err := os.WriteFile(dest, []byte("CURRENT"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(backup, []byte("USER-BACKUP"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceCardFile(dest, []byte("<svg>new</svg>")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(got, []byte("<svg>new</svg>")) {
+		t.Fatalf("dest=%q", got)
+	}
+	kept, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(kept) != "USER-BACKUP" {
+		t.Fatalf("pre-existing .old was mutated: %q", kept)
 	}
 }
 

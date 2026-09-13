@@ -69,18 +69,12 @@ func replaceCardFile(dest string, payload []byte) error {
 	if err := os.Chmod(tmpName, 0o644); err != nil && runtime.GOOS != "windows" {
 		return err
 	}
-	old := dest + ".old"
-	_ = os.Remove(old)
-	if err := renameFile(dest, old); err != nil && !os.IsNotExist(err) {
-		return err
-	}
+	// One rename: POSIX is atomic; Go 1.25 Windows uses
+	// MOVEFILE_REPLACE_EXISTING, so dest is never unlinked first. The
+	// dest→.old dance is for replacing a running .exe (replaceFile), not SVG.
 	if err := renameFile(tmpName, dest); err != nil {
-		_ = renameFile(old, dest)
 		return err
 	}
 	ok = true
-	if err := os.Remove(old); err != nil && !os.IsNotExist(err) && runtime.GOOS == "windows" {
-		scheduleWindowsDelete(old)
-	}
 	return nil
 }

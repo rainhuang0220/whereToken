@@ -35,9 +35,11 @@ const (
 )
 
 const (
-	agentRestID    = "rest"
-	agentRestLabel = "Rest"
-	emDash         = "—"
+	agentRestID     = "rest"
+	agentRestLabel  = "Rest"
+	agentOtherID    = "other"
+	agentOtherLabel = "Other"
+	emDash          = "—"
 )
 
 // PublicCard is the explicit allowlist the SVG renderer may see.
@@ -242,35 +244,56 @@ func projectAgents(sum metric.Summary, unavailable bool) []Agent {
 	if unavailable {
 		return nil
 	}
-	src := append([]metric.Slice(nil), sum.BySource...)
-	var rows []metric.Slice
-	for _, s := range src {
+	totals := map[string]int64{}
+	seen := make([]string, 0, len(sum.BySource))
+	for _, s := range sum.BySource {
 		if s.Total() == 0 {
 			continue
 		}
-		rows = append(rows, s)
+		id, _ := publicSource(s.ID)
+		if _, ok := totals[id]; !ok {
+			seen = append(seen, id)
+		}
+		totals[id] = satAdd(totals[id], s.Total())
+	}
+	type row struct {
+		id    string
+		total int64
+	}
+	rows := make([]row, 0, len(seen))
+	for _, id := range seen {
+		rows = append(rows, row{id: id, total: totals[id]})
 	}
 	sort.SliceStable(rows, func(i, j int) bool {
-		ti, tj := rows[i].Total(), rows[j].Total()
-		if ti != tj {
-			return ti > tj
+		if rows[i].total != rows[j].total {
+			return rows[i].total > rows[j].total
 		}
-		return rows[i].ID < rows[j].ID
+		return rows[i].id < rows[j].id
 	})
 	all := sum.All.Total()
 	var out []Agent
 	var rest int64
 	for i, s := range rows {
 		if i < 3 {
-			out = append(out, agentFrom(s.ID, s.Label, s.Total(), all, false))
+			_, label := publicSource(s.id)
+			out = append(out, agentFrom(s.id, label, s.total, all, false))
 			continue
 		}
-		rest = satAdd(rest, s.Total())
+		rest = satAdd(rest, s.total)
 	}
 	if rest > 0 {
 		out = append(out, agentFrom(agentRestID, agentRestLabel, rest, all, true))
 	}
 	return out
+}
+
+// publicSource maps an event source onto the catalog allowlist. Unknown
+// ids become "Other" so paths, emails, or raw strings never become labels.
+func publicSource(id string) (string, string) {
+	if canonical, ok := metric.LookupSource(id); ok {
+		return canonical, metric.SourceLabel(canonical)
+	}
+	return agentOtherID, agentOtherLabel
 }
 
 func agentFrom(id, label string, part, all int64, rest bool) Agent {

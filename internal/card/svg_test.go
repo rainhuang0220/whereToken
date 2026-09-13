@@ -59,26 +59,35 @@ func TestRenderEscapesDynamicText(t *testing.T) {
 	c := NewView(sum, StatusOf(sum), `<v&1>`)
 	out := render(t, c)
 	for _, bad := range []string{
-		"<script>", `<v&1>`,
+		"<script>", `<v&1>`, `<script>alert("xss")`,
 	} {
 		if strings.Contains(out, bad) {
 			t.Fatalf("unescaped %q in\n%s", bad, out)
 		}
 	}
-	if !strings.Contains(out, "&lt;script&gt;") && !strings.Contains(out, "&lt;script") {
-		t.Fatalf("expected escaped script, got\n%s", out)
+	if !strings.Contains(out, "&lt;v&amp;1&gt;") {
+		t.Fatalf("expected escaped version, got\n%s", out)
 	}
-	if !strings.Contains(out, "窑") && !strings.Contains(out, "&lt;") {
-		// unicode path below
+	if strings.Contains(out, `<script>alert("xss")`) {
+		t.Fatal("raw source markup in SVG")
 	}
 	u := ev("窑工<>", "unknown", ts(loc, 2026, 8, 15, 11), 3, 0, 0)
 	sum = metric.AggregateAt([]event.UsageEvent{u}, nil, now, loc)
 	out = render(t, NewView(sum, StatusOf(sum), "dev"))
-	if !strings.Contains(out, "窑工") {
-		t.Fatal("unicode label missing")
+	if strings.Contains(out, "窑工") {
+		t.Fatal("unknown source label must not be painted")
 	}
-	if strings.Contains(out, "窑工<>") {
-		t.Fatal("raw <> in unicode label")
+	if !strings.Contains(out, agentOtherLabel) {
+		t.Fatal("unknown source should render as Other")
+	}
+	hostile := DemoCard()
+	hostile.Agents = []Agent{{ID: "x", Label: `</text><image href="file:///etc/passwd"/>`, ShareText: "1%", ShareRatio: 0.1}}
+	escaped := render(t, hostile)
+	if strings.Contains(escaped, `<image href=`) || strings.Contains(escaped, "<script>") {
+		t.Fatal("unescaped agent label became markup")
+	}
+	if !strings.Contains(escaped, "&lt;/text&gt;") {
+		t.Fatal("agent label must be XML-escaped")
 	}
 }
 

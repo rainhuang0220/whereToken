@@ -57,6 +57,7 @@ type Flags struct {
 	CommunityAction string
 	NoSync          bool
 	CardPath        string
+	seen            map[string]bool
 }
 
 type usageError struct {
@@ -273,7 +274,26 @@ func parseFlagSet(fs *flag.FlagSet, f *Flags, args []string) error {
 		}
 		return usageError{msg: flagUsageMessage(err) + "\ntry `wheretoken --help`"}
 	}
+	markSeen(f, fs)
 	return nil
+}
+
+func markSeen(f *Flags, fs *flag.FlagSet) {
+	if f.seen == nil {
+		f.seen = map[string]bool{}
+	}
+	fs.Visit(func(fl *flag.Flag) {
+		f.seen[fl.Name] = true
+	})
+}
+
+func (f Flags) saw(names ...string) bool {
+	for _, n := range names {
+		if f.seen[n] {
+			return true
+		}
+	}
+	return false
 }
 
 func flagUsageMessage(err error) string {
@@ -487,19 +507,26 @@ func validateCardPath(p string) error {
 }
 
 func rejectCardFlags(f Flags) error {
-	if f.JSON || f.Today || f.ASCII || f.NoColor || f.Usage || f.NoCommunity || f.NoSync {
+	if f.JSON || f.Today || f.ASCII || f.NoColor || f.Usage || f.NoCommunity || f.NoSync ||
+		f.saw("json", "today", "ascii", "no-color", "usage", "no-community", "no-sync") {
 		return usageError{msg: "card writes an all-time SVG; it does not take --json/--today/--ascii/--no-color/--usage/--no-community/--no-sync\ntry `wheretoken --help`"}
 	}
-	if f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "" {
+	if f.Tool != "" || f.Vendor != "" || f.Model != "" || f.Since != "" || f.From != "" || f.To != "" ||
+		f.saw("tool", "vendor", "model", "since", "from", "to") {
 		return usageError{msg: "card always uses all-time local usage; it does not take --tool/--vendor/--model/--since/--from/--to\ntry `wheretoken --help`"}
 	}
-	if f.Width != 0 {
+	for _, id := range shorthandIDs {
+		if f.saw(id) {
+			return usageError{msg: "card always uses all-time local usage; it does not take --tool/--vendor/--model/--since/--from/--to\ntry `wheretoken --help`"}
+		}
+	}
+	if f.saw("width") {
 		return usageError{msg: "card writes a fixed 800×576 SVG; it does not take --width\ntry `wheretoken --help`"}
 	}
-	if f.Port != 8787 {
+	if f.saw("port") {
 		return usageError{msg: "card does not take --port\ntry `wheretoken --help`"}
 	}
-	if f.RankPeriod != "today" {
+	if f.saw("rank") {
 		return usageError{msg: "card does not take --rank\ntry `wheretoken --help`"}
 	}
 	return nil
