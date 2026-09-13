@@ -238,7 +238,7 @@ func TestRenderGolden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read golden: %v (run UPDATE_GOLDEN=1 go test ./internal/card -run TestRenderGolden)", err)
 	}
-	if string(want) != got {
+	if normalizeNL(want) != got {
 		t.Fatalf("golden mismatch (%d bytes got, %d want). UPDATE_GOLDEN=1 to refresh", len(got), len(want))
 	}
 }
@@ -262,9 +262,13 @@ func TestCommittedDemoMatchesRenderer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read demo: %v (run UPDATE_GOLDEN=1)", err)
 	}
-	if string(want) != got {
+	if normalizeNL(want) != got {
 		t.Fatalf("docs/media/vibe-coding-wall-demo.svg drifted from renderer")
 	}
+}
+
+func normalizeNL(b []byte) string {
+	return string(bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n")))
 }
 
 func TestRenderPeakOutlineAndPartialBadge(t *testing.T) {
