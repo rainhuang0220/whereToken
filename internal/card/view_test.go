@@ -588,14 +588,40 @@ func TestNewViewCurrentStreakIncludesToday(t *testing.T) {
 	}
 }
 
-func TestNewViewUnicodeAgentLabel(t *testing.T) {
+func TestNewViewUnknownSourceBecomesOther(t *testing.T) {
 	t.Parallel()
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 15, 12)
-	events := []event.UsageEvent{ev("窑工", "unknown", ts(loc, 2026, 8, 15, 10), 9, 0, 0)}
+	poison := "/Users/alice/src/secret-repo"
+	events := []event.UsageEvent{
+		ev(poison, "unknown", ts(loc, 2026, 8, 15, 10), 9, 0, 0),
+		ev("窑工", "unknown", ts(loc, 2026, 8, 15, 11), 3, 0, 0),
+		ev("claude", "anthropic", ts(loc, 2026, 8, 15, 12), 1, 0, 0),
+	}
 	card := viewOf(t, events, nil, now, loc)
-	if len(card.Agents) != 1 || card.Agents[0].Label != "窑工" {
+	if len(card.Agents) != 2 {
 		t.Fatalf("agents=%+v", card.Agents)
+	}
+	var other, claude *Agent
+	for i := range card.Agents {
+		switch card.Agents[i].ID {
+		case agentOtherID:
+			other = &card.Agents[i]
+		case "claude":
+			claude = &card.Agents[i]
+		}
+	}
+	if other == nil || other.Label != agentOtherLabel || other.TokensRaw != 12 {
+		t.Fatalf("other %+v", card.Agents)
+	}
+	if claude == nil || claude.Label != "Claude Code" {
+		t.Fatalf("claude %+v", card.Agents)
+	}
+	blob := card.Agents[0].ID + card.Agents[0].Label + card.Agents[1].ID + card.Agents[1].Label
+	for _, p := range []string{poison, "窑工", "/Users/", "alice"} {
+		if strings.Contains(blob, p) {
+			t.Fatalf("leaked %q in %+v", p, card.Agents)
+		}
 	}
 }
 
