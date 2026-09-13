@@ -7,7 +7,15 @@ wheretoken profile build ./public-profile
 wheretoken profile validate ./public-profile
 ```
 
-Copy the directory to GitHub Pages (`/whereToken/profile/` on this project site). Then point a Profile README at the previews and the live page. The CLI never logs into GitHub, never commits, and never pushes.
+Copy the directory to a static host. The CLI never logs into GitHub, never commits, and never pushes.
+
+This repository keeps three artifacts separate:
+
+- `docs/media/public-profile-demo/` is a committed synthetic product demo and is served only at `/whereToken/profile-demo/`. Its JSON, preview, and page say `DEMO DATA` / `synthetic_demo`.
+- Any directory produced by `profile build` is a local real bundle. It remains private until its owner explicitly publishes it.
+- `public-profile/` is the maintainer's production source. Pages copies it to `/whereToken/profile/` only when `profile.json` and `manifest.json` both declare `local_sanitized_snapshot`; it never falls back to demo data.
+
+The production flow is therefore private ledger → local release binary → sanitized bundle → explicit Git commit. GitHub Actions never scans HOME.
 
 Default build omits model breakdown and cost. Opt in:
 
@@ -18,6 +26,19 @@ wheretoken profile build ./public-profile --include-models --include-cost
 `--today` / `--since` are rejected: the bundle always contains `all`, `today`, `7d`, `30d`, and `53w` from one scan and one clock.
 
 Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json). Token math is unchanged (`docs/token-accounting.md`). Missing usage is unavailable (`—`), never `$0`.
+
+## Preview freshness
+
+Every snapshot contains a deterministic `sha256:…` `snapshot_id`. The hash excludes only `generated_at`, so rebuilding unchanged data at a later minute keeps the same ID; changing public data changes it. `manifest.json`, `profile.json`, and both previews carry the same ID.
+
+Use the hex part as a cache-busting query in Profile READMEs:
+
+```html
+<source media="(prefers-color-scheme: dark)" srcset="https://example/profile/preview-dark.svg?v=SNAPSHOT_HEX">
+<img src="https://example/profile/preview-light.svg?v=SNAPSHOT_HEX" alt="whereToken public usage preview">
+```
+
+An explicit publication updates the query only when the snapshot ID changes. This makes GitHub Camo fetch a new preview without pretending the snapshot is live-synced.
 
 ## Compatibility
 

@@ -78,7 +78,13 @@ wheretoken profile build ./public-profile
 Point a GitHub Profile README at the previews and the live page (do not link the raw SVG as the destination). See `docs/public-profile.md`.
 
 <p align="center">
-  <img src="docs/media/public-profile-demo/preview-light.svg" width="800" alt="whereToken public profile preview (synthetic demo)">
+  <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600" width="800" alt="whereToken public profile preview using synthetic demo data; opens the interactive demo">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
@@ -186,7 +192,7 @@ The dashboard runs locally on your machine. It provides a visual overview of tok
 
 **<https://rainhuang0220.github.io/whereToken/>** — landing page and a hands-on [dashboard demo](https://rainhuang0220.github.io/whereToken/demo/) running on a synthetic sample ledger (no install, no backend).
 
-The public site is a static GitHub Pages deployment: it reads nothing from your machine and shows fabricated demo data only. The **local dashboard** (`wheretoken serve`) is a different thing: it binds `127.0.0.1`, reads your real local ledgers, and never leaves your machine. The CLI report footer and `wheretoken serve` startup print the public URL; it only ever shows public/demo data — your local ledger is never uploaded because of it. Deployment details: [`docs/deployment.md`](docs/deployment.md).
+The public site is a static GitHub Pages deployment: it reads nothing from your machine. The dashboard demo and `/profile-demo/` use fabricated data; `/profile/` may contain the maintainer's explicitly published, sanitized local snapshot. The **local dashboard** (`wheretoken serve`) is different: it binds `127.0.0.1`, reads your real local ledgers, and never leaves your machine. Nothing scans a GitHub runner's HOME or uploads a ledger automatically. Deployment details: [`docs/deployment.md`](docs/deployment.md).
 
 ## Supported coding agents
 

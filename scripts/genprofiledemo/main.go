@@ -23,6 +23,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "genprofiledemo: %v\n", err)
 		os.Exit(1)
 	}
+	publicprofile.MarkSyntheticDemo(&snap)
 	files, err := publicprofile.Bundle(snap)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "genprofiledemo: %v\n", err)

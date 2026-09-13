@@ -10,5 +10,7 @@
     "manifest.json"
   ],
   "generated_at": "2026-09-09T07:00:00Z",
-  "schema": "wheretoken.public-profile"
+  "provenance": "synthetic_demo",
+  "schema": "wheretoken.public-profile",
+  "snapshot_id": "sha256:54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600"
 }

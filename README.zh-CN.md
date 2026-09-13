@@ -73,7 +73,13 @@ wheretoken profile build ./public-profile
 GitHub Profile README 应链到预览图和 live page（不要把 SVG 本身当跳转目标）。见 `docs/public-profile.md`。
 
 <p align="center">
-  <img src="docs/media/public-profile-demo/preview-light.svg" width="800" alt="whereToken 公开画像预览（合成演示）">
+  <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600" width="800" alt="whereToken 公开画像合成演示；点击打开交互演示">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
@@ -181,7 +187,7 @@ wheretoken serve
 
 **<https://rainhuang0220.github.io/whereToken/>** —— 项目主页与可直接把玩的[仪表盘演示](https://rainhuang0220.github.io/whereToken/demo/)（内置合成样例账本，无需安装，无后端）。
 
-公网站点是 GitHub Pages 纯静态部署：不读取你的机器，只展示虚构演示数据。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。命令行报表页脚和 `wheretoken serve` 启动时会打印这个公网地址；公网仅展示公开/演示数据，本地账本不会因此上传。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
+公网站点是 GitHub Pages 纯静态部署，不读取你的机器。仪表盘演示和 `/profile-demo/` 使用虚构数据；`/profile/` 可以展示维护者主动发布的本机脱敏快照。**本机仪表盘**（`wheretoken serve`）是另一回事：只绑定 `127.0.0.1`，读取本机真实账本，数据不出本机。GitHub Actions 不扫描 HOME，也不会自动上传账本。部署细节见 [`docs/deployment.md`](docs/deployment.md)。
 
 ## 支持的 coding agent
 

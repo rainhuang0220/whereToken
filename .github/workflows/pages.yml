@@ -1,7 +1,7 @@
 name: pages
 
-# Builds the public site: site/ landing + the dashboard in demo mode
-# (VITE_DEMO=1, committed sample payloads, no backend) → GitHub Pages.
+# Builds the public site, dashboard demo, product profile demo, and—only when
+# explicitly committed—the maintainer's sanitized production profile.
 
 on:
   push:
@@ -12,6 +12,8 @@ on:
       - "scripts/gendemo/**"
       - "scripts/genprofiledemo/**"
       - "docs/media/public-profile-demo/**"
+      - "public-profile/**"
+      - "profile-e2e/**"
       - "internal/profilewebembed/**"
       - "ci/github-workflows/pages.yml"
       - ".github/workflows/pages.yml"
@@ -35,7 +37,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            profile-e2e/package-lock.json
 
       - name: Test and build the dashboard demo
         working-directory: web
@@ -44,15 +48,29 @@ jobs:
           npm test
           VITE_DEMO=1 npm run build
 
+      - name: Test the public profile in Chromium
+        working-directory: profile-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+          npm test
+
       - name: Assemble the Pages tree
         run: |
-          mkdir -p _pages/demo _pages/profile
+          mkdir -p _pages/demo _pages/profile-demo
           cp -R site/. _pages/
           cp -R web/dist/. _pages/demo/
           # SPA fallback: deep links under /demo/ must serve the app shell.
           cp web/dist/index.html _pages/404.html
-          # Public profile is a static snapshot app, not the kiln dashboard.
-          cp -R docs/media/public-profile-demo/. _pages/profile/
+          # Product demo and maintainer profile are deliberately separate.
+          cp -R docs/media/public-profile-demo/. _pages/profile-demo/
+          if [ -f public-profile/profile.json ]; then
+            jq -e '.provenance.kind == "local_sanitized_snapshot" and .provenance.refresh_mode == "manual_publish" and .provenance.live_sync == false' public-profile/profile.json >/dev/null
+            jq -e '.provenance == "local_sanitized_snapshot"' public-profile/manifest.json >/dev/null
+            test "$(jq -r .snapshot_id public-profile/profile.json)" = "$(jq -r .snapshot_id public-profile/manifest.json)"
+            mkdir -p _pages/profile
+            cp -R public-profile/. _pages/profile/
+          fi
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

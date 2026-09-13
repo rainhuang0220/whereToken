@@ -26,6 +26,28 @@
     return snap.periods[id] || snap.periods.all;
   }
 
+  function validateSnapshot(snap) {
+	if (!snap || typeof snap !== "object") throw new Error("snapshot must be an object");
+	if (snap.schema !== "wheretoken.public-profile" || snap.schema_version !== 1) throw new Error("schema mismatch");
+	if (!/^sha256:[0-9a-f]{64}$/.test(snap.snapshot_id || "")) throw new Error("snapshot id mismatch");
+	const provenance = snap.provenance || {};
+	const local = provenance.kind === "local_sanitized_snapshot" && provenance.refresh_mode === "manual_publish";
+	const demo = provenance.kind === "synthetic_demo" && provenance.refresh_mode === "committed_fixture";
+	if ((!local && !demo) || provenance.live_sync !== false) throw new Error("provenance mismatch");
+	for (const id of ["all", "today", "7d", "30d", "53w"]) {
+	  const period = snap.periods && snap.periods[id];
+	  if (!period || !period.totals || !period.totals.total || !period.range) throw new Error("period mismatch");
+	}
+	const activity = snap.activity || {};
+	if (!Array.isArray(activity.dates) || activity.dates.length !== 371 || !Array.isArray(activity.series)) throw new Error("activity mismatch");
+	for (const series of activity.series) {
+	  if (![series.values, series.levels, series.states].every((items) => Array.isArray(items) && items.length === activity.dates.length)) {
+		throw new Error("activity series mismatch");
+	  }
+	}
+	return snap;
+  }
+
   function writeURL() {
     const q = new URLSearchParams();
     if (state.range !== "all") q.set("range", state.range);
@@ -48,7 +70,8 @@
     const snap = state.snap;
     if (!snap) return;
     const p = periodOf(snap, state.range);
-    $("freshness").textContent = "Public snapshot · generated locally · updated " + (snap.generated_at || snap.as_of_date);
+	const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
+	$("freshness").textContent = (demo ? "DEMO DATA · synthetic snapshot" : "Public snapshot · generated locally") + " · updated " + (snap.generated_at || snap.as_of_date);
     const owner = snap.owner || {};
     $("identity").textContent = owner.display_name || owner.github_login || "Local public snapshot";
     const kpis = [
@@ -112,6 +135,10 @@
       cell.addEventListener("mouseleave", hideTip);
       wall.append(cell);
     });
+	if (!wall.dataset.positioned) {
+	  wall.dataset.positioned = "true";
+	  requestAnimationFrame(() => { wall.scrollLeft = wall.scrollWidth; });
+	}
 
     const tabs = [{ id: "agents", label: "Agents" }, { id: "providers", label: "Providers" }];
     if ((p.by_model || []).length) tabs.push({ id: "models", label: "Models" });
@@ -163,8 +190,8 @@
 
   fetch("./profile.json", { cache: "no-store" })
     .then((r) => { if (!r.ok) throw new Error("snapshot missing"); return r.json(); })
-    .then((snap) => {
-      if (snap.schema !== "wheretoken.public-profile") throw new Error("schema mismatch");
+	.then((snap) => {
+	  validateSnapshot(snap);
       state.snap = snap;
       render();
     })
