@@ -138,6 +138,8 @@ func (a *App) Run() int {
 		return a.runLogout(flags, home)
 	case CommandSync:
 		return a.runSync(flags, home)
+	case CommandCard:
+		return a.runCard(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}

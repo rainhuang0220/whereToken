@@ -48,6 +48,11 @@ wheretoken \- local coding-agent token usage as a character table
 [\fIflags\fR]
 .B completion
 \fIbash\fR|\fIzsh\fR|\fIfish\fR|\fIpowershell\fR
+.br
+.B wheretoken
+[\fIflags\fR]
+.B card
+\fIpath.svg\fR
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
 OpenClaw, Codex, OpenCode, Cursor, Trae) and prints token totals, cache hit rate, streaks, request and turn counts,
@@ -231,6 +236,21 @@ with
 the card payload gains a
 .B usage
 block (period, vendors with per-model unit_prices, total).
+.TP
+.B card \fIpath.svg\fR
+Write a static 800×576 SVG of all-time local usage and a Monday-first
+53-week activity wall. The path is required and must end in
+.BR .svg .
+Allowed flags:
+.BR --offline ", " --quiet "/ " \fB-q\fR ", " --home .
+The file is replaced in place. Stdout prints one line,
+.B wrote
+then the absolute path. The SVG is built on this machine from the local
+ledgers;
+.B card
+does not upload usage and does not call Community Rank. Missing usage is
+.B \(em ,
+never $0.
 .SH EXIT STATUS
 .TP
 .B 0

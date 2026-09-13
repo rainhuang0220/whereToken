@@ -474,3 +474,76 @@ func TestParseRankPeriodAndNoCommunity(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+func TestParseCardPath(t *testing.T) {
+	f, err := Parse([]string{"card", "wall.svg"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Command != CommandCard || f.CardPath != "wall.svg" {
+		t.Fatalf("%+v", f)
+	}
+	f, err = Parse([]string{"card", "WALL.SVG"})
+	if err != nil || f.CardPath != "WALL.SVG" {
+		t.Fatalf("%+v %v", f, err)
+	}
+}
+
+func TestParseCardFlagsBeforeAndAfterCommand(t *testing.T) {
+	f, err := Parse([]string{"--offline", "--quiet", "card", "out.svg"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !f.Offline || !f.Quiet || f.Command != CommandCard || f.CardPath != "out.svg" {
+		t.Fatalf("%+v", f)
+	}
+	f, err = Parse([]string{"card", "--offline", "out.svg"})
+	if err != nil || !f.Offline || f.CardPath != "out.svg" {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"card", "out.svg", "--quiet", "--home", "/tmp/h"})
+	if err != nil || !f.Quiet || f.Home != "/tmp/h" || f.CardPath != "out.svg" {
+		t.Fatalf("%+v %v", f, err)
+	}
+}
+
+func TestParseCardUsageErrors(t *testing.T) {
+	cases := [][]string{
+		{"card"},
+		{"card", "out.png"},
+		{"card", "out.svg", "extra.svg"},
+		{"card", "out.svg", "--json"},
+		{"card", "--today", "out.svg"},
+		{"card", "--claude", "out.svg"},
+		{"card", "--tool=kimi", "out.svg"},
+		{"card", "--vendor=anthropic", "out.svg"},
+		{"card", "--model=opus", "out.svg"},
+		{"card", "--since", "7d", "out.svg"},
+		{"card", "--from", "2026-01-01", "out.svg"},
+		{"card", "--ascii", "out.svg"},
+		{"card", "--no-color", "out.svg"},
+		{"card", "--usage", "out.svg"},
+		{"card", "--width", "80", "out.svg"},
+		{"card", "--rank", "all", "out.svg"},
+		{"card", "--no-community", "out.svg"},
+		{"card", "--no-sync", "out.svg"},
+		{"card", "--port", "8790", "out.svg"},
+	}
+	for _, args := range cases {
+		_, err := Parse(args)
+		if err == nil || !IsUsage(err) {
+			t.Errorf("%v: err=%v", args, err)
+		}
+	}
+}
+
+func TestParseCardHelpAndVersionSkipPath(t *testing.T) {
+	f, err := Parse([]string{"card", "--help"})
+	if err != nil || !f.Help {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"card", "--version"})
+	if err != nil || !f.Version {
+		t.Fatalf("%+v %v", f, err)
+	}
+}

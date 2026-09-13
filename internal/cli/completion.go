@@ -43,7 +43,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -60,7 +60,8 @@ _wheretoken() {
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    card) opts="--quiet -q --offline --home --help --version" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -72,7 +73,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -147,6 +148,15 @@ _wheretoken() {
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '1:shell:(bash zsh fish powershell)'
       ;;
+    card)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-V --version)'{-V,--version}'[version]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--home[fake home]:dir:_files -/' \
+        '1:svg:_files -g "*.svg"'
+      ;;
     pricing)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -190,7 +200,7 @@ _wheretoken() {
         '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version)'
       ;;
   esac
 }
@@ -198,31 +208,32 @@ _wheretoken "$@"
 `
 
 const fishCompletion = `complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l today
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l since -r -a "7d 30d"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l from -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l to -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion card" -l today
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion card" -l since -r -a "7d 30d"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion card" -l from -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion card" -l to -r
 complete -c wheretoken -l ascii
 complete -c wheretoken -l no-color
 complete -c wheretoken -l quiet -s q
 complete -c wheretoken -l offline
 complete -c wheretoken -n "__fish_seen_subcommand_from login" -l no-sync
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion" -l tool -r -a "claude kimi grok minimax openclaw codex opencode cursor trae"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l model -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l claude -l kimi -l grok -l minimax -l openclaw -l codex -l opencode -l cursor -l trae
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor pricing completion card" -l tool -r -a "claude kimi grok minimax openclaw codex opencode cursor trae"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion card" -l vendor -r -a "anthropic moonshot openai minimax google deepseek doubao zhipu alibaba xai unknown"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion card" -l model -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion card" -l claude -l kimi -l grok -l minimax -l openclaw -l codex -l opencode -l cursor -l trae
 complete -c wheretoken -l home -r -F
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor pricing completion" -l port -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion" -l width -r
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community pricing completion" -l rank -r -a "today all"
-complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion" -l no-community
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources doctor pricing completion card" -l port -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor completion card" -l width -r
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community pricing completion card" -l rank -r -a "today all"
+complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion card" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
+complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
 `
 
 const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
@@ -245,6 +256,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
       'logout' { $cmd = $t }
       'sync' { $cmd = $t }
       'completion' { $cmd = $t }
+      'card' { $cmd = $t }
       'help' { $cmd = $t }
       'version' { $cmd = $t }
     }
@@ -261,8 +273,9 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
+    'card' { @('--quiet','--offline','--home','--help','--version') }
     'login' { @('--no-sync','--quiet','--offline','--home','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

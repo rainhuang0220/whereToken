@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -78,6 +78,15 @@ _wheretoken() {
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '1:shell:(bash zsh fish powershell)'
       ;;
+    card)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-V --version)'{-V,--version}'[version]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--offline[skip Cursor/Trae account APIs]' \
+        '--home[fake home]:dir:_files -/' \
+        '1:svg:_files -g "*.svg"'
+      ;;
     pricing)
       _arguments -s \
         '(-h --help)'{-h,--help}'[help]' \
@@ -121,7 +130,7 @@ _wheretoken() {
         '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card help version)'
       ;;
   esac
 }

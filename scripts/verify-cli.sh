@@ -26,6 +26,8 @@ echo "$ver" | grep -q wheretoken
 "$dir/wheretoken" --help | grep -q -- '--no-community'
 "$dir/wheretoken" --help | grep -q 'uploaded days'
 "$dir/wheretoken" --help | grep -q community
+"$dir/wheretoken" --help | grep -q 'card <path.svg>'
+"$dir/wheretoken" --help | grep -q 'wheretoken-wall.svg'
 if "$dir/wheretoken" --help | grep -q GOPATH; then
   echo "help lectures GOPATH" >&2
   exit 1
@@ -186,6 +188,48 @@ empty_today="$("$dir/wheretoken" --home "$empty" --today --ascii --quiet)"
 echo "$empty_today" | grep -q '本机没有找到账本'
 if echo "$empty_today" | grep -q '今天还没有用量'; then
   echo "empty-home --today pretended a ledger exists" >&2
+  exit 1
+fi
+
+card_svg="$dir/wall.svg"
+card_out="$("$dir/wheretoken" --home "$dir" --quiet card "$card_svg")"
+echo "$card_out" | grep -q "wrote "
+test -f "$card_svg"
+grep -q 'viewBox="0 0 800 576"' "$card_svg"
+grep -q 'VIBE CODING WALL' "$card_svg"
+if grep -q "$dir" "$card_svg"; then
+  echo "card SVG leaked home path" >&2
+  exit 1
+fi
+if grep -q eyJ "$card_svg"; then
+  echo "card SVG leaked JWT" >&2
+  exit 1
+fi
+if grep -E '\$0\.00' "$card_svg" >/dev/null; then
+  echo "card SVG printed \$0.00" >&2
+  exit 1
+fi
+set +e
+card_png="$("$dir/wheretoken" --home "$dir" --quiet card "$dir/wall.png" 2>&1)"
+card_png_code=$?
+set -e
+test "$card_png_code" -eq 2
+echo "$card_png" | grep -q '.svg'
+set +e
+card_nopath="$("$dir/wheretoken" --home "$dir" --quiet card 2>&1)"
+card_nopath_code=$?
+set -e
+test "$card_nopath_code" -eq 2
+empty_card="$empty/empty.svg"
+empty_card_out="$("$dir/wheretoken" --home "$empty" --quiet card "$empty_card")"
+echo "$empty_card_out" | grep -q "wrote "
+grep -q 'NO LOCAL USAGE AVAILABLE' "$empty_card"
+if grep -q 'data-state="empty"' "$empty_card"; then
+  echo "empty-home card painted measured empty zeros" >&2
+  exit 1
+fi
+if grep -E '\$0\.00' "$empty_card" >/dev/null; then
+  echo "empty-home card printed \$0.00" >&2
   exit 1
 fi
 
