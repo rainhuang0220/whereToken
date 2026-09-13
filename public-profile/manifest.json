@@ -1,0 +1,16 @@
+{
+  "as_of_date": "2026-09-14",
+  "generated": [
+    "profile.json",
+    "preview-light.svg",
+    "preview-dark.svg",
+    "index.html",
+    "assets/profile.css",
+    "assets/profile.js",
+    "manifest.json"
+  ],
+  "generated_at": "2026-09-13T19:37:26Z",
+  "provenance": "local_sanitized_snapshot",
+  "schema": "wheretoken.public-profile",
+  "snapshot_id": "sha256:d5c80d5df5fdb75035575fdc5453c143a65c755e351ace804f2bbc729bec63c4"
+}
