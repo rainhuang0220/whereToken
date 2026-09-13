@@ -5,17 +5,38 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 func Validate(s Snapshot) error {
+	raw, err := Marshal(s)
+	if err != nil {
+		return err
+	}
+	if err := validateSchemaJSON(raw); err != nil {
+		return err
+	}
+	return validateSemantics(s)
+}
+
+func validateSemantics(s Snapshot) error {
 	if s.Schema != SchemaName {
 		return fmt.Errorf("publicprofile: schema %q", s.Schema)
 	}
 	if s.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("publicprofile: schema_version %d", s.SchemaVersion)
+	}
+	if s.SnapshotID == "" {
+		return fmt.Errorf("publicprofile: snapshot_id")
+	}
+	wantID := s.SnapshotID
+	refreshSnapshotID(&s)
+	if s.SnapshotID != wantID {
+		return fmt.Errorf("publicprofile: snapshot_id mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339, s.GeneratedAt); err != nil {
 		return fmt.Errorf("publicprofile: generated_at: %w", err)
@@ -26,7 +47,9 @@ func Validate(s Snapshot) error {
 	if s.Producer.Name == "" || s.Producer.TokenAccountingVersion == "" {
 		return fmt.Errorf("publicprofile: producer")
 	}
-	if s.Provenance.Kind != "local_sanitized_snapshot" || s.Provenance.LiveSync {
+	validProvenance := (s.Provenance.Kind == ProvenanceLocal && s.Provenance.RefreshMode == RefreshManualPublish) ||
+		(s.Provenance.Kind == ProvenanceSyntheticDemo && s.Provenance.RefreshMode == RefreshCommittedFixture)
+	if !validProvenance || s.Provenance.LiveSync {
 		return fmt.Errorf("publicprofile: provenance")
 	}
 	switch s.DataStatus {
@@ -36,6 +59,14 @@ func Validate(s Snapshot) error {
 	}
 	if s.Privacy.RawEvents {
 		return fmt.Errorf("publicprofile: privacy.raw_events")
+	}
+	if s.Owner != nil {
+		if _, err := sanitizeOwner(s.Owner); err != nil {
+			return err
+		}
+	}
+	if err := validateLinks(s.Links); err != nil {
+		return err
 	}
 	for _, id := range []string{PeriodAll, PeriodToday, Period7d, Period30d, Period53w} {
 		p, ok := s.Periods.ByID(id)
@@ -141,6 +172,26 @@ func validateActivity(a Activity) error {
 	return nil
 }
 
+func validateLinks(l Links) error {
+	for _, raw := range []string{l.Project, l.TokenAccounting, l.LivePage} {
+		if err := requirePublicHTTPS(raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func requirePublicHTTPS(raw string) error {
+	if strings.TrimSpace(raw) != raw || raw == "" {
+		return fmt.Errorf("publicprofile: invalid url")
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Opaque != "" {
+		return fmt.Errorf("publicprofile: invalid url")
+	}
+	return nil
+}
+
 func gzipSize(s Snapshot) (int, error) {
 	raw, err := json.Marshal(s)
 	if err != nil {
@@ -169,11 +220,14 @@ func ValidateFile(path string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateSchemaJSON(raw); err != nil {
+		return err
+	}
 	var s Snapshot
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return err
 	}
-	return Validate(s)
+	return validateSemantics(s)
 }
 
 func Marshal(s Snapshot) ([]byte, error) {

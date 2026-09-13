@@ -1,6 +1,7 @@
 package publicprofile
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +50,90 @@ func TestBuildEmptyIsUnavailableNotZero(t *testing.T) {
 	}
 }
 
+func TestBuildEmptyWithCostPublishesUnavailableCost(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	snap, err := Build(Input{Now: now, Loc: loc, Version: "dev", IncludeCost: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(snap); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	cost := doc["periods"].(map[string]any)["all"].(map[string]any)["cost"].(map[string]any)
+	if cost["status"] != StatusUnavailable || cost["display"] != emDash {
+		t.Fatalf("cost=%v", cost)
+	}
+	if cost["usd_micro"] != nil || cost["priced_tokens"] != nil || cost["unpriced_tokens"] != nil {
+		t.Fatalf("unavailable cost must use null numeric values: %v", cost)
+	}
+}
+
+func TestBuildCostUsesContributingVendorVerificationDate(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	e := ev("kimi", "moonshot", now.Add(-time.Hour), 10, 0, 1)
+	e.Model = "kimi-k3"
+	snap, err := Build(Input{Events: []event.UsageEvent{e}, Now: now, Loc: loc, IncludeCost: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	cost := doc["periods"].(map[string]any)["all"].(map[string]any)["cost"].(map[string]any)
+	if cost["verified_at"] != "2026-08-20" {
+		t.Fatalf("verified_at=%v", cost["verified_at"])
+	}
+}
+
+func TestSnapshotIDStableWithoutDataChangeAndChangesWithData(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	baseEvent := ev("claude", "anthropic", now.Add(-time.Hour), 10, 0, 1)
+	idOf := func(events []event.UsageEvent, at time.Time) string {
+		t.Helper()
+		snap, err := Build(Input{Events: events, Now: at, Loc: loc})
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := Marshal(snap)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		id, _ := doc["snapshot_id"].(string)
+		return id
+	}
+	first := idOf([]event.UsageEvent{baseEvent}, now)
+	second := idOf([]event.UsageEvent{baseEvent}, now.Add(time.Minute))
+	if first == "" || first != second {
+		t.Fatalf("same data ids %q %q", first, second)
+	}
+	changedEvent := baseEvent
+	changedEvent.Miss++
+	changed := idOf([]event.UsageEvent{changedEvent}, now)
+	if changed == first {
+		t.Fatalf("changed data retained id %q", first)
+	}
+}
+
 func TestBuildUnknownSourceBecomesOther(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
@@ -66,6 +151,57 @@ func TestBuildUnknownSourceBecomesOther(t *testing.T) {
 	}
 	if len(snap.Periods.All.ByAgent) != 1 || snap.Periods.All.ByAgent[0].ID != AgentOtherID {
 		t.Fatalf("agents=%+v", snap.Periods.All.ByAgent)
+	}
+}
+
+func TestBuildUnknownModelBecomesOther(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	poison := `<script>alert(1)</script>`
+	e := ev("claude", "anthropic", now.Add(-time.Hour), 10, 0, 1)
+	e.Model = poison
+	snap, err := Build(Input{Events: []event.UsageEvent{e}, Now: now, Loc: loc, IncludeModels: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), poison) {
+		t.Fatalf("leaked model: %s", raw)
+	}
+	if len(snap.Periods.All.ByModel) != 1 || snap.Periods.All.ByModel[0].ID != ModelOtherID {
+		t.Fatalf("models=%+v", snap.Periods.All.ByModel)
+	}
+}
+
+func TestBuildRejectsUnsafeOwnerFieldsAndRendersDisplayNameAsData(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	for _, owner := range []*Owner{
+		{AvatarURL: "javascript:alert(1)"},
+		{ProfileURL: "file:///etc/passwd"},
+		{GitHubLogin: "../../../secret"},
+	} {
+		if _, err := Build(Input{Now: now, Loc: loc, Owner: owner}); err == nil {
+			t.Fatalf("accepted unsafe owner %+v", owner)
+		}
+	}
+	display := `<img src=x onerror=alert(1)>`
+	snap, err := Build(Input{Now: now, Loc: loc, Owner: &Owner{DisplayName: display}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := Bundle(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(files["index.html"]), display) {
+		t.Fatal("owner HTML was inlined into the page shell")
+	}
+	if !strings.Contains(string(files["assets/profile.js"]), ".textContent = owner.display_name") {
+		t.Fatal("owner display name is not assigned through textContent")
 	}
 }
 
@@ -96,6 +232,34 @@ func TestBuildAllTimeMatchesAggregateAt(t *testing.T) {
 	}
 }
 
+func TestBuildPeriodWindowsUseCanonicalMergedRequests(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, loc)
+	events := []event.UsageEvent{
+		{Source: "claude", Vendor: "anthropic", RequestID: "cross-midnight", Timestamp: time.Date(2026, 9, 13, 23, 59, 0, 0, loc), Miss: 10, Quality: event.QualityAuthoritative},
+		{Source: "claude", Vendor: "anthropic", RequestID: "cross-midnight", Timestamp: time.Date(2026, 9, 14, 0, 1, 0, 0, loc), Output: 5, Quality: event.QualityAuthoritative},
+	}
+	snap, err := Build(Input{Events: events, Now: now, Loc: loc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := *snap.Periods.All.Totals.Total.Value; got != 15 {
+		t.Fatalf("all=%d", got)
+	}
+	if got := *snap.Periods.Today.Totals.Total.Value; got != 15 {
+		t.Fatalf("today=%d; canonical request belongs wholly to its final local day", got)
+	}
+	if got := *snap.Periods.D7.Totals.Total.Value; got != 15 {
+		t.Fatalf("7d=%d", got)
+	}
+	if snap.Periods.Today.CurrentStreak.Value == nil || *snap.Periods.Today.CurrentStreak.Value != 1 {
+		t.Fatalf("today streak=%+v", snap.Periods.Today.CurrentStreak)
+	}
+	if snap.Periods.Today.Peak.Total.Value == nil || *snap.Periods.Today.Peak.Total.Value != 15 {
+		t.Fatalf("today peak=%+v", snap.Periods.Today.Peak)
+	}
+}
+
 func TestBuildReasoningNotInTotal(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
@@ -110,7 +274,7 @@ func TestBuildReasoningNotInTotal(t *testing.T) {
 	}
 }
 
-func TestLevelsIgnoreHistoryOutsideWall(t *testing.T) {
+func TestLevelsUseFullHistoryLikeCanonicalCard(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
 	inWall := ev("claude", "anthropic", time.Date(2026, 9, 10, 10, 0, 0, 0, loc), 100, 0, 0)
@@ -125,13 +289,14 @@ func TestLevelsIgnoreHistoryOutsideWall(t *testing.T) {
 	}
 	a := seriesByID(base, "all")
 	b := seriesByID(withHist, "all")
-	if len(a.Levels) != len(b.Levels) {
-		t.Fatal("length")
-	}
+	changed := false
 	for i := range a.Levels {
 		if a.Levels[i] != b.Levels[i] {
-			t.Fatalf("level[%d] %d vs %d (wall color must ignore history)", i, a.Levels[i], b.Levels[i])
+			changed = true
 		}
+	}
+	if !changed {
+		t.Fatal("history outside the wall did not affect full-history intensity")
 	}
 }
 

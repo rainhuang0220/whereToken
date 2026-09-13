@@ -63,6 +63,58 @@ func TestSnapshotP0SixSinceRecordsBegan(t *testing.T) {
 	}
 }
 
+func TestSnapshotCalendarUsesCanonicalRequestRows(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 9, 14, 12)
+	tests := []struct {
+		name   string
+		events []event.UsageEvent
+		want   int64
+	}{
+		{
+			name: "cross midnight complementary rows",
+			events: []event.UsageEvent{
+				{Source: "claude", RequestID: "r", Timestamp: time.Date(2026, 9, 13, 23, 59, 0, 0, loc), Miss: 10},
+				{Source: "claude", RequestID: "r", Timestamp: time.Date(2026, 9, 14, 0, 1, 0, 0, loc), Output: 5},
+			},
+			want: 15,
+		},
+		{
+			name: "same day overlapping stream rows",
+			events: []event.UsageEvent{
+				{Source: "claude", RequestID: "r", Timestamp: ts(loc, 2026, 9, 14, 9), Miss: 10},
+				{Source: "claude", RequestID: "r", Timestamp: ts(loc, 2026, 9, 14, 10), Miss: 15},
+			},
+			want: 15,
+		},
+		{
+			name: "placeholder then final",
+			events: []event.UsageEvent{
+				{Source: "claude", RequestID: "r", Timestamp: ts(loc, 2026, 9, 14, 9)},
+				{Source: "claude", RequestID: "r", Timestamp: ts(loc, 2026, 9, 14, 10), Miss: 100},
+			},
+			want: 100,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			snap, err := Build(tc.events, nil, nil, Filter{}, now, loc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if snap.Total != tc.want || snap.TodayTotal != tc.want || snap.PeakDay != tc.want {
+				t.Fatalf("total=%d today=%d peak=%d want=%d", snap.Total, snap.TodayTotal, snap.PeakDay, tc.want)
+			}
+			if len(snap.Last7) != 7 || snap.Last7[6] != tc.want {
+				t.Fatalf("last7=%v", snap.Last7)
+			}
+			if snap.CurrentStreak != 1 || snap.MaxStreak != 1 {
+				t.Fatalf("streak current=%d max=%d", snap.CurrentStreak, snap.MaxStreak)
+			}
+		})
+	}
+}
+
 func TestSnapshotZeroDataEmDash(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)

@@ -60,6 +60,7 @@ const emDash = "—"
 type Snapshot struct {
 	Schema        string     `json:"schema"`
 	SchemaVersion int        `json:"schema_version"`
+	SnapshotID    string     `json:"snapshot_id"`
 	GeneratedAt   string     `json:"generated_at"`
 	AsOfDate      string     `json:"as_of_date"`
 	Producer      Producer   `json:"producer"`
@@ -196,13 +197,13 @@ type Breakdown struct {
 }
 
 type Cost struct {
-	Status         string `json:"status"`
-	USDMicro       int64  `json:"usd_micro"`
-	Display        string `json:"display"`
-	PricedTokens   int64  `json:"priced_tokens"`
-	UnpricedTokens int64  `json:"unpriced_tokens"`
-	PriceCardID    string `json:"price_card_id"`
-	VerifiedAt     string `json:"verified_at"`
+	Status         string  `json:"status"`
+	USDMicro       *int64  `json:"usd_micro"`
+	Display        string  `json:"display"`
+	PricedTokens   *int64  `json:"priced_tokens"`
+	UnpricedTokens *int64  `json:"unpriced_tokens"`
+	PriceCardID    string  `json:"price_card_id"`
+	VerifiedAt     *string `json:"verified_at"`
 }
 
 type Activity struct {

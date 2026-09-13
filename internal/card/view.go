@@ -122,8 +122,11 @@ func StatusOf(sum metric.Summary) string {
 	return DataAvailable
 }
 
-// NewView builds a PublicCard from a canonical metric.Summary and a
-// precomputed availability flag. It copies BySource before sorting.
+// NewView builds the legacy card test/demo DTO from a canonical summary.
+//
+// Deprecated: NOT FOR PRODUCTION CLI. Production must build a
+// publicprofile.Snapshot and call FromSnapshot so every renderer shares the
+// same public contract.
 func NewView(sum metric.Summary, dataStatus, version string) PublicCard {
 	cal := sum.Calendar
 	unavailable := dataStatus == DataUnavailable

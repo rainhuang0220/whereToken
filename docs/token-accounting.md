@@ -221,11 +221,11 @@ the rest of the product. It does not re-bucket dates, recompute intensity, or
 re-estimate cost.
 
 - Source of truth: `metric.AggregateAt(events, turns, now, loc)`.
-- Calendar: `Summary.Calendar.All` (merged events). The default CLI report
-  rebuilds streaks / peak / last-7 from **unmerged** events so complementary
-  rows keep their log dates; that calendar can double-count overlapping stream
-  placeholders and need not match this wall. Dashboard `/api/summary` and
-  `wheretoken scan --json` use the same merged calendar as the card.
+- Calendar: `Summary.Calendar.All` (merged events). The default CLI report,
+  dashboard `/api/summary`, `wheretoken scan --json`, cards, and public
+  profiles all use this same request calendar. Repeated stream rows merge by
+  per-component maxima and the complete request belongs to its latest row's
+  local date.
 - `WindowFrom` is this week's Monday minus 52
   weeks; `WindowTo` is today. The SVG wall is a Monday-first 53×7 = 371 cell
   projection of that window, extending through this week's Sunday. Future

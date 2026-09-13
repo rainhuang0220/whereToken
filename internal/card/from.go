@@ -1,6 +1,9 @@
 package card
 
-import "github.com/rainhuang0220/whereToken/internal/publicprofile"
+import (
+	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
+)
 
 // FromSnapshot projects a public Snapshot onto the legacy 800×576 card DTO.
 func FromSnapshot(s publicprofile.Snapshot) PublicCard {
@@ -106,9 +109,13 @@ func fromCells(s publicprofile.Snapshot) []Cell {
 
 func fromAgents(all publicprofile.Period) []Agent {
 	var out []Agent
+	var rest int64
 	for i, a := range all.ByAgent {
 		if i >= 3 {
-			break
+			if a.Totals.Total.Value != nil {
+				rest += *a.Totals.Total.Value
+			}
+			continue
 		}
 		raw := int64(0)
 		if a.Totals.Total.Value != nil {
@@ -120,8 +127,30 @@ func fromAgents(all publicprofile.Period) []Agent {
 			TokensRaw:     raw,
 			TokensDisplay: a.Totals.Total.Display,
 			ShareText:     a.Share,
-			Rest:          a.ID == publicprofile.AgentOtherID,
+			Rest:          false,
+		})
+	}
+	if rest > 0 {
+		total := int64(0)
+		if all.Totals.Total.Value != nil {
+			total = *all.Totals.Total.Value
+		}
+		out = append(out, Agent{
+			ID:            agentRestID,
+			Label:         agentRestLabel,
+			TokensRaw:     rest,
+			TokensDisplay: FormatCompact(rest),
+			ShareText:     metric.FormatShare(rest, total),
+			ShareRatio:    partRatio(rest, total),
+			Rest:          true,
 		})
 	}
 	return out
+}
+
+func partRatio(part, all int64) float64 {
+	if all <= 0 {
+		return 0
+	}
+	return float64(part) / float64(all)
 }

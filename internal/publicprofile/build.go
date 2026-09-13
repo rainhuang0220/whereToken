@@ -1,6 +1,9 @@
 package publicprofile
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -19,6 +22,13 @@ const (
 	defaultProjectURL = "https://github.com/rainhuang0220/whereToken"
 	defaultAccounting = "https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md"
 	defaultLivePage   = "https://rainhuang0220.github.io/whereToken/profile/"
+)
+
+const (
+	ProvenanceLocal         = "local_sanitized_snapshot"
+	ProvenanceSyntheticDemo = "synthetic_demo"
+	RefreshManualPublish    = "manual_publish"
+	RefreshCommittedFixture = "committed_fixture"
 )
 
 // Build projects one scan into a public Snapshot. One now/loc, one aggregation
@@ -42,7 +52,9 @@ func Build(in Input) (Snapshot, error) {
 		version = "dev"
 	}
 
-	allSum := metric.AggregateAt(in.Events, in.Turns, now, loc)
+	canonicalEvents := metric.CanonicalEvents(in.Events)
+	in.Events = canonicalEvents
+	allSum := metric.AggregateAt(canonicalEvents, in.Turns, now, loc)
 	status := dataStatus(allSum)
 	unavailable := status == StatusUnavailable
 
@@ -59,8 +71,8 @@ func Build(in Input) (Snapshot, error) {
 		},
 		Owner: owner,
 		Provenance: Provenance{
-			Kind:        "local_sanitized_snapshot",
-			RefreshMode: "manual_publish",
+			Kind:        ProvenanceLocal,
+			RefreshMode: RefreshManualPublish,
 			LiveSync:    false,
 		},
 		DataStatus: status,
@@ -85,16 +97,42 @@ func Build(in Input) (Snapshot, error) {
 	snap.Periods.D30 = projectPeriod(Period30d, windows[Period30d], in, now, loc, status, metric.Summary{})
 	snap.Periods.W53 = projectPeriod(Period53w, windows[Period53w], in, now, loc, status, metric.Summary{})
 
-	dates := wallDates(allSum.Calendar.WindowFrom, allSum.Calendar.WindowTo)
+	dates := wallDates(allSum.Calendar.WindowFrom)
 	snap.Activity = Activity{
 		WeekStart: "monday",
 		From:      allSum.Calendar.WindowFrom,
 		To:        allSum.Calendar.WindowTo,
 		Dates:     dates,
-		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable, in.IncludeModels),
+		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable),
 	}
-	_ = unavailable
+	refreshSnapshotID(&snap)
 	return snap, nil
+}
+
+// MarkSyntheticDemo gives committed documentation fixtures an explicit,
+// machine-checkable provenance that production publication rejects.
+func MarkSyntheticDemo(s *Snapshot) {
+	if s == nil {
+		return
+	}
+	s.Provenance = Provenance{Kind: ProvenanceSyntheticDemo, RefreshMode: RefreshCommittedFixture, LiveSync: false}
+	refreshSnapshotID(s)
+}
+
+func refreshSnapshotID(s *Snapshot) {
+	if s == nil {
+		return
+	}
+	clone := *s
+	clone.SnapshotID = ""
+	clone.GeneratedAt = ""
+	raw, err := json.Marshal(clone)
+	if err != nil {
+		s.SnapshotID = ""
+		return
+	}
+	sum := sha256.Sum256(raw)
+	s.SnapshotID = "sha256:" + hex.EncodeToString(sum[:])
 }
 
 func omitted(models, cost bool) []string {
@@ -191,8 +229,10 @@ func filterWindow(events []event.UsageEvent, turns []event.TurnEvent, w metric.W
 func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *time.Location, status string, cached metric.Summary) Period {
 	unavailable := status == StatusUnavailable
 	sum := cached
+	periodEvents := in.Events
 	if id != PeriodAll {
 		evs, turns := filterWindow(in.Events, in.Turns, w, loc)
+		periodEvents = evs
 		sum = metric.AggregateAt(evs, turns, now, loc)
 	}
 	from := rangeFrom(w)
@@ -221,6 +261,10 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 		p.ByVendor = []Breakdown{}
 		if in.IncludeModels {
 			p.ByModel = []Breakdown{}
+		}
+		if in.IncludeCost {
+			c := unavailableCost()
+			p.Cost = &c
 		}
 		return p
 	}
@@ -251,7 +295,7 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 		p.ByModel = projectModels(sum.ByModel, all.Total())
 	}
 	if in.IncludeCost {
-		c := costFrom(all)
+		c := costFrom(all, periodEvents)
 		p.Cost = &c
 	}
 	return p
@@ -400,7 +444,7 @@ func breakdownRow(id, label string, s metric.Slice, all int64) Breakdown {
 	}
 }
 
-func costFrom(s metric.Slice) Cost {
+func costFrom(s metric.Slice, events []event.UsageEvent) Cost {
 	v := metric.View(s)
 	st := v.CostStatus
 	if st == "" {
@@ -410,18 +454,41 @@ func costFrom(s metric.Slice) Cost {
 	if display == "" {
 		display = emDash
 	}
+	usd, priced, unpriced := s.CostMicro, s.PricedTokens, s.UnpricedTokens
 	return Cost{
 		Status:         st,
-		USDMicro:       s.CostMicro,
+		USDMicro:       &usd,
 		Display:        display,
-		PricedTokens:   s.PricedTokens,
-		UnpricedTokens: s.UnpricedTokens,
+		PricedTokens:   &priced,
+		UnpricedTokens: &unpriced,
 		PriceCardID:    price.CardVersion,
-		VerifiedAt:     price.CardVersion,
+		VerifiedAt:     costVerifiedAt(events),
 	}
 }
 
-func buildSeries(sum metric.Summary, dates []string, windowTo string, unavailable, includeModels bool) []Series {
+func unavailableCost() Cost {
+	return Cost{Status: price.StatusUnavailable, Display: emDash, PriceCardID: price.CardVersion}
+}
+
+func costVerifiedAt(events []event.UsageEvent) *string {
+	latest := ""
+	for _, e := range events {
+		rate, _, ok := price.Resolve(e.Vendor, e.Model, e.Timestamp)
+		if !ok || !price.Event(e).OK {
+			continue
+		}
+		meta, ok := price.SourceFor(rate.Source)
+		if ok && meta.Verified > latest {
+			latest = meta.Verified
+		}
+	}
+	if latest == "" {
+		return nil
+	}
+	return &latest
+}
+
+func buildSeries(sum metric.Summary, dates []string, windowTo string, unavailable bool) []Series {
 	out := []Series{seriesFromDays("all", SeriesAllID, "All", sum.Calendar.All.Days, dates, windowTo, unavailable)}
 	type keyed struct {
 		id, label string
@@ -480,6 +547,5 @@ func buildSeries(sum metric.Summary, dates []string, windowTo string, unavailabl
 		}
 		out = append(out, seriesFromDays("vendor", v.id, v.label, v.days, dates, windowTo, unavailable))
 	}
-	_ = includeModels
 	return out
 }

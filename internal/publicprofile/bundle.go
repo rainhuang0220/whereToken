@@ -18,6 +18,10 @@ var GeneratedFiles = []string{
 }
 
 func Bundle(snap Snapshot) (map[string][]byte, error) {
+	refreshSnapshotID(&snap)
+	if err := Validate(snap); err != nil {
+		return nil, err
+	}
 	out := map[string][]byte{}
 	js, err := Marshal(snap)
 	if err != nil {
@@ -51,8 +55,10 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 	man, err := json.MarshalIndent(map[string]any{
 		"generated":    GeneratedFiles,
 		"schema":       SchemaName,
+		"snapshot_id":  snap.SnapshotID,
 		"generated_at": snap.GeneratedAt,
 		"as_of_date":   snap.AsOfDate,
+		"provenance":   snap.Provenance.Kind,
 	}, "", "  ")
 	if err != nil {
 		return nil, err

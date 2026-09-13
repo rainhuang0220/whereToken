@@ -8,7 +8,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
-func wallDates(from, to string) []string {
+func wallDates(from string) []string {
 	start, err := time.Parse("2006-01-02", from)
 	if err != nil {
 		return nil
@@ -17,7 +17,6 @@ func wallDates(from, to string) []string {
 	for i := 0; i < WallDays; i++ {
 		out = append(out, start.AddDate(0, 0, i).Format("2006-01-02"))
 	}
-	_ = to
 	return out
 }
 
@@ -49,21 +48,18 @@ func seriesFromDays(dim, id, label string, days []metric.Day, dates []string, wi
 		ID:        id,
 		Label:     label,
 		Values:    values,
-		Levels:    levelsFromVisible(values, states),
+		Levels:    levelsFromHistory(values, states, days),
 		States:    states,
 	}
 }
 
-// levelsFromVisible assigns 1–4 only from positive values in the visible
-// wall. History outside this series' values must not change colors.
-func levelsFromVisible(values []int64, states []string) []int {
+// levelsFromHistory mirrors metric.Calendar intensity: thresholds come from
+// the complete canonical series, while the returned cells remain 53-week.
+func levelsFromHistory(values []int64, states []string, days []metric.Day) []int {
 	var nonzero []int64
-	for i, v := range values {
-		if i < len(states) && states[i] != CellActive {
-			continue
-		}
-		if v > 0 {
-			nonzero = append(nonzero, v)
+	for _, day := range days {
+		if day.Total > 0 {
+			nonzero = append(nonzero, day.Total)
 		}
 	}
 	sort.Slice(nonzero, func(i, j int) bool { return nonzero[i] < nonzero[j] })

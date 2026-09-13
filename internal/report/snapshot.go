@@ -85,6 +85,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		loc = time.Local
 	}
 	now = now.In(loc)
+	events = metric.CanonicalEvents(events)
 
 	if strings.TrimSpace(f.Model) != "" {
 		found := false
@@ -126,10 +127,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 
 	sum := metric.AggregateAt(fe, ft, now, loc)
 	view := metric.View(sum.All)
-	// The streak calendar must run on unmerged events: mergeByRequest keeps
-	// per-field maxima on the latest timestamp, which would shift tokens
-	// across days.
-	cal := metric.BuildCalendar(fe, loc, now)
+	cal := sum.Calendar
 	snap := Snapshot{
 		Period:        period(f, now),
 		Scope:         scope(f),

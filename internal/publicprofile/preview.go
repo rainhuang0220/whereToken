@@ -50,6 +50,7 @@ func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 	fmt.Fprintf(b, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d" role="img">`+"\n", previewW, previewH, previewW, previewH)
 	fmt.Fprintf(b, `<title>%s</title>`+"\n", esc("whereToken public coding-agent usage preview"))
 	fmt.Fprintf(b, `<desc>%s</desc>`+"\n", esc(previewDesc(s)))
+	fmt.Fprintf(b, `<metadata id="wheretoken-snapshot-id">%s</metadata>`+"\n", esc(s.SnapshotID))
 	fmt.Fprintf(b, `<rect x="0.5" y="0.5" width="799" height="247" rx="8" fill="%s" stroke="%s" stroke-width="1"/>`+"\n", th.Bg, th.Border)
 	text(b, 20, 28, 13, th.Text, "start", "600", "whereToken")
 	text(b, 108, 28, 12, th.Secondary, "start", "400", "AI coding activity")
@@ -76,7 +77,11 @@ func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 	text(b, 420, 94, 12, th.Secondary, "start", "400", "top "+top)
 
 	writeWall(b, s, th, 20, 112)
-	text(b, 20, 232, 11, th.Secondary, "start", "400", "Local public snapshot")
+	footer := "Local public snapshot"
+	if s.Provenance.Kind == ProvenanceSyntheticDemo {
+		footer = "DEMO DATA · synthetic snapshot"
+	}
+	text(b, 20, 232, 11, th.Secondary, "start", "400", footer)
 	text(b, 780, 232, 11, th.Accent, "end", "600", "View interactive profile →")
 	b.WriteString("</svg>\n")
 }

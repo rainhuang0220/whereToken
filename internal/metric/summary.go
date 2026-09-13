@@ -206,6 +206,14 @@ func Aggregate(events []event.UsageEvent, turns []event.TurnEvent) Summary {
 	return AggregateAt(events, turns, time.Now(), time.Local)
 }
 
+// CanonicalEvents collapses repeated stream rows for one source/request into
+// the same max-per-component event used by AggregateAt. The canonical event
+// is assigned to the latest row's timestamp, so every calendar/window places
+// the entire request on one local day.
+func CanonicalEvents(events []event.UsageEvent) []event.UsageEvent {
+	return mergeByRequest(events)
+}
+
 // AggregateAt is Aggregate with an explicit clock for the calendar window.
 func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Time, loc *time.Location) Summary {
 	merged := mergeByRequest(events)
