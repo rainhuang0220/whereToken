@@ -83,7 +83,7 @@ func Build(in Input) (Snapshot, error) {
 			DailyPrecision:  true,
 			OmittedSections: omitted(in.IncludeModels, in.IncludeCost),
 		},
-		Notices: notices(status, in.IncludeCost, allSum),
+		Notices: notices(status, in.IncludeCost, allSum, in),
 		Links: Links{
 			Project:         defaultProjectURL,
 			TokenAccounting: defaultAccounting,
@@ -103,7 +103,7 @@ func Build(in Input) (Snapshot, error) {
 		From:      allSum.Calendar.WindowFrom,
 		To:        allSum.Calendar.WindowTo,
 		Dates:     dates,
-		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable),
+		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable, in),
 	}
 	refreshSnapshotID(&snap)
 	return snap, nil
@@ -149,13 +149,20 @@ func omitted(models, cost bool) []string {
 	return out
 }
 
-func notices(status string, includeCost bool, sum metric.Summary) []string {
+func notices(status string, includeCost bool, sum metric.Summary, in Input) []string {
 	var out []string
 	if status == StatusPartial {
 		out = append(out, NoticePartialUsage)
 	}
 	if includeCost && sum.All.CostStatus == price.StatusPartial {
 		out = append(out, NoticeUnpricedCost)
+	}
+	for _, s := range sum.BySource {
+		id, _ := publicSource(s.ID)
+		if tokenReason(id, in) == ReasonAccountAPISkipped && tokensUnavailable(s) && s.Requests > 0 {
+			out = append(out, NoticeAccountAPISkipped)
+			break
+		}
 	}
 	if out == nil {
 		return []string{}
@@ -289,10 +296,10 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 	p.CurrentStreak = availableCount(int64(sum.Calendar.All.Stats.CurrentStreak))
 	p.LongestStreak = availableCount(int64(sum.Calendar.All.Stats.LongestStreak))
 	p.Peak = projectPeak(sum.Calendar, id)
-	p.ByAgent = projectBreakdown(sum.BySource, all.Total(), true, false)
-	p.ByVendor = projectBreakdown(sum.ByVendor, all.Total(), false, true)
+	p.ByAgent = projectBreakdown(sum.BySource, all.Total(), true, false, in, loc)
+	p.ByVendor = projectBreakdown(sum.ByVendor, all.Total(), false, true, in, loc)
 	if in.IncludeModels {
-		p.ByModel = projectModels(sum.ByModel, all.Total())
+		p.ByModel = projectModels(sum.ByModel, all.Total(), in, loc)
 	}
 	if in.IncludeCost {
 		c := costFrom(all, periodEvents)
@@ -315,12 +322,16 @@ func emptyTotals() Totals {
 }
 
 func totalsFromSlice(s metric.Slice) Totals {
+	st := tokenStatusOf(s)
+	if st == StatusUnavailable {
+		return emptyTotals()
+	}
 	return Totals{
-		Miss:        availableInt(s.Miss),
-		CacheRead:   availableInt(s.CacheRead),
-		CacheCreate: availableInt(s.CacheCreate),
-		Output:      availableInt(s.Output),
-		Total:       availableInt(s.Total()),
+		Miss:        intComponent(s.Miss, st),
+		CacheRead:   intComponent(s.CacheRead, st),
+		CacheCreate: intComponent(s.CacheCreate, st),
+		Output:      intComponent(s.Output, st),
+		Total:       intComponent(s.Total(), st),
 	}
 }
 
@@ -348,7 +359,7 @@ func projectPortrait(sum metric.Summary, seed string, unavailable bool) Portrait
 	return Portrait{State: p.State, Primary: p.Primary, Tags: tags}
 }
 
-func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool) []Breakdown {
+func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool, in Input, loc *time.Location) []Breakdown {
 	type acc struct {
 		id, label string
 		s         metric.Slice
@@ -395,7 +406,7 @@ func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool) [
 	out := []Breakdown{}
 	for i, a := range list {
 		if i < maxBreakdown {
-			out = append(out, breakdownRow(a.id, a.label, a.s, all))
+			out = append(out, breakdownRow(a.id, a.label, a.s, all, asSource, in, loc))
 			continue
 		}
 		rest.Miss = satAdd(rest.Miss, a.s.Miss)
@@ -409,7 +420,7 @@ func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool) [
 		if asVendor {
 			id, label = VendorOtherID, VendorOtherLabel
 		}
-		out = append(out, breakdownRow(id, label, rest, all))
+		out = append(out, breakdownRow(id, label, rest, all, asSource, in, loc))
 	}
 	if out == nil {
 		return []Breakdown{}
@@ -417,7 +428,7 @@ func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool) [
 	return out
 }
 
-func projectModels(rows []metric.ModelSlice, all int64) []Breakdown {
+func projectModels(rows []metric.ModelSlice, all int64, in Input, loc *time.Location) []Breakdown {
 	var slices []metric.Slice
 	for _, m := range rows {
 		id, label := publicModel(m.Model, m.Vendor)
@@ -425,22 +436,29 @@ func projectModels(rows []metric.ModelSlice, all int64) []Breakdown {
 		s.ID, s.Label = id, label
 		slices = append(slices, s)
 	}
-	return projectBreakdown(slices, all, false, false)
+	return projectBreakdown(slices, all, false, false, in, loc)
 }
 
-func breakdownRow(id, label string, s metric.Slice, all int64) Breakdown {
+func breakdownRow(id, label string, s metric.Slice, all int64, asSource bool, in Input, loc *time.Location) Breakdown {
 	q := string(s.Quality)
 	if q == "" {
 		q = string(event.QualityAuthoritative)
 	}
+	unavailable := tokensUnavailable(s)
+	share := emDash
+	if !unavailable {
+		share = metric.FormatShare(s.Total(), all)
+	}
+	cov := coverageFromSlice(id, s, asSource, in, loc)
 	return Breakdown{
 		ID:       id,
 		Label:    label,
 		Totals:   totalsFromSlice(s),
-		Share:    metric.FormatShare(s.Total(), all),
-		HitRate:  hitRateOf(s.Miss, s.CacheRead, s.CacheCreate, false),
+		Share:    share,
+		HitRate:  hitRateOf(s.Miss, s.CacheRead, s.CacheCreate, unavailable),
 		Requests: availableCount(s.Requests),
 		Quality:  q,
+		Coverage: cov,
 	}
 }
 
@@ -488,64 +506,145 @@ func costVerifiedAt(events []event.UsageEvent) *string {
 	return &latest
 }
 
-func buildSeries(sum metric.Summary, dates []string, windowTo string, unavailable bool) []Series {
-	out := []Series{seriesFromDays("all", SeriesAllID, "All", sum.Calendar.All.Days, dates, windowTo, unavailable)}
-	type keyed struct {
-		id, label string
-		days      []metric.Day
-		total     int64
+type seriesAcc struct {
+	id, label string
+	counts    map[string]int64
+	total     int64
+}
+
+func buildSeries(sum metric.Summary, dates []string, windowTo string, unavailable bool, in Input) []Series {
+	loc := in.Loc
+	from, to := sum.Calendar.WindowFrom, windowTo
+	out := []Series{seriesFromCounts("all", SeriesAllID, "All", MetricTokens, dayTotals(sum.Calendar.All.Days), dates, to, unavailable)}
+	reqAll := requestCounts(in.Events, loc, nil)
+	out = append(out, seriesFromCounts("all", SeriesAllID, "All", MetricRequests, reqAll, dates, to, unavailable))
+
+	quality := map[string]metric.Slice{}
+	for _, s := range sum.BySource {
+		pid, _ := publicSource(s.ID)
+		quality[pid] = s
 	}
-	var agents []keyed
+
+	tokenAgents := map[string]*seriesAcc{}
 	for id, ser := range sum.Calendar.BySource {
 		pid, label := publicSource(id)
-		total := int64(0)
-		for _, d := range ser.Days {
-			if d.Date >= sum.Calendar.WindowFrom && d.Date <= windowTo {
-				total = satAdd(total, d.Total)
-			}
+		if tokensUnavailable(quality[pid]) {
+			continue
 		}
+		counts := dayTotals(ser.Days)
+		total := windowSum(counts, from, to)
 		if total == 0 {
 			continue
 		}
-		agents = append(agents, keyed{id: pid, label: label, days: ser.Days, total: total})
-	}
-	sort.SliceStable(agents, func(i, j int) bool {
-		if agents[i].total != agents[j].total {
-			return agents[i].total > agents[j].total
+		if a, ok := tokenAgents[pid]; ok {
+			for date, v := range counts {
+				a.counts[date] = satAdd(a.counts[date], v)
+			}
+			a.total = satAdd(a.total, total)
+			continue
 		}
-		return agents[i].id < agents[j].id
-	})
-	for i, a := range agents {
-		if i >= maxSeries {
-			break
-		}
-		out = append(out, seriesFromDays("agent", a.id, a.label, a.days, dates, windowTo, unavailable))
+		tokenAgents[pid] = &seriesAcc{id: pid, label: label, counts: counts, total: total}
 	}
-	var vendors []keyed
+
+	requestAgents := map[string]*seriesAcc{}
+	for _, e := range in.Events {
+		if e.SkipRequest || e.Timestamp.IsZero() {
+			continue
+		}
+		pid, label := publicSource(e.Source)
+		if loc == nil {
+			loc = time.UTC
+		}
+		date := e.Timestamp.In(loc).Format("2006-01-02")
+		a := requestAgents[pid]
+		if a == nil {
+			a = &seriesAcc{id: pid, label: label, counts: map[string]int64{}}
+			requestAgents[pid] = a
+		}
+		a.counts[date] = satAdd(a.counts[date], 1)
+		if date >= from && date <= to {
+			a.total = satAdd(a.total, 1)
+		}
+	}
+
+	out = appendSeries(out, "agent", MetricTokens, mapValues(tokenAgents), dates, to, unavailable)
+	out = appendSeries(out, "agent", MetricRequests, mapValues(requestAgents), dates, to, unavailable)
+
+	tokenVendors := map[string]*seriesAcc{}
 	for id, ser := range sum.Calendar.ByVendor {
 		pid, label := publicVendor(id)
-		total := int64(0)
-		for _, d := range ser.Days {
-			if d.Date >= sum.Calendar.WindowFrom && d.Date <= windowTo {
-				total = satAdd(total, d.Total)
-			}
-		}
+		counts := dayTotals(ser.Days)
+		total := windowSum(counts, from, to)
 		if total == 0 {
 			continue
 		}
-		vendors = append(vendors, keyed{id: pid, label: label, days: ser.Days, total: total})
-	}
-	sort.SliceStable(vendors, func(i, j int) bool {
-		if vendors[i].total != vendors[j].total {
-			return vendors[i].total > vendors[j].total
+		if a, ok := tokenVendors[pid]; ok {
+			for date, v := range counts {
+				a.counts[date] = satAdd(a.counts[date], v)
+			}
+			a.total = satAdd(a.total, total)
+			continue
 		}
-		return vendors[i].id < vendors[j].id
+		tokenVendors[pid] = &seriesAcc{id: pid, label: label, counts: counts, total: total}
+	}
+	requestVendors := map[string]*seriesAcc{}
+	for _, e := range in.Events {
+		if e.SkipRequest || e.Timestamp.IsZero() {
+			continue
+		}
+		pid, label := publicVendor(e.Vendor)
+		if loc == nil {
+			loc = time.UTC
+		}
+		date := e.Timestamp.In(loc).Format("2006-01-02")
+		a := requestVendors[pid]
+		if a == nil {
+			a = &seriesAcc{id: pid, label: label, counts: map[string]int64{}}
+			requestVendors[pid] = a
+		}
+		a.counts[date] = satAdd(a.counts[date], 1)
+		if date >= from && date <= to {
+			a.total = satAdd(a.total, 1)
+		}
+	}
+	out = appendSeries(out, "vendor", MetricTokens, mapValues(tokenVendors), dates, to, unavailable)
+	out = appendSeries(out, "vendor", MetricRequests, mapValues(requestVendors), dates, to, unavailable)
+	return out
+}
+
+func mapValues(in map[string]*seriesAcc) []seriesAcc {
+	out := make([]seriesAcc, 0, len(in))
+	for _, v := range in {
+		if v.total == 0 {
+			continue
+		}
+		out = append(out, *v)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].total != out[j].total {
+			return out[i].total > out[j].total
+		}
+		return out[i].id < out[j].id
 	})
-	for i, v := range vendors {
+	return out
+}
+
+func appendSeries(out []Series, dim, metricName string, rows []seriesAcc, dates []string, windowTo string, unavailable bool) []Series {
+	for i, a := range rows {
 		if i >= maxSeries {
 			break
 		}
-		out = append(out, seriesFromDays("vendor", v.id, v.label, v.days, dates, windowTo, unavailable))
+		out = append(out, seriesFromCounts(dim, a.id, a.label, metricName, a.counts, dates, windowTo, unavailable))
 	}
 	return out
+}
+
+func windowSum(counts map[string]int64, from, to string) int64 {
+	var n int64
+	for date, v := range counts {
+		if date >= from && date <= to {
+			n = satAdd(n, v)
+		}
+	}
+	return n
 }

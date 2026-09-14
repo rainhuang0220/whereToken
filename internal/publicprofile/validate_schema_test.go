@@ -33,6 +33,16 @@ func TestPublishedDemoPassesRuntimeSchema(t *testing.T) {
 	}
 }
 
+func TestV1ProductionSnapshotStillValidates(t *testing.T) {
+	path := filepath.Join("..", "..", "public-profile", "profile.json")
+	if err := ValidateFile(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateProductionFile(path, false); err == nil {
+		t.Fatal("v1 production snapshot must not pass the v2 production gate")
+	}
+}
+
 func TestValidateFileRejectsAdditionalPropertiesAtEverySchemaLayer(t *testing.T) {
 	base := schemaTestDocument(t)
 	cases := []struct {
@@ -52,6 +62,7 @@ func TestValidateFileRejectsAdditionalPropertiesAtEverySchemaLayer(t *testing.T)
 		{"peak", []string{"periods", "all", "peak"}},
 		{"portrait", []string{"periods", "all", "portrait"}},
 		{"breakdown", []string{"periods", "all", "by_agent", "0"}},
+		{"coverage", []string{"periods", "all", "by_agent", "0", "coverage"}},
 		{"cost", []string{"periods", "all", "cost"}},
 		{"activity", []string{"activity"}},
 		{"series", []string{"activity", "series", "0"}},

@@ -95,6 +95,8 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--include-models[export model breakdown]' \
         '--include-cost[export API list-price equivalent]' \
+        '--production[fail incomplete cloud token coverage]' \
+        '--allow-partial[allow a production snapshot with partial coverage]' \
         '1:action:(build validate)' \
         '2:path:_files'
       ;;

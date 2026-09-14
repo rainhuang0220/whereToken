@@ -25,3 +25,7 @@ complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on 
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-models
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-cost
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l production
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l allow-partial

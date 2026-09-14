@@ -63,7 +63,16 @@ bash scripts/verify-cli.sh
    `ci/github-workflows/pages.yml`. After the deploy, load the site, `/demo/`,
    and the custom domain if one is configured (Pages custom domains are set
    repo-side, unmanaged by CI).
-6. **Dogfood the release binary** (per platform you can reach):
+6. **Public profile (maintainer only, optional the same day)** — rebuild from the release binary **without `--offline`**, then gate it:
+
+   ```bash
+   wheretoken profile build ./public-profile
+   wheretoken profile validate ./public-profile --production
+   ```
+
+   Do not publish a HOME scan from CI. Do not use `--offline` for the production snapshot. `--offline` is for fixtures and tests.
+
+7. **Dogfood the release binary** (per platform you can reach):
 
    ```bash
    curl -sLO https://github.com/rainhuang0220/whereToken/releases/download/vX.Y.Z/wheretoken_darwin_arm64.tar.gz

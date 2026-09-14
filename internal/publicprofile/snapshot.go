@@ -11,7 +11,8 @@ import (
 
 const (
 	SchemaName             = "wheretoken.public-profile"
-	SchemaVersion          = 1
+	SchemaVersion          = 2
+	SchemaVersionV1        = 1
 	TokenAccountingVersion = "1"
 	WallWeeks              = 53
 	WallDays               = WallWeeks * 7
@@ -50,8 +51,28 @@ const (
 )
 
 const (
-	NoticePartialUsage = "partial_usage"
-	NoticeUnpricedCost = "unpriced_cost"
+	NoticePartialUsage      = "partial_usage"
+	NoticeUnpricedCost      = "unpriced_cost"
+	NoticeAccountAPISkipped = "account_api_skipped"
+)
+
+const (
+	MetricTokens   = "tokens"
+	MetricRequests = "requests"
+)
+
+const (
+	TokenSourceLocal      = "local"
+	TokenSourceAccountAPI = "account_api"
+	TokenSourceDerived    = "derived"
+	TokenSourceUnknown    = "unknown"
+)
+
+const (
+	ReasonAccountAPISkipped  = "account_api_skipped"
+	ReasonAuthMissing        = "auth_missing"
+	ReasonAPIFailed          = "api_failed"
+	ReasonLocalTokensMissing = "local_tokens_missing"
 )
 
 const emDash = "—"
@@ -187,13 +208,22 @@ type Portrait struct {
 }
 
 type Breakdown struct {
-	ID       string  `json:"id"`
-	Label    string  `json:"label"`
-	Totals   Totals  `json:"totals"`
-	Share    string  `json:"share"`
-	HitRate  HitRate `json:"hit_rate"`
-	Requests Count   `json:"requests"`
-	Quality  string  `json:"quality"`
+	ID       string   `json:"id"`
+	Label    string   `json:"label"`
+	Totals   Totals   `json:"totals"`
+	Share    string   `json:"share"`
+	HitRate  HitRate  `json:"hit_rate"`
+	Requests Count    `json:"requests"`
+	Quality  string   `json:"quality"`
+	Coverage Coverage `json:"coverage,omitempty"`
+}
+
+type Coverage struct {
+	Tokens      string     `json:"tokens"`
+	Requests    string     `json:"requests"`
+	TokenSource string     `json:"token_source"`
+	TokenWindow *DateRange `json:"token_window"`
+	Reason      string     `json:"reason,omitempty"`
 }
 
 type Cost struct {
@@ -218,6 +248,7 @@ type Series struct {
 	Dimension string   `json:"dimension"`
 	ID        string   `json:"id"`
 	Label     string   `json:"label"`
+	Metric    string   `json:"metric,omitempty"`
 	Values    []int64  `json:"values"`
 	Levels    []int    `json:"levels"`
 	States    []string `json:"states"`
@@ -239,4 +270,6 @@ type Input struct {
 	IncludeCost   bool
 	Owner         *Owner
 	PortraitSeed  string
+	Offline       bool
+	Errors        []string
 }

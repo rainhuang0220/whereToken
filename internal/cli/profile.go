@@ -12,9 +12,21 @@ import (
 func (a *App) runProfile(flags Flags, home adapter.Home) int {
 	switch flags.ProfileAction {
 	case "validate":
-		if err := publicprofile.ValidateFile(flags.ProfilePath); err != nil {
+		snap, err := publicprofile.LoadFile(flags.ProfilePath)
+		if err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
+		}
+		if flags.Production {
+			if err := publicprofile.ValidateProduction(snap, flags.AllowPartial); err != nil {
+				fmt.Fprintln(a.Stderr, err.Error())
+				return ExitFail
+			}
+			if flags.AllowPartial {
+				if warn := publicprofile.ProductionWarning(snap); warn != "" {
+					fmt.Fprintln(a.Stderr, warn)
+				}
+			}
 		}
 		fmt.Fprintln(a.Stdout, "ok")
 		return ExitOK
@@ -37,6 +49,8 @@ func (a *App) runProfileBuild(flags Flags, home adapter.Home) int {
 		IncludeModels: flags.IncludeModels,
 		IncludeCost:   flags.IncludeCost,
 		PortraitSeed:  a.PortraitSeed(home),
+		Offline:       flags.Offline || res.Offline,
+		Errors:        res.Errors,
 	})
 	if err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())

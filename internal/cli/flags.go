@@ -62,6 +62,8 @@ type Flags struct {
 	ProfilePath     string
 	IncludeModels   bool
 	IncludeCost     bool
+	Production      bool
+	AllowPartial    bool
 	seen            map[string]bool
 }
 
@@ -278,6 +280,8 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.BoolVar(&f.NoSync, "no-sync", f.NoSync, "")
 	fs.BoolVar(&f.IncludeModels, "include-models", f.IncludeModels, "")
 	fs.BoolVar(&f.IncludeCost, "include-cost", f.IncludeCost, "")
+	fs.BoolVar(&f.Production, "production", f.Production, "")
+	fs.BoolVar(&f.AllowPartial, "allow-partial", f.AllowPartial, "")
 	tf.bind(fs)
 	return fs
 }
@@ -560,6 +564,12 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 	}
 	if f.Today || f.Since != "" || f.From != "" || f.To != "" {
 		return Flags{}, usageError{msg: "profile always publishes fixed periods; it does not take --today/--since/--from/--to\ntry `wheretoken --help`"}
+	}
+	if f.ProfileAction != "validate" && (f.Production || f.AllowPartial) {
+		return Flags{}, usageError{msg: "--production and --allow-partial are for profile validate\ntry `wheretoken --help`"}
+	}
+	if f.AllowPartial && !f.Production {
+		return Flags{}, usageError{msg: "--allow-partial requires --production\ntry `wheretoken --help`"}
 	}
 	return *f, nil
 }

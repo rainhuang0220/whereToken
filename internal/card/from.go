@@ -78,7 +78,7 @@ func fromCost(c *publicprofile.Cost, unavail bool) Cost {
 func fromCells(s publicprofile.Snapshot) []Cell {
 	var ser publicprofile.Series
 	for _, it := range s.Activity.Series {
-		if it.Dimension == "all" {
+		if it.Dimension == "all" && (it.Metric == publicprofile.MetricTokens || it.Metric == "") {
 			ser = it
 			break
 		}

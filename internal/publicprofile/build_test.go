@@ -274,7 +274,7 @@ func TestBuildReasoningNotInTotal(t *testing.T) {
 	}
 }
 
-func TestLevelsUseFullHistoryLikeCanonicalCard(t *testing.T) {
+func TestLevelsUseVisibleWindowOnly(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
 	inWall := ev("claude", "anthropic", time.Date(2026, 9, 10, 10, 0, 0, 0, loc), 100, 0, 0)
@@ -287,20 +287,16 @@ func TestLevelsUseFullHistoryLikeCanonicalCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := seriesByID(base, "all")
-	b := seriesByID(withHist, "all")
-	changed := false
+	a := seriesBy(base, "all", SeriesAllID, MetricTokens)
+	b := seriesBy(withHist, "all", SeriesAllID, MetricTokens)
 	for i := range a.Levels {
 		if a.Levels[i] != b.Levels[i] {
-			changed = true
+			t.Fatalf("wall-external history changed visible intensity at %d: %d -> %d", i, a.Levels[i], b.Levels[i])
 		}
-	}
-	if !changed {
-		t.Fatal("history outside the wall did not affect full-history intensity")
 	}
 }
 
-func TestMeasuredZeroNotUnavailable(t *testing.T) {
+func TestMeasuredAuthoritativeZeroStaysAvailable(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
 	e := ev("claude", "anthropic", now.Add(-time.Hour), 0, 0, 0)
@@ -308,13 +304,133 @@ func TestMeasuredZeroNotUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// usableTokens requires miss/cache/output >= 0; total 0 with no requests → unavailable
-	_ = snap
+	if err := Validate(snap); err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Totals.Total.Status != StatusAvailable || row.Totals.Total.Value == nil || *row.Totals.Total.Value != 0 {
+		t.Fatalf("measured zero became %+v", row.Totals.Total)
+	}
+	if row.Coverage.Tokens != StatusAvailable {
+		t.Fatalf("coverage=%+v", row.Coverage)
+	}
 }
 
-func seriesByID(s Snapshot, id string) Series {
+func TestOfflineCloudTokensAreUnavailableNotZero(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	events := []event.UsageEvent{
+		ev("grok", "xai", now.Add(-time.Hour), 100, 0, 10),
+		{
+			Source: "cursor", Vendor: "anthropic", RequestID: "bubble-1",
+			Timestamp: now.Add(-time.Hour), Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+		},
+	}
+	snap, err := Build(Input{Events: events, Now: now, Loc: loc, Offline: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(snap); err != nil {
+		t.Fatal(err)
+	}
+	var cursor, grok Breakdown
+	for _, row := range snap.Periods.All.ByAgent {
+		switch row.ID {
+		case "cursor":
+			cursor = row
+		case "grok":
+			grok = row
+		}
+	}
+	if cursor.ID != "cursor" {
+		t.Fatal("missing cursor row")
+	}
+	if cursor.Totals.Total.Status != StatusUnavailable || cursor.Totals.Total.Value != nil || cursor.Totals.Total.Display != emDash {
+		t.Fatalf("cursor tokens=%+v", cursor.Totals.Total)
+	}
+	if cursor.Share != emDash {
+		t.Fatalf("cursor share=%q", cursor.Share)
+	}
+	if cursor.Requests.Value == nil || *cursor.Requests.Value != 1 || cursor.Requests.Status != StatusAvailable {
+		t.Fatalf("cursor requests=%+v", cursor.Requests)
+	}
+	if cursor.Coverage.Tokens != StatusUnavailable || cursor.Coverage.Requests != StatusAvailable {
+		t.Fatalf("coverage=%+v", cursor.Coverage)
+	}
+	if cursor.Coverage.Reason != ReasonAccountAPISkipped {
+		t.Fatalf("reason=%q", cursor.Coverage.Reason)
+	}
+	if grok.Share != "100.0%" {
+		t.Fatalf("grok share=%q (unavailable tokens must not enter denominator)", grok.Share)
+	}
+	if seriesBy(snap, "agent", "cursor", MetricTokens).ID != "" {
+		t.Fatal("cursor token series must be omitted when tokens are unavailable")
+	}
+	req := seriesBy(snap, "agent", "cursor", MetricRequests)
+	if req.ID != "cursor" {
+		t.Fatal("cursor request series missing")
+	}
+	var reqSum int64
+	for _, v := range req.Values {
+		reqSum += v
+	}
+	if reqSum != 1 {
+		t.Fatalf("cursor request series sum=%d", reqSum)
+	}
+	if err := ValidateProduction(snap, false); err == nil {
+		t.Fatal("production validation must fail for skipped account API")
+	} else if !strings.Contains(err.Error(), "Regenerate without --offline") {
+		t.Fatalf("msg=%v", err)
+	}
+	if err := ValidateProduction(snap, true); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOnlineAccountAPICoverage(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	events := []event.UsageEvent{
+		{Source: "cursor", Vendor: "anthropic", RequestID: "bubble", Timestamp: now.Add(-time.Hour), Quality: "", Derivation: event.DeriveRaw},
+		{
+			Source: "cursor", Vendor: "anthropic", RequestID: "api-1", Timestamp: now.Add(-time.Hour),
+			Miss: 40, CacheRead: 200, CacheCreate: 10, Output: 5,
+			Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		},
+	}
+	snap, err := Build(Input{Events: events, Now: now, Loc: loc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Validate(snap); err != nil {
+		t.Fatal(err)
+	}
+	var cursor Breakdown
+	for _, row := range snap.Periods.All.ByAgent {
+		if row.ID == "cursor" {
+			cursor = row
+		}
+	}
+	if cursor.Totals.Total.Value == nil || *cursor.Totals.Total.Value != 255 {
+		t.Fatalf("cursor tokens=%+v", cursor.Totals.Total)
+	}
+	if cursor.Coverage.Tokens != StatusAvailable || cursor.Coverage.TokenSource != TokenSourceAccountAPI {
+		t.Fatalf("coverage=%+v", cursor.Coverage)
+	}
+	if cursor.Coverage.TokenWindow == nil || cursor.Coverage.TokenWindow.From == nil {
+		t.Fatalf("token window=%+v", cursor.Coverage.TokenWindow)
+	}
+	if cursor.Requests.Value == nil || *cursor.Requests.Value != 1 {
+		t.Fatalf("requests=%+v", cursor.Requests)
+	}
+	if err := ValidateProduction(snap, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func seriesBy(s Snapshot, dim, id, metricName string) Series {
 	for _, ser := range s.Activity.Series {
-		if ser.ID == id && ser.Dimension == "all" {
+		if ser.Dimension == dim && ser.ID == id && ser.Metric == metricName {
 			return ser
 		}
 	}

@@ -33,11 +33,17 @@ func TestPreviewLightAndDarkShareStructure(t *testing.T) {
 	if strings.Contains(ls, "#0b0f10") || strings.Contains(ls, "scanline") {
 		t.Fatal("light still CRT")
 	}
-	if !strings.Contains(ls, "#ffffff") || !strings.Contains(ds, "#0d1117") {
+	if !strings.Contains(ls, "#F8FAFC") || !strings.Contains(ds, "#090B11") {
 		t.Fatal("theme colors")
 	}
-	if !strings.Contains(ls, "View interactive profile") {
+	if strings.Contains(ls, "#bf4a16") || strings.Contains(ds, "#e85d04") {
+		t.Fatal("legacy orange palette")
+	}
+	if !strings.Contains(ls, "Explore profile") {
 		t.Fatal("cta")
+	}
+	if !strings.Contains(ls, "tokens tracked") {
+		t.Fatal("tokens tracked label")
 	}
 	if strings.Contains(ls, "/Users/") {
 		t.Fatal("path leak")

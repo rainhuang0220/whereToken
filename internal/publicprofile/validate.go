@@ -27,16 +27,18 @@ func validateSemantics(s Snapshot) error {
 	if s.Schema != SchemaName {
 		return fmt.Errorf("publicprofile: schema %q", s.Schema)
 	}
-	if s.SchemaVersion != SchemaVersion {
+	if s.SchemaVersion != SchemaVersion && s.SchemaVersion != SchemaVersionV1 {
 		return fmt.Errorf("publicprofile: schema_version %d", s.SchemaVersion)
 	}
 	if s.SnapshotID == "" {
 		return fmt.Errorf("publicprofile: snapshot_id")
 	}
-	wantID := s.SnapshotID
-	refreshSnapshotID(&s)
-	if s.SnapshotID != wantID {
-		return fmt.Errorf("publicprofile: snapshot_id mismatch")
+	if s.SchemaVersion != SchemaVersionV1 {
+		wantID := s.SnapshotID
+		refreshSnapshotID(&s)
+		if s.SnapshotID != wantID {
+			return fmt.Errorf("publicprofile: snapshot_id mismatch")
+		}
 	}
 	if _, err := time.Parse(time.RFC3339, s.GeneratedAt); err != nil {
 		return fmt.Errorf("publicprofile: generated_at: %w", err)
@@ -73,11 +75,11 @@ func validateSemantics(s Snapshot) error {
 		if !ok {
 			return fmt.Errorf("publicprofile: missing period %s", id)
 		}
-		if err := validatePeriod(id, p, s.Privacy.CostIncluded, s.Privacy.ModelsIncluded); err != nil {
+		if err := validatePeriod(id, p, s.Privacy.CostIncluded, s.Privacy.ModelsIncluded, s.SchemaVersion); err != nil {
 			return err
 		}
 	}
-	if err := validateActivity(s.Activity); err != nil {
+	if err := validateActivity(s.Activity, s.SchemaVersion); err != nil {
 		return err
 	}
 	if err := scanSensitive(s); err != nil {
@@ -89,7 +91,7 @@ func validateSemantics(s Snapshot) error {
 	return nil
 }
 
-func validatePeriod(id string, p Period, cost, models bool) error {
+func validatePeriod(id string, p Period, cost, models bool, version int) error {
 	if err := checkTotals(id, p.Totals); err != nil {
 		return err
 	}
@@ -105,10 +107,10 @@ func validatePeriod(id string, p Period, cost, models bool) error {
 	if !models && len(p.ByModel) > 0 {
 		return fmt.Errorf("publicprofile: %s unexpected by_model", id)
 	}
-	if err := reconcile(id, "agent", p.ByAgent, p.Totals.Total); err != nil {
+	if err := reconcile(id, "agent", p.ByAgent, p.Totals.Total, version); err != nil {
 		return err
 	}
-	if err := reconcile(id, "vendor", p.ByVendor, p.Totals.Total); err != nil {
+	if err := reconcile(id, "vendor", p.ByVendor, p.Totals.Total, version); err != nil {
 		return err
 	}
 	return nil
@@ -128,17 +130,22 @@ func checkTotals(id string, t Totals) error {
 	return nil
 }
 
-func reconcile(period, kind string, rows []Breakdown, total Component) error {
+func reconcile(period, kind string, rows []Breakdown, total Component, version int) error {
 	if total.Value == nil || total.Status == StatusUnavailable {
 		return nil
 	}
 	var sum int64
 	for _, r := range rows {
-		if r.Totals.Total.Value != nil {
+		if r.Totals.Total.Status != StatusUnavailable && r.Totals.Total.Value != nil {
 			sum = satAdd(sum, *r.Totals.Total.Value)
 		}
 		if r.ID == "" || r.Label == "" {
 			return fmt.Errorf("publicprofile: %s %s empty id/label", period, kind)
+		}
+		if version >= SchemaVersion {
+			if err := validateCoverage(period, kind, r); err != nil {
+				return err
+			}
 		}
 	}
 	if sum > *total.Value {
@@ -147,7 +154,29 @@ func reconcile(period, kind string, rows []Breakdown, total Component) error {
 	return nil
 }
 
-func validateActivity(a Activity) error {
+func validateCoverage(period, kind string, r Breakdown) error {
+	switch r.Coverage.Tokens {
+	case StatusAvailable, StatusPartial, StatusUnavailable:
+	default:
+		return fmt.Errorf("publicprofile: %s %s %s coverage.tokens", period, kind, r.ID)
+	}
+	switch r.Coverage.Requests {
+	case StatusAvailable, StatusPartial, StatusUnavailable:
+	default:
+		return fmt.Errorf("publicprofile: %s %s %s coverage.requests", period, kind, r.ID)
+	}
+	if r.Coverage.Tokens == StatusUnavailable {
+		if r.Totals.Total.Status != StatusUnavailable || r.Totals.Total.Value != nil {
+			return fmt.Errorf("publicprofile: %s %s %s unavailable tokens labelled available", period, kind, r.ID)
+		}
+		if r.Share != emDash {
+			return fmt.Errorf("publicprofile: %s %s %s unavailable share", period, kind, r.ID)
+		}
+	}
+	return nil
+}
+
+func validateActivity(a Activity, version int) error {
 	if a.WeekStart != "monday" {
 		return fmt.Errorf("publicprofile: week_start")
 	}
@@ -155,6 +184,11 @@ func validateActivity(a Activity) error {
 		return fmt.Errorf("publicprofile: dates want %d got %d", WallDays, len(a.Dates))
 	}
 	for _, s := range a.Series {
+		if version >= SchemaVersion {
+			if s.Metric != MetricTokens && s.Metric != MetricRequests {
+				return fmt.Errorf("publicprofile: series %s metric %q", s.ID, s.Metric)
+			}
+		}
 		if len(s.Values) != len(a.Dates) || len(s.Levels) != len(a.Dates) || len(s.States) != len(a.Dates) {
 			return fmt.Errorf("publicprofile: series %s length", s.ID)
 		}

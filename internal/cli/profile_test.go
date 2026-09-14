@@ -25,6 +25,20 @@ func TestParseProfileBuildAndValidate(t *testing.T) {
 	if err != nil || !f.IncludeModels || !f.IncludeCost {
 		t.Fatalf("%+v %v", f, err)
 	}
+	f, err = Parse([]string{"profile", "validate", "out", "--production"})
+	if err != nil || !f.Production || f.AllowPartial {
+		t.Fatalf("%+v %v", f, err)
+	}
+	f, err = Parse([]string{"profile", "validate", "out", "--production", "--allow-partial"})
+	if err != nil || !f.Production || !f.AllowPartial {
+		t.Fatalf("%+v %v", f, err)
+	}
+	if _, err := Parse([]string{"profile", "build", "out", "--production"}); err == nil || !IsUsage(err) {
+		t.Fatalf("build production: %v", err)
+	}
+	if _, err := Parse([]string{"profile", "validate", "out", "--allow-partial"}); err == nil || !IsUsage(err) {
+		t.Fatalf("allow-partial alone: %v", err)
+	}
 	if _, err := Parse([]string{"profile", "build", "out", "--today"}); err == nil || !IsUsage(err) {
 		t.Fatalf("today: %v", err)
 	}

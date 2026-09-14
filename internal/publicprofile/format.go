@@ -9,8 +9,15 @@ import (
 )
 
 func availableInt(n int64) Component {
+	return intComponent(n, StatusAvailable)
+}
+
+func intComponent(n int64, status string) Component {
+	if status == StatusUnavailable {
+		return unavailableComponent()
+	}
 	v := n
-	return Component{Value: &v, Display: FormatCompact(n), Status: StatusAvailable}
+	return Component{Value: &v, Display: FormatCompact(n), Status: status}
 }
 
 func unavailableComponent() Component {

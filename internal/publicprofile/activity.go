@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
@@ -20,11 +21,7 @@ func wallDates(from string) []string {
 	return out
 }
 
-func seriesFromDays(dim, id, label string, days []metric.Day, dates []string, windowTo string, unavailable bool) Series {
-	byDate := make(map[string]metric.Day, len(days))
-	for _, d := range days {
-		byDate[d.Date] = d
-	}
+func seriesFromCounts(dim, id, label, metricName string, counts map[string]int64, dates []string, windowTo string, unavailable bool) Series {
 	values := make([]int64, len(dates))
 	states := make([]string, len(dates))
 	for i, date := range dates {
@@ -36,9 +33,9 @@ func seriesFromDays(dim, id, label string, days []metric.Day, dates []string, wi
 			states[i] = CellUnknown
 			continue
 		}
-		if d, ok := byDate[date]; ok && d.Total > 0 {
+		if v := counts[date]; v > 0 {
 			states[i] = CellActive
-			values[i] = d.Total
+			values[i] = v
 			continue
 		}
 		states[i] = CellEmpty
@@ -47,19 +44,48 @@ func seriesFromDays(dim, id, label string, days []metric.Day, dates []string, wi
 		Dimension: dim,
 		ID:        id,
 		Label:     label,
+		Metric:    metricName,
 		Values:    values,
-		Levels:    levelsFromHistory(values, states, days),
+		Levels:    levelsFromVisible(values, states),
 		States:    states,
 	}
 }
 
-// levelsFromHistory mirrors metric.Calendar intensity: thresholds come from
-// the complete canonical series, while the returned cells remain 53-week.
-func levelsFromHistory(values []int64, states []string, days []metric.Day) []int {
+func dayTotals(days []metric.Day) map[string]int64 {
+	out := make(map[string]int64, len(days))
+	for _, d := range days {
+		if d.Total > 0 {
+			out[d.Date] = d.Total
+		}
+	}
+	return out
+}
+
+func requestCounts(events []event.UsageEvent, loc *time.Location, keep func(event.UsageEvent) bool) map[string]int64 {
+	out := map[string]int64{}
+	if loc == nil {
+		loc = time.UTC
+	}
+	for _, e := range events {
+		if e.SkipRequest || e.Timestamp.IsZero() {
+			continue
+		}
+		if keep != nil && !keep(e) {
+			continue
+		}
+		date := e.Timestamp.In(loc).Format("2006-01-02")
+		out[date] = satAdd(out[date], 1)
+	}
+	return out
+}
+
+// levelsFromVisible uses only the 53-week cells being rendered.
+// History outside the wall must not change intensity.
+func levelsFromVisible(values []int64, states []string) []int {
 	var nonzero []int64
-	for _, day := range days {
-		if day.Total > 0 {
-			nonzero = append(nonzero, day.Total)
+	for i, v := range values {
+		if i < len(states) && states[i] == CellActive && v > 0 {
+			nonzero = append(nonzero, v)
 		}
 	}
 	sort.Slice(nonzero, func(i, j int) bool { return nonzero[i] < nonzero[j] })
@@ -78,11 +104,12 @@ func intensityLevel(total int64, nonzero []int64) int {
 		return 0
 	}
 	n := len(nonzero)
-	q1 := quantileNearest(nonzero, 0.25)
-	q2 := quantileNearest(nonzero, 0.50)
-	q3 := quantileNearest(nonzero, 0.75)
+	q1 := quantileNearest(nonzero, 0.20)
+	q2 := quantileNearest(nonzero, 0.40)
+	q3 := quantileNearest(nonzero, 0.60)
+	q4 := quantileNearest(nonzero, 0.80)
 	if q1 == nonzero[n-1] {
-		return 2
+		return 3
 	}
 	switch {
 	case total <= q1:
@@ -91,8 +118,10 @@ func intensityLevel(total int64, nonzero []int64) int {
 		return 2
 	case total <= q3:
 		return 3
-	default:
+	case total <= q4:
 		return 4
+	default:
+		return 5
 	}
 }
 

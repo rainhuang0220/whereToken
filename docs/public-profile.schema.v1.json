@@ -7,7 +7,7 @@
   "required": ["schema", "schema_version", "snapshot_id", "generated_at", "as_of_date", "producer", "provenance", "data_status", "privacy", "periods", "activity", "notices", "links"],
   "properties": {
     "schema": { "type": "string", "const": "wheretoken.public-profile" },
-    "schema_version": { "type": "integer", "const": 2 },
+    "schema_version": { "type": "integer", "const": 1 },
     "snapshot_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "generated_at": { "type": "string", "format": "date-time" },
     "as_of_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
@@ -18,7 +18,7 @@
     "privacy": { "$ref": "#/$defs/privacy" },
     "periods": { "$ref": "#/$defs/periods" },
     "activity": { "$ref": "#/$defs/activity" },
-    "notices": { "type": "array", "items": { "type": "string", "enum": ["partial_usage", "unpriced_cost", "account_api_skipped"] } },
+    "notices": { "type": "array", "items": { "type": "string", "enum": ["partial_usage", "unpriced_cost"] } },
     "links": { "$ref": "#/$defs/links" }
   },
   "$defs": {
@@ -171,7 +171,7 @@
     "breakdown": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "totals", "share", "hit_rate", "requests", "quality", "coverage"],
+      "required": ["id", "label", "totals", "share", "hit_rate", "requests", "quality"],
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
@@ -179,25 +179,7 @@
         "share": { "type": "string" },
         "hit_rate": { "$ref": "#/$defs/hit_rate" },
         "requests": { "$ref": "#/$defs/count" },
-        "quality": { "type": "string" },
-        "coverage": { "$ref": "#/$defs/coverage" }
-      }
-    },
-    "coverage": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["tokens", "requests", "token_source", "token_window"],
-      "properties": {
-        "tokens": { "type": "string", "enum": ["available", "partial", "unavailable"] },
-        "requests": { "type": "string", "enum": ["available", "partial", "unavailable"] },
-        "token_source": { "type": "string", "enum": ["local", "account_api", "derived", "unknown"] },
-        "token_window": {
-          "anyOf": [
-            { "$ref": "#/$defs/range" },
-            { "type": "null" }
-          ]
-        },
-        "reason": { "type": "string", "enum": ["account_api_skipped", "auth_missing", "api_failed", "local_tokens_missing"] }
+        "quality": { "type": "string" }
       }
     },
     "cost": {
@@ -229,12 +211,11 @@
     "series": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dimension", "id", "label", "metric", "values", "levels", "states"],
+      "required": ["dimension", "id", "label", "values", "levels", "states"],
       "properties": {
         "dimension": { "type": "string", "enum": ["all", "agent", "vendor", "model"] },
         "id": { "type": "string" },
         "label": { "type": "string" },
-        "metric": { "type": "string", "enum": ["tokens", "requests"] },
         "values": { "type": "array", "items": { "type": "integer" } },
         "levels": { "type": "array", "items": { "type": "integer" } },
         "states": { "type": "array", "items": { "type": "string", "enum": ["active", "empty", "unknown", "future"] } }

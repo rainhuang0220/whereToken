@@ -20,6 +20,8 @@ USAGE
   wheretoken [flags] completion bash|zsh|fish|powershell
   wheretoken [flags] profile build <dir>     public snapshot + light/dark preview + live page
   wheretoken [flags] profile validate <path> check a profile.json or bundle
+  wheretoken profile validate <path> --production   fail incomplete cloud token coverage
+  wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
 
 INSTALL
@@ -65,6 +67,8 @@ FLAGS
   --width N            cap ranking width; drop 估价 then 回合/请求 before truncating names
   --include-models     profile build: export model breakdown (off by default)
   --include-cost       profile build: export API list-price equivalent (off by default)
+  --production         profile validate: fail if a cloud source skipped account usage
+  --allow-partial      profile validate: allow a production snapshot with partial coverage
 
 ENV
   NO_COLOR             disable ANSI (same as --no-color)
@@ -126,6 +130,8 @@ EXAMPLES
   wheretoken completion zsh
   wheretoken card ./wheretoken-wall.svg
   wheretoken card profile.svg --offline
+  wheretoken profile build ./public-profile
+  wheretoken profile validate ./public-profile --production
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787
 Public:    ` + PublicSiteURL + `（公开/演示数据，本地账本不上传）

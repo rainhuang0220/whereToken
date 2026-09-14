@@ -73,16 +73,19 @@ Publish a sanitized snapshot of local usage: GitHub-light/dark preview SVGs plus
 
 ```bash
 wheretoken profile build ./public-profile
+wheretoken profile validate ./public-profile --production
 ```
+
+Build online. `--offline` is for tests and local-only fixtures; it skips Cursor/Trae account usage.
 
 Point a GitHub Profile README at the previews and the live page (do not link the raw SVG as the destination). See `docs/public-profile.md`.
 
 <p align="center">
   <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
-      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
-      <img src="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600" width="800" alt="whereToken public profile preview using synthetic demo data; opens the interactive demo">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5" width="800" alt="whereToken public profile preview using synthetic demo data; opens the interactive demo">
     </picture>
   </a>
 </p>

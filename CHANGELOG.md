@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Public profile schema 2: per-source `coverage` (tokens/requests/token_source/window/reason) and activity series with an explicit `metric` (`tokens` | `requests`). Missing token ledgers stay unavailable (`—`), never `available` `0`
+- `wheretoken profile validate --production` fails when a cloud-enriched source still has requests but skipped account usage; `--allow-partial` is required to publish that snapshot. Real profiles must be built without `--offline`
+- Live page: tokens tracked hero, Tokens/Requests switch, ranked breakdown, source coverage panel, 30-day trend, discrete heatmap, and no All-series fallback when a selected agent has no token wall
+- Preview SVGs use the same light/dark tokens. v1 snapshots still validate
+
 ## 0.7.2 — 2026-09-14 (Alpha)
 
 - New command: `wheretoken profile build <dir>` writes one sanitized public-profile bundle—schema-versioned JSON, independent GitHub light/dark SVG previews, and an offline-static interactive page with range, breakdown, filter, theme, keyboard tooltip, reduced-motion, and mobile support. Models and API-equivalent cost remain explicit opt-ins

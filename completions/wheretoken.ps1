@@ -37,7 +37,7 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }
-    'profile' { @('build','validate','--include-models','--include-cost','--quiet','--offline','--home','--help') }
+    'profile' { @('build','validate','--include-models','--include-cost','--production','--allow-partial','--quiet','--offline','--home','--help') }
     'login' { @('--no-sync','--quiet','--offline','--home','--help') }
     default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','profile','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }

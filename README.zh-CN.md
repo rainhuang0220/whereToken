@@ -68,16 +68,19 @@ whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，
 
 ```bash
 wheretoken profile build ./public-profile
+wheretoken profile validate ./public-profile --production
 ```
+
+真实画像请在线生成。`--offline` 只用于测试和明确的本机快照；它会跳过 Cursor/Trae 账号用量。
 
 GitHub Profile README 应链到预览图和 live page（不要把 SVG 本身当跳转目标）。见 `docs/public-profile.md`。
 
 <p align="center">
   <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
-      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600">
-      <img src="docs/media/public-profile-demo/preview-light.svg?v=54556bbc18dc3fe9546fa49db856c9c0786bb0fffd52407eb9a6cfed58a57600" width="800" alt="whereToken 公开画像合成演示；点击打开交互演示">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5" width="800" alt="whereToken 公开画像合成演示；点击打开交互演示">
     </picture>
   </a>
 </p>

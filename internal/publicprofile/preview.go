@@ -21,19 +21,22 @@ type Theme struct {
 	Secondary string
 	Empty     string
 	Accent    string
-	Heat      [5]float64
+	Heat      [6]string
+	Peak      string
 }
 
 var ThemeLight = Theme{
-	Name: "light", Bg: "#ffffff", Surface: "#f6f8fa", Border: "#d0d7de",
-	Text: "#1f2328", Secondary: "#656d76", Empty: "#ebedf0", Accent: "#bf4a16",
-	Heat: [5]float64{0, 0.22, 0.45, 0.7, 1},
+	Name: "light", Bg: "#F8FAFC", Surface: "#FFFFFF", Border: "#E2E8F0",
+	Text: "#0F172A", Secondary: "#64748B", Empty: "#EEF2F6", Accent: "#4F46E5",
+	Heat: [6]string{"#EEF2F6", "#E0E7FF", "#C7D2FE", "#A5B4FC", "#818CF8", "#4F46E5"},
+	Peak: "#06B6D4",
 }
 
 var ThemeDark = Theme{
-	Name: "dark", Bg: "#0d1117", Surface: "#161b22", Border: "#30363d",
-	Text: "#e6edf3", Secondary: "#8b949e", Empty: "#21262d", Accent: "#e85d04",
-	Heat: [5]float64{0, 0.28, 0.5, 0.72, 1},
+	Name: "dark", Bg: "#090B11", Surface: "#10141D", Border: "#252C3A",
+	Text: "#F8FAFC", Secondary: "#94A3B8", Empty: "#1B2230", Accent: "#8B5CF6",
+	Heat: [6]string{"#1B2230", "#2E1064", "#4C1D95", "#6D28D9", "#8B5CF6", "#C4B5FD"},
+	Peak: "#22D3EE",
 }
 
 func RenderPreview(w io.Writer, s Snapshot, th Theme) error {
@@ -51,14 +54,14 @@ func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 	fmt.Fprintf(b, `<title>%s</title>`+"\n", esc("whereToken public coding-agent usage preview"))
 	fmt.Fprintf(b, `<desc>%s</desc>`+"\n", esc(previewDesc(s)))
 	fmt.Fprintf(b, `<metadata id="wheretoken-snapshot-id">%s</metadata>`+"\n", esc(s.SnapshotID))
-	fmt.Fprintf(b, `<rect x="0.5" y="0.5" width="799" height="247" rx="8" fill="%s" stroke="%s" stroke-width="1"/>`+"\n", th.Bg, th.Border)
+	fmt.Fprintf(b, `<rect x="0.5" y="0.5" width="799" height="247" rx="12" fill="%s" stroke="%s" stroke-width="1"/>`+"\n", th.Bg, th.Border)
 	text(b, 20, 28, 13, th.Text, "start", "600", "whereToken")
-	text(b, 108, 28, 12, th.Secondary, "start", "400", "AI coding activity")
-	text(b, 780, 28, 11, th.Secondary, "end", "400", "as of "+s.AsOfDate)
+	text(b, 112, 28, 12, th.Secondary, "start", "400", "AI coding profile")
+	text(b, 780, 28, 11, th.Secondary, "end", "400", "updated "+s.AsOfDate)
 
 	total := all.Totals.Total.Display
 	text(b, 20, 64, 28, th.Accent, "start", "700", total)
-	text(b, 20, 82, 11, th.Secondary, "start", "400", "tokens burned · all time")
+	text(b, 20, 82, 11, th.Secondary, "start", "400", "tokens tracked")
 
 	streak := "—"
 	if all.CurrentStreak.Display != "" {
@@ -82,26 +85,33 @@ func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 		footer = "DEMO DATA · synthetic snapshot"
 	}
 	text(b, 20, 232, 11, th.Secondary, "start", "400", footer)
-	text(b, 780, 232, 11, th.Accent, "end", "600", "View interactive profile →")
+	text(b, 780, 232, 11, th.Accent, "end", "600", "Explore profile →")
 	b.WriteString("</svg>\n")
 }
 
 func writeWall(b *strings.Builder, s Snapshot, th Theme, x, y float64) {
 	ser := Series{}
 	for _, it := range s.Activity.Series {
-		if it.Dimension == "all" {
+		if it.Dimension == "all" && (it.Metric == MetricTokens || it.Metric == "") {
 			ser = it
 			break
 		}
 	}
 	cell, gap := 9.0, 2.0
+	peakIdx := -1
+	peakVal := int64(-1)
+	for i := 0; i < len(ser.Values) && i < WallDays; i++ {
+		if i < len(ser.States) && ser.States[i] == CellActive && ser.Values[i] > peakVal {
+			peakVal = ser.Values[i]
+			peakIdx = i
+		}
+	}
 	for i := 0; i < len(s.Activity.Dates) && i < WallDays; i++ {
 		col := i / 7
 		row := i % 7
 		cx := x + float64(col)*(cell+gap)
 		cy := y + float64(row)*(cell+gap)
 		fill := th.Empty
-		op := 1.0
 		st := CellEmpty
 		if i < len(ser.States) {
 			st = ser.States[i]
@@ -112,20 +122,20 @@ func writeWall(b *strings.Builder, s Snapshot, th Theme, x, y float64) {
 		case CellUnknown:
 			fill = th.Border
 		case CellActive:
-			fill = th.Accent
-			lv := 0
-			if i < len(ser.Levels) {
+			lv := 1
+			if i < len(ser.Levels) && ser.Levels[i] > 0 {
 				lv = ser.Levels[i]
 			}
-			if lv >= 0 && lv < 5 {
-				op = th.Heat[lv]
+			if lv > 5 {
+				lv = 5
 			}
+			fill = th.Heat[lv]
 		}
-		if op < 1 {
-			fmt.Fprintf(b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="1.5" fill="%s" fill-opacity="%.2f"/>`+"\n", cx, cy, cell, cell, fill, op)
-		} else {
-			fmt.Fprintf(b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="1.5" fill="%s"/>`+"\n", cx, cy, cell, cell, fill)
+		stroke := ""
+		if i == peakIdx && st == CellActive {
+			stroke = fmt.Sprintf(` stroke="%s" stroke-width="1"`, th.Peak)
 		}
+		fmt.Fprintf(b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="1.5" fill="%s"%s/>`+"\n", cx, cy, cell, cell, fill, stroke)
 	}
 }
 
