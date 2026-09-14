@@ -6,8 +6,10 @@
     range: params.get("range") || "all",
     tab: params.get("tab") || "agents",
     filter: params.get("filter") || "",
+    metric: params.get("metric") === "requests" ? "requests" : "tokens",
     snap: null,
   };
+  let tipTimer = 0;
 
   function applyTheme(mode) {
     if (mode === "light" || mode === "dark") {
@@ -26,26 +28,32 @@
     return snap.periods[id] || snap.periods.all;
   }
 
+  function metricOf(series) {
+    return series && series.metric ? series.metric : "tokens";
+  }
+
   function validateSnapshot(snap) {
-	if (!snap || typeof snap !== "object") throw new Error("snapshot must be an object");
-	if (snap.schema !== "wheretoken.public-profile" || snap.schema_version !== 1) throw new Error("schema mismatch");
-	if (!/^sha256:[0-9a-f]{64}$/.test(snap.snapshot_id || "")) throw new Error("snapshot id mismatch");
-	const provenance = snap.provenance || {};
-	const local = provenance.kind === "local_sanitized_snapshot" && provenance.refresh_mode === "manual_publish";
-	const demo = provenance.kind === "synthetic_demo" && provenance.refresh_mode === "committed_fixture";
-	if ((!local && !demo) || provenance.live_sync !== false) throw new Error("provenance mismatch");
-	for (const id of ["all", "today", "7d", "30d", "53w"]) {
-	  const period = snap.periods && snap.periods[id];
-	  if (!period || !period.totals || !period.totals.total || !period.range) throw new Error("period mismatch");
-	}
-	const activity = snap.activity || {};
-	if (!Array.isArray(activity.dates) || activity.dates.length !== 371 || !Array.isArray(activity.series)) throw new Error("activity mismatch");
-	for (const series of activity.series) {
-	  if (![series.values, series.levels, series.states].every((items) => Array.isArray(items) && items.length === activity.dates.length)) {
-		throw new Error("activity series mismatch");
-	  }
-	}
-	return snap;
+    if (!snap || typeof snap !== "object") throw new Error("snapshot must be an object");
+    if (snap.schema !== "wheretoken.public-profile" || (snap.schema_version !== 1 && snap.schema_version !== 2)) {
+      throw new Error("schema mismatch");
+    }
+    if (!/^sha256:[0-9a-f]{64}$/.test(snap.snapshot_id || "")) throw new Error("snapshot id mismatch");
+    const provenance = snap.provenance || {};
+    const local = provenance.kind === "local_sanitized_snapshot" && provenance.refresh_mode === "manual_publish";
+    const demo = provenance.kind === "synthetic_demo" && provenance.refresh_mode === "committed_fixture";
+    if ((!local && !demo) || provenance.live_sync !== false) throw new Error("provenance mismatch");
+    for (const id of ["all", "today", "7d", "30d", "53w"]) {
+      const period = snap.periods && snap.periods[id];
+      if (!period || !period.totals || !period.totals.total || !period.range) throw new Error("period mismatch");
+    }
+    const activity = snap.activity || {};
+    if (!Array.isArray(activity.dates) || activity.dates.length !== 371 || !Array.isArray(activity.series)) throw new Error("activity mismatch");
+    for (const series of activity.series) {
+      if (![series.values, series.levels, series.states].every((items) => Array.isArray(items) && items.length === activity.dates.length)) {
+        throw new Error("activity series mismatch");
+      }
+    }
+    return snap;
   }
 
   function writeURL() {
@@ -53,117 +61,384 @@
     if (state.range !== "all") q.set("range", state.range);
     if (state.tab !== "agents") q.set("tab", state.tab);
     if (state.filter) q.set("filter", state.filter);
+    if (state.metric !== "tokens") q.set("metric", state.metric);
     const s = q.toString();
     history.replaceState(null, "", s ? "?" + s : location.pathname);
   }
 
   function seriesFor(snap) {
     const wantDim = state.tab === "providers" ? "vendor" : state.tab === "models" ? "model" : "agent";
+    const series = snap.activity.series || [];
     if (!state.filter) {
-      return snap.activity.series.find((s) => s.dimension === "all") || snap.activity.series[0];
+      return series.find((s) => s.dimension === "all" && metricOf(s) === state.metric) || null;
     }
-    return snap.activity.series.find((s) => s.dimension === wantDim && s.id === state.filter)
-      || snap.activity.series.find((s) => s.dimension === "all");
+    return series.find((s) => s.dimension === wantDim && s.id === state.filter && metricOf(s) === state.metric) || null;
+  }
+
+  function coverageOf(row) {
+    if (row && row.coverage && row.coverage.tokens) return row.coverage;
+    const total = row && row.totals && row.totals.total ? row.totals.total : {};
+    const zero = total.value == null || total.value === 0;
+    const unavailable = row && row.quality === "degraded" && zero;
+    return {
+      tokens: unavailable ? "unavailable" : (total.status || "available"),
+      requests: row && row.requests ? row.requests.status : "available",
+      token_source: "unknown",
+      reason: unavailable ? "local_tokens_missing" : "",
+    };
+  }
+
+  function compact(n) {
+    if (n == null || n < 0) return "—";
+    if (n < 1000) return String(n);
+    const units = [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"]];
+    for (const [div, suffix] of units) {
+      if (n >= div) {
+        const scaled = n / div;
+        const text = scaled >= 100 ? scaled.toFixed(1) : scaled >= 10 ? scaled.toFixed(1) : scaled.toFixed(2);
+        return String(text).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1") + suffix;
+      }
+    }
+    return String(n);
+  }
+
+  function formatDay(iso) {
+    if (!iso) return "";
+    const d = new Date(iso + "T00:00:00");
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function monthName(iso) {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-US", { month: "short" });
+  }
+
+  function unitLabel() {
+    return state.metric === "requests" ? "requests" : "tokens";
+  }
+
+  function selectedRow(snap) {
+    const p = periodOf(snap, state.range);
+    const rows = state.tab === "providers" ? p.by_vendor : state.tab === "models" ? (p.by_model || []) : p.by_agent;
+    return (rows || []).find((row) => row.id === state.filter) || null;
+  }
+
+  function hasMixedCoverage(snap) {
+    const rows = (snap.periods && snap.periods.all && snap.periods.all.by_agent) || [];
+    return rows.some((row) => coverageOf(row).token_source === "account_api") &&
+      rows.some((row) => coverageOf(row).token_source !== "account_api");
   }
 
   function render() {
     const snap = state.snap;
     if (!snap) return;
     const p = periodOf(snap, state.range);
-	const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
-	$("freshness").textContent = (demo ? "DEMO DATA · synthetic snapshot" : "Public snapshot · generated locally") + " · updated " + (snap.generated_at || snap.as_of_date);
+    const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
+    const when = (snap.generated_at || snap.as_of_date || "").slice(0, 10);
+    const pretty = when ? formatDay(when).replace(/,\s+\d{4}$/, "") : "";
+    $("freshness").textContent = (demo ? "DEMO DATA · synthetic snapshot" : "Public snapshot") + (pretty ? " · updated " + pretty : "");
     const owner = snap.owner || {};
     $("identity").textContent = owner.display_name || owner.github_login || "Local public snapshot";
-    const kpis = [
-      ["All-time tokens", snap.periods.all.totals.total.display, "This page default range is All"],
-      ["This range", p.totals.total.display, p.range.label],
-      ["Cache hit rate", p.hit_rate.display],
-      ["Requests", p.requests.display],
-      ["Current streak", p.current_streak.display],
-      ["Active days", p.active_days.display],
+
+    const all = snap.periods.all.totals.total;
+    $("hero-value").textContent = all.display || "—";
+    $("hero-label").textContent = "Tracked tokens";
+    const heroCoverage = $("hero-coverage");
+    heroCoverage.hidden = !hasMixedCoverage(snap);
+    heroCoverage.textContent = heroCoverage.hidden ? "" : "Coverage varies by source · see Data coverage";
+    const d7 = snap.periods["7d"].totals.total;
+    const week = !d7.display || d7.display === "—" || d7.status === "unavailable" ? "—" : "+" + d7.display;
+    const items = [
+      [week, "last 7d"],
+      [(p.current_streak.display || "—") + " day streak", ""],
+      [(p.hit_rate.display || "—") + " cache hit", ""],
     ];
-    $("kpis").replaceChildren();
-    kpis.forEach(([k, v]) => {
-      const d = document.createElement("div");
-      const dt = document.createElement("dt");
-      dt.textContent = k;
-      const dd = document.createElement("dd");
-      dd.textContent = v;
-      d.append(dt, dd);
-      $("kpis").append(d);
+    $("hero-meta").replaceChildren();
+    items.forEach(([value, note]) => {
+      const li = document.createElement("li");
+      const strong = document.createElement("strong");
+      strong.textContent = value;
+      li.append(strong, note ? document.createTextNode(" · " + note) : document.createTextNode(""));
+      $("hero-meta").append(li);
     });
+
+    const chip = $("coverage-chip");
     if (snap.data_status === "partial") {
-      $("status").hidden = false;
-      $("status").textContent = "Partial data";
+      chip.hidden = false;
+      chip.textContent = "Coverage · Partial";
     } else if (snap.data_status === "unavailable") {
-      $("status").hidden = false;
-      $("status").textContent = "No public activity in this snapshot.";
+      chip.hidden = false;
+      chip.textContent = "Coverage · None";
     } else {
-      $("status").hidden = true;
+      chip.hidden = true;
     }
 
-    const ranges = ["today", "7d", "30d", "53w", "all"];
-    const labels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "All" };
-    $("ranges").replaceChildren();
-    ranges.forEach((id) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = labels[id];
-      b.setAttribute("role", "tab");
-      b.setAttribute("aria-selected", state.range === id ? "true" : "false");
-      b.addEventListener("click", () => { state.range = id; writeURL(); render(); });
-      $("ranges").append(b);
+    $("status").hidden = snap.data_status !== "unavailable";
+    if (snap.data_status === "unavailable") {
+      $("status").textContent = "No public activity in this snapshot.";
+    }
+
+    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "Available history" };
+    renderSeg($("metrics"), [
+      { id: "tokens", label: "Tokens" },
+      { id: "requests", label: "Requests" },
+    ], state.metric, (id) => { state.metric = id; writeURL(); render(); });
+    renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
+      state.range = id; writeURL(); render();
     });
+    $("range-readout").textContent = (state.metric === "requests" ? compact(p.requests.value) + " requests" : p.totals.total.display) + " · " + (rangeLabels[state.range] || p.range.label);
 
     const ser = seriesFor(snap);
+    const row = selectedRow(snap);
+    $("series-heading").textContent = row ? row.label : "All";
+    renderWall(snap, ser, row);
+    renderTrend(snap, ser);
+    renderBreakdown(snap, p);
+    renderCoverage(snap);
+  }
+
+  function renderSeg(root, items, selected, onPick) {
+    root.replaceChildren();
+    items.forEach((item) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = item.label;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", selected === item.id ? "true" : "false");
+      b.addEventListener("click", () => onPick(item.id));
+      root.append(b);
+    });
+  }
+
+  function renderWall(snap, ser, row) {
     const wall = $("wall");
-    wall.replaceChildren();
+    const empty = $("wall-empty");
     const dates = snap.activity.dates || [];
+    wall.replaceChildren();
+    $("months").replaceChildren();
+    $("weekdays").replaceChildren();
+    $("legend").replaceChildren();
+    if (!ser) {
+      empty.hidden = false;
+      empty.replaceChildren();
+      const title = document.createElement("p");
+      const kind = state.metric === "requests" ? "Request" : "Token";
+      title.textContent = kind + " activity unavailable" + (row ? " for " + row.label : "");
+      empty.append(title);
+      if (state.metric === "tokens") {
+        const alt = (snap.activity.series || []).find((s) => s.dimension === (state.filter ? (state.tab === "providers" ? "vendor" : "agent") : "all") && s.id === (state.filter || "all") && metricOf(s) === "requests");
+        if (alt) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = "View request activity";
+          b.addEventListener("click", () => { state.metric = "requests"; writeURL(); render(); });
+          empty.append(b);
+        }
+      }
+      return;
+    }
+    empty.hidden = true;
+
+    const weekdays = document.createElement("span");
+    weekdays.style.height = "18px";
+    $("weekdays").append(weekdays);
+    ["Mon", "", "Wed", "", "Fri", "", ""].forEach((label) => {
+      const s = document.createElement("span");
+      s.textContent = label;
+      $("weekdays").append(s);
+    });
+
+    let lastMonth = "";
+    for (let col = 0; col < 53; col++) {
+      const date = dates[col * 7];
+      const label = document.createElement("span");
+      if (date) {
+        const m = date.slice(0, 7);
+        if (m !== lastMonth) {
+          label.textContent = monthName(date);
+          lastMonth = m;
+        }
+      }
+      $("months").append(label);
+    }
+
+    let peak = -1;
+    let peakIdx = -1;
+    dates.forEach((_, i) => {
+      if ((ser.states[i] || "") === "active" && ser.values[i] > peak) {
+        peak = ser.values[i];
+        peakIdx = i;
+      }
+    });
+
     dates.forEach((date, i) => {
-      const st = (ser && ser.states[i]) || "empty";
-      const val = (ser && ser.values[i]) || 0;
-      const lv = (ser && ser.levels[i]) || 0;
+      const st = (ser.states[i]) || "empty";
+      const val = ser.values[i] || 0;
+      const lv = ser.levels[i] || 0;
       const cell = document.createElement("button");
       cell.type = "button";
-      cell.className = "cell " + st;
-      cell.style.opacity = st === "active" ? String(0.2 + lv * 0.2) : "";
+      cell.className = "cell " + st + (st === "active" ? " lv" + Math.min(Math.max(lv, 1), 5) : "") + (i === peakIdx ? " peak" : "");
       cell.dataset.date = date;
       cell.setAttribute("aria-label", date + " " + st);
-      cell.addEventListener("focus", (e) => showTip(e, date, val, st, ser));
-      cell.addEventListener("mouseenter", (e) => showTip(e, date, val, st, ser));
+      const show = (e) => showTip(e, date, val, st, ser, i === peakIdx);
+      cell.addEventListener("focus", show);
+      cell.addEventListener("mouseenter", show);
       cell.addEventListener("blur", hideTip);
       cell.addEventListener("mouseleave", hideTip);
       wall.append(cell);
     });
-	if (!wall.dataset.positioned) {
-	  wall.dataset.positioned = "true";
-	  requestAnimationFrame(() => { wall.scrollLeft = wall.scrollWidth; });
-	}
+    if (!wall.dataset.positioned) {
+      wall.dataset.positioned = "true";
+      requestAnimationFrame(() => {
+        const scroller = $("heat-scroll");
+        scroller.scrollLeft = scroller.scrollWidth;
+      });
+    }
 
+    const legend = $("legend");
+    const less = document.createElement("span");
+    less.textContent = "Less";
+    legend.append(less);
+    ["empty", "lv1", "lv2", "lv3", "lv4", "lv5"].forEach((cls) => {
+      const i = document.createElement("i");
+      i.className = "cell " + (cls === "empty" ? "empty" : cls);
+      legend.append(i);
+    });
+    const more = document.createElement("span");
+    more.textContent = "More";
+    legend.append(more);
+  }
+
+  function renderTrend(snap, ser) {
+    const host = $("trend");
+    const label = $("trend-value");
+    host.replaceChildren();
+    if (!ser) {
+      label.textContent = "";
+      return;
+    }
+    const dates = snap.activity.dates || [];
+    let end = dates.findIndex((date) => date > snap.activity.to);
+    if (end < 0) end = dates.length;
+    const windowDays = { today: 1, "7d": 7, "30d": 30, "53w": 371, all: 371 }[state.range] || 30;
+    const start = Math.max(0, end - windowDays);
+    const trendLabels = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days", "53w": "Last 53 weeks", all: "Available 53-week activity" };
+    $("trend-label").textContent = trendLabels[state.range];
+    host.setAttribute("aria-label", trendLabels[state.range]);
+    const pts = [];
+    for (let i = start; i < end; i++) {
+      if ((ser.states[i] || "") === "future") continue;
+      pts.push({ date: dates[i], value: ser.values[i] || 0 });
+    }
+    const max = Math.max(1, ...pts.map((p) => p.value));
+    const sum = pts.reduce((n, p) => n + p.value, 0);
+    label.textContent = compact(sum) + " " + unitLabel();
+    const w = 1000;
+    const h = 72;
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+    svg.setAttribute("preserveAspectRatio", "none");
+    const pad = 4;
+    const xy = pts.map((p, i) => {
+      const x = pts.length === 1 ? w / 2 : pad + (i * (w - pad * 2)) / (pts.length - 1);
+      const y = h - pad - (p.value / max) * (h - pad * 2);
+      return [x, y, p];
+    });
+    const d = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const area = document.createElementNS(ns, "path");
+    area.setAttribute("class", "area");
+    area.setAttribute("d", d + " L " + xy[xy.length - 1][0].toFixed(1) + " " + (h - pad) + " L " + xy[0][0].toFixed(1) + " " + (h - pad) + " Z");
+    const line = document.createElementNS(ns, "path");
+    line.setAttribute("class", "line");
+    line.setAttribute("d", d);
+    svg.append(area, line);
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("class", "dot");
+    dot.setAttribute("r", "4");
+    dot.setAttribute("visibility", "hidden");
+    svg.append(dot);
+    svg.addEventListener("mousemove", (ev) => {
+      const r = svg.getBoundingClientRect();
+      const x = ((ev.clientX - r.left) / r.width) * w;
+      let best = 0;
+      let dist = Infinity;
+      xy.forEach((p, i) => {
+        const dx = Math.abs(p[0] - x);
+        if (dx < dist) { dist = dx; best = i; }
+      });
+      const p = xy[best];
+      dot.setAttribute("cx", p[0]);
+      dot.setAttribute("cy", p[1]);
+      dot.setAttribute("visibility", "visible");
+      label.textContent = formatDay(p[2].date) + " · " + compact(p[2].value) + " " + unitLabel();
+    });
+    svg.addEventListener("mouseleave", () => {
+      dot.setAttribute("visibility", "hidden");
+      label.textContent = compact(sum) + " " + unitLabel();
+    });
+    host.append(svg);
+  }
+
+  function renderBreakdown(snap, p) {
     const tabs = [{ id: "agents", label: "Agents" }, { id: "providers", label: "Providers" }];
     if ((p.by_model || []).length) tabs.push({ id: "models", label: "Models" });
     if (state.tab === "models" && tabs.length < 3) state.tab = "agents";
-    $("tabs").replaceChildren();
-    tabs.forEach((tab) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = tab.label;
-      b.setAttribute("role", "tab");
-      b.setAttribute("aria-selected", state.tab === tab.id ? "true" : "false");
-      b.addEventListener("click", () => { state.tab = tab.id; state.filter = ""; writeURL(); render(); });
-      $("tabs").append(b);
-    });
+    renderSeg($("tabs"), tabs, state.tab, (id) => { state.tab = id; state.filter = ""; writeURL(); render(); });
     const rows = state.tab === "providers" ? p.by_vendor : state.tab === "models" ? (p.by_model || []) : p.by_agent;
     $("rows").replaceChildren();
-    (rows || []).forEach((row) => {
+    const max = Math.max(1, ...(rows || []).map((row) => {
+      const cov = coverageOf(row);
+      if (cov.tokens === "unavailable") return 0;
+      return row.totals.total.value || 0;
+    }));
+    (rows || []).forEach((row, idx) => {
+      const cov = coverageOf(row);
       const b = document.createElement("button");
       b.type = "button";
+      b.className = "rank-row";
       b.setAttribute("aria-pressed", state.filter === row.id ? "true" : "false");
-      const left = document.createElement("span");
-      left.textContent = row.label;
-      const right = document.createElement("span");
-      right.textContent = row.totals.total.display + " · " + row.share;
-      b.append(left, right);
+      const n = document.createElement("span");
+      n.className = "rank-n";
+      n.textContent = String(idx + 1);
+      const body = document.createElement("span");
+      const top = document.createElement("span");
+      top.className = "rank-top";
+      const name = document.createElement("span");
+      name.className = "rank-name";
+      name.textContent = row.label;
+      const value = document.createElement("span");
+      value.className = "rank-value";
+      value.textContent = cov.tokens === "unavailable" ? "—" : row.totals.total.display;
+      top.append(name, value);
+      const bar = document.createElement("span");
+      bar.className = "rank-bar";
+      const fill = document.createElement("i");
+      const pct = cov.tokens === "unavailable" ? 0 : Math.max(0, (row.totals.total.value || 0) / max * 100);
+      fill.style.width = pct + "%";
+      bar.append(fill);
+      const meta = document.createElement("span");
+      meta.className = "rank-meta";
+      const req = compact(row.requests && row.requests.value);
+      if (cov.tokens === "unavailable") {
+        meta.textContent = req + " requests";
+      } else {
+        meta.textContent = (row.share || "—") + " · " + req + " requests";
+      }
+      body.append(top, bar, meta);
+      if (cov.tokens === "unavailable") {
+        const note = document.createElement("span");
+        note.className = "rank-note";
+        note.textContent = "Token usage unavailable";
+        body.append(note);
+      } else if (cov.token_source === "account_api" && cov.token_window) {
+        const note = document.createElement("span");
+        note.className = "rank-note";
+        note.textContent = coverageNote(cov);
+        body.append(note);
+      }
+      b.append(n, body);
       b.addEventListener("click", () => {
         state.filter = state.filter === row.id ? "" : row.id;
         writeURL();
@@ -173,16 +448,104 @@
     });
   }
 
-  function showTip(ev, date, val, st, ser) {
+  function renderCoverage(snap) {
+    const host = $("coverage-table");
+    host.replaceChildren();
+    const table = document.createElement("table");
+    table.className = "coverage-table";
+    const head = document.createElement("tr");
+    ["Source", "Tokens", "Requests", "Notes"].forEach((label) => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      head.append(th);
+    });
+    table.append(head);
+    (snap.periods.all.by_agent || []).forEach((row) => {
+      const cov = coverageOf(row);
+      const tr = document.createElement("tr");
+      const cells = [
+        row.label,
+        cov.tokens === "available" ? "Tokens ✓" : cov.tokens === "partial" ? "Tokens partial" : "Tokens —",
+        cov.requests === "available" ? "Requests ✓" : "Requests —",
+        coverageNote(cov),
+      ];
+      cells.forEach((text, i) => {
+        const td = document.createElement("td");
+        td.textContent = text;
+        if (i === 1 || i === 2) td.className = text.indexOf("—") >= 0 ? "miss" : "ok";
+        tr.append(td);
+      });
+      table.append(tr);
+    });
+    host.append(table);
+  }
+
+  function coverageNote(cov) {
+    switch (cov.reason) {
+      case "account_api_skipped": return "Account usage skipped";
+      case "auth_missing": return "Sign-in missing";
+      case "api_failed": return "Account usage failed";
+      case "local_tokens_missing": return "Token ledger missing";
+      default:
+        if (cov.token_source === "account_api" && cov.token_window) {
+          const from = cov.token_window.from ? formatDay(cov.token_window.from) : "Start unavailable";
+          return from + " – " + formatDay(cov.token_window.to);
+        }
+        if (cov.token_source === "account_api") return "Account usage";
+        return "";
+    }
+  }
+
+  function showTip(ev, date, val, st, ser, peak) {
     const tip = $("tip");
     tip.hidden = false;
-    tip.textContent = date + " · " + (st === "future" ? "future" : st === "unknown" ? "unknown" : String(val) + " tokens") + (ser && ser.label ? " · " + ser.label : "");
-    const r = ev.target.getBoundingClientRect();
-    tip.style.left = Math.min(r.left, window.innerWidth - 220) + "px";
-    tip.style.top = (r.bottom + 8) + "px";
+    tip.replaceChildren();
+    const title = document.createElement("b");
+    title.textContent = formatDay(date);
+    const body = document.createElement("div");
+    if (st === "future") body.textContent = "Future";
+    else if (st === "unknown") body.textContent = "Unknown";
+    else body.textContent = compact(val) + " " + unitLabel();
+    const src = document.createElement("div");
+    src.className = "muted";
+    src.textContent = ser && ser.label ? ser.label : "";
+    tip.append(title, body);
+    if (src.textContent) tip.append(src);
+    if (peak && st === "active") {
+      const p = document.createElement("div");
+      p.className = "muted";
+      p.textContent = "Peak day";
+      tip.append(p);
+    }
+    requestAnimationFrame(() => placeTip(ev.target, tip));
+    tip.classList.add("is-on");
   }
-  function hideTip() { $("tip").hidden = true; }
 
+  function placeTip(target, tip) {
+    const r = target.getBoundingClientRect();
+    const tw = tip.offsetWidth || 180;
+    const th = tip.offsetHeight || 64;
+    let left = r.left + r.width / 2 - tw / 2;
+    let top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8;
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  }
+
+  function hideTip() {
+    const tip = $("tip");
+    tip.classList.remove("is-on");
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => { tip.hidden = true; }, 160);
+  }
+
+  $("coverage-chip").addEventListener("click", () => {
+    const box = $("coverage");
+    box.open = true;
+    box.scrollIntoView({ block: "nearest" });
+  });
   document.querySelectorAll("[data-theme-set]").forEach((b) => {
     b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme-set")));
   });
@@ -190,8 +553,8 @@
 
   fetch("./profile.json", { cache: "no-store" })
     .then((r) => { if (!r.ok) throw new Error("snapshot missing"); return r.json(); })
-	.then((snap) => {
-	  validateSnapshot(snap);
+    .then((snap) => {
+      validateSnapshot(snap);
       state.snap = snap;
       render();
     })

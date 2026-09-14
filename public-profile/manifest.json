@@ -9,8 +9,8 @@
     "assets/profile.js",
     "manifest.json"
   ],
-  "generated_at": "2026-09-13T19:37:26Z",
+  "generated_at": "2026-09-14T11:15:00Z",
   "provenance": "local_sanitized_snapshot",
   "schema": "wheretoken.public-profile",
-  "snapshot_id": "sha256:d5c80d5df5fdb75035575fdc5453c143a65c755e351ace804f2bbc729bec63c4"
+  "snapshot_id": "sha256:8de0b5bdeeffe5aa8d4feb44a268886e650b319f9ba9d77c46d19c8d1451874f"
 }
