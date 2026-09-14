@@ -34,13 +34,62 @@ func TestPublishedDemoPassesRuntimeSchema(t *testing.T) {
 }
 
 func TestV1ProductionSnapshotStillValidates(t *testing.T) {
-	path := filepath.Join("..", "..", "public-profile", "profile.json")
-	if err := ValidateFile(path); err != nil {
+	doc := v1SchemaTestDocument(t)
+	if err := validateDocument(t, doc); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateProductionFile(path, false); err == nil {
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var snap Snapshot
+	if err := json.Unmarshal(raw, &snap); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateProduction(snap, false); err == nil {
 		t.Fatal("v1 production snapshot must not pass the v2 production gate")
 	}
+}
+
+func v1SchemaTestDocument(t *testing.T) map[string]any {
+	t.Helper()
+	doc := schemaTestDocument(t)
+	doc["schema_version"] = float64(SchemaVersionV1)
+
+	periods := objectAt(t, doc, []string{"periods"})
+	for _, rawPeriod := range periods {
+		period, ok := rawPeriod.(map[string]any)
+		if !ok {
+			t.Fatal("period is not an object")
+		}
+		for _, key := range []string{"by_agent", "by_vendor", "by_model"} {
+			rows, _ := period[key].([]any)
+			for _, rawRow := range rows {
+				row, ok := rawRow.(map[string]any)
+				if !ok {
+					t.Fatal("breakdown row is not an object")
+				}
+				delete(row, "coverage")
+			}
+		}
+	}
+
+	activity := objectAt(t, doc, []string{"activity"})
+	series, _ := activity["series"].([]any)
+	v1Series := make([]any, 0, len(series))
+	for _, rawSeries := range series {
+		item, ok := rawSeries.(map[string]any)
+		if !ok {
+			t.Fatal("activity series is not an object")
+		}
+		if item["metric"] != MetricTokens {
+			continue
+		}
+		delete(item, "metric")
+		v1Series = append(v1Series, item)
+	}
+	activity["series"] = v1Series
+	return doc
 }
 
 func TestValidateFileRejectsAdditionalPropertiesAtEverySchemaLayer(t *testing.T) {
