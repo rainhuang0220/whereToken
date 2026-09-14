@@ -88,7 +88,7 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)
 	}
 
-	useAPI := hasTokenTotals(apiEvents)
+	useAPI := hasAccountUsage(apiEvents)
 	for _, e := range localEvs {
 		if useAPI {
 			e = stripLocalTokens(e)
@@ -225,9 +225,6 @@ func emitLocal(composers map[string]*composerMeta, bubbles []bubbleRow, root ada
 			}
 			miss, cacheRead, cacheCreate, out := b.miss, b.cacheRead, b.cacheCreate, b.output
 			q := event.QualityDegraded
-			if miss != 0 || cacheRead != 0 || cacheCreate != 0 || out != 0 {
-				q = event.QualityAuthoritative
-			}
 			emit(event.UsageEvent{
 				Source:      "cursor",
 				Vendor:      vendor.Lookup(useModel, ""),

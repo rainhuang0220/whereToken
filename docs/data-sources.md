@@ -294,6 +294,8 @@ Local bubbles: `type=2` (not thinking capability 30) → requests; `type=1` non-
 
 Token columns: `POST` Cursor `DashboardService/GetFilteredUsageEvents` (fallback `GetAggregatedUsageEvents`), last 53 local weeks. When the API has totals, local `tokenCount` is ignored so the two are not added together. `--offline` skips the API.
 
+Filtered pagination is atomic: every advertised page must complete. Partial rows from a failed or page-limited fetch are discarded. A complete aggregated response can recover the account total; otherwise the adapter reports a sanitized error and keeps only degraded local token counts plus local request/turn history.
+
 ### Token mapping
 
 | whereToken | Source | Kind |

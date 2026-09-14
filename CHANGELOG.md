@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Public profile schema 2: per-source `coverage` (tokens/requests/token_source/window/reason) and activity series with an explicit `metric` (`tokens` | `requests`). Missing token ledgers stay unavailable (`—`), never `available` `0`
+- Cursor account pagination is atomic: a failed or truncated filtered response is discarded, a complete aggregate fallback may recover it, and a successful empty response remains an authoritative measured zero
 - `wheretoken profile validate --production` fails when a cloud-enriched source still has requests but skipped account usage; `--allow-partial` is required to publish that snapshot. Real profiles must be built without `--offline`
 - Live page: tokens tracked hero, Tokens/Requests switch, ranked breakdown, source coverage panel, 30-day trend, discrete heatmap, and no All-series fallback when a selected agent has no token wall
 - Preview SVGs use the same light/dark tokens. v1 snapshots still validate

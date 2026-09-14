@@ -81,7 +81,7 @@ html, body {
 body { background-image: var(--glow); background-attachment: fixed; }
 .skip { position: absolute; left: -999px; }
 .skip:focus { left: 8px; top: 8px; background: var(--surface); padding: 8px; z-index: 5; }
-button, a { font: inherit; }
+button, a { font: inherit; touch-action: manipulation; }
 button:focus-visible, a:focus-visible, .cell:focus-visible, summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
@@ -163,6 +163,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 28px 22px 80px; }
   font-size: 13px;
 }
 .hero-meta strong { color: var(--text); font-weight: 600; }
+.hero-coverage { margin: -6px 0 14px; color: var(--muted); font-size: 12px; }
 
 .section-head {
   display: flex;
@@ -172,6 +173,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 28px 22px 80px; }
   margin-bottom: 14px;
 }
 h2 { font-size: 15px; margin: 0; letter-spacing: -0.01em; }
+h1, h2 { text-wrap: balance; scroll-margin-top: 16px; }
 .series-heading, .range-readout, .wall-hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .activity, .break, .coverage, .about { margin: 36px 0; }
 .activity-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
@@ -307,6 +309,9 @@ h2 { font-size: 15px; margin: 0; letter-spacing: -0.01em; }
   border-color: var(--border);
   box-shadow: inset 3px 0 0 var(--primary);
   background: var(--primary-soft);
+}
+@media (hover: hover) {
+  .chip:hover, .theme button:hover, .seg button:hover, .wall-empty button:hover, .rank-row:hover { background: var(--primary-soft); }
 }
 .rank-n { color: var(--subtle); font-variant-numeric: tabular-nums; padding-top: 2px; }
 .rank-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }

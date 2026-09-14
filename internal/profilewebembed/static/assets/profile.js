@@ -124,6 +124,12 @@
     return (rows || []).find((row) => row.id === state.filter) || null;
   }
 
+  function hasMixedCoverage(snap) {
+    const rows = (snap.periods && snap.periods.all && snap.periods.all.by_agent) || [];
+    return rows.some((row) => coverageOf(row).token_source === "account_api") &&
+      rows.some((row) => coverageOf(row).token_source !== "account_api");
+  }
+
   function render() {
     const snap = state.snap;
     if (!snap) return;
@@ -137,7 +143,10 @@
 
     const all = snap.periods.all.totals.total;
     $("hero-value").textContent = all.display || "—";
-    $("hero-label").textContent = "Tokens tracked";
+    $("hero-label").textContent = "Tracked tokens";
+    const heroCoverage = $("hero-coverage");
+    heroCoverage.hidden = !hasMixedCoverage(snap);
+    heroCoverage.textContent = heroCoverage.hidden ? "" : "Coverage varies by source · see Data coverage";
     const d7 = snap.periods["7d"].totals.total;
     const week = !d7.display || d7.display === "—" || d7.status === "unavailable" ? "—" : "+" + d7.display;
     const items = [
@@ -170,7 +179,7 @@
       $("status").textContent = "No public activity in this snapshot.";
     }
 
-    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "All" };
+    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "Available history" };
     renderSeg($("metrics"), [
       { id: "tokens", label: "Tokens" },
       { id: "requests", label: "Requests" },
@@ -310,8 +319,13 @@
       return;
     }
     const dates = snap.activity.dates || [];
-    const end = dates.length;
-    const start = Math.max(0, end - 30);
+    let end = dates.findIndex((date) => date > snap.activity.to);
+    if (end < 0) end = dates.length;
+    const windowDays = { today: 1, "7d": 7, "30d": 30, "53w": 371, all: 371 }[state.range] || 30;
+    const start = Math.max(0, end - windowDays);
+    const trendLabels = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days", "53w": "Last 53 weeks", all: "Available 53-week activity" };
+    $("trend-label").textContent = trendLabels[state.range];
+    host.setAttribute("aria-label", trendLabels[state.range]);
     const pts = [];
     for (let i = start; i < end; i++) {
       if ((ser.states[i] || "") === "future") continue;
@@ -421,7 +435,7 @@
       } else if (cov.token_source === "account_api" && cov.token_window) {
         const note = document.createElement("span");
         note.className = "rank-note";
-        note.textContent = "Account usage · 53w";
+        note.textContent = coverageNote(cov);
         body.append(note);
       }
       b.append(n, body);
@@ -473,6 +487,10 @@
       case "api_failed": return "Account usage failed";
       case "local_tokens_missing": return "Token ledger missing";
       default:
+        if (cov.token_source === "account_api" && cov.token_window) {
+          const from = cov.token_window.from ? formatDay(cov.token_window.from) : "Start unavailable";
+          return from + " – " + formatDay(cov.token_window.to);
+        }
         if (cov.token_source === "account_api") return "Account usage";
         return "";
     }

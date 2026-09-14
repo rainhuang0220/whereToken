@@ -214,6 +214,34 @@ func TestParseAccountAPIErrorsDoNotLeakToken(t *testing.T) {
 	}
 }
 
+func TestAccountAPIFailureLeavesLocalTokenCountsDegraded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "upstream boom", http.StatusBadGateway)
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	db := writeVscdb(t, dir, []kv{
+		{key: "composerData:sess-a", value: `{"composerId":"sess-a","createdAt":1700000000000,"usageData":{}}`},
+		{key: "bubbleId:sess-a:a1", value: `{"type":2,"createdAt":"2026-02-09T14:44:08.000Z","tokenCount":{"inputTokens":100,"outputTokens":10}}`},
+	}, nil)
+	putItem(t, db, authAccessTokenKey, fakeJWT)
+
+	var evs []event.UsageEvent
+	err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(e event.UsageEvent) {
+		evs = append(evs, e)
+	}, func(event.TurnEvent) {})
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+	if len(evs) != 1 || evs[0].Miss+evs[0].Output != 110 {
+		t.Fatalf("local fallback events=%+v", evs)
+	}
+	if evs[0].Quality != event.QualityDegraded {
+		t.Fatalf("local Cursor tokenCount must stay degraded after API failure: %+v", evs[0])
+	}
+}
+
 func TestProductionSQLDoesNotDumpItemTable(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -338,6 +366,107 @@ func TestFetchFilteredTurnsPageWhenParsedRowsAreFewerThanRaw(t *testing.T) {
 	}
 	if len(evs) != 2 {
 		t.Fatalf("events=%d want both token rows", len(evs))
+	}
+}
+
+func TestFetchUsageRejectsPartialFilteredPages(t *testing.T) {
+	filteredPages := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "GetFilteredUsageEvents"):
+			filteredPages++
+			if filteredPages == 1 {
+				io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"1770000000000","model":"gpt-5","tokenUsage":{"inputTokens":100}}]}`)
+				return
+			}
+			http.Error(w, "private upstream body", http.StatusInternalServerError)
+		case strings.Contains(r.URL.Path, "GetAggregatedUsageEvents"):
+			http.Error(w, "private aggregate body", http.StatusBadGateway)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchUsageWithToken("cursor-root", fakeJWT)
+	if err == nil {
+		t.Fatal("partial filtered pagination must return an error")
+	}
+	if len(evs) != 0 {
+		t.Fatalf("partial account rows escaped as usable data: %+v", evs)
+	}
+	if strings.Contains(err.Error(), "private") {
+		t.Fatalf("raw HTTP body leaked through error: %v", err)
+	}
+}
+
+func TestFetchUsageUsesCompleteAggregatedFallbackAfterPartialFilteredPages(t *testing.T) {
+	filteredPages := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "GetFilteredUsageEvents"):
+			filteredPages++
+			if filteredPages == 1 {
+				io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"1770000000000","model":"gpt-5","tokenUsage":{"inputTokens":100}}]}`)
+				return
+			}
+			http.Error(w, "boom", http.StatusInternalServerError)
+		case strings.Contains(r.URL.Path, "GetAggregatedUsageEvents"):
+			io.WriteString(w, `{"aggregations":[{"modelIntent":"gpt-5","inputTokens":250,"outputTokens":25}]}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchUsageWithToken("cursor-root", fakeJWT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := metric.Aggregate(evs, nil).All.Total(); got != 275 {
+		t.Fatalf("fallback total=%d want complete aggregate 275", got)
+	}
+}
+
+func TestFetchUsageRejectsFilteredPaginationLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "GetFilteredUsageEvents"):
+			io.WriteString(w, `{"totalUsageEventsCount":101,"usageEventsDisplay":[{"timestamp":"1770000000000","model":"gpt-5","tokenUsage":{"inputTokens":1}}]}`)
+		case strings.Contains(r.URL.Path, "GetAggregatedUsageEvents"):
+			http.Error(w, "boom", http.StatusBadGateway)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchUsageWithToken("cursor-root", fakeJWT)
+	if err == nil {
+		t.Fatal("pagination truncation must return an error")
+	}
+	if len(evs) != 0 {
+		t.Fatalf("truncated account rows escaped as usable data: %d", len(evs))
+	}
+}
+
+func TestFetchUsageRepresentsAuthoritativeZero(t *testing.T) {
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+			io.WriteString(w, `{"totalUsageEventsCount":0,"usageEventsDisplay":[]}`)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return now }}).fetchUsageWithToken("cursor-root", fakeJWT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Quality != event.QualityAuthoritative || evs[0].Derivation != event.DeriveProviderAPI || evs[0].Miss+evs[0].CacheRead+evs[0].CacheCreate+evs[0].Output != 0 {
+		t.Fatalf("authoritative zero not represented: %+v", evs)
 	}
 }
 

@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#090b11" media="(prefers-color-scheme: dark)">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self'; base-uri 'none'; form-action 'none'">
 	<link rel="icon" href="data:,">
   <title>whereToken · AI coding profile</title>
@@ -28,12 +30,13 @@
       <a class="gh" id="github" href="https://github.com/rainhuang0220/whereToken" rel="noopener">GitHub ↗</a>
     </div>
   </header>
-  <p id="status" class="banner" hidden></p>
+  <p id="status" class="banner" role="status" aria-live="polite" hidden></p>
   <main id="main">
     <p class="identity" id="identity"></p>
     <section class="hero" aria-labelledby="hero-label">
       <p class="hero-value" id="hero-value">—</p>
       <h1 class="hero-label" id="hero-label">Tokens tracked</h1>
+      <p class="hero-coverage" id="hero-coverage" hidden></p>
       <ul class="hero-meta" id="hero-meta"></ul>
     </section>
 
@@ -51,7 +54,7 @@
       </div>
       <div class="trend-card" id="trend-card">
         <div class="trend-head">
-          <span>Last 30 days</span>
+          <span id="trend-label">Last 30 days</span>
           <span id="trend-value"></span>
         </div>
         <div id="trend" class="trend" role="img" aria-label="Last 30 days"></div>

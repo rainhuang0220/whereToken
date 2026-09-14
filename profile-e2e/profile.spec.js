@@ -59,7 +59,7 @@ test.beforeEach(() => {
 
 test("loads the static project subpath with truthful snapshot provenance", async ({ page }) => {
   await page.goto(baseURL);
-  await expect(page.locator('[aria-label="Time range"] [aria-selected="true"]')).toHaveText("All");
+  await expect(page.locator('[aria-label="Time range"] [aria-selected="true"]')).toHaveText("Available history");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
   await expect(page.locator("#freshness")).toContainText("DEMO DATA");
   await expect(page.locator("#freshness")).toContainText("updated");
@@ -72,7 +72,7 @@ test("loads the static project subpath with truthful snapshot provenance", async
 
 test("switches every range and optional breakdown tab", async ({ page }) => {
   await page.goto(baseURL);
-  for (const [label, id] of [["Today", "today"], ["7d", "7d"], ["30d", "30d"], ["53w", "53w"], ["All", "all"]]) {
+  for (const [label, id] of [["Today", "today"], ["7d", "7d"], ["30d", "30d"], ["53w", "53w"], ["Available history", "all"]]) {
     await page.getByRole("tab", { name: label, exact: true }).click();
     await expect(page.locator("#range-readout")).toContainText(snapshot.periods[id].totals.total.display);
   }
@@ -87,6 +87,56 @@ test("switches every range and optional breakdown tab", async ({ page }) => {
   snapshot.activity.series.push(modelSeries);
   await page.reload();
   await expect(page.getByRole("tab", { name: "Models" })).toBeVisible();
+});
+
+test("explains mixed source coverage next to the hero and with exact dates", async ({ page }) => {
+  const cursor = snapshot.periods.all.by_agent.find((row) => row.id === "cursor") || snapshot.periods.all.by_agent[0];
+  cursor.coverage = {
+    tokens: "available",
+    requests: "available",
+    token_source: "account_api",
+    token_window: { from: "2025-09-08", to: "2026-09-14", label: "53w account usage" },
+  };
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-coverage")).toContainText("Coverage varies by source");
+  await expect(page.locator("#coverage-table")).toContainText("Sep 8, 2025 – Sep 14, 2026");
+});
+
+test("uses the selected range for the trend window", async ({ page }) => {
+  const series = snapshot.activity.series.find((item) => item.dimension === "all" && (item.metric || "tokens") === "tokens");
+  series.values.fill(0);
+  series.levels.fill(0);
+  series.states.fill("empty");
+  let end = snapshot.activity.dates.findIndex((date) => date > snapshot.activity.to);
+  if (end < 0) end = snapshot.activity.dates.length;
+  for (let i = end - 7; i < end; i++) {
+    series.values[i] = 1;
+    series.levels[i] = 1;
+    series.states[i] = "active";
+  }
+  series.values[end - 30] = 100;
+  series.levels[end - 30] = 5;
+  series.states[end - 30] = "active";
+
+  await page.goto(baseURL);
+  await page.getByRole("tab", { name: "Today", exact: true }).click();
+  await expect(page.locator("#trend-label")).toHaveText("Today");
+  await expect(page.locator("#trend-value")).toHaveText("1 tokens");
+  await page.getByRole("tab", { name: "7d", exact: true }).click();
+  await expect(page.locator("#trend-label")).toHaveText("Last 7 days");
+  await expect(page.locator("#trend-value")).toHaveText("7 tokens");
+  await page.getByRole("tab", { name: "30d", exact: true }).click();
+  await expect(page.locator("#trend-label")).toHaveText("Last 30 days");
+  await expect(page.locator("#trend-value")).toHaveText("107 tokens");
+});
+
+test("announces async status and keeps the trend accessible as range changes", async ({ page }) => {
+  await page.goto(baseURL);
+  await expect(page.locator("#status")).toHaveAttribute("aria-live", "polite");
+  await expect(page.locator("#trend")).toHaveAttribute("aria-label", "Available 53-week activity");
+  await page.getByRole("tab", { name: "Today", exact: true }).click();
+  await expect(page.locator("#trend")).toHaveAttribute("aria-label", "Today");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveCount(2);
 });
 
 test("persists filter URL state and exposes mouse and keyboard tooltips", async ({ page }) => {

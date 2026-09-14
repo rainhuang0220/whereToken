@@ -93,12 +93,23 @@ func TestValidateFileEnforcesSchemaRequiredEnumAndType(t *testing.T) {
 		{"invalid enum", func(doc map[string]any) { doc["data_status"] = "secret" }},
 		{"wrong type", func(doc map[string]any) { doc["schema_version"] = "1" }},
 		{"invalid notice", func(doc map[string]any) { doc["notices"] = []any{"private_note"} }},
+		{"private coverage reason", func(doc map[string]any) {
+			objectAt(t, doc, []string{"periods", "all", "by_agent", "0", "coverage"})["reason"] = "/Users/foo/private"
+		}},
+		{"secret token source", func(doc map[string]any) {
+			objectAt(t, doc, []string{"periods", "all", "by_agent", "0", "coverage"})["token_source"] = "Bearer abc"
+		}},
+		{"unsafe token window label", func(doc map[string]any) {
+			objectAt(t, doc, []string{"periods", "all", "by_agent", "0", "coverage"})["token_window"] = map[string]any{
+				"from": "2025-09-08", "to": "2026-09-14", "label": "<script>",
+			}
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			doc := cloneDocument(t, base)
 			tc.mutate(doc)
-			if err := validateDocument(t, doc); err == nil {
+			if err := validateSchemaDocument(t, doc); err == nil {
 				t.Fatal("accepted schema-invalid document")
 			}
 		})
@@ -181,6 +192,10 @@ func TestValidateFileRejectsSemanticTamperingAfterResigning(t *testing.T) {
 		{"activity length mismatch", func(s *Snapshot) {
 			s.Activity.Series[0].Values = []int64{1, 2, 3}
 		}},
+		{"coverage available with unavailable total", func(s *Snapshot) {
+			s.Periods.All.ByAgent[0].Coverage.Tokens = StatusAvailable
+			s.Periods.All.ByAgent[0].Totals = emptyTotals()
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -199,6 +214,16 @@ func TestValidateFileRejectsSemanticTamperingAfterResigning(t *testing.T) {
 				t.Fatal("accepted semantically invalid document")
 			}
 		})
+	}
+}
+
+func TestAllowPartialDoesNotBypassSemanticValidation(t *testing.T) {
+	s := schemaTestSnapshot(t)
+	one := int64(1)
+	s.Periods.All.Totals.Total.Value = &one
+	refreshSnapshotID(&s)
+	if err := ValidateProduction(s, true); err == nil {
+		t.Fatal("allow-partial bypassed a token invariant")
 	}
 }
 
@@ -233,4 +258,13 @@ func validateDocument(t *testing.T, doc map[string]any) error {
 		t.Fatal(err)
 	}
 	return ValidateFile(path)
+}
+
+func validateSchemaDocument(t *testing.T, doc map[string]any) error {
+	t.Helper()
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return validateSchemaJSON(raw)
 }

@@ -205,7 +205,7 @@ func TestParseBubbleTokensAndTurns(t *testing.T) {
 	if asst.Miss != 100 || asst.Output != 10 || asst.CacheRead != 0 {
 		t.Fatalf("asst tokens %+v", asst)
 	}
-	if asst.Quality != event.QualityAuthoritative {
+	if asst.Quality != event.QualityDegraded {
 		t.Fatalf("asst quality=%s", asst.Quality)
 	}
 	if asst.Vendor != "minimax" || asst.Model != "MiniMax-M2.7" {

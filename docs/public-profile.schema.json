@@ -107,6 +107,16 @@
         "label": { "type": "string" }
       }
     },
+    "coverage_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "label"],
+      "properties": {
+        "from": { "type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "to": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "label": { "type": "string", "enum": ["account usage", "53w account usage"] }
+      }
+    },
     "totals": {
       "type": "object",
       "additionalProperties": false,
@@ -193,7 +203,7 @@
         "token_source": { "type": "string", "enum": ["local", "account_api", "derived", "unknown"] },
         "token_window": {
           "anyOf": [
-            { "$ref": "#/$defs/range" },
+            { "$ref": "#/$defs/coverage_range" },
             { "type": "null" }
           ]
         },

@@ -24,12 +24,16 @@ func ValidateProduction(s Snapshot, allowPartial bool) error {
 			continue
 		}
 		reqOK := row.Requests.Status == StatusAvailable && row.Requests.Value != nil && *row.Requests.Value > 0
-		tokMissing := row.Coverage.Tokens == StatusUnavailable || row.Totals.Total.Status == StatusUnavailable
+		tokMissing := row.Coverage.Tokens != StatusAvailable || row.Totals.Total.Status != StatusAvailable
 		skipped := row.Coverage.Reason == ReasonAccountAPISkipped ||
 			row.Coverage.Reason == ReasonAuthMissing ||
 			row.Coverage.Reason == ReasonAPIFailed
 		if reqOK && tokMissing && skipped {
-			msgs = append(msgs, fmt.Sprintf("Production profile has incomplete %s token coverage.\n%s account usage was skipped.\nRegenerate without --offline.", row.Label, row.Label))
+			action := "Regenerate online with a complete account API response."
+			if row.Coverage.Reason == ReasonAccountAPISkipped {
+				action = "Regenerate without --offline."
+			}
+			msgs = append(msgs, fmt.Sprintf("Production profile has incomplete %s token coverage.\n%s account usage is incomplete.\n%s", row.Label, row.Label, action))
 		}
 	}
 	if len(msgs) == 0 {

@@ -173,6 +173,9 @@ func validateCoverage(period, kind string, r Breakdown) error {
 			return fmt.Errorf("publicprofile: %s %s %s unavailable share", period, kind, r.ID)
 		}
 	}
+	if r.Coverage.Tokens != r.Totals.Total.Status {
+		return fmt.Errorf("publicprofile: %s %s %s coverage/total status mismatch", period, kind, r.ID)
+	}
 	return nil
 }
 

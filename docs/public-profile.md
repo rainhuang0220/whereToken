@@ -9,7 +9,9 @@ wheretoken profile build ./public-profile
 wheretoken profile validate ./public-profile --production
 ```
 
-`--offline` is for CI fixtures, tests, and explicitly local-only snapshots. It skips Cursor/Trae account APIs. If local Cursor rows still have requests, token columns stay **unavailable** (`—`), never `0`. Publishing that as production fails `--production` unless you pass `--allow-partial`.
+`--offline` is for CI fixtures, tests, and explicitly local-only snapshots. It skips Cursor/Trae account APIs. If local Cursor rows still have requests, token columns stay **unavailable** (`—`) or explicitly **partial** when degraded local token counts exist, never a fabricated authoritative `0`. Publishing that as production fails `--production` unless you pass `--allow-partial`.
+
+Cursor filtered usage is accepted only when every advertised page completes. A mid-pagination error or page-limit truncation discards the partial account rows; a complete aggregated response may recover the total. Otherwise coverage records an enumerated failure and production validation fails. Raw API errors and response bodies never enter the snapshot.
 
 Copy the directory to a static host. The CLI never logs into GitHub, never commits, and never pushes.
 
@@ -29,7 +31,9 @@ wheretoken profile build ./public-profile --include-models --include-cost
 
 `--today` / `--since` are rejected: the bundle always contains `all`, `today`, `7d`, `30d`, and `53w` from one scan and one clock.
 
-Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (version **2**). Version 1 snapshots still validate. Token math is unchanged (`docs/token-accounting.md`). Missing usage is unavailable (`—`), never `$0`. Each breakdown row carries `coverage` (`tokens` / `requests` / `token_source` / `token_window` / `reason`). Activity series are explicit `{dimension, id, metric: tokens|requests}` — the live page never guesses, and never falls back from a missing agent series to All.
+Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (version **2**). Version 1 snapshots still validate in normal compatibility mode, but fail `--production` because they cannot prove the v2 per-source coverage contract; rebuild them with the current binary before publishing. Token math is unchanged (`docs/token-accounting.md`). Missing usage is unavailable (`—`), never `$0`. Each breakdown row carries `coverage` (`tokens` / `requests` / `token_source` / `token_window` / `reason`). Activity series are explicit `{dimension, id, metric: tokens|requests}` — the live page never guesses, and never falls back from a missing agent series to All.
+
+`all` means all history available to this scan, not a promise of identical all-time history across providers. The page labels it “Available history” and shows source-specific account windows next to account-derived rows. The hero total is the sum of tracked values; `data_status=partial` and the coverage panel disclose any incomplete source.
 
 ## Preview freshness
 

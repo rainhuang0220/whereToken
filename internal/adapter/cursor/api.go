@@ -44,21 +44,32 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	end := now.UnixMilli()
 
 	filtered, ferr := a.fetchFiltered(token, start, end)
-	if hasTokenTotals(filtered) {
-		return tagged(sourceRoot, filtered), ferr
+	if ferr == nil {
+		return tagged(sourceRoot, completeAccountUsage(filtered, now)), nil
 	}
 	if adapter.IsUnauthorized(ferr) {
 		return nil, ferr
 	}
 
 	agg, aerr := a.fetchAggregated(token, start, end)
-	if aerr == nil && hasTokenTotals(agg) {
-		return tagged(sourceRoot, agg), nil
-	}
-	if ferr == nil {
-		return tagged(sourceRoot, filtered), nil
+	if aerr == nil {
+		return tagged(sourceRoot, completeAccountUsage(agg, now)), nil
 	}
 	return nil, ferr
+}
+
+func completeAccountUsage(events []event.UsageEvent, now time.Time) []event.UsageEvent {
+	if len(events) != 0 {
+		return events
+	}
+	return []event.UsageEvent{{
+		Source:      "cursor",
+		RequestID:   "cursor-api:measured-zero",
+		Timestamp:   now,
+		Quality:     event.QualityAuthoritative,
+		Derivation:  event.DeriveProviderAPI,
+		SkipRequest: true,
+	}}
 }
 
 func tagged(sourceRoot string, events []event.UsageEvent) []event.UsageEvent {
@@ -128,7 +139,11 @@ func (a Adapter) fetchAggregated(token string, start, end int64) ([]event.UsageE
 	if err != nil {
 		return nil, err
 	}
-	return parseAggregated(raw, a.now()), nil
+	events, ok := parseAggregated(raw, a.now())
+	if !ok {
+		return nil, fmt.Errorf("账号用量接口返回无法解析")
+	}
+	return events, nil
 }
 
 func (a Adapter) refreshAccessToken(refresh string) (string, error) {
@@ -270,14 +285,18 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, error) {
 	return out, len(list), total, nil
 }
 
-func parseAggregated(raw []byte, now time.Time) []event.UsageEvent {
+func parseAggregated(raw []byte, now time.Time) ([]event.UsageEvent, bool) {
 	var top map[string]any
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	if dec.Decode(&top) != nil {
-		return nil
+		return nil, false
 	}
-	list := asSlice(adapter.Pick(top, "aggregations"))
+	rawList, present := top["aggregations"]
+	if !present {
+		return nil, false
+	}
+	list := asSlice(rawList)
 	out := make([]event.UsageEvent, 0, len(list))
 	for i, item := range list {
 		m := adapter.AsMap(item)
@@ -291,7 +310,7 @@ func parseAggregated(raw []byte, now time.Time) []event.UsageEvent {
 		}
 		out = append(out, ev)
 	}
-	return out
+	return out, true
 }
 
 func mapTokens(model, session string, ts time.Time, usage map[string]any, i int) event.UsageEvent {
@@ -317,9 +336,9 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 	}
 }
 
-func hasTokenTotals(events []event.UsageEvent) bool {
+func hasAccountUsage(events []event.UsageEvent) bool {
 	for _, e := range events {
-		if e.Miss != 0 || e.CacheRead != 0 || e.CacheCreate != 0 || e.Output != 0 {
+		if e.Derivation == event.DeriveProviderAPI || e.Miss != 0 || e.CacheRead != 0 || e.CacheCreate != 0 || e.Output != 0 {
 			return true
 		}
 	}

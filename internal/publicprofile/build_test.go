@@ -428,6 +428,91 @@ func TestOnlineAccountAPICoverage(t *testing.T) {
 	}
 }
 
+func TestAccountAPIFailureMarksLocalCloudTokensPartialAndBlocksProduction(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, loc)
+	local := ev("cursor", "anthropic", now.Add(-time.Hour), 100, 0, 10)
+	local.Quality = event.QualityDegraded
+	snap, err := Build(Input{
+		Events: []event.UsageEvent{local}, Now: now, Loc: loc,
+		Errors: []string{"cursor: 账号用量接口 HTTP 500"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Coverage.Tokens != StatusPartial || row.Coverage.Reason != ReasonAPIFailed {
+		t.Fatalf("coverage=%+v", row.Coverage)
+	}
+	if row.Totals.Total.Status != StatusPartial || row.Totals.Total.Value == nil || *row.Totals.Total.Value != 110 {
+		t.Fatalf("partial local tokens=%+v", row.Totals.Total)
+	}
+	if snap.DataStatus != StatusPartial {
+		t.Fatalf("data_status=%q", snap.DataStatus)
+	}
+	if err := ValidateProduction(snap, false); err == nil {
+		t.Fatal("API failure with partial local tokens must block production")
+	}
+	if err := ValidateProduction(snap, true); err != nil {
+		t.Fatalf("allow-partial should bypass only coverage incompleteness: %v", err)
+	}
+}
+
+func TestProductionGateKeepsLowRankCloudSourceVisible(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, loc)
+	sources := []string{"claude", "kimi", "grok", "minimax", "openclaw", "opencode", "codex", "gemini", "qwen"}
+	events := make([]event.UsageEvent, 0, len(sources)+1)
+	for i, source := range sources {
+		events = append(events, ev(source, "anthropic", now.Add(-time.Duration(i+1)*time.Hour), int64(1000-i), 0, 1))
+	}
+	events = append(events, event.UsageEvent{
+		Source: "cursor", Vendor: "anthropic", RequestID: "cursor-local", Timestamp: now,
+		Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+	})
+	snap, err := Build(Input{Events: events, Now: now, Loc: loc, Offline: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cursor *Breakdown
+	for i := range snap.Periods.All.ByAgent {
+		if snap.Periods.All.ByAgent[i].ID == "cursor" {
+			cursor = &snap.Periods.All.ByAgent[i]
+			break
+		}
+	}
+	if cursor == nil {
+		t.Fatal("low-rank cloud source was hidden in Other")
+	}
+	if err := ValidateProduction(snap, false); err == nil {
+		t.Fatal("hidden low-rank cloud coverage must not bypass production gate")
+	}
+}
+
+func TestCursorAuthoritativeZeroHasZeroShareAndPassesProduction(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, loc)
+	local := event.UsageEvent{Source: "cursor", RequestID: "bubble", Timestamp: now, Quality: ""}
+	zero := event.UsageEvent{
+		Source: "cursor", RequestID: "cursor-api:measured-zero", Timestamp: now,
+		Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	snap, err := Build(Input{Events: []event.UsageEvent{local, zero}, Now: now, Loc: loc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Coverage.Tokens != StatusAvailable || row.Totals.Total.Status != StatusAvailable || row.Totals.Total.Value == nil || *row.Totals.Total.Value != 0 {
+		t.Fatalf("authoritative zero=%+v coverage=%+v", row.Totals.Total, row.Coverage)
+	}
+	if row.Share != "0.0%" {
+		t.Fatalf("share=%q", row.Share)
+	}
+	if err := ValidateProduction(snap, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func seriesBy(s Snapshot, dim, id, metricName string) Series {
 	for _, ser := range s.Activity.Series {
 		if ser.Dimension == dim && ser.ID == id && ser.Metric == metricName {

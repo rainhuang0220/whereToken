@@ -405,7 +405,7 @@ func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool, i
 	var rest metric.Slice
 	out := []Breakdown{}
 	for i, a := range list {
-		if i < maxBreakdown {
+		if i < maxBreakdown || (asSource && cloudSource(a.id)) {
 			out = append(out, breakdownRow(a.id, a.label, a.s, all, asSource, in, loc))
 			continue
 		}
@@ -447,7 +447,11 @@ func breakdownRow(id, label string, s metric.Slice, all int64, asSource bool, in
 	unavailable := tokensUnavailable(s)
 	share := emDash
 	if !unavailable {
-		share = metric.FormatShare(s.Total(), all)
+		if s.Total() == 0 {
+			share = "0.0%"
+		} else {
+			share = metric.FormatShare(s.Total(), all)
+		}
 	}
 	cov := coverageFromSlice(id, s, asSource, in, loc)
 	return Breakdown{
