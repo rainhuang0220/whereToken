@@ -30,6 +30,16 @@ If source files only append, a later successful scan must not drop tokens.
 `/reset` archives (`*.jsonl.reset.*`, `*.jsonl.deleted.*`) still count.
 Incremental parse errors must keep the cached events for that file.
 
+## Installer invariants
+
+- Installation success is user-observable command availability, not merely copying a binary. Windows tests must prove install → resolve `wheretoken` → `--version` → run in the same shell process.
+- Do not hide installer defects with README advice to reopen the terminal. The normal path is one install command, then `wheretoken` in that same terminal.
+- `cmd.exe` installers must preserve caller state deliberately across `setlocal`; use `call` when the parent batch must continue after the installer returns.
+- Treat existing PATH values as opaque data. Do not parse them with delayed expansion or unquoted shell metacharacters; preserve spaces, literal `!`, `&`, `%VAR%`, and existing entries exactly.
+- Installer regression tests must exercise the actual shell lifecycle. Separate GitHub Actions `run:` steps are not proof of same-shell PATH behavior.
+- Keep normal installs user-scoped and dependency-free when release binaries exist; a download failure must fail clearly rather than silently falling back to a toolchain such as Go.
+- Distinguish installer-script rollout from packaged release rollout: changes under `main/scripts/install.*` are live as soon as main changes, while the latest binary version remains whatever the most recent GitHub Release published.
+
 ## Verify
 
 ```bash
