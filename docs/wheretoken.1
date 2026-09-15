@@ -91,7 +91,7 @@ Windows PowerShell:
 .B irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
 .PP
 Windows Command Prompt:
-.B curl.exe -fsSL -o %TEMP%\\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\\wt-install.cmd
+.B curl.exe -fsSL -o "%TEMP%\\wt-install.cmd" https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && call "%TEMP%\\wt-install.cmd"
 .PP
 Homebrew:
 .B brew tap rainhuang0220/wheretoken

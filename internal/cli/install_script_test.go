@@ -87,6 +87,18 @@ func TestInstallPS1MentionsWindowsZip(t *testing.T) {
 	if strings.Contains(s, "eyJ") {
 		t.Fatal("install.ps1 must not contain JWT material")
 	}
+	if !strings.Contains(s, "PROCESSOR_ARCHITEW6432") {
+		t.Fatal("install.ps1 must honor PROCESSOR_ARCHITEW6432 (32-bit PowerShell on 64-bit Windows)")
+	}
+	if strings.Contains(s, "go install") {
+		t.Fatal("install.ps1 must fail clearly on download errors, not fall back to go install")
+	}
+	if regexp.MustCompile(`(?i)(?m)^\s*exit\b`).MatchString(s) {
+		t.Fatal("install.ps1 must not call exit; that closes the irm | iex host instead of returning to the prompt")
+	}
+	if !strings.Contains(s, "& {") {
+		t.Fatal("install.ps1 must wrap the body in & { } so irm | iex does not leak ErrorActionPreference")
+	}
 }
 
 func TestInstallCMDUsesCurlTarCertutil(t *testing.T) {
@@ -109,6 +121,7 @@ func TestInstallCMDUsesCurlTarCertutil(t *testing.T) {
 		"LOCALAPPDATA",
 		"update",
 		"uninstall",
+		"find.exe",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("install.cmd missing %q", want)
@@ -116,6 +129,21 @@ func TestInstallCMDUsesCurlTarCertutil(t *testing.T) {
 	}
 	if strings.Contains(s, "eyJ") {
 		t.Fatal("install.cmd must not contain JWT material")
+	}
+	if !strings.Contains(s, "PROCESSOR_ARCHITEW6432") {
+		t.Fatal("install.cmd must honor PROCESSOR_ARCHITEW6432")
+	}
+	if !strings.Contains(s, "setlocal") {
+		t.Fatal("install.cmd is expected to use setlocal for delayed expansion")
+	}
+	if !regexp.MustCompile(`endlocal(?:\s*&\s*endlocal)?\s*&\s*set "PATH=%(?:PATH|WT_PATH)%"`).MatchString(s) {
+		t.Fatal(`setlocal rolls back PATH when the batch exits; persist the caller's PATH with endlocal & set "PATH=..."`)
+	}
+	if strings.Contains(s, `echo ;%PATH%;`) || strings.Contains(s, `echo ;!UPATH!;`) {
+		t.Fatal(`install.cmd must not echo unquoted PATH; metacharacters like & would be parsed`)
+	}
+	if !strings.Contains(s, `echo ";%PATH%;"`) {
+		t.Fatal(`install.cmd must quote PATH when piping to find.exe`)
 	}
 }
 
@@ -263,9 +291,12 @@ func TestInstallDocsDoNotClaimLiveNpmPackage(t *testing.T) {
 	if !strings.Contains(rs, irm) {
 		t.Fatal("README must show the PowerShell irm | iex one-liner")
 	}
-	cmd := `curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd`
+	cmd := `curl.exe -fsSL -o "%TEMP%\wt-install.cmd" https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && call "%TEMP%\wt-install.cmd"`
 	if !strings.Contains(rs, cmd) {
-		t.Fatal("README must show the Command Prompt curl.exe install.cmd one-liner")
+		t.Fatal("README must show the Command Prompt curl.exe install.cmd one-liner using call and quoted TEMP")
+	}
+	if strings.Contains(rs, "Open a new terminal if the command is not on") {
+		t.Fatal("README must not tell users to reopen the terminal as the normal Windows install path")
 	}
 	ci := strings.Index(rs, curl)
 	gi := strings.Index(rs, goInstall)

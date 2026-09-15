@@ -38,6 +38,34 @@ Modern developers often use several coding agents at once. Each tool stores usag
 
 It is designed to operate locally. Feedback and bug reports are welcome.
 
+## Install
+
+macOS / Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+```
+
+Command Prompt (without PowerShell):
+
+```bat
+curl.exe -fsSL -o "%TEMP%\wt-install.cmd" https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && call "%TEMP%\wt-install.cmd"
+```
+
+Then, in the same terminal:
+
+```bash
+wheretoken
+```
+
+Homebrew, `go install`, and source builds: [Other install methods](#other-install-methods).
+
 ## Features
 
 ### Unified usage overview
@@ -98,38 +126,16 @@ Point a GitHub Profile README at the previews and the live page (do not link the
 
 `wheretoken card path.svg` still writes the 800×576 Vibe Coding Wall from the same snapshot. Prefer `profile build` for new READMEs.
 
-## Installation
+## Other install methods
 
-### Recommended: Homebrew
+Homebrew:
 
 ```bash
 brew tap rainhuang0220/wheretoken
 brew install wheretoken
 ```
 
-### Prebuilt binaries
-
-macOS and Linux:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
-```
-
-Windows (PowerShell):
-
-```powershell
-irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
-```
-
-Windows (Command Prompt, the `C:\Users\…>` window):
-
-```bat
-curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd
-```
-
-The script prints the installed path (`~/.local/bin/wheretoken` on Unix, `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe` on Windows). Run that line. Open a new terminal if the command is not on `PATH` yet.
-
-### Build from source
+If you already have Go:
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
@@ -137,7 +143,7 @@ go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 
 Release binaries and `brew tap` include the dashboard. `go install` and `brew --HEAD` build the CLI only. To serve the dashboard from a clone, build the web UI (`cd web && npm run build`) and set `WHERETOKEN_WEB` to `web/dist`.
 
-The `npm/` wrapper is **not on the npm registry** yet.
+The `npm/` wrapper is **not on the npm registry** yet. GitHub Release binaries are currently **unsigned**.
 
 ## Quick start
 

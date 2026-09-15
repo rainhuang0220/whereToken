@@ -32,6 +32,10 @@ jobs:
       - name: Go test
         run: go test ./...
 
+      - name: Windows installer same-shell smoke
+        if: runner.os == 'Windows'
+        run: go test -count=1 -timeout 180s ./internal/cli -run "TestInstallCMD|TestInstallPS1"
+
       - name: Go race (not Windows)
         if: runner.os != 'Windows'
         run: go test -race ./internal/cli ./internal/table ./internal/report ./internal/metric ./internal/fuzzy ./internal/vendor ./internal/httpapi ./internal/adapter/trae

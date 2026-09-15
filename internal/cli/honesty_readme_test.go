@@ -34,6 +34,9 @@ func TestEnglishREADMEHonesty(t *testing.T) {
 	if !strings.Contains(strings.ToLower(rs), "irm") || !strings.Contains(rs, "| iex") {
 		t.Fatal("English README must keep the irm|iex install")
 	}
+	if strings.Contains(rs, "Open a new terminal if the command is not on") {
+		t.Fatal("English README must not treat reopening the terminal as the normal install path")
+	}
 	if !strings.Contains(rs, "brew tap rainhuang0220/wheretoken") {
 		t.Fatal("English README must keep brew tap rainhuang0220/wheretoken")
 	}
@@ -94,6 +97,9 @@ func TestChineseREADMEHonesty(t *testing.T) {
 		if !strings.Contains(rs, want) {
 			t.Errorf("Chinese README missing honesty %q", want)
 		}
+	}
+	if strings.Contains(rs, "当前终端找不到命令，就新开一个") {
+		t.Fatal("Chinese README must not treat reopening the terminal as the normal install path")
 	}
 	if regexp.MustCompile(`WHERETOKEN_COMMUNITY_URL\s*=\s*https?://`).MatchString(rs) {
 		t.Fatal("Chinese README must not ship a public WHERETOKEN_COMMUNITY_URL")

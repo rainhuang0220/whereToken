@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fix: Windows Command Prompt installer exports PATH to the calling `cmd.exe` (`setlocal` no longer rolls it back), so `wheretoken` works in the same window after the README one-liner
+- Windows PowerShell installer detects WOW64 (`PROCESSOR_ARCHITEW6432`), fails clearly on download errors instead of falling back to `go install`, and does not `exit` the `irm | iex` host
+- README: one-command install, then `wheretoken` in the same terminal. Command Prompt uses `call` and a quoted `%TEMP%` path
+- Tests: same-shell CMD and PowerShell installer smoke on `windows-latest`
+
 ## 0.7.3 — 2026-09-14 (Alpha)
 
 - Public profile schema 2: per-source `coverage` (tokens/requests/token_source/window/reason) and activity series with an explicit `metric` (`tokens` | `requests`). Missing token ledgers stay unavailable (`—`), never `available` `0`
