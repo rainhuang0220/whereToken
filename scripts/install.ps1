@@ -54,6 +54,7 @@
       $new = if ($userPath) { "$dir;$userPath" } else { $dir }
       New-ItemProperty -Path 'HKCU:\Environment' -Name Path -PropertyType ExpandString -Value $new -Force | Out-Null
       try {
+        # Dummy delete broadcasts WM_SETTINGCHANGE without rewriting Path as REG_SZ.
         [Environment]::SetEnvironmentVariable('WT_PATH_REFRESH', [NullString]::Value, 'User')
       } catch {
       }

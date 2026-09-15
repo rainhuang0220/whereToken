@@ -144,6 +144,36 @@ func TestInstallPS1MissingAsset(t *testing.T) {
 	}
 }
 
+func TestInstallCMDPreservesBangInUserPath(t *testing.T) {
+	testInstallCMDPreservesPathEntry(t, `C:\Tools!Special\bin`, `C:\Bang!Dir\bin`)
+}
+
+func TestInstallCMDPreservesAmpInUserPath(t *testing.T) {
+	testInstallCMDPreservesPathEntry(t, `C:\Amp&Dir\bin`, `C:\Amp&Dir\bin`)
+}
+
+func testInstallCMDPreservesPathEntry(t *testing.T, userEntry, processEntry string) {
+	t.Helper()
+	fx := newWindowsInstallFixture(t, windowsInstallFixtureOpts{processPathPrefix: processEntry})
+	fx.prependUserPath(t, userEntry)
+	out := fx.runCMD(t, cmdSameShellProbe(fx.binDir))
+	assertSameShellSuccess(t, out, fx.binDir)
+	got := fx.userPath(t)
+	if !pathHasExactEntry(got, userEntry) {
+		t.Fatalf("User Path lost %q:\n%s", userEntry, got)
+	}
+	stripped := strings.ReplaceAll(userEntry, "!", "")
+	if stripped != userEntry && strings.Contains(got, stripped) && !pathHasExactEntry(got, userEntry) {
+		t.Fatalf("delayed expansion stripped ! from User Path:\n%s", got)
+	}
+	if n := countPathEntries(got, fx.binDir); n != 1 {
+		t.Fatalf("User Path has %d copies of %s\n%s", n, fx.binDir, got)
+	}
+	if strings.Contains(out, "is not recognized") {
+		t.Fatalf("installer executed PATH content:\n%s", out)
+	}
+}
+
 func TestCIWindowsInstallerSmokeStaysOneShell(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -166,15 +196,17 @@ func TestCIWindowsInstallerSmokeStaysOneShell(t *testing.T) {
 }
 
 type windowsInstallFixtureOpts struct {
-	badChecksum bool
-	omitAsset   bool
+	badChecksum       bool
+	omitAsset         bool
+	processPathPrefix string
 }
 
 type windowsInstallFixture struct {
-	root    string
-	binDir  string
-	asset   string
-	restore func()
+	root              string
+	binDir            string
+	asset             string
+	processPathPrefix string
+	restore           func()
 }
 
 func newWindowsInstallFixture(t *testing.T, opts windowsInstallFixtureOpts) *windowsInstallFixture {
@@ -229,10 +261,11 @@ func newWindowsInstallFixture(t *testing.T, opts windowsInstallFixtureOpts) *win
 	t.Cleanup(srv.Close)
 
 	fx := &windowsInstallFixture{
-		root:    root,
-		binDir:  binDir,
-		asset:   asset,
-		restore: restore,
+		root:              root,
+		binDir:            binDir,
+		asset:             asset,
+		processPathPrefix: opts.processPathPrefix,
+		restore:           restore,
 	}
 	t.Setenv("WHERETOKEN_RELEASE_URL", srv.URL)
 	t.Setenv("BIN_DIR", binDir)
@@ -247,8 +280,31 @@ func (fx *windowsInstallFixture) cmdEnv(extra ...string) []string {
 		"BIN_DIR="+fx.binDir,
 		"PREFIX="+filepath.Dir(fx.binDir),
 	)
+	if fx.processPathPrefix != "" {
+		env = append(env, "PATH="+fx.processPathPrefix+";"+os.Getenv("PATH"))
+	}
 	env = append(env, extra...)
 	return env
+}
+
+func (fx *windowsInstallFixture) prependUserPath(t *testing.T, entry string) {
+	t.Helper()
+	value, typ, exists := readUserPath(t)
+	if typ == "" {
+		typ = "REG_EXPAND_SZ"
+	}
+	next := entry
+	if exists && strings.TrimSpace(value) != "" {
+		next = entry + ";" + value
+	}
+	cmd := exec.Command("reg.exe", "add", `HKCU\Environment`, "/v", "Path", "/t", typ, "/d", next, "/f")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("prepend User Path %q: %v\n%s", entry, err, out)
+	}
+}
+
+func pathHasExactEntry(path, dir string) bool {
+	return countPathEntries(path, dir) == 1
 }
 
 func (fx *windowsInstallFixture) psEnv(extra ...string) []string {

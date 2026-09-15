@@ -139,6 +139,12 @@ func TestInstallCMDUsesCurlTarCertutil(t *testing.T) {
 	if !regexp.MustCompile(`endlocal(?:\s*&\s*endlocal)?\s*&\s*set "PATH=%(?:PATH|WT_PATH)%"`).MatchString(s) {
 		t.Fatal(`setlocal rolls back PATH when the batch exits; persist the caller's PATH with endlocal & set "PATH=..."`)
 	}
+	if strings.Contains(s, `echo ;%PATH%;`) || strings.Contains(s, `echo ;!UPATH!;`) {
+		t.Fatal(`install.cmd must not echo unquoted PATH; metacharacters like & would be parsed`)
+	}
+	if !strings.Contains(s, `echo ";%PATH%;"`) {
+		t.Fatal(`install.cmd must quote PATH when piping to find.exe`)
+	}
 }
 
 func TestGoreleaserShipsManCompletionsAndLicense(t *testing.T) {

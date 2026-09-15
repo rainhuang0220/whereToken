@@ -131,9 +131,6 @@ if errorlevel 1 (
 rmdir /s /q "%WORKDIR%" 2>nul
 echo wheretoken: installed %BIN_DIR%\wheretoken.exe
 
-echo ;%PATH%; | find.exe /I ";%BIN_DIR%;" >nul
-if errorlevel 1 set "PATH=%BIN_DIR%;%PATH%"
-
 call :AddUserPath "%BIN_DIR%"
 if errorlevel 1 (
   echo wheretoken: User PATH was not updated; this shell should still run wheretoken
@@ -144,8 +141,10 @@ set "VER="
 for /f "usebackq delims=" %%V in (`"%EXE%" --version 2^>nul`) do set "VER=%%V"
 if defined VER echo wheretoken: !VER!
 
-rem Turn off delayed expansion before exporting PATH so "!" in PATH is preserved.
+rem Copy PATH with delayed expansion off so "!" stays literal and "&" is not parsed.
 setlocal DisableDelayedExpansion
+echo ";%PATH%;" | find.exe /I ";%BIN_DIR%;" >nul
+if errorlevel 1 set "PATH=%BIN_DIR%;%PATH%"
 set "WT_PATH=%PATH%"
 endlocal & endlocal & set "PATH=%WT_PATH%"
 
@@ -166,13 +165,20 @@ echo next: wheretoken uninstall
 exit /b 0
 
 :AddUserPath
+setlocal DisableDelayedExpansion
 set "ADD=%~1"
-if "!ADD:~-1!"=="\" set "ADD=!ADD:~0,-1!"
+if "%ADD:~-1%"=="\" set "ADD=%ADD:~0,-1%"
 set "UPATH="
 for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "UPATH=%%B"
 if defined UPATH (
-  echo ;!UPATH!; | find.exe /I ";%ADD%;" >nul
-  if not errorlevel 1 goto :BroadcastEnv
+  echo ";%UPATH%;" | find.exe /I ";%ADD%;" >nul
+  if not errorlevel 1 (
+    endlocal
+    goto :BroadcastEnv
+  )
+)
+setlocal EnableDelayedExpansion
+if defined UPATH (
   set "NEW=%ADD%;!UPATH!"
 ) else (
   set "NEW=%ADD%"
@@ -180,13 +186,18 @@ if defined UPATH (
 reg add "HKCU\Environment" /v Path /t REG_EXPAND_SZ /d "!NEW!" /f >nul
 if errorlevel 1 (
   echo wheretoken: failed to write HKCU\Environment Path
+  endlocal
+  endlocal
   exit /b 1
 )
+endlocal
+endlocal
 echo wheretoken: User PATH updated
 goto :BroadcastEnv
 
 :BroadcastEnv
 where powershell.exe >nul 2>nul
 if errorlevel 1 exit /b 0
+rem Dummy delete broadcasts WM_SETTINGCHANGE without rewriting Path as REG_SZ.
 powershell.exe -NoProfile -NonInteractive -Command "[Environment]::SetEnvironmentVariable('WT_PATH_REFRESH',[NullString]::Value,'User')" >nul 2>nul
 exit /b 0
