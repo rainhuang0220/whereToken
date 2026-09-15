@@ -38,6 +38,34 @@
 
 它设计为在本机运行。欢迎反馈和缺陷报告。
 
+## 安装
+
+macOS / Linux：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
+```
+
+Windows（PowerShell）：
+
+```powershell
+irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
+```
+
+命令提示符（不使用 PowerShell）：
+
+```bat
+curl.exe -fsSL -o "%TEMP%\wt-install.cmd" https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && call "%TEMP%\wt-install.cmd"
+```
+
+然后在同一个终端里输入：
+
+```bash
+wheretoken
+```
+
+Homebrew、`go install` 和源码构建见 [其他安装方式](#其他安装方式)。
+
 ## 功能
 
 ### 统一用量
@@ -93,38 +121,16 @@ GitHub Profile README 应链到预览图和 live page（不要把 SVG 本身当�
 
 `wheretoken card path.svg` 仍会从同一快照写出 800×576 Vibe Coding Wall。新 README 请优先用 `profile build`。
 
-## 安装
+## 其他安装方式
 
-### 推荐：Homebrew
+Homebrew：
 
 ```bash
 brew tap rainhuang0220/wheretoken
 brew install wheretoken
 ```
 
-### 预编译二进制
-
-macOS / Linux：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.sh | bash
-```
-
-Windows（PowerShell）：
-
-```powershell
-irm https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.ps1 | iex
-```
-
-Windows（命令提示符，也就是 `C:\Users\…>` 那种窗口）：
-
-```bat
-curl.exe -fsSL -o %TEMP%\wt-install.cmd https://raw.githubusercontent.com/rainhuang0220/whereToken/main/scripts/install.cmd && %TEMP%\wt-install.cmd
-```
-
-脚本会印出安装路径（Unix 一般是 `~/.local/bin/wheretoken`，Windows 是 `%LOCALAPPDATA%\whereToken\bin\wheretoken.exe`）。跑那一行。当前终端找不到命令，就新开一个。
-
-### 从源码构建
+如果本机已有 Go：
 
 ```bash
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
@@ -132,7 +138,7 @@ go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 
 Release 二进制和 `brew tap` 包含仪表盘。`go install` 和 `brew --HEAD` 只编命令行。从克隆目录启动仪表盘时，先构建网页（`cd web && npm run build`），再设置 `WHERETOKEN_WEB` 为 `web/dist`。
 
-`npm/` 包装 **还没上 npm 源**。
+`npm/` 包装 **还没上 npm 源**。GitHub Release 二进制目前 **未签名**。
 
 ## 快速开始
 

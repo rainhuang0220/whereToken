@@ -46,4 +46,14 @@ func TestReleaseAssetNamesMatchGoreleaserAndNpm(t *testing.T) {
 	if !strings.Contains(string(ps1), `wheretoken_windows_${goarch}.zip`) {
 		t.Fatal("install.ps1 asset name drifted from goreleaser")
 	}
+	cmd, err := os.ReadFile(filepath.Join(root, "scripts", "install.cmd"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(cmd), `wheretoken_windows_%GOARCH%.zip`) {
+		t.Fatal("install.cmd asset name drifted from goreleaser")
+	}
+	if strings.Contains(string(goreleaser), "wrap_in_directory: true") {
+		t.Fatal("wrapping release archives would hide wheretoken.exe from install.cmd")
+	}
 }
