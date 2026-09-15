@@ -64,6 +64,17 @@
     }
   }
 
+  function Get-Sha256File([string]$path) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $fs = [System.IO.File]::OpenRead($path)
+    try {
+      return ([BitConverter]::ToString($sha.ComputeHash($fs))).Replace('-', '').ToLowerInvariant()
+    } finally {
+      $fs.Dispose()
+      $sha.Dispose()
+    }
+  }
+
   $asset = "wheretoken_windows_${goarch}.zip"
   $url = "$base/$asset"
   $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('wheretoken-' + [guid]::NewGuid().ToString())
@@ -86,10 +97,11 @@
     $line = Get-Content $sums | Where-Object { $_ -like "*$asset*" } | Select-Object -First 1
     if (-not $line) { throw "wheretoken: checksums.txt did not list $asset`nwheretoken: install did not copy a binary or change PATH." }
     $want = ($line -split '\s+')[0].ToLower()
-    $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+    $got = Get-Sha256File $zip
     if ($got -ne $want) { throw "wheretoken: SHA256 mismatch for $asset`nwheretoken: install did not copy a binary or change PATH." }
     Write-Host 'wheretoken: checksum ok'
-    Expand-Archive -Path $zip -DestinationPath $tmp -Force
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $tmp)
     $exe = Get-ChildItem -Path $tmp -Filter wheretoken.exe -Recurse | Select-Object -First 1
     if (-not $exe) { throw "wheretoken: archive had no wheretoken.exe`nwheretoken: install did not copy a binary or change PATH." }
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null

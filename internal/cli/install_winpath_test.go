@@ -85,28 +85,33 @@ func TestInstallPS1RejectsChecksumMismatch(t *testing.T) {
 func TestInstallCMDUnsupportedArch(t *testing.T) {
 	fx := newWindowsInstallFixture(t, windowsInstallFixtureOpts{})
 	script := filepath.Join(fx.root, "scripts", "install.cmd")
-	cmd := exec.Command("cmd.exe", "/D", "/E:ON", "/V:OFF", "/S", "/C",
-		fmt.Sprintf(`call "%s"`, script))
-	cmd.Env = fx.cmdEnv("PROCESSOR_ARCHITECTURE=IA64")
-	out, err := cmd.CombinedOutput()
+	wrapper := filepath.Join(t.TempDir(), "arch.cmd")
+	body := fmt.Sprintf("@echo off\r\nset PROCESSOR_ARCHITEW6432=\r\nset PROCESSOR_ARCHITECTURE=IA64\r\ncall \"%s\"\r\n", script)
+	if err := os.WriteFile(wrapper, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCmdFile(fx.cmdEnv(), wrapper)
 	if err == nil {
 		t.Fatalf("expected unsupported arch\n%s", out)
 	}
-	got := string(out)
-	if !strings.Contains(got, "unsupported") || !strings.Contains(got, "IA64") {
-		t.Fatalf("expected a clear unsupported-arch error\n%s", got)
+	if !strings.Contains(out, "unsupported") || !strings.Contains(out, "IA64") {
+		t.Fatalf("expected a clear unsupported-arch error\n%s", out)
 	}
 	if _, statErr := os.Stat(filepath.Join(fx.binDir, "wheretoken.exe")); !os.IsNotExist(statErr) {
-		t.Fatalf("unsupported arch must not install a binary\n%s", got)
+		t.Fatalf("unsupported arch must not install a binary\n%s", out)
 	}
 }
 
 func TestInstallPS1UnsupportedArch(t *testing.T) {
 	fx := newWindowsInstallFixture(t, windowsInstallFixtureOpts{})
 	script := filepath.Join(fx.root, "scripts", "install.ps1")
-	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-		fmt.Sprintf(`Get-Content -Raw -LiteralPath '%s' | Invoke-Expression`, script))
-	cmd.Env = fx.psEnv("PROCESSOR_ARCHITECTURE=IA64", "PROCESSOR_ARCHITEW6432=")
+	ps := fmt.Sprintf(`$ErrorActionPreference = 'Stop'
+Remove-Item Env:PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue
+$env:PROCESSOR_ARCHITECTURE = 'IA64'
+Get-Content -Raw -LiteralPath '%s' | Invoke-Expression
+`, powershellSingleQuote(script))
+	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps)
+	cmd.Env = fx.psEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("expected unsupported arch\n%s", out)
@@ -274,13 +279,17 @@ func (fx *windowsInstallFixture) runCMDAllowFail(t *testing.T, probe string) (st
 	if err := os.WriteFile(downloaded, raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	wrapper := filepath.Join(spacedTemp, "smoke.cmd")
+	wrapper := filepath.Join(t.TempDir(), "smoke.cmd")
 	body := fmt.Sprintf("@echo off\r\ncall \"%s\"\r\nif errorlevel 1 exit /b 1\r\n%s\r\n", downloaded, probe)
 	if err := os.WriteFile(wrapper, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("cmd.exe", "/D", "/E:ON", "/V:OFF", "/S", "/C", `call "`+wrapper+`"`)
-	cmd.Env = fx.cmdEnv("TEMP="+spacedTemp, "TMP="+spacedTemp)
+	return runCmdFile(fx.cmdEnv("TEMP="+spacedTemp, "TMP="+spacedTemp), wrapper)
+}
+
+func runCmdFile(env []string, bat string) (string, error) {
+	cmd := exec.Command("cmd.exe", "/D", "/E:ON", "/V:OFF", "/C", bat)
+	cmd.Env = env
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
