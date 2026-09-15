@@ -3,48 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#090b11" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11100f" media="(prefers-color-scheme: dark)">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self'; base-uri 'none'; form-action 'none'">
-	<link rel="icon" href="data:,">
-  <title>whereToken · AI coding profile</title>
+  <link rel="icon" href="data:,">
+  <title>whereToken · coding activity</title>
   <link rel="stylesheet" href="./assets/profile.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="top">
-    <div class="brand">
-      <strong>whereToken</strong>
-      <span>AI coding profile</span>
-    </div>
-    <div class="header-meta">
-      <p class="freshness" id="freshness">Public snapshot</p>
-      <button type="button" class="chip" id="coverage-chip" hidden>Coverage</button>
-    </div>
-    <div class="header-actions">
-      <div class="theme" role="group" aria-label="Theme">
-        <button type="button" data-theme-set="system">System</button>
-        <button type="button" data-theme-set="light">Light</button>
-        <button type="button" data-theme-set="dark">Dark</button>
+    <div class="top-inner">
+      <div class="brand">
+        <strong>whereToken</strong>
+        <span>my coding-agent token usage</span>
       </div>
-      <a class="gh" id="github" href="https://github.com/rainhuang0220/whereToken" rel="noopener">GitHub ↗</a>
+      <div class="header-actions">
+        <p class="freshness" id="freshness"></p>
+        <div class="theme" role="group" aria-label="Theme">
+          <button type="button" data-theme-set="system">System</button>
+          <button type="button" data-theme-set="light">Light</button>
+          <button type="button" data-theme-set="dark">Dark</button>
+        </div>
+        <a class="gh" id="github" href="https://github.com/rainhuang0220/whereToken" rel="noopener">GitHub</a>
+      </div>
     </div>
   </header>
   <p id="status" class="banner" role="status" aria-live="polite" hidden></p>
+
   <main id="main">
-    <p class="identity" id="identity"></p>
-    <section class="hero" aria-labelledby="hero-label">
-      <p class="hero-value" id="hero-value">—</p>
-      <h1 class="hero-label" id="hero-label">Tokens tracked</h1>
-      <p class="hero-coverage" id="hero-coverage" hidden></p>
+    <p class="identity" id="identity" hidden></p>
+
+    <section class="overview" aria-labelledby="hero-label">
+      <div class="hero">
+        <p class="hero-value" id="hero-value">—</p>
+        <h1 class="hero-label" id="hero-label">Tokens</h1>
+      </div>
+      <div class="coverage-note" id="hero-coverage" hidden>
+        <span>Coverage varies by source.</span>
+        <button type="button" class="coverage-link" id="coverage-chip">View details</button>
+      </div>
       <ul class="hero-meta" id="hero-meta"></ul>
     </section>
 
     <section class="activity" aria-labelledby="activity-h">
-      <div class="section-head">
+      <div class="section-head activity-head">
         <div>
           <h2 id="activity-h">Activity</h2>
-          <p class="series-heading" id="series-heading">All</p>
+          <p class="series-heading" id="series-heading">All agents</p>
         </div>
         <p class="range-readout" id="range-readout"></p>
       </div>
@@ -52,13 +58,7 @@
         <div class="seg" role="tablist" aria-label="Metric" id="metrics"></div>
         <div class="seg" role="tablist" aria-label="Time range" id="ranges"></div>
       </div>
-      <div class="trend-card" id="trend-card">
-        <div class="trend-head">
-          <span id="trend-label">Last 30 days</span>
-          <span id="trend-value"></span>
-        </div>
-        <div id="trend" class="trend" role="img" aria-label="Last 30 days"></div>
-      </div>
+
       <div class="heat-panel">
         <div class="heat-layout">
           <div class="weekdays" id="weekdays" aria-hidden="true"></div>
@@ -68,10 +68,18 @@
           </div>
         </div>
         <div class="heat-foot">
-          <p id="wall-hint" class="wall-hint">Latest weeks shown · scroll sideways for earlier activity.</p>
+          <p id="wall-hint" class="wall-hint">53 weeks · <span class="mobile-only">scroll sideways · </span>latest on the right</p>
           <div class="legend" id="legend" aria-label="Activity scale"></div>
         </div>
         <div id="wall-empty" class="wall-empty" hidden></div>
+      </div>
+
+      <div class="trend-strip" id="trend-card">
+        <div class="trend-head">
+          <span id="trend-label">Last 30 days</span>
+          <span id="trend-value"></span>
+        </div>
+        <div id="trend" class="trend" role="img" aria-label="Last 30 days"></div>
       </div>
       <div id="tip" class="tip" role="tooltip" hidden></div>
     </section>
@@ -84,23 +92,22 @@
       <div id="rows" class="rows"></div>
     </section>
 
-    <details class="coverage" id="coverage">
-      <summary>Data coverage</summary>
-      <div id="coverage-table" class="coverage-table"></div>
+    <details class="technical" id="coverage">
+      <summary>Technical details <span>Data coverage and methodology</span></summary>
+      <div class="technical-body">
+        <section aria-labelledby="coverage-h">
+          <h2 id="coverage-h">Data coverage</h2>
+          <div id="coverage-table" class="coverage-table"></div>
+        </section>
+        <section class="about" aria-labelledby="about-h">
+          <h2 id="about-h">About this data</h2>
+          <p>Manually published from a sanitized local snapshot. This page does not sync with the owner’s machine. Prompts, paths, transcripts, and raw events are excluded.</p>
+          <p>Total = miss + cache read + cache create + output; reasoning is not added twice. Missing usage stays unavailable (—), never zero.</p>
+          <p><a id="download" href="./profile.json" download>Download JSON</a>
+             · <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">How totals work</a></p>
+        </section>
+      </div>
     </details>
-
-    <section class="about" aria-labelledby="about-h">
-      <h2 id="about-h">About this data</h2>
-      <p>This page is live in the browser. The usage numbers are a locally generated public snapshot, not a live cloud sync. No prompts, paths, or transcripts are published.</p>
-      <ul>
-        <li>Tokens tracked are the ledger values this snapshot can actually measure. Coverage windows can differ by source.</li>
-        <li>Total = miss + cache read + cache create + output. Reasoning is not added twice.</li>
-        <li>Missing usage is shown as unavailable (—), never $0.</li>
-        <li>Cost, if present, is an API list-price equivalent, not a subscription bill.</li>
-      </ul>
-      <p><a id="download" href="./profile.json" download>Download public snapshot</a>
-         · <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">Token accounting</a></p>
-    </section>
   </main>
   <script src="./assets/profile.js"></script>
 </body>

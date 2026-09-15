@@ -10,6 +10,10 @@
     snap: null,
   };
   let tipTimer = 0;
+  let tipFrame = 0;
+  let tipTarget = null;
+  let hoverTarget = null;
+  let focusTarget = null;
 
   function applyTheme(mode) {
     if (mode === "light" || mode === "dark") {
@@ -133,26 +137,34 @@
   function render() {
     const snap = state.snap;
     if (!snap) return;
+    dismissTip();
     const p = periodOf(snap, state.range);
     const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
-    const when = (snap.generated_at || snap.as_of_date || "").slice(0, 10);
+    const when = (snap.as_of_date || "").slice(0, 10);
     const pretty = when ? formatDay(when).replace(/,\s+\d{4}$/, "") : "";
-    $("freshness").textContent = (demo ? "DEMO DATA · synthetic snapshot" : "Public snapshot") + (pretty ? " · updated " + pretty : "");
+    $("freshness").textContent = (demo ? "DEMO DATA · " : "") + (pretty ? "updated " + pretty : "");
     const owner = snap.owner || {};
-    $("identity").textContent = owner.display_name || owner.github_login || "Local public snapshot";
+    const identityNode = $("identity");
+    identityNode.textContent = owner.display_name || owner.github_login || "";
+    const identity = identityNode.textContent;
+    $("identity").hidden = !identity;
+    if (snap.links && /^https:\/\//.test(snap.links.project || "")) $("github").href = snap.links.project;
 
-    const all = snap.periods.all.totals.total;
-    $("hero-value").textContent = all.display || "—";
-    $("hero-label").textContent = "Tracked tokens";
+    const total = state.metric === "requests" ? p.requests : p.totals.total;
+    $("hero-value").textContent = total.display || "—";
+    $("hero-label").textContent = state.metric === "requests" ? "requests" : "tokens";
     const heroCoverage = $("hero-coverage");
-    heroCoverage.hidden = !hasMixedCoverage(snap);
-    heroCoverage.textContent = heroCoverage.hidden ? "" : "Coverage varies by source · see Data coverage";
-    const d7 = snap.periods["7d"].totals.total;
-    const week = !d7.display || d7.display === "—" || d7.status === "unavailable" ? "—" : "+" + d7.display;
+    const coverageIssue = hasMixedCoverage(snap) || snap.data_status !== "available";
+    heroCoverage.hidden = !coverageIssue;
+    const coverageText = heroCoverage.querySelector("span");
+    if (coverageText) {
+      coverageText.textContent = snap.data_status === "unavailable" ? "Token coverage unavailable." :
+        snap.data_status === "partial" ? "Partial coverage." : "Coverage varies by source.";
+    }
     const items = [
-      [week, "last 7d"],
-      [(p.current_streak.display || "—") + " day streak", ""],
-      [(p.hit_rate.display || "—") + " cache hit", ""],
+      [p.requests.display || "—", "requests"],
+      [p.active_days.display || "—", "active days"],
+      [p.current_streak.display || "—", "day current streak"],
     ];
     $("hero-meta").replaceChildren();
     items.forEach(([value, note]) => {
@@ -163,23 +175,12 @@
       $("hero-meta").append(li);
     });
 
-    const chip = $("coverage-chip");
-    if (snap.data_status === "partial") {
-      chip.hidden = false;
-      chip.textContent = "Coverage · Partial";
-    } else if (snap.data_status === "unavailable") {
-      chip.hidden = false;
-      chip.textContent = "Coverage · None";
-    } else {
-      chip.hidden = true;
-    }
-
     $("status").hidden = snap.data_status !== "unavailable";
     if (snap.data_status === "unavailable") {
       $("status").textContent = "No public activity in this snapshot.";
     }
 
-    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "Available history" };
+    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "All" };
     renderSeg($("metrics"), [
       { id: "tokens", label: "Tokens" },
       { id: "requests", label: "Requests" },
@@ -187,11 +188,11 @@
     renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
       state.range = id; writeURL(); render();
     });
-    $("range-readout").textContent = (state.metric === "requests" ? compact(p.requests.value) + " requests" : p.totals.total.display) + " · " + (rangeLabels[state.range] || p.range.label);
+    $("range-readout").textContent = (p.active_days.display || "—") + " active days";
 
     const ser = seriesFor(snap);
     const row = selectedRow(snap);
-    $("series-heading").textContent = row ? row.label : "All";
+    $("series-heading").textContent = row ? row.label : "All agents";
     renderWall(snap, ser, row);
     renderTrend(snap, ser);
     renderBreakdown(snap, p);
@@ -262,6 +263,7 @@
       }
       $("months").append(label);
     }
+    updateMonthLabelVisibility();
 
     let peak = -1;
     let peakIdx = -1;
@@ -280,12 +282,23 @@
       cell.type = "button";
       cell.className = "cell " + st + (st === "active" ? " lv" + Math.min(Math.max(lv, 1), 5) : "") + (i === peakIdx ? " peak" : "");
       cell.dataset.date = date;
-      cell.setAttribute("aria-label", date + " " + st);
-      const show = (e) => showTip(e, date, val, st, ser, i === peakIdx);
-      cell.addEventListener("focus", show);
-      cell.addEventListener("mouseenter", show);
-      cell.addEventListener("blur", hideTip);
-      cell.addEventListener("mouseleave", hideTip);
+      cell.setAttribute("aria-describedby", "tip");
+      cell.setAttribute("aria-label", formatDay(date) + ", " + tipValue(val, st) + (state.filter && ser.label ? ", " + ser.label : ""));
+      const show = (e) => showTip(e, date, val, st, ser);
+      const enter = (e) => { hoverTarget = cell; show(e); };
+      const leave = () => {
+        if (hoverTarget === cell) hoverTarget = null;
+        scheduleTipHide(cell);
+      };
+      cell.addEventListener("focus", (e) => { focusTarget = cell; show(e); });
+      cell.addEventListener("pointerenter", enter);
+      cell.addEventListener("mouseenter", enter);
+      cell.addEventListener("blur", () => {
+        if (focusTarget === cell) focusTarget = null;
+        scheduleTipHide(cell);
+      });
+      cell.addEventListener("pointerleave", leave);
+      cell.addEventListener("mouseleave", leave);
       wall.append(cell);
     });
     if (!wall.dataset.positioned) {
@@ -308,6 +321,16 @@
     const more = document.createElement("span");
     more.textContent = "More";
     legend.append(more);
+  }
+
+  function updateMonthLabelVisibility() {
+    const scroller = $("heat-scroll");
+    const bounds = scroller.getBoundingClientRect();
+    $("months").querySelectorAll("span").forEach((label) => {
+      const rect = label.getBoundingClientRect();
+      const fullyVisible = rect.left >= bounds.left && rect.right <= bounds.right;
+      label.style.visibility = label.textContent && fullyVisible ? "" : "hidden";
+    });
   }
 
   function renderTrend(snap, ser) {
@@ -347,13 +370,10 @@
       return [x, y, p];
     });
     const d = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-    const area = document.createElementNS(ns, "path");
-    area.setAttribute("class", "area");
-    area.setAttribute("d", d + " L " + xy[xy.length - 1][0].toFixed(1) + " " + (h - pad) + " L " + xy[0][0].toFixed(1) + " " + (h - pad) + " Z");
     const line = document.createElementNS(ns, "path");
     line.setAttribute("class", "line");
     line.setAttribute("d", d);
-    svg.append(area, line);
+    svg.append(line);
     const dot = document.createElementNS(ns, "circle");
     dot.setAttribute("class", "dot");
     dot.setAttribute("r", "4");
@@ -465,14 +485,14 @@
       const tr = document.createElement("tr");
       const cells = [
         row.label,
-        cov.tokens === "available" ? "Tokens ✓" : cov.tokens === "partial" ? "Tokens partial" : "Tokens —",
-        cov.requests === "available" ? "Requests ✓" : "Requests —",
+        cov.tokens === "available" ? "Available" : cov.tokens === "partial" ? "Partial" : "Unavailable",
+        cov.requests === "available" ? "Available" : "Unavailable",
         coverageNote(cov),
       ];
       cells.forEach((text, i) => {
         const td = document.createElement("td");
         td.textContent = text;
-        if (i === 1 || i === 2) td.className = text.indexOf("—") >= 0 ? "miss" : "ok";
+        if (i === 1 || i === 2) td.className = text === "Unavailable" ? "miss" : "ok";
         tr.append(td);
       });
       table.append(tr);
@@ -496,49 +516,72 @@
     }
   }
 
-  function showTip(ev, date, val, st, ser, peak) {
+  function tipValue(val, st) {
+    if (st === "future") return "Future";
+    if (st === "unknown") return "Unknown";
+    return compact(val) + " " + unitLabel();
+  }
+
+  function showTip(ev, date, val, st, ser) {
     const tip = $("tip");
+    const target = ev.currentTarget;
+    clearTimeout(tipTimer);
+    cancelAnimationFrame(tipFrame);
+    tipTarget = target;
     tip.hidden = false;
     tip.replaceChildren();
     const title = document.createElement("b");
     title.textContent = formatDay(date);
     const body = document.createElement("div");
-    if (st === "future") body.textContent = "Future";
-    else if (st === "unknown") body.textContent = "Unknown";
-    else body.textContent = compact(val) + " " + unitLabel();
+    body.textContent = tipValue(val, st);
     const src = document.createElement("div");
     src.className = "muted";
-    src.textContent = ser && ser.label ? ser.label : "";
+    src.textContent = state.filter && ser && ser.label ? ser.label : "";
     tip.append(title, body);
     if (src.textContent) tip.append(src);
-    if (peak && st === "active") {
-      const p = document.createElement("div");
-      p.className = "muted";
-      p.textContent = "Peak day";
-      tip.append(p);
-    }
-    requestAnimationFrame(() => placeTip(ev.target, tip));
     tip.classList.add("is-on");
+    tipFrame = requestAnimationFrame(() => {
+      if (tipTarget !== target || !target.isConnected) return;
+      placeTip(target, tip);
+    });
   }
 
   function placeTip(target, tip) {
     const r = target.getBoundingClientRect();
     const tw = tip.offsetWidth || 180;
     const th = tip.offsetHeight || 64;
+    const margin = 8;
     let left = r.left + r.width / 2 - tw / 2;
     let top = r.top - th - 8;
-    if (top < 8) top = r.bottom + 8;
-    if (left < 8) left = 8;
-    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    if (top < margin) top = r.bottom + 8;
+    const maxLeft = Math.max(margin, window.innerWidth - tw - margin);
+    const maxTop = Math.max(margin, window.innerHeight - th - margin);
+    left = Math.min(Math.max(left, margin), maxLeft);
+    top = Math.min(Math.max(top, margin), maxTop);
     tip.style.left = left + "px";
     tip.style.top = top + "px";
   }
 
-  function hideTip() {
-    const tip = $("tip");
-    tip.classList.remove("is-on");
+  function scheduleTipHide(target) {
+    if (hoverTarget === target || focusTarget === target) return;
     clearTimeout(tipTimer);
-    tipTimer = setTimeout(() => { tip.hidden = true; }, 160);
+    tipTimer = setTimeout(() => {
+      if (tipTarget !== target || hoverTarget === target || focusTarget === target) return;
+      dismissTip();
+    }, 160);
+  }
+
+  function dismissTip() {
+    const tip = $("tip");
+    clearTimeout(tipTimer);
+    cancelAnimationFrame(tipFrame);
+    tipTimer = 0;
+    tipFrame = 0;
+    tipTarget = null;
+    hoverTarget = null;
+    focusTarget = null;
+    tip.classList.remove("is-on");
+    tip.hidden = true;
   }
 
   $("coverage-chip").addEventListener("click", () => {
@@ -549,6 +592,9 @@
   document.querySelectorAll("[data-theme-set]").forEach((b) => {
     b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme-set")));
   });
+  $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
+  window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
+  window.addEventListener("scroll", dismissTip, { passive: true, capture: true });
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
 
   fetch("./profile.json", { cache: "no-store" })

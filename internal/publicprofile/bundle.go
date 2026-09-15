@@ -2,6 +2,8 @@ package publicprofile
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/rainhuang0220/whereToken/internal/profilewebembed"
@@ -52,17 +54,30 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 	out["index.html"] = html
 	out["assets/profile.css"] = css
 	out["assets/profile.js"] = script
+	assetRevision := bundleAssetRevision(out)
 	man, err := json.MarshalIndent(map[string]any{
-		"generated":    GeneratedFiles,
-		"schema":       SchemaName,
-		"snapshot_id":  snap.SnapshotID,
-		"generated_at": snap.GeneratedAt,
-		"as_of_date":   snap.AsOfDate,
-		"provenance":   snap.Provenance.Kind,
+		"asset_revision": assetRevision,
+		"generated":      GeneratedFiles,
+		"schema":         SchemaName,
+		"snapshot_id":    snap.SnapshotID,
+		"generated_at":   snap.GeneratedAt,
+		"as_of_date":     snap.AsOfDate,
+		"provenance":     snap.Provenance.Kind,
 	}, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 	out["manifest.json"] = append(man, '\n')
 	return out, nil
+}
+
+func bundleAssetRevision(files map[string][]byte) string {
+	h := sha256.New()
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js"} {
+		h.Write([]byte(name))
+		h.Write([]byte{0})
+		h.Write(files[name])
+		h.Write([]byte{0})
+	}
+	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }

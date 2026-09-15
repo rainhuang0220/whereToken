@@ -19,6 +19,17 @@ func TestPreviewLightAndDarkShareStructure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for i := range snap.Activity.Series {
+		ser := &snap.Activity.Series[i]
+		if ser.Dimension != "all" || (ser.Metric != MetricTokens && ser.Metric != "") {
+			continue
+		}
+		for level := 1; level <= 5; level++ {
+			ser.States[level-1] = CellActive
+			ser.Levels[level-1] = level
+			ser.Values[level-1] = int64(level)
+		}
+	}
 	var light, dark bytes.Buffer
 	if err := RenderPreview(&light, snap, ThemeLight); err != nil {
 		t.Fatal(err)
@@ -27,23 +38,38 @@ func TestPreviewLightAndDarkShareStructure(t *testing.T) {
 		t.Fatal(err)
 	}
 	ls, ds := light.String(), dark.String()
-	if !strings.Contains(ls, `viewBox="0 0 800 248"`) || !strings.Contains(ds, `viewBox="0 0 800 248"`) {
+	if !strings.Contains(ls, `viewBox="0 0 800 204"`) || !strings.Contains(ds, `viewBox="0 0 800 204"`) {
 		t.Fatal("dimensions")
 	}
-	if strings.Contains(ls, "#0b0f10") || strings.Contains(ls, "scanline") {
-		t.Fatal("light still CRT")
+	for _, forbidden := range []string{"AI coding profile", "Local public snapshot", "Public snapshot", "Explore profile", "→"} {
+		if strings.Contains(ls, forbidden) || strings.Contains(ds, forbidden) {
+			t.Fatalf("removed preview copy %q is still present", forbidden)
+		}
 	}
-	if !strings.Contains(ls, "#F8FAFC") || !strings.Contains(ds, "#090B11") {
+	if !strings.Contains(ls, "#F7F6F3") || !strings.Contains(ds, "#11100F") {
 		t.Fatal("theme colors")
 	}
-	if strings.Contains(ls, "#bf4a16") || strings.Contains(ds, "#e85d04") {
-		t.Fatal("legacy orange palette")
+	for _, color := range []string{"#EEEAE4", "#E4D4C1", "#D5AE86", "#C57E4A", "#A65331", "#71321F"} {
+		if !strings.Contains(ls, color) {
+			t.Fatalf("light heat color %s missing", color)
+		}
 	}
-	if !strings.Contains(ls, "Explore profile") {
-		t.Fatal("cta")
+	for _, color := range []string{"#24211E", "#3A2B24", "#65402D", "#965837", "#C77845", "#F1A260"} {
+		if !strings.Contains(ds, color) {
+			t.Fatalf("dark heat color %s missing", color)
+		}
 	}
-	if !strings.Contains(ls, "tokens tracked") {
-		t.Fatal("tokens tracked label")
+	if !strings.Contains(ls, "1.01K") || !strings.Contains(ls, "tokens") {
+		t.Fatal("total token label")
+	}
+	if got := strings.Count(ls, `width="12.0" height="12.0"`); got != WallDays {
+		t.Fatalf("wall cells=%d want=%d", got, WallDays)
+	}
+	if !strings.Contains(ls, `x="30.0" y="96.0" width="12.0"`) || !strings.Contains(ls, `x="758.0"`) || !strings.Contains(ls, `y="180.0"`) {
+		t.Fatal("wall does not span the intended 740px width")
+	}
+	if !strings.Contains(ls, `metadata id="wheretoken-snapshot-id"`) || !strings.Contains(ds, snap.SnapshotID) {
+		t.Fatal("snapshot metadata")
 	}
 	if strings.Contains(ls, "/Users/") {
 		t.Fatal("path leak")

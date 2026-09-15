@@ -1,5 +1,6 @@
 {
   "as_of_date": "2026-09-09",
+  "asset_revision": "sha256:54f63c2723fceed8ab0e724b1572a99d53e416ba7ecb2f59f30d9903c5cb6d7d",
   "generated": [
     "profile.json",
     "preview-light.svg",

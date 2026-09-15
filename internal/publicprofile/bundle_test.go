@@ -1,12 +1,17 @@
 package publicprofile
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rainhuang0220/whereToken/internal/profilewebembed"
 )
 
 func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
@@ -35,6 +40,21 @@ func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
 	if !strings.Contains(string(files["preview-light.svg"]), id) {
 		t.Fatal("preview does not identify its snapshot")
 	}
+	assetRevision, _ := manifest["asset_revision"].(string)
+	if assetRevision == "" || assetRevision == id {
+		t.Fatalf("asset revision must exist independently of snapshot id: %q", assetRevision)
+	}
+	h := sha256.New()
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js"} {
+		h.Write([]byte(name))
+		h.Write([]byte{0})
+		h.Write(files[name])
+		h.Write([]byte{0})
+	}
+	wantRevision := "sha256:" + hex.EncodeToString(h.Sum(nil))
+	if assetRevision != wantRevision {
+		t.Fatalf("asset_revision=%q want content digest %q", assetRevision, wantRevision)
+	}
 }
 
 func TestCommittedSyntheticDemoIsVisiblyMarked(t *testing.T) {
@@ -52,5 +72,61 @@ func TestCommittedSyntheticDemoIsVisiblyMarked(t *testing.T) {
 	}
 	if !strings.Contains(string(preview), "DEMO DATA") {
 		t.Fatal("demo preview is not visibly marked")
+	}
+}
+
+func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
+	for _, root := range []string{
+		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),
+		filepath.Join("..", "..", "public-profile"),
+	} {
+		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js"} {
+			got, err := os.ReadFile(filepath.Join(root, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := profilewebembed.Read(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Fatalf("%s does not match embedded source %s", root, name)
+			}
+		}
+	}
+}
+
+func TestAssetRevisionChangesForStyleOnlyAsset(t *testing.T) {
+	snap, err := Build(Input{Now: time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC), Loc: time.UTC})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := Bundle(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest map[string]any
+	if err := json.Unmarshal(files["manifest.json"], &manifest); err != nil {
+		t.Fatal(err)
+	}
+	snapshotID, _ := manifest["snapshot_id"].(string)
+	baseRevision, _ := manifest["asset_revision"].(string)
+	if snapshotID == "" || baseRevision == "" {
+		t.Fatalf("manifest missing cache inputs: %#v", manifest)
+	}
+
+	styled := make(map[string][]byte, len(files))
+	for name, payload := range files {
+		styled[name] = append([]byte(nil), payload...)
+	}
+	styled["assets/profile.css"] = append(styled["assets/profile.css"], '\n')
+	styleRevision := bundleAssetRevision(styled)
+	if styleRevision == baseRevision {
+		t.Fatal("style-only asset change did not change asset revision")
+	}
+	baseKey := snapshotID + "-" + strings.TrimPrefix(baseRevision, "sha256:")
+	styleKey := snapshotID + "-" + strings.TrimPrefix(styleRevision, "sha256:")
+	if baseKey == styleKey {
+		t.Fatal("style-only asset change did not change preview cache key")
 	}
 }

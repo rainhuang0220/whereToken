@@ -39,14 +39,18 @@ Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (versi
 
 Every snapshot contains a deterministic `sha256:…` `snapshot_id`. The hash excludes only `generated_at`, so rebuilding unchanged data at a later minute keeps the same ID; changing public data changes it. `manifest.json`, `profile.json`, and both previews carry the same ID.
 
-Use the hex part as a cache-busting query in Profile READMEs:
+The bundle manifest also contains a content-derived `asset_revision`. It hashes both preview SVGs and the embedded HTML/CSS/JavaScript, so a renderer-only or style-only publication changes the asset revision without changing the data identity.
+
+Use `SNAPSHOT_HEX-ASSET_HEX` as the cache-busting query in Profile READMEs:
 
 ```html
-<source media="(prefers-color-scheme: dark)" srcset="https://example/profile/preview-dark.svg?v=SNAPSHOT_HEX">
-<img src="https://example/profile/preview-light.svg?v=SNAPSHOT_HEX" alt="whereToken public usage preview">
+<source media="(prefers-color-scheme: dark)" srcset="https://example/profile/preview-dark.svg?v=SNAPSHOT_HEX-ASSET_HEX">
+<img src="https://example/profile/preview-light.svg?v=SNAPSHOT_HEX-ASSET_HEX" alt="whereToken public usage preview">
 ```
 
-An explicit publication updates the query only when the snapshot ID changes. This makes GitHub Camo fetch a new preview without pretending the snapshot is live-synced.
+An explicit publication updates the query when either the public data or the renderer assets change. This makes GitHub Camo fetch a new preview while preserving `snapshot_id` as a data-only identifier.
+
+GitHub renders a README SVG through Camo as one image element. The SVG can keep a root title and description, but per-cell pointer or keyboard interaction is not available inside the README image. Link the static preview to the interactive page instead of attempting image maps, scripts, or hundreds of HTML cells.
 
 ## Compatibility
 

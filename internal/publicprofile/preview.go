@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 const (
 	previewW = 800
-	previewH = 248
+	previewH = 204
 )
 
 type Theme struct {
@@ -20,23 +21,19 @@ type Theme struct {
 	Text      string
 	Secondary string
 	Empty     string
-	Accent    string
 	Heat      [6]string
-	Peak      string
 }
 
 var ThemeLight = Theme{
-	Name: "light", Bg: "#F8FAFC", Surface: "#FFFFFF", Border: "#E2E8F0",
-	Text: "#0F172A", Secondary: "#64748B", Empty: "#EEF2F6", Accent: "#4F46E5",
-	Heat: [6]string{"#EEF2F6", "#E0E7FF", "#C7D2FE", "#A5B4FC", "#818CF8", "#4F46E5"},
-	Peak: "#06B6D4",
+	Name: "light", Bg: "#F7F6F3", Surface: "#FBFAF8", Border: "#DEDAD4",
+	Text: "#201D19", Secondary: "#756D64", Empty: "#EEEAE4",
+	Heat: [6]string{"#EEEAE4", "#E4D4C1", "#D5AE86", "#C57E4A", "#A65331", "#71321F"},
 }
 
 var ThemeDark = Theme{
-	Name: "dark", Bg: "#090B11", Surface: "#10141D", Border: "#252C3A",
-	Text: "#F8FAFC", Secondary: "#94A3B8", Empty: "#1B2230", Accent: "#8B5CF6",
-	Heat: [6]string{"#1B2230", "#2E1064", "#4C1D95", "#6D28D9", "#8B5CF6", "#C4B5FD"},
-	Peak: "#22D3EE",
+	Name: "dark", Bg: "#11100F", Surface: "#171513", Border: "#2A2724",
+	Text: "#F2EEE8", Secondary: "#A79D92", Empty: "#24211E",
+	Heat: [6]string{"#24211E", "#3A2B24", "#65402D", "#965837", "#C77845", "#F1A260"},
 }
 
 func RenderPreview(w io.Writer, s Snapshot, th Theme) error {
@@ -48,44 +45,26 @@ func RenderPreview(w io.Writer, s Snapshot, th Theme) error {
 
 func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 	all := s.Periods.All
-	w53 := s.Periods.W53
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	fmt.Fprintf(b, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d" role="img">`+"\n", previewW, previewH, previewW, previewH)
 	fmt.Fprintf(b, `<title>%s</title>`+"\n", esc("whereToken public coding-agent usage preview"))
 	fmt.Fprintf(b, `<desc>%s</desc>`+"\n", esc(previewDesc(s)))
 	fmt.Fprintf(b, `<metadata id="wheretoken-snapshot-id">%s</metadata>`+"\n", esc(s.SnapshotID))
-	fmt.Fprintf(b, `<rect x="0.5" y="0.5" width="799" height="247" rx="12" fill="%s" stroke="%s" stroke-width="1"/>`+"\n", th.Bg, th.Border)
-	text(b, 20, 28, 13, th.Text, "start", "600", "whereToken")
-	text(b, 112, 28, 12, th.Secondary, "start", "400", "AI coding profile")
-	text(b, 780, 28, 11, th.Secondary, "end", "400", "updated "+s.AsOfDate)
+	fmt.Fprintf(b, `<rect x="0.5" y="0.5" width="799" height="203" rx="6" fill="%s" stroke="%s" stroke-width="1"/>`+"\n", th.Bg, th.Border)
+	text(b, 30, 27, 13, th.Text, "start", "600", "whereToken")
+	text(b, 112, 27, 12, th.Secondary, "start", "400", "my coding-agent token usage")
+	updated := "updated " + previewDate(s.AsOfDate)
+	if s.Provenance.Kind == ProvenanceSyntheticDemo {
+		updated = "DEMO DATA · " + updated
+	}
+	text(b, 770, 27, 11, th.Secondary, "end", "400", updated)
+	fmt.Fprintf(b, `<line x1="30" y1="43.5" x2="770" y2="43.5" stroke="%s" stroke-width="1"/>`+"\n", th.Border)
 
 	total := all.Totals.Total.Display
-	text(b, 20, 64, 28, th.Accent, "start", "700", total)
-	text(b, 20, 82, 11, th.Secondary, "start", "400", "tokens tracked")
+	text(b, 30, 79, 30, th.Text, "start", "600", total+" tokens")
+	text(b, 770, 82, 10, th.Secondary, "end", "500", "53 weeks")
 
-	streak := "—"
-	if all.CurrentStreak.Display != "" {
-		streak = all.CurrentStreak.Display
-	}
-	active := "—"
-	if w53.ActiveDays.Display != "" {
-		active = w53.ActiveDays.Display
-	}
-	text(b, 420, 58, 12, th.Text, "start", "600", streak+" day streak")
-	text(b, 420, 76, 12, th.Text, "start", "600", active+" active days · 53w")
-	top := "—"
-	if len(all.ByAgent) > 0 {
-		top = all.ByAgent[0].Label
-	}
-	text(b, 420, 94, 12, th.Secondary, "start", "400", "top "+top)
-
-	writeWall(b, s, th, 20, 112)
-	footer := "Local public snapshot"
-	if s.Provenance.Kind == ProvenanceSyntheticDemo {
-		footer = "DEMO DATA · synthetic snapshot"
-	}
-	text(b, 20, 232, 11, th.Secondary, "start", "400", footer)
-	text(b, 780, 232, 11, th.Accent, "end", "600", "Explore profile →")
+	writeWall(b, s, th, 30, 96)
 	b.WriteString("</svg>\n")
 }
 
@@ -97,15 +76,7 @@ func writeWall(b *strings.Builder, s Snapshot, th Theme, x, y float64) {
 			break
 		}
 	}
-	cell, gap := 9.0, 2.0
-	peakIdx := -1
-	peakVal := int64(-1)
-	for i := 0; i < len(ser.Values) && i < WallDays; i++ {
-		if i < len(ser.States) && ser.States[i] == CellActive && ser.Values[i] > peakVal {
-			peakVal = ser.Values[i]
-			peakIdx = i
-		}
-	}
+	cell, gap := 12.0, 2.0
 	for i := 0; i < len(s.Activity.Dates) && i < WallDays; i++ {
 		col := i / 7
 		row := i % 7
@@ -131,16 +102,20 @@ func writeWall(b *strings.Builder, s Snapshot, th Theme, x, y float64) {
 			}
 			fill = th.Heat[lv]
 		}
-		stroke := ""
-		if i == peakIdx && st == CellActive {
-			stroke = fmt.Sprintf(` stroke="%s" stroke-width="1"`, th.Peak)
-		}
-		fmt.Fprintf(b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="1.5" fill="%s"%s/>`+"\n", cx, cy, cell, cell, fill, stroke)
+		fmt.Fprintf(b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="1.5" fill="%s"/>`+"\n", cx, cy, cell, cell, fill)
 	}
 }
 
 func previewDesc(s Snapshot) string {
-	return "Public snapshot of local coding-agent token usage as of " + s.AsOfDate + ". No prompts, paths, or identifiers."
+	return "Coding-agent token usage through " + s.AsOfDate + ". No prompts, paths, or identifiers."
+}
+
+func previewDate(iso string) string {
+	d, err := time.Parse("2006-01-02", iso)
+	if err != nil {
+		return iso
+	}
+	return d.Format("Jan 2")
 }
 
 func text(b *strings.Builder, x, y, size float64, fill, anchor, weight, s string) {

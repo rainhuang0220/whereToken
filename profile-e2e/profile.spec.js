@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bundle = path.join(repo, "docs", "media", "public-profile-demo");
+const staticBundle = path.join(repo, "internal", "profilewebembed", "static");
 const mount = "/whereToken/profile/";
 let server;
 let baseURL;
@@ -30,8 +31,8 @@ test.beforeAll(async () => {
       res.end(JSON.stringify(snapshot));
       return;
     }
-    const safePath = path.resolve(bundle, relative);
-    if (!safePath.startsWith(bundle + path.sep)) {
+    const safePath = path.resolve(staticBundle, relative);
+    if (!safePath.startsWith(staticBundle + path.sep)) {
       res.writeHead(403).end("forbidden");
       return;
     }
@@ -59,7 +60,7 @@ test.beforeEach(() => {
 
 test("loads the static project subpath with truthful snapshot provenance", async ({ page }) => {
   await page.goto(baseURL);
-  await expect(page.locator('[aria-label="Time range"] [aria-selected="true"]')).toHaveText("Available history");
+  await expect(page.locator('[aria-label="Time range"] [aria-selected="true"]')).toHaveText("All");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
   await expect(page.locator("#freshness")).toContainText("DEMO DATA");
   await expect(page.locator("#freshness")).toContainText("updated");
@@ -67,14 +68,15 @@ test("loads the static project subpath with truthful snapshot provenance", async
   snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
   await page.reload();
   await expect(page.locator("#freshness")).not.toContainText("DEMO DATA");
-  await expect(page.locator("#freshness")).toContainText("Public snapshot");
+  await expect(page.locator("#freshness")).not.toContainText("Public snapshot");
+  await expect(page.locator("#freshness")).toContainText("updated");
 });
 
 test("switches every range and optional breakdown tab", async ({ page }) => {
   await page.goto(baseURL);
-  for (const [label, id] of [["Today", "today"], ["7d", "7d"], ["30d", "30d"], ["53w", "53w"], ["Available history", "all"]]) {
+  for (const [label, id] of [["Today", "today"], ["7d", "7d"], ["30d", "30d"], ["53w", "53w"], ["All", "all"]]) {
     await page.getByRole("tab", { name: label, exact: true }).click();
-    await expect(page.locator("#range-readout")).toContainText(snapshot.periods[id].totals.total.display);
+    await expect(page.locator("#hero-value")).toHaveText(snapshot.periods[id].totals.total.display);
   }
   await expect(page.getByRole("tab", { name: "Agents" })).toBeVisible();
   await page.getByRole("tab", { name: "Providers" }).click();
@@ -154,6 +156,110 @@ test("persists filter URL state and exposes mouse and keyboard tooltips", async 
   await expect(page.locator("#tip")).toContainText(await row.locator(".rank-name").innerText());
   await active.focus();
   await expect(page.locator("#tip")).toContainText("tokens");
+  await expect(active).toHaveAttribute("aria-describedby", "tip");
+});
+
+test("keeps the newest tooltip after rapid A to B to C movement", async ({ page }) => {
+  await page.goto(baseURL);
+  const cells = page.locator("#wall .cell.active");
+  const a = cells.nth(0);
+  const b = cells.nth(1);
+  const c = cells.nth(2);
+  const cDate = await c.getAttribute("data-date");
+
+  await a.dispatchEvent("mouseenter");
+  await a.dispatchEvent("mouseleave");
+  await b.dispatchEvent("mouseenter");
+  await b.dispatchEvent("mouseleave");
+  await c.dispatchEvent("mouseenter");
+
+  await expect(page.locator("#tip")).toContainText(formatExpectedDay(cDate));
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeVisible();
+  await expect(page.locator("#tip")).toContainText(formatExpectedDay(cDate));
+});
+
+test("keeps tooltip ownership across rapid keyboard focus and mixed hover", async ({ page }) => {
+  await page.goto(baseURL);
+  const cells = page.locator("#wall .cell.active");
+  const a = cells.nth(0);
+  const b = cells.nth(1);
+  const bDate = await b.getAttribute("data-date");
+
+  await a.focus();
+  await b.focus();
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeVisible();
+  await expect(page.locator("#tip")).toContainText(formatExpectedDay(bDate));
+
+  await b.dispatchEvent("mouseenter");
+  await b.dispatchEvent("mouseleave");
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeVisible();
+});
+
+test("supports pointer lifecycle and hides after the active trigger leaves", async ({ page }) => {
+  await page.goto(baseURL);
+  const active = page.locator("#wall .cell.active").first();
+  await active.dispatchEvent("pointerenter", { pointerType: "pen" });
+  await expect(page.locator("#tip")).toBeVisible();
+  await expect(page.locator("#tip > *")).toHaveCount(2);
+  await expect(page.locator("#tip")).not.toContainText("Peak day");
+  await active.dispatchEvent("pointerleave", { pointerType: "pen" });
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeHidden();
+
+  await active.dispatchEvent("mouseenter");
+  await active.dispatchEvent("mouseleave");
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeHidden();
+});
+
+test("clears stale tooltip state before range metric and filter rerenders", async ({ page }) => {
+  await page.goto(baseURL);
+  const tip = page.locator("#tip");
+
+  await page.locator("#wall .cell.active").first().dispatchEvent("mouseenter");
+  await expect(tip).toBeVisible();
+  await page.getByRole("tab", { name: "7d", exact: true }).click();
+  await expect(tip).toBeHidden();
+
+  await page.locator("#wall .cell.active").first().dispatchEvent("mouseenter");
+  await page.getByRole("tab", { name: "Requests", exact: true }).click();
+  await expect(tip).toBeHidden();
+
+  await page.locator("#wall .cell.active").first().dispatchEvent("mouseenter");
+  await page.locator("#rows button").first().click();
+  await expect(tip).toBeHidden();
+});
+
+test("clamps tooltips at viewport edges and closes them on resize", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseURL);
+  const tip = page.locator("#tip");
+  const edgeCases = [
+    [page.locator("#wall .cell").first(), "start"],
+    [page.locator("#wall .cell").last(), "end"],
+  ];
+  for (const [cell, edge] of edgeCases) {
+    await page.locator("#heat-scroll").evaluate((node, side) => {
+      node.scrollLeft = side === "start" ? 0 : node.scrollWidth;
+    }, edge);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await cell.dispatchEvent("mouseenter");
+    await expect(tip).toBeVisible();
+    const box = await tip.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(8);
+    expect(box.y).toBeGreaterThanOrEqual(8);
+    expect(box.x + box.width).toBeLessThanOrEqual(382);
+    expect(box.y + box.height).toBeLessThanOrEqual(836);
+  }
+  await page.locator("#heat-scroll").evaluate((node) => { node.scrollLeft -= 20; });
+  await expect(tip).toBeHidden();
+  await page.locator("#wall .cell").last().dispatchEvent("mouseenter");
+  await expect(tip).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event("resize")));
+  await expect(tip).toBeHidden();
 });
 
 test("persists theme and honors reduced motion", async ({ page }) => {
@@ -166,6 +272,13 @@ test("persists theme and honors reduced motion", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const transition = await page.locator("#wall").evaluate((node) => getComputedStyle(node).transitionDuration);
   expect(transition).toBe("0s");
+
+  const cells = page.locator("#wall .cell.active");
+  await cells.nth(0).dispatchEvent("mouseenter");
+  await cells.nth(0).dispatchEvent("mouseleave");
+  await cells.nth(1).dispatchEvent("mouseenter");
+  await page.waitForTimeout(220);
+  await expect(page.locator("#tip")).toBeVisible();
 });
 
 test("shows explicit invalid, empty, and partial states", async ({ page }) => {
@@ -190,7 +303,8 @@ test("shows explicit invalid, empty, and partial states", async ({ page }) => {
   snapshot = structuredClone(baseline);
   snapshot.data_status = "partial";
   await page.reload();
-  await expect(page.locator("#coverage-chip")).toContainText("Partial");
+  await expect(page.locator("#hero-coverage")).toContainText("Partial coverage");
+  await expect(page.locator("#coverage-chip")).toBeVisible();
 });
 
 test("keeps the page fixed at 390px and starts the wall at recent weeks", async ({ page }) => {
@@ -208,6 +322,35 @@ test("keeps the page fixed at 390px and starts the wall at recent weeks", async 
   expect(dimensions.wallWidth).toBeGreaterThan(dimensions.viewport);
   expect(dimensions.wallLeft).toBeGreaterThan(0);
   await expect(page.locator("#wall-hint")).toContainText("scroll");
+});
+
+test("keeps mobile month labels and wrapped metadata rules clean", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseURL);
+  await page.locator("#heat-scroll").evaluate((node) => {
+    const label = [...node.querySelectorAll("#months span")].find((item) => item.textContent && item.offsetLeft > node.clientWidth);
+    node.scrollLeft = label.offsetLeft - node.offsetLeft + 5;
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  const layout = await page.evaluate(() => {
+    const scroller = document.getElementById("heat-scroll").getBoundingClientRect();
+    const monthLabels = [...document.querySelectorAll("#months span")]
+      .filter((node) => node.textContent && getComputedStyle(node).visibility !== "hidden")
+      .map((node) => node.getBoundingClientRect())
+      .filter((rect) => rect.right > scroller.left && rect.left < scroller.right);
+    const meta = [...document.querySelectorAll("#hero-meta li")];
+    return {
+      monthLefts: monthLabels.map((rect) => rect.left),
+      scrollerLeft: scroller.left,
+      firstMetaLeft: meta[0].getBoundingClientRect().left,
+      thirdMetaLeft: meta[2].getBoundingClientRect().left,
+      thirdMetaBorder: getComputedStyle(meta[2]).borderLeftWidth,
+    };
+  });
+  expect(Math.min(...layout.monthLefts)).toBeGreaterThanOrEqual(layout.scrollerLeft);
+  expect(layout.thirdMetaLeft).toBeCloseTo(layout.firstMetaLeft, 0);
+  expect(layout.thirdMetaBorder).toBe("0px");
 });
 
 test("makes no external runtime request", async ({ page }) => {
@@ -260,9 +403,18 @@ test("switches Tokens and Requests without treating counts as tokens", async ({ 
   await expect(page.getByRole("tab", { name: "Tokens", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Requests", exact: true }).click();
   await expect(page).toHaveURL(/metric=requests/);
-  await expect(page.locator("#range-readout")).toContainText("requests");
+  await expect(page.locator("#hero-label")).toHaveText("requests");
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.requests.display);
   const active = page.locator("#wall .cell.active").first();
   await active.hover();
   await expect(page.locator("#tip")).toContainText("requests");
   await expect(page.locator("#tip")).not.toContainText("tokens");
 });
+
+function formatExpectedDay(iso) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
