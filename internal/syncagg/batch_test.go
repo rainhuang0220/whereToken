@@ -210,6 +210,81 @@ func TestDecodeBatchRejectsUnknownScopeAndFields(t *testing.T) {
 	}
 }
 
+// TestDecodeBatchRejectsMalformedAndOversizedRows proves the hosted sync
+// endpoint does not trust an authenticated caller's request body: DecodeBatch
+// itself must reject negative/overflowing measures, an out-of-range
+// revision, an unparseable date, and unrecognized quality/derivation/status
+// enums before anything reaches storage or a dashboard-reconstruction loop
+// that would otherwise materialize one synthetic event per unit.
+func TestDecodeBatchRejectsMalformedAndOversizedRows(t *testing.T) {
+	t.Parallel()
+	valid, err := Build(testBuildInput(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(valid.DailyModelUsage) == 0 {
+		t.Fatal("fixture produced no rows")
+	}
+
+	mutateRow := func(mutate func(*DailyModel)) Batch {
+		b := valid
+		rows := append([]DailyModel(nil), valid.DailyModelUsage...)
+		mutate(&rows[0])
+		b.DailyModelUsage = rows
+		return b
+	}
+	rowCases := map[string]Batch{
+		"negative miss":          mutateRow(func(r *DailyModel) { r.Miss = -1 }),
+		"miss over budget":       mutateRow(func(r *DailyModel) { r.Miss = maxDailyTokens + 1 }),
+		"user_turns over budget": mutateRow(func(r *DailyModel) { r.UserTurns = maxDailyCount + 1 }),
+		"negative requests":      mutateRow(func(r *DailyModel) { r.Requests = -1 }),
+		"zero revision":          mutateRow(func(r *DailyModel) { r.Revision = 0 }),
+		"negative revision":      mutateRow(func(r *DailyModel) { r.Revision = -5 }),
+		"unparseable date":       mutateRow(func(r *DailyModel) { r.Date = "not-a-date" }),
+		"unknown quality":        mutateRow(func(r *DailyModel) { r.Quality = "trustworthy" }),
+		"unknown derivation":     mutateRow(func(r *DailyModel) { r.Derivation = "guessed" }),
+		"malformed hash":         mutateRow(func(r *DailyModel) { r.SourceKeyHash = "not-hex" }),
+		"tool too long":          mutateRow(func(r *DailyModel) { r.Tool = strings.Repeat("x", 33) }),
+	}
+	for name, b := range rowCases {
+		t.Run(name, func(t *testing.T) {
+			raw, err := json.Marshal(b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeBatch(raw); err == nil {
+				t.Fatalf("%s: DecodeBatch accepted a malformed row", name)
+			}
+		})
+	}
+
+	mutateSource := func(mutate func(*Source)) Batch {
+		b := valid
+		srcs := append([]Source(nil), valid.Sources...)
+		mutate(&srcs[0])
+		b.Sources = srcs
+		return b
+	}
+	if len(valid.Sources) == 0 {
+		t.Fatal("fixture produced no sources")
+	}
+	sourceCases := map[string]Batch{
+		"unknown status": mutateSource(func(s *Source) { s.Status = "compromised" }),
+		"empty hash":     mutateSource(func(s *Source) { s.SourceKeyHash = "" }),
+	}
+	for name, b := range sourceCases {
+		t.Run(name, func(t *testing.T) {
+			raw, err := json.Marshal(b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeBatch(raw); err == nil {
+				t.Fatalf("%s: DecodeBatch accepted a malformed source", name)
+			}
+		})
+	}
+}
+
 // TestBuildAssignsDuplicateRowsToTheSameDateAsLocalMetric guards against the
 // exact drift the architecture review flagged: a duplicate stream row for
 // one request must land on the same local calendar date the local report,
