@@ -119,6 +119,37 @@ describe('hosted pages', () => {
   })
 })
 
+// The hosted server now requires the X-CSRF-Token header with no cookie
+// fallback (see internal/hosted/auth.go requireCSRF). Every mutating
+// cookie-authenticated call from the SPA must keep sending csrfHeaders();
+// a call that only relies on the browser attaching cookies would start
+// failing with 403 the moment it reached the server.
+function mutatingCallsMissingCSRF(src: string): string[] {
+  const lines = src.split('\n')
+  const offenders: string[] = []
+  lines.forEach((line, i) => {
+    if (/method:\s*['"](POST|PUT|DELETE)['"]/.test(line)) {
+      const nearby = lines.slice(i, i + 6).join('\n')
+      if (!nearby.includes('csrfHeaders()')) offenders.push(line.trim())
+    }
+  })
+  return offenders
+}
+
+describe('hosted CSRF header contract', () => {
+  it('every mutating hosted fetch call sends csrfHeaders(), never the cookie alone', () => {
+    for (const file of ['Pair.vue', 'Settings.vue']) {
+      const src = page(file)
+      expect(src).toMatch(/method:\s*['"](POST|PUT|DELETE)['"]/)
+      const offenders = mutatingCallsMissingCSRF(src)
+      expect(offenders, `${file} missing csrfHeaders() near: ${offenders.join('; ')}`).toEqual([])
+    }
+    const menu = readFileSync(new URL('../components/HostedAccountMenu.vue', import.meta.url), 'utf8')
+    expect(menu).toMatch(/method:\s*['"]POST['"]/)
+    expect(mutatingCallsMissingCSRF(menu)).toEqual([])
+  })
+})
+
 describe('hosted account menu source', () => {
   it('is a real menu button with fallback and keyboard hooks', () => {
     const src = readFileSync(new URL('../components/HostedAccountMenu.vue', import.meta.url), 'utf8')
