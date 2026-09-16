@@ -2,11 +2,45 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
+  const ABSOLUTE_TOKEN_CAP = 1_000_000_000;
+  const HEAT_MID_POSITION = 0.25;
+  const HEAT_HIGH_POSITION = 0.60;
+  const WALL_PALETTES = {
+    cobalt: {
+      label: "Cobalt",
+      stops: [
+        [0, [0.88, 0.055, 260]],
+        [HEAT_MID_POSITION, [0.72, 0.140, 260]],
+        [HEAT_HIGH_POSITION, [0.54, 0.170, 260]],
+        [1, [0.46, 0.180, 260]],
+      ],
+    },
+    magenta: {
+      label: "Magenta",
+      stops: [
+        [0, [0.88, 0.080, 340]],
+        [HEAT_MID_POSITION, [0.72, 0.180, 340]],
+        [HEAT_HIGH_POSITION, [0.54, 0.180, 340]],
+        [1, [0.46, 0.190, 340]],
+      ],
+    },
+    newsprint: {
+      label: "Newsprint",
+      texture: true,
+      stops: [
+        [0, [0.86, 0, 0]],
+        [HEAT_MID_POSITION, [0.67, 0, 0]],
+        [HEAT_HIGH_POSITION, [0.43, 0, 0]],
+        [1, [0.20, 0, 0]],
+      ],
+    },
+  };
   const state = {
     range: params.get("range") || "all",
     tab: params.get("tab") || "agents",
     filter: params.get("filter") || "",
     metric: params.get("metric") === "requests" ? "requests" : "tokens",
+    palette: storedWallPalette(),
     snap: null,
   };
   let tipTimer = 0;
@@ -26,6 +60,76 @@
     document.querySelectorAll("[data-theme-set]").forEach((b) => {
       b.setAttribute("aria-pressed", b.getAttribute("data-theme-set") === mode ? "true" : "false");
     });
+  }
+
+  function storedWallPalette() {
+    try {
+      const saved = localStorage.getItem("wt-wall-palette");
+      return WALL_PALETTES[saved] ? saved : "newsprint";
+    } catch (_) {
+      return "newsprint";
+    }
+  }
+
+  function applyWallPalette(id) {
+    if (!WALL_PALETTES[id]) return;
+    state.palette = id;
+    try { localStorage.setItem("wt-wall-palette", id); } catch (_) {}
+  }
+
+  function wallPalette() {
+    return WALL_PALETTES[state.palette] || WALL_PALETTES.newsprint;
+  }
+
+  function presentationIntensity(value, level) {
+    if (state.metric === "tokens") {
+      return Math.sqrt(Math.min(Math.max(Number(value) || 0, 0) / ABSOLUTE_TOKEN_CAP, 1));
+    }
+    return level > 0 ? Math.min(level / 5, 1) : 0;
+  }
+
+  function heatColor(palette, intensity) {
+    intensity = Math.min(Math.max(intensity, 0), 1);
+    let from = palette.stops[0];
+    let to = palette.stops[palette.stops.length - 1];
+    for (let i = 1; i < palette.stops.length; i++) {
+      if (intensity <= palette.stops[i][0]) {
+        from = palette.stops[i - 1];
+        to = palette.stops[i];
+        break;
+      }
+    }
+    const span = to[0] - from[0] || 1;
+    const t = (intensity - from[0]) / span;
+    const color = from[1].map((value, i) => value + (to[1][i] - value) * t);
+    return oklchHex(color[0], color[1], color[2]);
+  }
+
+  function oklchHex(l, c, h) {
+    const radians = h * Math.PI / 180;
+    const a = c * Math.cos(radians);
+    const b = c * Math.sin(radians);
+    const lRoot = l + 0.3963377774 * a + 0.2158037573 * b;
+    const mRoot = l - 0.1055613458 * a - 0.0638541728 * b;
+    const sRoot = l - 0.0894841775 * a - 1.291485548 * b;
+    const ll = lRoot ** 3;
+    const mm = mRoot ** 3;
+    const ss = sRoot ** 3;
+    const rgb = [
+      4.0767416621 * ll - 3.3077115913 * mm + 0.2309699292 * ss,
+      -1.2684380046 * ll + 2.6097574011 * mm - 0.3413193965 * ss,
+      -0.0041960863 * ll - 0.7034186147 * mm + 1.707614701 * ss,
+    ];
+    const channel = (linear) => {
+      const encoded = linear <= 0.0031308 ? 12.92 * linear : 1.055 * linear ** (1 / 2.4) - 0.055;
+      return Math.round(Math.min(Math.max(encoded, 0), 1) * 255).toString(16).padStart(2, "0");
+    };
+    return "#" + rgb.map(channel).join("");
+  }
+
+  function applyHeatPresentation(node, palette, intensity) {
+    node.style.backgroundColor = heatColor(palette, intensity);
+    node.classList.toggle("newsprint", Boolean(palette.texture));
   }
 
   function periodOf(snap, id) {
@@ -188,6 +292,10 @@
     renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
       state.range = id; writeURL(); render();
     });
+    renderSeg($("palettes"), Object.entries(WALL_PALETTES).map(([id, palette]) => ({ id, label: palette.label })), state.palette, (id) => {
+      applyWallPalette(id);
+      render();
+    });
     $("range-readout").textContent = (p.active_days.display || "—") + " active days";
 
     const ser = seriesFor(snap);
@@ -201,13 +309,25 @@
 
   function renderSeg(root, items, selected, onPick) {
     root.replaceChildren();
-    items.forEach((item) => {
+    items.forEach((item, index) => {
       const b = document.createElement("button");
       b.type = "button";
       b.textContent = item.label;
       b.setAttribute("role", "tab");
       b.setAttribute("aria-selected", selected === item.id ? "true" : "false");
+      b.tabIndex = selected === item.id ? 0 : -1;
       b.addEventListener("click", () => onPick(item.id));
+      b.addEventListener("keydown", (event) => {
+        let next = index;
+        if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % items.length;
+        else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + items.length) % items.length;
+        else if (event.key === "Home") next = 0;
+        else if (event.key === "End") next = items.length - 1;
+        else return;
+        event.preventDefault();
+        onPick(items[next].id);
+        requestAnimationFrame(() => root.querySelectorAll('[role="tab"]')[next]?.focus());
+      });
       root.append(b);
     });
   }
@@ -216,6 +336,7 @@
     const wall = $("wall");
     const empty = $("wall-empty");
     const dates = snap.activity.dates || [];
+    const palette = wallPalette();
     wall.replaceChildren();
     $("months").replaceChildren();
     $("weekdays").replaceChildren();
@@ -280,7 +401,10 @@
       const lv = ser.levels[i] || 0;
       const cell = document.createElement("button");
       cell.type = "button";
-      cell.className = "cell " + st + (st === "active" ? " lv" + Math.min(Math.max(lv, 1), 5) : "") + (i === peakIdx ? " peak" : "");
+      cell.className = "cell " + st + (i === peakIdx ? " peak" : "");
+      if (st === "active" && val > 0) {
+        applyHeatPresentation(cell, palette, presentationIntensity(val, lv));
+      }
       cell.dataset.date = date;
       cell.setAttribute("aria-describedby", "tip");
       cell.setAttribute("aria-label", formatDay(date) + ", " + tipValue(val, st) + (state.filter && ser.label ? ", " + ser.label : ""));
@@ -313,9 +437,13 @@
     const less = document.createElement("span");
     less.textContent = "Less";
     legend.append(less);
-    ["empty", "lv1", "lv2", "lv3", "lv4", "lv5"].forEach((cls) => {
+    const legendSteps = [null, 0, HEAT_MID_POSITION, HEAT_HIGH_POSITION, 1];
+    legendSteps.forEach((intensity) => {
       const i = document.createElement("i");
-      i.className = "cell " + (cls === "empty" ? "empty" : cls);
+      i.className = "cell";
+      if (intensity != null) {
+        applyHeatPresentation(i, palette, intensity);
+      }
       legend.append(i);
     });
     const more = document.createElement("span");

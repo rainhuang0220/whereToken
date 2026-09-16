@@ -75,6 +75,31 @@ func TestCommittedSyntheticDemoIsVisiblyMarked(t *testing.T) {
 	}
 }
 
+func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
+	snap, err := Build(Input{Now: time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC), Loc: time.UTC})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := Bundle(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(files["index.html"])
+	if !strings.Contains(html, `id="palettes"`) || !strings.Contains(html, `aria-label="Activity color"`) {
+		t.Fatal("generated live page does not expose an activity-color switcher")
+	}
+	js := string(files["assets/profile.js"])
+	for _, want := range []string{"Cobalt", "Magenta", "Newsprint", "ABSOLUTE_TOKEN_CAP", "wt-wall-palette"} {
+		if !strings.Contains(js, want) {
+			t.Fatalf("generated live script is missing %q", want)
+		}
+	}
+	css := string(files["assets/profile.css"])
+	if !strings.Contains(css, `.cell.newsprint`) {
+		t.Fatal("generated live stylesheet does not provide the newsprint cell treatment")
+	}
+}
+
 func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 	for _, root := range []string{
 		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),

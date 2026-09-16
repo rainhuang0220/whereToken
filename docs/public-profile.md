@@ -33,6 +33,8 @@ wheretoken profile build ./public-profile --include-models --include-cost
 
 Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (version **2**). Version 1 snapshots still validate in normal compatibility mode, but fail `--production` because they cannot prove the v2 per-source coverage contract; rebuild them with the current binary before publishing. Token math is unchanged (`docs/token-accounting.md`). Missing usage is unavailable (`—`), never `$0`. Each breakdown row carries `coverage` (`tokens` / `requests` / `token_source` / `token_window` / `reason`). Activity series are explicit `{dimension, id, metric: tokens|requests}` — the live page never guesses, and never falls back from a missing agent series to All.
 
+`activity.series[].levels` remains a five-level compatibility field in the public schema. It is not the renderer's visual granularity: preview rendering derives a continuous intensity from each raw `values[]` entry with the stable absolute scale `sqrt(clamp(value / 1,000,000,000, 0, 1))`. Zero stays empty; only days at or above one billion tokens saturate, and the same daily value renders at the same intensity regardless of the surrounding 53-week distribution.
+
 `all` means all history available to this scan, not a promise of identical all-time history across providers. The page labels it “Available history” and shows source-specific account windows next to account-derived rows. The hero total is the sum of tracked values; `data_status=partial` and the coverage panel disclose any incomplete source.
 
 ## Preview freshness

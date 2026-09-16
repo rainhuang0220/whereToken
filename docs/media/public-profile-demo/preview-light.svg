@@ -1,384 +1,686 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 204" width="800" height="204" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 194" width="800" height="194" role="img">
 <title>whereToken public coding-agent usage preview</title>
 <desc>Coding-agent token usage through 2026-09-09. No prompts, paths, or identifiers.</desc>
 <metadata id="wheretoken-snapshot-id">sha256:6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5</metadata>
-<rect x="0.5" y="0.5" width="799" height="203" rx="6" fill="#F7F6F3" stroke="#DEDAD4" stroke-width="1"/>
-<text x="30.0" y="27.0" fill="#201D19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.0" font-weight="600" text-anchor="start">whereToken</text>
-<text x="112.0" y="27.0" fill="#756D64" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.0" font-weight="400" text-anchor="start">my coding-agent token usage</text>
-<text x="770.0" y="27.0" fill="#756D64" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.0" font-weight="400" text-anchor="end">DEMO DATA · updated Sep 9</text>
-<line x1="30" y1="43.5" x2="770" y2="43.5" stroke="#DEDAD4" stroke-width="1"/>
-<text x="30.0" y="79.0" fill="#201D19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30.0" font-weight="600" text-anchor="start">198.76M tokens</text>
-<text x="770.0" y="82.0" fill="#756D64" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.0" font-weight="500" text-anchor="end">53 weeks</text>
-<rect x="30.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="30.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="30.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="30.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="30.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="30.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="30.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="44.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="44.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="44.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="44.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="44.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="44.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="44.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="58.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="58.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="58.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="58.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="58.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="58.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="58.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="72.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="72.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="72.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="72.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="72.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="72.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="72.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="86.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="86.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="86.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="86.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="86.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="86.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="86.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="100.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="100.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="100.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="100.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="100.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="100.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="100.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="114.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="114.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="114.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="114.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="114.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="114.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="114.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="128.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="128.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="128.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="128.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="128.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="128.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="128.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="142.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="142.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="142.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="142.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="142.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="142.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="142.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="156.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="156.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="156.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="156.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="156.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="156.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="156.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="170.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="170.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="170.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="170.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="170.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="170.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="170.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="184.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="184.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="184.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="184.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="184.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="184.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="184.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="198.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="198.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="198.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="198.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="198.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="198.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="198.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="212.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="212.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="212.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="212.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="212.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="212.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="212.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="226.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="226.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="226.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="226.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="226.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="226.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="226.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="240.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="240.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="240.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="240.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="240.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="240.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="240.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="254.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="254.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="254.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="254.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="254.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="254.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="254.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="268.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="268.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="268.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="268.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="268.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="268.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="268.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="282.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="282.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="282.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="282.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="282.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="282.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="282.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="296.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="296.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="296.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="296.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="296.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="296.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="296.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="310.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="310.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="310.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="310.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="310.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="310.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="310.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="324.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="324.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="324.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="324.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="324.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="324.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="324.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="338.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="338.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="338.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="338.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="338.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="338.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="338.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="352.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="352.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="352.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="352.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="352.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="352.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="352.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="366.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="366.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="366.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="366.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="366.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="366.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="366.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="380.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="380.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="380.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="380.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="380.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="380.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="380.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="394.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="394.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="394.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="394.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="394.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="394.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="394.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="408.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="408.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="408.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="408.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="408.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="408.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="408.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="422.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="422.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="422.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="422.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="422.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="422.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="422.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="436.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="436.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="436.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="436.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="436.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="436.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="436.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="450.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="450.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="450.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="450.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="450.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="450.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="450.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="464.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="464.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="464.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="464.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="464.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="464.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="464.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="478.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="478.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="478.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="478.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="478.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="478.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="478.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="492.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="492.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="492.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="492.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="492.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="492.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="492.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="506.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="520.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="520.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="520.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="520.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="520.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="520.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="520.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="534.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="534.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="534.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="534.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="534.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="534.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="534.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="548.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="548.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="548.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="548.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="548.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="548.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="548.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="562.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="562.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="562.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="562.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="562.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="562.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="562.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="576.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="576.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="576.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="576.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="576.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="576.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="576.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="590.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="590.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="590.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="590.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="590.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="590.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="590.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="604.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="604.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="604.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="604.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="604.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="604.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="604.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="618.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="618.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="618.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="618.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="618.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="618.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="618.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="632.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="632.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="632.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="632.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="632.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="632.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="632.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="646.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="646.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="646.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="646.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="646.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="646.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="646.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="660.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="660.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="660.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="660.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="660.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="660.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="660.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="674.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="674.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="674.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="674.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="674.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="674.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="674.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="688.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="688.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="688.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="688.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="688.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="688.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="688.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="702.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="702.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="702.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="702.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="702.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="702.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="702.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="716.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="716.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="716.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="716.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="716.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="716.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="716.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="730.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="730.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="730.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="730.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="730.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="730.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="730.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="744.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="744.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#E4D4C1"/>
-<rect x="744.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#71321F"/>
-<rect x="744.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="744.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="744.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="744.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#EEEAE4"/>
-<rect x="758.0" y="96.0" width="12.0" height="12.0" rx="1.5" fill="#C57E4A"/>
-<rect x="758.0" y="110.0" width="12.0" height="12.0" rx="1.5" fill="#D5AE86"/>
-<rect x="758.0" y="124.0" width="12.0" height="12.0" rx="1.5" fill="#A65331"/>
-<rect x="758.0" y="138.0" width="12.0" height="12.0" rx="1.5" fill="#FBFAF8"/>
-<rect x="758.0" y="152.0" width="12.0" height="12.0" rx="1.5" fill="#FBFAF8"/>
-<rect x="758.0" y="166.0" width="12.0" height="12.0" rx="1.5" fill="#FBFAF8"/>
-<rect x="758.0" y="180.0" width="12.0" height="12.0" rx="1.5" fill="#FBFAF8"/>
+<text x="4.0" y="19.0" fill="#1F2328" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.0" font-weight="600" text-anchor="start">whereToken</text>
+<text x="86.0" y="19.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.0" font-weight="400" text-anchor="start">my coding-agent token usage</text>
+<text x="796.0" y="19.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.0" font-weight="400" text-anchor="end">DEMO DATA · updated Sep 9</text>
+<line x1="4" y1="31.5" x2="796" y2="31.5" stroke="#D1D9E0" stroke-width="1"/>
+<text x="4.0" y="65.0" fill="#1F2328" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30.0" font-weight="600" text-anchor="start">198.76M tokens</text>
+<text class="month" x="28.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Sep</text>
+<text class="month" x="86.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Oct</text>
+<text class="month" x="144.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Nov</text>
+<text class="month" x="202.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Dec</text>
+<text class="month" x="274.5" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Jan</text>
+<text class="month" x="332.5" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Feb</text>
+<text class="month" x="390.5" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Mar</text>
+<text class="month" x="463.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Apr</text>
+<text class="month" x="521.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">May</text>
+<text class="month" x="579.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Jun</text>
+<text class="month" x="651.5" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Jul</text>
+<text class="month" x="709.5" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Aug</text>
+<text class="month" x="782.0" y="82.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Sep</text>
+<text class="weekday" x="22.0" y="98.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="end">Mon</text>
+<text class="weekday" x="22.0" y="127.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="end">Wed</text>
+<text class="weekday" x="22.0" y="156.0" fill="#59636E" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="end">Fri</text>
+<defs>
+<pattern id="newsprint-ink-0" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-1" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-2" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-3" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-4" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-7" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-8" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-9" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-10" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-11" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-12" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-14" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-15" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-16" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-17" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-18" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-20" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-21" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-22" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-23" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-24" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-25" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-26" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-27" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-28" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-29" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-30" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-31" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-32" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-35" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-36" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-37" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-38" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-39" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-42" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-43" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-44" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-45" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-46" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-47" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-48" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-49" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-50" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-51" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-52" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-53" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-56" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-57" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-58" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-59" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-60" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-61" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-63" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-64" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-65" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-66" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-67" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-70" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-71" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-72" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-73" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-74" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-77" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-78" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-79" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-80" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-81" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-84" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-85" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-86" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-87" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-88" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-91" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-92" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-93" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-94" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-95" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-98" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-99" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-100" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-101" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-102" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-104" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-105" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-106" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-107" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-108" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-109" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-112" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-113" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-114" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-115" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-116" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-119" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-120" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-121" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-122" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-123" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-124" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-125" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-126" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-127" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-128" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-129" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-130" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-133" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-134" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-135" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-136" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-137" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-139" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-140" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-141" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-142" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-143" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-144" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-145" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-147" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-148" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-149" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-150" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-151" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-154" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-155" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-156" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-157" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-158" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-159" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-161" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-162" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-163" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-164" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-165" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-167" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-168" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-169" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-170" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-171" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-172" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-174" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-175" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-176" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-177" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-178" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-179" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-180" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-182" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-183" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-184" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-185" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#B9B9B9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-186" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-188" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-189" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-190" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-191" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-192" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-193" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-196" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-197" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-198" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-199" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-200" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-202" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-203" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-204" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-205" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-206" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-207" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-210" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-211" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-212" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-213" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-214" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-215" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-217" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-218" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-219" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-220" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-221" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-223" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-224" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-225" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-226" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-227" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-228" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-229" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-231" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-232" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-233" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-234" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-245" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-246" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-247" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-248" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-249" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-251" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-252" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-253" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-254" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-255" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-256" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-257" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-258" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-259" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-260" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-261" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-262" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-263" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-266" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-267" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-268" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-269" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-270" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-273" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-274" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-275" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-276" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-277" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-278" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-280" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-281" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-282" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-283" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-284" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-287" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-288" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-289" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-290" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-291" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-294" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-295" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-296" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-297" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-298" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-301" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-302" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-303" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-304" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-305" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-306" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-308" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-309" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-310" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-311" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-312" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-314" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-315" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-316" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-317" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-318" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-319" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-322" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-323" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-324" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C9C9C9"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-325" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-326" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-329" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-330" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-331" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-332" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-333" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-336" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-337" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-338" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-339" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-340" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-341" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CECECE"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-343" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-344" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-345" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-346" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-347" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-348" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CFCFCF"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-350" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-351" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-352" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-353" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-354" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-357" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CCCCCC"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-358" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CDCDCD"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-359" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#C8C8C8"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-360" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-361" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-364" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-365" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CBCBCB"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+<pattern id="newsprint-ink-366" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="#CACACA"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>
+</defs>
+<rect class="day" x="28.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-0)"/>
+<rect class="day" x="28.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-1)"/>
+<rect class="day" x="28.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-2)"/>
+<rect class="day" x="28.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-3)"/>
+<rect class="day" x="28.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-4)"/>
+<rect class="day" x="28.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="28.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="42.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-7)"/>
+<rect class="day" x="42.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-8)"/>
+<rect class="day" x="42.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-9)"/>
+<rect class="day" x="42.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-10)"/>
+<rect class="day" x="42.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-11)"/>
+<rect class="day" x="42.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-12)"/>
+<rect class="day" x="42.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="57.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-14)"/>
+<rect class="day" x="57.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-15)"/>
+<rect class="day" x="57.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-16)"/>
+<rect class="day" x="57.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-17)"/>
+<rect class="day" x="57.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-18)"/>
+<rect class="day" x="57.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="57.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-20)"/>
+<rect class="day" x="71.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-21)"/>
+<rect class="day" x="71.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-22)"/>
+<rect class="day" x="71.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-23)"/>
+<rect class="day" x="71.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-24)"/>
+<rect class="day" x="71.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-25)"/>
+<rect class="day" x="71.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-26)"/>
+<rect class="day" x="71.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-27)"/>
+<rect class="day" x="86.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-28)"/>
+<rect class="day" x="86.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-29)"/>
+<rect class="day" x="86.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-30)"/>
+<rect class="day" x="86.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-31)"/>
+<rect class="day" x="86.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-32)"/>
+<rect class="day" x="86.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="86.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="100.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-35)"/>
+<rect class="day" x="100.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-36)"/>
+<rect class="day" x="100.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-37)"/>
+<rect class="day" x="100.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-38)"/>
+<rect class="day" x="100.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-39)"/>
+<rect class="day" x="100.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="100.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="115.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-42)"/>
+<rect class="day" x="115.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-43)"/>
+<rect class="day" x="115.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-44)"/>
+<rect class="day" x="115.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-45)"/>
+<rect class="day" x="115.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-46)"/>
+<rect class="day" x="115.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-47)"/>
+<rect class="day" x="115.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-48)"/>
+<rect class="day" x="129.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-49)"/>
+<rect class="day" x="129.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-50)"/>
+<rect class="day" x="129.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-51)"/>
+<rect class="day" x="129.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-52)"/>
+<rect class="day" x="129.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-53)"/>
+<rect class="day" x="129.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="129.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="144.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-56)"/>
+<rect class="day" x="144.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-57)"/>
+<rect class="day" x="144.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-58)"/>
+<rect class="day" x="144.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-59)"/>
+<rect class="day" x="144.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-60)"/>
+<rect class="day" x="144.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-61)"/>
+<rect class="day" x="144.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="158.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-63)"/>
+<rect class="day" x="158.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-64)"/>
+<rect class="day" x="158.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-65)"/>
+<rect class="day" x="158.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-66)"/>
+<rect class="day" x="158.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-67)"/>
+<rect class="day" x="158.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="158.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="173.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-70)"/>
+<rect class="day" x="173.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-71)"/>
+<rect class="day" x="173.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-72)"/>
+<rect class="day" x="173.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-73)"/>
+<rect class="day" x="173.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-74)"/>
+<rect class="day" x="173.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="173.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="187.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-77)"/>
+<rect class="day" x="187.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-78)"/>
+<rect class="day" x="187.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-79)"/>
+<rect class="day" x="187.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-80)"/>
+<rect class="day" x="187.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-81)"/>
+<rect class="day" x="187.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="187.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="202.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-84)"/>
+<rect class="day" x="202.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-85)"/>
+<rect class="day" x="202.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-86)"/>
+<rect class="day" x="202.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-87)"/>
+<rect class="day" x="202.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-88)"/>
+<rect class="day" x="202.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="202.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="216.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-91)"/>
+<rect class="day" x="216.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-92)"/>
+<rect class="day" x="216.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-93)"/>
+<rect class="day" x="216.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-94)"/>
+<rect class="day" x="216.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-95)"/>
+<rect class="day" x="216.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="216.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="231.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-98)"/>
+<rect class="day" x="231.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-99)"/>
+<rect class="day" x="231.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-100)"/>
+<rect class="day" x="231.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-101)"/>
+<rect class="day" x="231.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-102)"/>
+<rect class="day" x="231.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="231.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-104)"/>
+<rect class="day" x="245.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-105)"/>
+<rect class="day" x="245.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-106)"/>
+<rect class="day" x="245.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-107)"/>
+<rect class="day" x="245.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-108)"/>
+<rect class="day" x="245.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-109)"/>
+<rect class="day" x="245.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="245.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="260.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-112)"/>
+<rect class="day" x="260.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-113)"/>
+<rect class="day" x="260.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-114)"/>
+<rect class="day" x="260.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-115)"/>
+<rect class="day" x="260.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-116)"/>
+<rect class="day" x="260.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="260.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="274.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-119)"/>
+<rect class="day" x="274.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-120)"/>
+<rect class="day" x="274.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-121)"/>
+<rect class="day" x="274.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-122)"/>
+<rect class="day" x="274.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-123)"/>
+<rect class="day" x="274.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-124)"/>
+<rect class="day" x="274.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-125)"/>
+<rect class="day" x="289.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-126)"/>
+<rect class="day" x="289.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-127)"/>
+<rect class="day" x="289.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-128)"/>
+<rect class="day" x="289.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-129)"/>
+<rect class="day" x="289.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-130)"/>
+<rect class="day" x="289.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="289.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="303.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-133)"/>
+<rect class="day" x="303.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-134)"/>
+<rect class="day" x="303.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-135)"/>
+<rect class="day" x="303.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-136)"/>
+<rect class="day" x="303.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-137)"/>
+<rect class="day" x="303.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="303.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-139)"/>
+<rect class="day" x="318.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-140)"/>
+<rect class="day" x="318.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-141)"/>
+<rect class="day" x="318.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-142)"/>
+<rect class="day" x="318.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-143)"/>
+<rect class="day" x="318.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-144)"/>
+<rect class="day" x="318.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-145)"/>
+<rect class="day" x="318.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="332.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-147)"/>
+<rect class="day" x="332.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-148)"/>
+<rect class="day" x="332.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-149)"/>
+<rect class="day" x="332.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-150)"/>
+<rect class="day" x="332.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-151)"/>
+<rect class="day" x="332.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="332.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="347.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-154)"/>
+<rect class="day" x="347.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-155)"/>
+<rect class="day" x="347.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-156)"/>
+<rect class="day" x="347.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-157)"/>
+<rect class="day" x="347.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-158)"/>
+<rect class="day" x="347.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-159)"/>
+<rect class="day" x="347.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="361.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-161)"/>
+<rect class="day" x="361.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-162)"/>
+<rect class="day" x="361.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-163)"/>
+<rect class="day" x="361.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-164)"/>
+<rect class="day" x="361.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-165)"/>
+<rect class="day" x="361.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="361.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-167)"/>
+<rect class="day" x="376.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-168)"/>
+<rect class="day" x="376.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-169)"/>
+<rect class="day" x="376.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-170)"/>
+<rect class="day" x="376.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-171)"/>
+<rect class="day" x="376.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-172)"/>
+<rect class="day" x="376.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="376.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-174)"/>
+<rect class="day" x="390.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-175)"/>
+<rect class="day" x="390.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-176)"/>
+<rect class="day" x="390.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-177)"/>
+<rect class="day" x="390.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-178)"/>
+<rect class="day" x="390.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-179)"/>
+<rect class="day" x="390.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-180)"/>
+<rect class="day" x="390.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="405.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-182)"/>
+<rect class="day" x="405.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-183)"/>
+<rect class="day" x="405.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-184)"/>
+<rect class="day" x="405.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-185)"/>
+<rect class="day" x="405.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-186)"/>
+<rect class="day" x="405.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="405.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-188)"/>
+<rect class="day" x="419.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-189)"/>
+<rect class="day" x="419.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-190)"/>
+<rect class="day" x="419.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-191)"/>
+<rect class="day" x="419.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-192)"/>
+<rect class="day" x="419.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-193)"/>
+<rect class="day" x="419.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="419.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="434.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-196)"/>
+<rect class="day" x="434.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-197)"/>
+<rect class="day" x="434.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-198)"/>
+<rect class="day" x="434.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-199)"/>
+<rect class="day" x="434.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-200)"/>
+<rect class="day" x="434.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="434.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-202)"/>
+<rect class="day" x="448.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-203)"/>
+<rect class="day" x="448.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-204)"/>
+<rect class="day" x="448.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-205)"/>
+<rect class="day" x="448.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-206)"/>
+<rect class="day" x="448.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-207)"/>
+<rect class="day" x="448.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="448.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="463.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-210)"/>
+<rect class="day" x="463.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-211)"/>
+<rect class="day" x="463.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-212)"/>
+<rect class="day" x="463.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-213)"/>
+<rect class="day" x="463.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-214)"/>
+<rect class="day" x="463.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-215)"/>
+<rect class="day" x="463.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="477.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-217)"/>
+<rect class="day" x="477.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-218)"/>
+<rect class="day" x="477.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-219)"/>
+<rect class="day" x="477.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-220)"/>
+<rect class="day" x="477.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-221)"/>
+<rect class="day" x="477.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="477.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-223)"/>
+<rect class="day" x="492.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-224)"/>
+<rect class="day" x="492.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-225)"/>
+<rect class="day" x="492.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-226)"/>
+<rect class="day" x="492.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-227)"/>
+<rect class="day" x="492.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-228)"/>
+<rect class="day" x="492.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-229)"/>
+<rect class="day" x="492.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="506.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-231)"/>
+<rect class="day" x="506.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-232)"/>
+<rect class="day" x="506.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-233)"/>
+<rect class="day" x="506.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-234)"/>
+<rect class="day" x="506.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="506.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="506.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="521.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="535.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-245)"/>
+<rect class="day" x="535.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-246)"/>
+<rect class="day" x="535.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-247)"/>
+<rect class="day" x="535.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-248)"/>
+<rect class="day" x="535.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-249)"/>
+<rect class="day" x="535.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="535.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-251)"/>
+<rect class="day" x="550.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-252)"/>
+<rect class="day" x="550.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-253)"/>
+<rect class="day" x="550.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-254)"/>
+<rect class="day" x="550.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-255)"/>
+<rect class="day" x="550.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-256)"/>
+<rect class="day" x="550.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-257)"/>
+<rect class="day" x="550.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-258)"/>
+<rect class="day" x="564.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-259)"/>
+<rect class="day" x="564.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-260)"/>
+<rect class="day" x="564.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-261)"/>
+<rect class="day" x="564.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-262)"/>
+<rect class="day" x="564.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-263)"/>
+<rect class="day" x="564.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="564.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="579.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-266)"/>
+<rect class="day" x="579.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-267)"/>
+<rect class="day" x="579.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-268)"/>
+<rect class="day" x="579.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-269)"/>
+<rect class="day" x="579.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-270)"/>
+<rect class="day" x="579.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="579.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="593.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-273)"/>
+<rect class="day" x="593.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-274)"/>
+<rect class="day" x="593.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-275)"/>
+<rect class="day" x="593.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-276)"/>
+<rect class="day" x="593.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-277)"/>
+<rect class="day" x="593.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-278)"/>
+<rect class="day" x="593.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="608.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-280)"/>
+<rect class="day" x="608.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-281)"/>
+<rect class="day" x="608.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-282)"/>
+<rect class="day" x="608.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-283)"/>
+<rect class="day" x="608.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-284)"/>
+<rect class="day" x="608.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="608.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="622.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-287)"/>
+<rect class="day" x="622.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-288)"/>
+<rect class="day" x="622.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-289)"/>
+<rect class="day" x="622.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-290)"/>
+<rect class="day" x="622.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-291)"/>
+<rect class="day" x="622.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="622.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="637.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-294)"/>
+<rect class="day" x="637.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-295)"/>
+<rect class="day" x="637.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-296)"/>
+<rect class="day" x="637.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-297)"/>
+<rect class="day" x="637.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-298)"/>
+<rect class="day" x="637.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="637.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="651.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-301)"/>
+<rect class="day" x="651.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-302)"/>
+<rect class="day" x="651.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-303)"/>
+<rect class="day" x="651.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-304)"/>
+<rect class="day" x="651.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-305)"/>
+<rect class="day" x="651.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-306)"/>
+<rect class="day" x="651.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="666.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-308)"/>
+<rect class="day" x="666.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-309)"/>
+<rect class="day" x="666.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-310)"/>
+<rect class="day" x="666.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-311)"/>
+<rect class="day" x="666.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-312)"/>
+<rect class="day" x="666.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="666.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-314)"/>
+<rect class="day" x="680.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-315)"/>
+<rect class="day" x="680.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-316)"/>
+<rect class="day" x="680.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-317)"/>
+<rect class="day" x="680.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-318)"/>
+<rect class="day" x="680.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-319)"/>
+<rect class="day" x="680.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="680.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="695.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-322)"/>
+<rect class="day" x="695.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-323)"/>
+<rect class="day" x="695.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-324)"/>
+<rect class="day" x="695.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-325)"/>
+<rect class="day" x="695.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-326)"/>
+<rect class="day" x="695.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="695.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="709.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-329)"/>
+<rect class="day" x="709.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-330)"/>
+<rect class="day" x="709.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-331)"/>
+<rect class="day" x="709.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-332)"/>
+<rect class="day" x="709.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-333)"/>
+<rect class="day" x="709.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="709.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="724.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-336)"/>
+<rect class="day" x="724.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-337)"/>
+<rect class="day" x="724.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-338)"/>
+<rect class="day" x="724.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-339)"/>
+<rect class="day" x="724.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-340)"/>
+<rect class="day" x="724.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-341)"/>
+<rect class="day" x="724.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="738.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-343)"/>
+<rect class="day" x="738.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-344)"/>
+<rect class="day" x="738.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-345)"/>
+<rect class="day" x="738.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-346)"/>
+<rect class="day" x="738.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-347)"/>
+<rect class="day" x="738.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-348)"/>
+<rect class="day" x="738.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="753.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-350)"/>
+<rect class="day" x="753.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-351)"/>
+<rect class="day" x="753.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-352)"/>
+<rect class="day" x="753.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-353)"/>
+<rect class="day" x="753.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-354)"/>
+<rect class="day" x="753.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="753.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="767.5" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-357)"/>
+<rect class="day" x="767.5" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-358)"/>
+<rect class="day" x="767.5" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-359)"/>
+<rect class="day" x="767.5" y="131.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-360)"/>
+<rect class="day" x="767.5" y="146.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-361)"/>
+<rect class="day" x="767.5" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="767.5" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#EFF2F5"/>
+<rect class="day" x="782.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-364)"/>
+<rect class="day" x="782.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-365)"/>
+<rect class="day" x="782.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="url(#newsprint-ink-366)"/>
+<rect class="day" x="782.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="#F6F8FA"/>
+<rect class="day" x="782.0" y="146.0" width="13.0" height="13.0" rx="1.5" fill="#F6F8FA"/>
+<rect class="day" x="782.0" y="160.5" width="13.0" height="13.0" rx="1.5" fill="#F6F8FA"/>
+<rect class="day" x="782.0" y="175.0" width="13.0" height="13.0" rx="1.5" fill="#F6F8FA"/>
 </svg>

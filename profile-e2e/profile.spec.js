@@ -281,6 +281,28 @@ test("persists theme and honors reduced motion", async ({ page }) => {
   await expect(page.locator("#tip")).toBeVisible();
 });
 
+test("operates the Activity color tabs with arrows and persists the selected palette", async ({ page }) => {
+  await page.goto(baseURL);
+  const cobalt = page.getByRole("tab", { name: "Cobalt", exact: true });
+  const magenta = page.getByRole("tab", { name: "Magenta", exact: true });
+  const newsprint = page.getByRole("tab", { name: "Newsprint", exact: true });
+
+  await expect(newsprint).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#wall .cell.active").first()).toHaveClass(/newsprint/);
+  await cobalt.focus();
+  await cobalt.press("ArrowRight");
+  await expect(magenta).toBeFocused();
+  await expect(magenta).toHaveAttribute("aria-selected", "true");
+  await magenta.press("End");
+  await expect(newsprint).toBeFocused();
+  await expect(newsprint).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#wall .cell.active").first()).toHaveClass(/newsprint/);
+
+  await page.reload();
+  await expect(newsprint).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#wall .cell.active").first()).toHaveClass(/newsprint/);
+});
+
 test("shows explicit invalid, empty, and partial states", async ({ page }) => {
   snapshot.schema_version = 999;
   await page.goto(baseURL);
