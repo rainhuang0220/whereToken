@@ -38,7 +38,7 @@ test.beforeAll(async () => {
     }
     try {
       const body = await fs.readFile(safePath);
-      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : "text/html";
+      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : "text/html";
       res.setHeader("content-type", type);
       res.end(body);
     } catch {
@@ -325,8 +325,11 @@ test("keeps structural ink separate from Activity data accents", async ({ page }
   await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
   const newsprint = await visualTokens();
   expect(newsprint.dataAccent).toBe("#1f2328");
-  expect(newsprint.paper).toContain("newsprint-paper.svg");
-  await expect(page.locator("body")).toHaveCSS("--paper-crease", /newsprint-folds\.svg/);
+  expect(newsprint.page).toBe("#f2f0e9");
+  expect(newsprint.paper).toContain("newsprint-surface.png");
+  expect(newsprint.paper).toContain("newsprint-fiber.svg");
+  expect(newsprint.paper).not.toContain("newsprint-folds.svg");
+  expect(await page.locator("body").evaluate((node) => getComputedStyle(node, "::before").content)).toBe("none");
 });
 
 test("keeps an explicit dark display preference when the Activity palette changes", async ({ page }) => {
@@ -438,8 +441,8 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
-    "/whereToken/profile/assets/newsprint-folds.svg",
-    "/whereToken/profile/assets/newsprint-paper.svg",
+    "/whereToken/profile/assets/newsprint-fiber.svg",
+    "/whereToken/profile/assets/newsprint-surface.png",
     "/whereToken/profile/profile.json",
   ].sort());
 });

@@ -94,5 +94,10 @@ func replaceGenerated(dir string, files map[string][]byte) error {
 			return err
 		}
 	}
+	for _, name := range publicprofile.RetiredGeneratedFiles {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
 	return nil
 }

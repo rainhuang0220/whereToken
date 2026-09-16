@@ -22,7 +22,7 @@ const server = http.createServer(async (req, res) => {
   if (!safePath.startsWith(staticBundle + path.sep)) return res.writeHead(403).end("forbidden");
   try {
     const body = await fs.readFile(safePath);
-    res.setHeader("content-type", relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : "text/html");
+    res.setHeader("content-type", relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : "text/html");
     res.end(body);
   } catch {
     res.writeHead(404).end("not found");
@@ -44,9 +44,32 @@ try {
       await page.goto(baseURL, { waitUntil: "networkidle" });
       await page.getByRole("tab", { name: palette, exact: true }).click();
       await page.screenshot({ path: path.join(output, `live-${name}-${palette.toLowerCase()}.png`) });
+      if (name === "desktop" && palette === "Newsprint") {
+        const wall = await page.locator("#heat-scroll").boundingBox();
+        if (wall) {
+          await page.screenshot({
+            path: path.join(output, "newsprint-heatmap-crop.png"),
+            clip: {
+              x: Math.max(0, Math.min(wall.x, width - 400)),
+              y: Math.max(0, Math.min(wall.y - 72, height - 400)),
+              width: 400,
+              height: 400,
+            },
+          });
+        }
+      }
       await page.close();
     }
   }
+
+  const swatch = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+  await swatch.goto(new URL("../scripts/gennewsprint/material-swatch.html", import.meta.url).href, { waitUntil: "networkidle" });
+  await swatch.screenshot({ path: path.join(output, "newsprint-material-swatch.png") });
+  await swatch.screenshot({
+    path: path.join(output, "newsprint-plain-paper-crop.png"),
+    clip: { x: 780, y: 480, width: 400, height: 400 },
+  });
+  await swatch.close();
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

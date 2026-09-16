@@ -19,10 +19,6 @@
   --tip-bg: #1b1b1b;
   --tip-text: #ffffff;
   --tip-muted: #d4d4d4;
-  --paper-texture: url("./newsprint-paper.svg");
-  --paper-size: 1024px 1024px;
-  --paper-crease: url("./newsprint-folds.svg");
-  --paper-crease-size: 100% 100%;
   --cell: 15px;
   --cell-gap: 3px;
   color-scheme: light;
@@ -44,9 +40,6 @@
   --tip-bg: #1f2328;
   --tip-text: #ffffff;
   --tip-muted: #d0d7de;
-  --paper-texture: none;
-  --paper-size: auto;
-  --paper-crease: none;
 }
 
 :root[data-activity-palette="magenta"] {
@@ -65,13 +58,10 @@
   --tip-bg: #24121b;
   --tip-text: #ffffff;
   --tip-muted: #d0d7de;
-  --paper-texture: none;
-  --paper-size: auto;
-  --paper-crease: none;
 }
 
 :root[data-activity-palette="newsprint"] {
-  --page: #fefefc;
+  --page: #f2f0e9;
   --surface: transparent;
   --surface-2: #f1f1ef;
   --border: #303030;
@@ -86,10 +76,6 @@
   --tip-bg: #1b1b1b;
   --tip-text: #ffffff;
   --tip-muted: #d4d4d4;
-  --paper-texture: url("./newsprint-paper.svg");
-  --paper-size: 1024px 1024px;
-  --paper-crease: url("./newsprint-folds.svg");
-  --paper-crease-size: 100% 100%;
 }
 
 [data-theme="dark"] {
@@ -108,10 +94,6 @@
   --tip-bg: #f2eee8;
   --tip-text: #171513;
   --tip-muted: #675e56;
-  --paper-texture: none;
-  --paper-size: auto;
-  --paper-crease: none;
-  --paper-crease-size: auto;
   color-scheme: dark;
 }
 
@@ -135,10 +117,6 @@
     --tip-bg: #f2eee8;
     --tip-text: #171513;
     --tip-muted: #675e56;
-    --paper-texture: none;
-    --paper-size: auto;
-    --paper-crease: none;
-    --paper-crease-size: auto;
     color-scheme: dark;
   }
   :root:not([data-theme="light"])[data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
@@ -156,10 +134,6 @@
   --ui-accent: #f2eee8;
   --focus: #f2eee8;
   --empty: #24211e;
-  --paper-texture: none;
-  --paper-size: auto;
-  --paper-crease: none;
-  --paper-crease-size: auto;
 }
 :root[data-theme="dark"][data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
 :root[data-theme="dark"][data-activity-palette="magenta"] { --data-accent: #f26ca8; --theme-label: #f26ca8; }
@@ -177,10 +151,6 @@
     --ui-accent: #f2eee8;
     --focus: #f2eee8;
     --empty: #24211e;
-    --paper-texture: none;
-    --paper-size: auto;
-    --paper-crease: none;
-    --paper-crease-size: auto;
   }
   :root:not([data-theme="light"])[data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
   :root:not([data-theme="light"])[data-activity-palette="magenta"] { --data-accent: #f26ca8; --theme-label: #f26ca8; }
@@ -195,27 +165,22 @@ body {
   max-width: 100%;
   overflow-x: hidden;
   background-color: var(--page);
-  background-image: var(--paper-texture);
-  background-size: var(--paper-size);
   color: var(--text);
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
-body { position: relative; }
-body::before {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background: var(--paper-crease);
-  background-position: center top;
-  background-repeat: no-repeat;
-  background-size: var(--paper-crease-size);
-  content: "";
-  pointer-events: none;
+:root[data-activity-palette="newsprint"] body {
+  background-image:
+    url("./newsprint-fiber.svg"),
+    url("./newsprint-surface.png");
+  background-repeat: repeat;
+  background-size: 128px 128px, 1536px 1536px;
+  background-blend-mode: soft-light, soft-light;
 }
-.top,
-main,
-.banner { position: relative; z-index: 1; }
+:root[data-theme="dark"][data-activity-palette="newsprint"] body { background-image: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] body { background-image: none; }
+}
 
 button,
 a { font: inherit; touch-action: manipulation; }
@@ -464,9 +429,9 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 .cell.lv4 { background: var(--lv4); }
 .cell.lv5 { background: var(--lv5); }
 .cell.newsprint {
-  background-image: url("./newsprint-paper.svg");
-  background-size: 160px 160px;
-  background-blend-mode: multiply;
+  background-image: url("./newsprint-fiber.svg");
+  background-size: 28px 28px;
+  background-blend-mode: soft-light;
 }
 .cell.newsprint:nth-child(7n + 1) { background-position: 11px 7px; }
 .cell.newsprint:nth-child(7n + 2) { background-position: 43px 29px; }

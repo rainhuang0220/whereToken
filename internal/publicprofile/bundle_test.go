@@ -45,7 +45,7 @@ func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
 		t.Fatalf("asset revision must exist independently of snapshot id: %q", assetRevision)
 	}
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-paper.svg", "assets/newsprint-folds.svg"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])
@@ -98,23 +98,22 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 	if !strings.Contains(css, `.cell.newsprint`) {
 		t.Fatal("generated live stylesheet does not provide the newsprint cell treatment")
 	}
-	if !strings.Contains(css, `./newsprint-paper.svg`) {
-		t.Fatal("generated live stylesheet does not reference the canonical newsprint material")
+	if !strings.Contains(css, `./newsprint-surface.png`) {
+		t.Fatal("generated live stylesheet does not reference the canonical newsprint surface")
 	}
-	if !strings.Contains(css, `./newsprint-folds.svg`) {
-		t.Fatal("generated live stylesheet does not reference the canonical newsprint folds")
+	if !strings.Contains(css, `./newsprint-fiber.svg`) {
+		t.Fatal("generated live stylesheet does not reference the canonical newsprint fiber")
 	}
-	paper := string(files["assets/newsprint-paper.svg"])
-	for _, want := range []string{"feTurbulence", "fractalNoise"} {
-		if !strings.Contains(paper, want) {
-			t.Fatalf("generated newsprint material is missing %q", want)
+	for _, bad := range []string{"newsprint-folds.svg", "--paper-crease", "body::before"} {
+		if strings.Contains(css, bad) {
+			t.Fatalf("generated live stylesheet retains rejected crease abstraction %q", bad)
 		}
 	}
-	folds := string(files["assets/newsprint-folds.svg"])
-	for _, want := range []string{`id="vertical-fold"`, `id="diagonal-fold"`} {
-		if !strings.Contains(folds, want) {
-			t.Fatalf("generated newsprint folds are missing %q", want)
-		}
+	if _, ok := files["assets/newsprint-folds.svg"]; ok {
+		t.Fatal("generated bundle retains rejected path-based fold asset")
+	}
+	if _, ok := files["assets/newsprint-paper.svg"]; ok {
+		t.Fatal("generated bundle retains obsolete direct-noise paper asset")
 	}
 }
 
@@ -123,7 +122,7 @@ func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),
 		filepath.Join("..", "..", "public-profile"),
 	} {
-		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-paper.svg", "assets/newsprint-folds.svg"} {
+		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg"} {
 			got, err := os.ReadFile(filepath.Join(root, name))
 			if err != nil {
 				t.Fatal(err)
@@ -134,6 +133,11 @@ func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 			}
 			if !bytes.Equal(got, want) {
 				t.Fatalf("%s does not match embedded source %s", root, name)
+			}
+		}
+		for _, name := range RetiredGeneratedFiles {
+			if _, err := os.Stat(filepath.Join(root, name)); !os.IsNotExist(err) {
+				t.Fatalf("%s retains retired generated asset %s", root, name)
 			}
 		}
 	}

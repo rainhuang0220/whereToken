@@ -16,9 +16,16 @@ var GeneratedFiles = []string{
 	"index.html",
 	"assets/profile.css",
 	"assets/profile.js",
+	"assets/newsprint-surface.png",
+	"assets/newsprint-fiber.svg",
+	"manifest.json",
+}
+
+// RetiredGeneratedFiles are outputs from older bundle layouts. Generators
+// remove them so a rebuild cannot keep serving rejected or stale material.
+var RetiredGeneratedFiles = []string{
 	"assets/newsprint-paper.svg",
 	"assets/newsprint-folds.svg",
-	"manifest.json",
 }
 
 func Bundle(snap Snapshot) (map[string][]byte, error) {
@@ -56,16 +63,16 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 	out["index.html"] = html
 	out["assets/profile.css"] = css
 	out["assets/profile.js"] = script
-	paper, err := profilewebembed.Read("assets/newsprint-paper.svg")
+	surface, err := profilewebembed.Read("assets/newsprint-surface.png")
 	if err != nil {
 		return nil, err
 	}
-	folds, err := profilewebembed.Read("assets/newsprint-folds.svg")
+	fiber, err := profilewebembed.Read("assets/newsprint-fiber.svg")
 	if err != nil {
 		return nil, err
 	}
-	out["assets/newsprint-paper.svg"] = paper
-	out["assets/newsprint-folds.svg"] = folds
+	out["assets/newsprint-surface.png"] = surface
+	out["assets/newsprint-fiber.svg"] = fiber
 	assetRevision := bundleAssetRevision(out)
 	man, err := json.MarshalIndent(map[string]any{
 		"asset_revision": assetRevision,
@@ -85,7 +92,7 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 
 func bundleAssetRevision(files map[string][]byte) string {
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-paper.svg", "assets/newsprint-folds.svg"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])

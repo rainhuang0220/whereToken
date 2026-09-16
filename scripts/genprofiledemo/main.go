@@ -42,4 +42,11 @@ func main() {
 		}
 		fmt.Println("wrote", p)
 	}
+	for _, name := range publicprofile.RetiredGeneratedFiles {
+		p := filepath.Join(root, name)
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "genprofiledemo: %v\n", err)
+			os.Exit(1)
+		}
+	}
 }
