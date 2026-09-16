@@ -18,6 +18,7 @@ var GeneratedFiles = []string{
 	"assets/profile.js",
 	"assets/newsprint-surface.png",
 	"assets/newsprint-fiber.svg",
+	"assets/newsprint-fiber-b.svg",
 	"manifest.json",
 }
 
@@ -71,8 +72,13 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	fiberB, err := profilewebembed.Read("assets/newsprint-fiber-b.svg")
+	if err != nil {
+		return nil, err
+	}
 	out["assets/newsprint-surface.png"] = surface
 	out["assets/newsprint-fiber.svg"] = fiber
+	out["assets/newsprint-fiber-b.svg"] = fiberB
 	assetRevision := bundleAssetRevision(out)
 	man, err := json.MarshalIndent(map[string]any{
 		"asset_revision": assetRevision,
@@ -92,7 +98,7 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 
 func bundleAssetRevision(files map[string][]byte) string {
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg", "assets/newsprint-fiber-b.svg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])

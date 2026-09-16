@@ -172,10 +172,12 @@ body {
 :root[data-activity-palette="newsprint"] body {
   background-image:
     url("./newsprint-fiber.svg"),
+    url("./newsprint-fiber-b.svg"),
     url("./newsprint-surface.png");
-  background-repeat: repeat;
-  background-size: 128px 128px, 1536px 1536px;
-  background-blend-mode: soft-light, soft-light;
+  background-repeat: repeat, repeat, repeat;
+  background-size: 131px 127px, 173px 149px, 2560px 3200px;
+  background-position: 0 0, 41px 23px, 0 0;
+  background-blend-mode: soft-light, soft-light, soft-light;
 }
 :root[data-theme="dark"][data-activity-palette="newsprint"] body { background-image: none; }
 @media (prefers-color-scheme: dark) {
@@ -429,17 +431,17 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 .cell.lv4 { background: var(--lv4); }
 .cell.lv5 { background: var(--lv5); }
 .cell.newsprint {
-  background-image: url("./newsprint-fiber.svg");
-  background-size: 28px 28px;
-  background-blend-mode: soft-light;
+  background-image: url("./newsprint-fiber.svg"), url("./newsprint-fiber-b.svg");
+  background-size: 28px 27px, 37px 31px;
+  background-blend-mode: soft-light, soft-light;
 }
-.cell.newsprint:nth-child(7n + 1) { background-position: 11px 7px; }
-.cell.newsprint:nth-child(7n + 2) { background-position: 43px 29px; }
-.cell.newsprint:nth-child(7n + 3) { background-position: 79px 53px; }
-.cell.newsprint:nth-child(7n + 4) { background-position: 101px 17px; }
-.cell.newsprint:nth-child(7n + 5) { background-position: 23px 91px; }
-.cell.newsprint:nth-child(7n + 6) { background-position: 67px 113px; }
-.cell.newsprint:nth-child(7n) { background-position: 127px 71px; }
+.cell.newsprint:nth-child(7n + 1) { background-position: 11px 7px, 3px 19px; }
+.cell.newsprint:nth-child(7n + 2) { background-position: 43px 29px, 17px 5px; }
+.cell.newsprint:nth-child(7n + 3) { background-position: 79px 53px, 31px 41px; }
+.cell.newsprint:nth-child(7n + 4) { background-position: 101px 17px, 9px 27px; }
+.cell.newsprint:nth-child(7n + 5) { background-position: 23px 91px, 21px 13px; }
+.cell.newsprint:nth-child(7n + 6) { background-position: 67px 113px, 5px 37px; }
+.cell.newsprint:nth-child(7n) { background-position: 127px 71px, 29px 11px; }
 .cell.peak { box-shadow: inset 0 0 0 1px var(--text); }
 @media (hover: hover) {
   .cell:hover { box-shadow: inset 0 0 0 1px var(--text); }

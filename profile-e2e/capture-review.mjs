@@ -66,8 +66,12 @@ try {
   await swatch.goto(new URL("../scripts/gennewsprint/material-swatch.html", import.meta.url).href, { waitUntil: "networkidle" });
   await swatch.screenshot({ path: path.join(output, "newsprint-material-swatch.png") });
   await swatch.screenshot({
-    path: path.join(output, "newsprint-plain-paper-crop.png"),
-    clip: { x: 780, y: 480, width: 400, height: 400 },
+    path: path.join(output, "newsprint-plain-region-a.png"),
+    clip: { x: 40, y: 500, width: 400, height: 400 },
+  });
+  await swatch.screenshot({
+    path: path.join(output, "newsprint-plain-region-b.png"),
+    clip: { x: 760, y: 40, width: 400, height: 400 },
   });
   await swatch.close();
 } finally {

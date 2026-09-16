@@ -328,7 +328,12 @@ test("keeps structural ink separate from Activity data accents", async ({ page }
   expect(newsprint.page).toBe("#f2f0e9");
   expect(newsprint.paper).toContain("newsprint-surface.png");
   expect(newsprint.paper).toContain("newsprint-fiber.svg");
+  expect(newsprint.paper).toContain("newsprint-fiber-b.svg");
   expect(newsprint.paper).not.toContain("newsprint-folds.svg");
+  const paperSize = await page.locator("body").evaluate((node) => getComputedStyle(node).backgroundSize);
+  expect(paperSize).toContain("2560px");
+  expect(paperSize).toContain("3200px");
+  expect(paperSize).not.toContain("100%");
   expect(await page.locator("body").evaluate((node) => getComputedStyle(node, "::before").content)).toBe("none");
 });
 
@@ -442,6 +447,7 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
     "/whereToken/profile/assets/newsprint-fiber.svg",
+    "/whereToken/profile/assets/newsprint-fiber-b.svg",
     "/whereToken/profile/assets/newsprint-surface.png",
     "/whereToken/profile/profile.json",
   ].sort());
