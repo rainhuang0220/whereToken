@@ -1,5 +1,7 @@
 # whereToken Newsprint Material Design v3
 
+> Status: superseded. The v3 procedural height-field bake was rejected in review (obvious, not real, not aesthetically acceptable). Production Newsprint is now a reference-first adaptation of ambientCG Paper001 (CC0); see `scripts/gennewsprint/vendor/SOURCE.md`.
+>
 > Status: implementation specification
 > Scope: only the `Newsprint` theme of the live public profile
 > Baseline inspected: `7d9a1629efef67fdad5954a12e5563f382175a35` (`fix(profile): render newsprint as procedural paper`)

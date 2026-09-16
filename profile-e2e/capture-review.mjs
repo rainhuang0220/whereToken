@@ -22,7 +22,7 @@ const server = http.createServer(async (req, res) => {
   if (!safePath.startsWith(staticBundle + path.sep)) return res.writeHead(403).end("forbidden");
   try {
     const body = await fs.readFile(safePath);
-    res.setHeader("content-type", relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : "text/html");
+    res.setHeader("content-type", relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : relative.endsWith(".jpg") ? "image/jpeg" : "text/html");
     res.end(body);
   } catch {
     res.writeHead(404).end("not found");

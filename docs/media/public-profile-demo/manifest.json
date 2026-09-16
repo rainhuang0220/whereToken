@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-09-09",
-  "asset_revision": "sha256:99068eb358b47f685b38d3a4245dfecc376fa10b6a16ff9f8aead9c97e0c4b08",
+  "asset_revision": "sha256:8ed4f7255b65a2bd89e1cb6f232d1d91bebd24f4f6a8f222c3f852f5f0c6d15a",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -8,9 +8,7 @@
     "index.html",
     "assets/profile.css",
     "assets/profile.js",
-    "assets/newsprint-surface.png",
-    "assets/newsprint-fiber.svg",
-    "assets/newsprint-fiber-b.svg",
+    "assets/newsprint-surface.jpg",
     "manifest.json"
   ],
   "generated_at": "2026-09-09T07:00:00Z",

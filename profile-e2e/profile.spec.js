@@ -38,7 +38,7 @@ test.beforeAll(async () => {
     }
     try {
       const body = await fs.readFile(safePath);
-      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : "text/html";
+      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : relative.endsWith(".jpg") ? "image/jpeg" : "text/html";
       res.setHeader("content-type", type);
       res.end(body);
     } catch {
@@ -325,14 +325,12 @@ test("keeps structural ink separate from Activity data accents", async ({ page }
   await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
   const newsprint = await visualTokens();
   expect(newsprint.dataAccent).toBe("#1f2328");
-  expect(newsprint.page).toBe("#f2f0e9");
-  expect(newsprint.paper).toContain("newsprint-surface.png");
-  expect(newsprint.paper).toContain("newsprint-fiber.svg");
-  expect(newsprint.paper).toContain("newsprint-fiber-b.svg");
+  expect(newsprint.page).toBe("#f7f6f1");
+  expect(newsprint.paper).toContain("newsprint-surface.jpg");
+  expect(newsprint.paper).not.toContain("newsprint-fiber.svg");
   expect(newsprint.paper).not.toContain("newsprint-folds.svg");
   const paperSize = await page.locator("body").evaluate((node) => getComputedStyle(node).backgroundSize);
-  expect(paperSize).toContain("1920px");
-  expect(paperSize).toContain("2400px");
+  expect(paperSize).toContain("560px");
   expect(paperSize).not.toContain("100%");
   expect(await page.locator("body").evaluate((node) => getComputedStyle(node, "::before").content)).toBe("none");
 });
@@ -446,9 +444,7 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
-    "/whereToken/profile/assets/newsprint-fiber.svg",
-    "/whereToken/profile/assets/newsprint-fiber-b.svg",
-    "/whereToken/profile/assets/newsprint-surface.png",
+    "/whereToken/profile/assets/newsprint-surface.jpg",
     "/whereToken/profile/profile.json",
   ].sort());
 });

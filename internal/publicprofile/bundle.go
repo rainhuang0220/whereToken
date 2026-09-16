@@ -16,9 +16,7 @@ var GeneratedFiles = []string{
 	"index.html",
 	"assets/profile.css",
 	"assets/profile.js",
-	"assets/newsprint-surface.png",
-	"assets/newsprint-fiber.svg",
-	"assets/newsprint-fiber-b.svg",
+	"assets/newsprint-surface.jpg",
 	"manifest.json",
 }
 
@@ -27,6 +25,9 @@ var GeneratedFiles = []string{
 var RetiredGeneratedFiles = []string{
 	"assets/newsprint-paper.svg",
 	"assets/newsprint-folds.svg",
+	"assets/newsprint-fiber.svg",
+	"assets/newsprint-fiber-b.svg",
+	"assets/newsprint-surface.png",
 }
 
 func Bundle(snap Snapshot) (map[string][]byte, error) {
@@ -64,21 +65,11 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 	out["index.html"] = html
 	out["assets/profile.css"] = css
 	out["assets/profile.js"] = script
-	surface, err := profilewebembed.Read("assets/newsprint-surface.png")
+	surface, err := profilewebembed.Read("assets/newsprint-surface.jpg")
 	if err != nil {
 		return nil, err
 	}
-	fiber, err := profilewebembed.Read("assets/newsprint-fiber.svg")
-	if err != nil {
-		return nil, err
-	}
-	fiberB, err := profilewebembed.Read("assets/newsprint-fiber-b.svg")
-	if err != nil {
-		return nil, err
-	}
-	out["assets/newsprint-surface.png"] = surface
-	out["assets/newsprint-fiber.svg"] = fiber
-	out["assets/newsprint-fiber-b.svg"] = fiberB
+	out["assets/newsprint-surface.jpg"] = surface
 	assetRevision := bundleAssetRevision(out)
 	man, err := json.MarshalIndent(map[string]any{
 		"asset_revision": assetRevision,
@@ -98,7 +89,7 @@ func Bundle(snap Snapshot) (map[string][]byte, error) {
 
 func bundleAssetRevision(files map[string][]byte) string {
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg", "assets/newsprint-fiber-b.svg"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.jpg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])

@@ -45,7 +45,7 @@ func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
 		t.Fatalf("asset revision must exist independently of snapshot id: %q", assetRevision)
 	}
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg", "assets/newsprint-fiber-b.svg"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.jpg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])
@@ -98,17 +98,14 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 	if !strings.Contains(css, `.cell.newsprint`) {
 		t.Fatal("generated live stylesheet does not provide the newsprint cell treatment")
 	}
-	if !strings.Contains(css, `./newsprint-surface.png`) {
+	if !strings.Contains(css, `./newsprint-surface.jpg`) {
 		t.Fatal("generated live stylesheet does not reference the canonical newsprint surface")
 	}
-	if !strings.Contains(css, `./newsprint-fiber.svg`) {
-		t.Fatal("generated live stylesheet does not reference the canonical newsprint fiber")
+	if strings.Contains(css, `newsprint-fiber.svg`) {
+		t.Fatal("generated live stylesheet still layers procedural fiber SVGs")
 	}
-	if !strings.Contains(css, `./newsprint-fiber-b.svg`) {
-		t.Fatal("generated live stylesheet does not reference the secondary newsprint fiber")
-	}
-	if !strings.Contains(css, `1920px 2400px`) {
-		t.Fatal("generated live stylesheet does not keep the master sheet at a fixed CSS-pixel scale")
+	if !strings.Contains(css, `background-size: 560px auto`) {
+		t.Fatal("generated live stylesheet does not keep the scanned sheet at a fixed CSS-pixel scale")
 	}
 	if strings.Contains(css, `background-size: 100% 100%`) {
 		t.Fatal("generated live stylesheet stretches the paper material to the viewport")
@@ -131,7 +128,7 @@ func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),
 		filepath.Join("..", "..", "public-profile"),
 	} {
-		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.png", "assets/newsprint-fiber.svg", "assets/newsprint-fiber-b.svg"} {
+		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.jpg"} {
 			got, err := os.ReadFile(filepath.Join(root, name))
 			if err != nil {
 				t.Fatal(err)
