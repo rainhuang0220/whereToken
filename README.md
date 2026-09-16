@@ -111,9 +111,9 @@ Point a GitHub Profile README at the previews and the live page (do not link the
 <p align="center">
   <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-ce404c8f7ac9ff7290446c932d9f39d7848f863da8905a1a40208872c031ff35">
-      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-ce404c8f7ac9ff7290446c932d9f39d7848f863da8905a1a40208872c031ff35">
-      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-ce404c8f7ac9ff7290446c932d9f39d7848f863da8905a1a40208872c031ff35" width="800" alt="whereToken public profile preview using synthetic demo data; opens the interactive demo">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-7f300ac43cdf13bfd7e9e8fd9837dd376ecefba05858ac096780d8eb471cd013">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-7f300ac43cdf13bfd7e9e8fd9837dd376ecefba05858ac096780d8eb471cd013">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-7f300ac43cdf13bfd7e9e8fd9837dd376ecefba05858ac096780d8eb471cd013" width="800" alt="whereToken public profile preview using synthetic demo data; opens the interactive demo">
     </picture>
   </a>
 </p>

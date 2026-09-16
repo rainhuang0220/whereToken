@@ -74,6 +74,7 @@
   function applyWallPalette(id) {
     if (!WALL_PALETTES[id]) return;
     state.palette = id;
+    document.documentElement.setAttribute("data-activity-palette", id);
     try { localStorage.setItem("wt-wall-palette", id); } catch (_) {}
   }
 
@@ -723,6 +724,7 @@
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("scroll", dismissTip, { passive: true, capture: true });
+  applyWallPalette(state.palette);
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
 
   fetch("./profile.json", { cache: "no-store" })

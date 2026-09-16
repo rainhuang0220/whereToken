@@ -281,6 +281,51 @@ test("persists theme and honors reduced motion", async ({ page }) => {
   await expect(page.locator("#tip")).toBeVisible();
 });
 
+test("applies each Activity palette to the page visual language, not only the wall", async ({ page }) => {
+  await page.goto(baseURL);
+  const visualTokens = () => page.locator("html").evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const body = getComputedStyle(document.body);
+    return {
+      accent: root.getPropertyValue("--accent").trim(),
+      border: root.getPropertyValue("--border").trim(),
+      muted: root.getPropertyValue("--muted").trim(),
+      paper: body.backgroundImage,
+    };
+  });
+
+  await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
+  await expect.poll(visualTokens).toEqual({
+    accent: "#ffd700",
+    border: "#ffd700",
+    muted: "#514b3c",
+    paper: "none",
+  });
+
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await expect.poll(visualTokens).toEqual({
+    accent: "#c2185b",
+    border: "#d89ab5",
+    muted: "#7a3a57",
+    paper: "none",
+  });
+
+  await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
+  const newsprint = await visualTokens();
+  expect(newsprint.accent).toBe("#1b1b1b");
+  expect(newsprint.border).toBe("#6d6a64");
+  expect(newsprint.muted).toBe("#54514b");
+  expect(newsprint.paper).toContain("radial-gradient");
+});
+
+test("keeps an explicit dark display preference when the Activity palette changes", async ({ page }) => {
+  await page.goto(baseURL);
+  await page.getByRole("button", { name: "Dark" }).click();
+  await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect.poll(() => page.locator("body").evaluate((node) => getComputedStyle(node).backgroundColor)).toBe("rgb(17, 16, 15)");
+});
+
 test("operates the Activity color tabs with arrows and persists the selected palette", async ({ page }) => {
   await page.goto(baseURL);
   const cobalt = page.getByRole("tab", { name: "Cobalt", exact: true });
