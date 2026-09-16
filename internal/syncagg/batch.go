@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
 type SourceInput struct {
@@ -105,7 +107,12 @@ func Build(in BuildInput) (Batch, error) {
 		DailyModelUsage:     []DailyModel{},
 	}
 
-	merged := mergeByRequest(in.Events)
+	// Canonicalize with the same request-merge behavior the local report,
+	// dashboard, and public profile use (max per token component, latest
+	// timestamp wins, quality promoted by rank, negative rows dropped) so a
+	// hosted view cannot silently disagree with the local ledger it was
+	// synced from.
+	merged := metric.CanonicalEvents(in.Events)
 	rows := map[rowKey]*DailyModel{}
 	turnCount := map[string]int64{}
 
@@ -253,49 +260,53 @@ func sourceScopes(rows []DailyModel, tool string) []SourceScope {
 	return out
 }
 
-func mergeByRequest(events []event.UsageEvent) []event.UsageEvent {
-	var out []event.UsageEvent
-	index := map[string]int{}
-	for _, e := range events {
-		if e.RequestID == "" {
-			out = append(out, e)
-			continue
-		}
-		key := e.Source + "\x00" + e.RequestID
-		if i, ok := index[key]; ok {
-			out[i] = maxEvent(out[i], e)
-			continue
-		}
-		index[key] = len(out)
-		out = append(out, e)
-	}
-	return out
+// Bounds below mirror the DB column widths in internal/hosted/migrate.go
+// (tool/vendor VARCHAR(32), model VARCHAR(128), quality VARCHAR(32),
+// derivation VARCHAR(64), source_key_hash CHAR(64)) plus resource limits
+// that keep one row from making hosted dashboard reconstruction
+// (internal/hosted/dashboard.go) do unbounded work. A bearer token proves
+// the caller is a paired device, not that its request body is trustworthy;
+// the server must independently bound and validate it.
+const (
+	maxToolLen       = 32
+	maxVendorLen     = 32
+	maxModelLen      = 128
+	maxQualityLen    = 32
+	maxDerivationLen = 64
+
+	// maxDailyTokens bounds a single day's per-model token component. It is
+	// generous relative to any real account (Cursor's own 53-week ledgers
+	// run in the low billions) while still being finite.
+	maxDailyTokens = 1_000_000_000_000 // 1e12
+	// maxDailyCount bounds requests/user_turns: one literal event per unit,
+	// so this also bounds how many synthetic events a hosted dashboard
+	// request will materialize per row (see aggregateRows).
+	maxDailyCount = 1_000_000
+	maxRevision   = 1 << 62
+)
+
+var validSourceStatus = map[string]bool{
+	"ok": true, "auth_missing": true, "auth_expired": true, "absent": true, "degraded": true,
 }
 
-func maxEvent(a, b event.UsageEvent) event.UsageEvent {
-	if b.Miss > a.Miss {
-		a.Miss = b.Miss
-	}
-	if b.CacheRead > a.CacheRead {
-		a.CacheRead = b.CacheRead
-	}
-	if b.CacheCreate > a.CacheCreate {
-		a.CacheCreate = b.CacheCreate
-	}
-	if b.Output > a.Output {
-		a.Output = b.Output
-	}
-	if b.SkipRequest {
-		a.SkipRequest = true
-	}
-	if a.Derivation == "" {
-		a.Derivation = b.Derivation
-	}
-	if a.Quality == "" {
-		a.Quality = b.Quality
-	}
-	return a
+var validQuality = map[string]bool{
+	"":                                 true,
+	string(event.QualityAuthoritative): true,
+	string(event.QualityDegraded):      true,
+	string(event.QualityEstimated):     true,
+	string(event.QualityAbsent):        true,
 }
+
+var validDerivation = map[string]bool{
+	"":                       true,
+	event.DeriveRaw:          true,
+	event.DeriveProviderAPI:  true,
+	event.DeriveDerived:      true,
+	event.DeriveDeduplicated: true,
+	event.DeriveEstimated:    true,
+}
+
+var sourceKeyHashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 func DecodeBatch(raw []byte) (Batch, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -311,17 +322,95 @@ func DecodeBatch(raw []byte) (Batch, error) {
 		return Batch{}, fmt.Errorf("device_id required")
 	}
 	for i := range b.DailyModelUsage {
-		if _, err := ParseScope(string(b.DailyModelUsage[i].SourceScope)); err != nil {
-			return Batch{}, err
-		}
-		if n := len([]rune(b.DailyModelUsage[i].Model)); n > 128 {
-			return Batch{}, fmt.Errorf("model too long")
+		if err := b.DailyModelUsage[i].validate(); err != nil {
+			return Batch{}, fmt.Errorf("daily_model_usage[%d]: %w", i, err)
 		}
 	}
 	for i := range b.Sources {
-		if _, err := ParseScope(string(b.Sources[i].SourceScope)); err != nil {
-			return Batch{}, err
+		if err := b.Sources[i].validate(); err != nil {
+			return Batch{}, fmt.Errorf("sources[%d]: %w", i, err)
 		}
 	}
 	return b, nil
+}
+
+func (r DailyModel) validate() error {
+	if _, err := ParseScope(string(r.SourceScope)); err != nil {
+		return err
+	}
+	if _, err := time.Parse("2006-01-02", r.Date); err != nil {
+		return fmt.Errorf("invalid date %q", r.Date)
+	}
+	if err := validateBoundedField("tool", r.Tool, maxToolLen, true); err != nil {
+		return err
+	}
+	if err := validateBoundedField("vendor", r.Vendor, maxVendorLen, false); err != nil {
+		return err
+	}
+	if n := len([]rune(r.Model)); n > maxModelLen {
+		return fmt.Errorf("model too long")
+	}
+	if !sourceKeyHashPattern.MatchString(r.SourceKeyHash) {
+		return fmt.Errorf("source_key_hash must be 64 lowercase hex characters")
+	}
+	if err := validateBoundedField("quality", r.Quality, maxQualityLen, false); err != nil {
+		return err
+	}
+	if !validQuality[r.Quality] {
+		return fmt.Errorf("unknown quality %q", r.Quality)
+	}
+	if err := validateBoundedField("derivation", r.Derivation, maxDerivationLen, false); err != nil {
+		return err
+	}
+	if !validDerivation[r.Derivation] {
+		return fmt.Errorf("unknown derivation %q", r.Derivation)
+	}
+	for name, v := range map[string]int64{
+		"miss": r.Miss, "cache_read": r.CacheRead, "cache_create": r.CacheCreate, "output": r.Output,
+	} {
+		if v < 0 || v > maxDailyTokens {
+			return fmt.Errorf("%s out of range", name)
+		}
+	}
+	for name, v := range map[string]int64{"requests": r.Requests, "user_turns": r.UserTurns} {
+		if v < 0 || v > maxDailyCount {
+			return fmt.Errorf("%s out of range", name)
+		}
+	}
+	if r.Revision <= 0 || r.Revision > maxRevision {
+		return fmt.Errorf("revision out of range")
+	}
+	return nil
+}
+
+func (s Source) validate() error {
+	if _, err := ParseScope(string(s.SourceScope)); err != nil {
+		return err
+	}
+	if err := validateBoundedField("tool", s.Tool, maxToolLen, true); err != nil {
+		return err
+	}
+	if !validSourceStatus[s.Status] {
+		return fmt.Errorf("unknown status %q", s.Status)
+	}
+	if err := validateBoundedField("quality", s.Quality, maxQualityLen, false); err != nil {
+		return err
+	}
+	if !validQuality[s.Quality] {
+		return fmt.Errorf("unknown quality %q", s.Quality)
+	}
+	if !sourceKeyHashPattern.MatchString(s.SourceKeyHash) {
+		return fmt.Errorf("source_key_hash must be 64 lowercase hex characters")
+	}
+	return nil
+}
+
+func validateBoundedField(name, v string, max int, required bool) error {
+	if required && v == "" {
+		return fmt.Errorf("%s required", name)
+	}
+	if n := len([]rune(v)); n > max {
+		return fmt.Errorf("%s too long", name)
+	}
+	return nil
 }

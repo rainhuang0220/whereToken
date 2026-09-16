@@ -210,6 +210,153 @@ func TestDecodeBatchRejectsUnknownScopeAndFields(t *testing.T) {
 	}
 }
 
+// TestDecodeBatchRejectsMalformedAndOversizedRows proves the hosted sync
+// endpoint does not trust an authenticated caller's request body: DecodeBatch
+// itself must reject negative/overflowing measures, an out-of-range
+// revision, an unparseable date, and unrecognized quality/derivation/status
+// enums before anything reaches storage or a dashboard-reconstruction loop
+// that would otherwise materialize one synthetic event per unit.
+func TestDecodeBatchRejectsMalformedAndOversizedRows(t *testing.T) {
+	t.Parallel()
+	valid, err := Build(testBuildInput(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(valid.DailyModelUsage) == 0 {
+		t.Fatal("fixture produced no rows")
+	}
+
+	mutateRow := func(mutate func(*DailyModel)) Batch {
+		b := valid
+		rows := append([]DailyModel(nil), valid.DailyModelUsage...)
+		mutate(&rows[0])
+		b.DailyModelUsage = rows
+		return b
+	}
+	rowCases := map[string]Batch{
+		"negative miss":          mutateRow(func(r *DailyModel) { r.Miss = -1 }),
+		"miss over budget":       mutateRow(func(r *DailyModel) { r.Miss = maxDailyTokens + 1 }),
+		"user_turns over budget": mutateRow(func(r *DailyModel) { r.UserTurns = maxDailyCount + 1 }),
+		"negative requests":      mutateRow(func(r *DailyModel) { r.Requests = -1 }),
+		"zero revision":          mutateRow(func(r *DailyModel) { r.Revision = 0 }),
+		"negative revision":      mutateRow(func(r *DailyModel) { r.Revision = -5 }),
+		"unparseable date":       mutateRow(func(r *DailyModel) { r.Date = "not-a-date" }),
+		"unknown quality":        mutateRow(func(r *DailyModel) { r.Quality = "trustworthy" }),
+		"unknown derivation":     mutateRow(func(r *DailyModel) { r.Derivation = "guessed" }),
+		"malformed hash":         mutateRow(func(r *DailyModel) { r.SourceKeyHash = "not-hex" }),
+		"tool too long":          mutateRow(func(r *DailyModel) { r.Tool = strings.Repeat("x", 33) }),
+	}
+	for name, b := range rowCases {
+		t.Run(name, func(t *testing.T) {
+			raw, err := json.Marshal(b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeBatch(raw); err == nil {
+				t.Fatalf("%s: DecodeBatch accepted a malformed row", name)
+			}
+		})
+	}
+
+	mutateSource := func(mutate func(*Source)) Batch {
+		b := valid
+		srcs := append([]Source(nil), valid.Sources...)
+		mutate(&srcs[0])
+		b.Sources = srcs
+		return b
+	}
+	if len(valid.Sources) == 0 {
+		t.Fatal("fixture produced no sources")
+	}
+	sourceCases := map[string]Batch{
+		"unknown status": mutateSource(func(s *Source) { s.Status = "compromised" }),
+		"empty hash":     mutateSource(func(s *Source) { s.SourceKeyHash = "" }),
+	}
+	for name, b := range sourceCases {
+		t.Run(name, func(t *testing.T) {
+			raw, err := json.Marshal(b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := DecodeBatch(raw); err == nil {
+				t.Fatalf("%s: DecodeBatch accepted a malformed source", name)
+			}
+		})
+	}
+}
+
+// TestBuildAssignsDuplicateRowsToTheSameDateAsLocalMetric guards against the
+// exact drift the architecture review flagged: a duplicate stream row for
+// one request must land on the same local calendar date the local report,
+// dashboard, and public profile would assign it to (the latest observed
+// timestamp), not the earliest one, and a later-in-time row's larger token
+// counts must win even when it crosses midnight from the first row.
+func TestBuildAssignsDuplicateRowsToTheSameDateAsLocalMetric(t *testing.T) {
+	t.Parallel()
+	loc := shanghai(t)
+	in := testBuildInput(t)
+	in.Events = []event.UsageEvent{
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "cross-midnight",
+			Timestamp: time.Date(2026, 9, 3, 23, 59, 0, 0, loc),
+			Miss:      1_000, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw,
+		},
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "cross-midnight",
+			Timestamp: time.Date(2026, 9, 4, 0, 0, 5, 0, loc),
+			Miss:      5_000, Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+		},
+	}
+	in.Turns = nil
+	b, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.DailyModelUsage) != 1 {
+		t.Fatalf("want one canonical row, got %+v", b.DailyModelUsage)
+	}
+	row := b.DailyModelUsage[0]
+	if row.Date != "2026-09-04" {
+		t.Fatalf("canonical request must land on its latest local date, got %s", row.Date)
+	}
+	if row.Miss != 5_000 {
+		t.Fatalf("canonical row must keep the max per component, got miss=%d", row.Miss)
+	}
+	// metric.CanonicalEvents is deliberately pessimistic: if any duplicate
+	// row for this request ever looked degraded, the merged request stays
+	// degraded rather than upgrading to the better-looking sibling row.
+	if row.Quality != string(event.QualityDegraded) {
+		t.Fatalf("canonical row must keep the worse-observed quality, got %s", row.Quality)
+	}
+}
+
+// TestBuildDropsNegativeTokenRowsLikeLocalMetric ensures the same defensive
+// filter internal/metric applies to malformed local events also applies
+// before a batch is aggregated for upload, rather than silently uploading a
+// negative count for the hosted store to further mishandle.
+func TestBuildDropsNegativeTokenRowsLikeLocalMetric(t *testing.T) {
+	t.Parallel()
+	in := testBuildInput(t)
+	in.Events = []event.UsageEvent{
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "poisoned",
+			Timestamp: time.Date(2026, 9, 3, 10, 0, 0, 0, shanghai(t)),
+			Miss:      -1, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw,
+		},
+	}
+	in.Turns = nil
+	b, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.DailyModelUsage) != 0 {
+		t.Fatalf("negative-token row must be dropped, got %+v", b.DailyModelUsage)
+	}
+}
+
 func TestBuildRequiresHashKey(t *testing.T) {
 	t.Parallel()
 	in := testBuildInput(t)

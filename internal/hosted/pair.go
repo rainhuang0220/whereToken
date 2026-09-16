@@ -11,13 +11,6 @@ import (
 
 const pairAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-type pairPending struct {
-	rawToken string
-	login    string
-	deviceID string
-	hmacKey  []byte
-}
-
 func (s *server) pairStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -43,7 +36,7 @@ func (s *server) pairStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	secret, secretHash, err := newOpaqueToken()
+	secret, secretHash, err := newDeviceToken()
 	if err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
@@ -99,14 +92,19 @@ func (s *server) pairStatus(w http.ResponseWriter, r *http.Request) {
 	case !ch.ExpiresAt.After(now) && !ch.ConsumedAt.Valid:
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "expired"})
 	case ch.ConsumedAt.Valid:
-		if v, ok := s.takePending(code); ok {
+		approved, err := s.opts.Store.GetPairApproval(r.Context(), code)
+		if err == nil {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status":          "approved",
-				"device_token":    v.rawToken,
-				"user_login":      v.login,
-				"device_id":       v.deviceID,
-				"source_hmac_key": base64.RawURLEncoding.EncodeToString(v.hmacKey),
+				"device_token":    in.DeviceSecret,
+				"user_login":      approved.UserLogin,
+				"device_id":       approved.Device.PublicID,
+				"source_hmac_key": base64.RawURLEncoding.EncodeToString(approved.SourceHMACKey),
 			})
+			return
+		}
+		if err != ErrNotFound && err != ErrUnauthorized {
+			http.Error(w, "server error", http.StatusInternalServerError)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "consumed"})
@@ -175,48 +173,49 @@ func (s *server) pairConfirm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	if !ch.ExpiresAt.After(s.opts.Now()) || ch.ConsumedAt.Valid || ch.DeniedAt.Valid {
+	if ch.DeniedAt.Valid {
+		http.Error(w, "expired", http.StatusGone)
+		return
+	}
+	// A fresh accept/deny must respect the pairing window; a retry of an
+	// already-consumed code is handled inside ApprovePair regardless of
+	// expiry, so the window is only enforced here for the not-yet-consumed
+	// path.
+	if !ch.ConsumedAt.Valid && !ch.ExpiresAt.After(s.opts.Now()) {
 		http.Error(w, "expired", http.StatusGone)
 		return
 	}
 	if !in.Accept {
 		if err := s.opts.Store.DenyPair(r.Context(), code, user.ID); err != nil {
+			if err == ErrNotFound {
+				http.Error(w, "expired", http.StatusGone)
+				return
+			}
 			http.Error(w, "server error", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	dev, raw, err := s.opts.Store.InsertDevice(r.Context(), user.ID, ch.Meta)
+	dev, err := s.opts.Store.ApprovePair(r.Context(), code, user.ID)
 	if err != nil {
-		s.logf("pair confirm stage=insert_device error=%s", sanitizeOAuthLog(err.Error()))
-		http.Error(w, "server error", http.StatusInternalServerError)
+		s.logf("pair confirm stage=approve_pair error=%s", sanitizeOAuthLog(err.Error()))
+		switch err {
+		case ErrUnauthorized:
+			http.Error(w, "forbidden", http.StatusForbidden)
+		case ErrNotFound:
+			http.Error(w, "expired", http.StatusGone)
+		default:
+			http.Error(w, "server error", http.StatusInternalServerError)
+		}
 		return
 	}
-	if err := s.opts.Store.ConsumePair(r.Context(), code, user.ID); err != nil {
-		s.logf("pair confirm stage=consume_pair error=%s", sanitizeOAuthLog(err.Error()))
-		http.Error(w, "server error", http.StatusInternalServerError)
-		return
-	}
-	s.putPending(code, pairPending{rawToken: raw, login: user.Login, deviceID: dev.PublicID, hmacKey: user.SourceHMACKey})
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"status":    "approved",
 		"device_id": dev.PublicID,
 		"label":     dev.Label,
 	})
-}
-
-func (s *server) putPending(code string, p pairPending) {
-	s.pending.Store(code, p)
-}
-
-func (s *server) takePending(code string) (pairPending, bool) {
-	v, ok := s.pending.LoadAndDelete(code)
-	if !ok {
-		return pairPending{}, false
-	}
-	return v.(pairPending), true
 }
 
 func formatCode(code string) string {
