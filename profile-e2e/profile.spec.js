@@ -281,41 +281,52 @@ test("persists theme and honors reduced motion", async ({ page }) => {
   await expect(page.locator("#tip")).toBeVisible();
 });
 
-test("applies each Activity palette to the page visual language, not only the wall", async ({ page }) => {
+test("keeps structural ink separate from Activity data accents", async ({ page }) => {
   await page.goto(baseURL);
   const visualTokens = () => page.locator("html").evaluate(() => {
     const root = getComputedStyle(document.documentElement);
     const body = getComputedStyle(document.body);
     return {
-      accent: root.getPropertyValue("--accent").trim(),
+      page: root.getPropertyValue("--page").trim(),
+      surface: root.getPropertyValue("--surface").trim(),
       border: root.getPropertyValue("--border").trim(),
-      muted: root.getPropertyValue("--muted").trim(),
+      uiAccent: root.getPropertyValue("--ui-accent").trim(),
+      dataAccent: root.getPropertyValue("--data-accent").trim(),
       paper: body.backgroundImage,
     };
   });
 
   await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
   await expect.poll(visualTokens).toEqual({
-    accent: "#ffd700",
-    border: "#ffd700",
-    muted: "#514b3c",
+    page: "#ffffff",
+    surface: "#ffffff",
+    border: "#1f2328",
+    uiAccent: "#1f2328",
+    dataAccent: "#ffd700",
     paper: "none",
   });
+  await expect(page.locator(".top")).toHaveCSS("border-bottom-color", "rgb(31, 35, 40)");
+  await expect(page.locator(".trend .line")).toHaveCSS("stroke", "rgb(255, 215, 0)");
+  await expect(page.locator(".rank-bar i").first()).toHaveCSS("background-color", "rgb(255, 215, 0)");
 
   await page.getByRole("tab", { name: "Magenta", exact: true }).click();
   await expect.poll(visualTokens).toEqual({
-    accent: "#c2185b",
-    border: "#d89ab5",
-    muted: "#7a3a57",
+    page: "#ffffff",
+    surface: "#ffffff",
+    border: "#1f2328",
+    uiAccent: "#1f2328",
+    dataAccent: "#c2185b",
     paper: "none",
   });
+  await expect(page.locator(".top")).toHaveCSS("border-bottom-color", "rgb(31, 35, 40)");
+  await expect(page.locator(".trend .line")).toHaveCSS("stroke", "rgb(194, 24, 91)");
+  await expect(page.locator(".rank-bar i").first()).toHaveCSS("background-color", "rgb(194, 24, 91)");
 
   await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
   const newsprint = await visualTokens();
-  expect(newsprint.accent).toBe("#1b1b1b");
-  expect(newsprint.border).toBe("#6d6a64");
-  expect(newsprint.muted).toBe("#54514b");
-  expect(newsprint.paper).toContain("radial-gradient");
+  expect(newsprint.dataAccent).toBe("#1f2328");
+  expect(newsprint.paper).toContain("feTurbulence");
+  await expect(page.locator("body")).toHaveCSS("--paper-crease", /linear-gradient/);
 });
 
 test("keeps an explicit dark display preference when the Activity palette changes", async ({ page }) => {
