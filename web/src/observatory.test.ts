@@ -156,7 +156,6 @@ describe('observatoryEmptyHint', () => {
       observatoryEmptyHint({
         all: zeroAll,
         by_source: [],
-        by_vendor: [],
       }),
     ).toBe(
       '本机没有找到账本。装好任一受支持的工具并跑一次就会有数；Cursor / Trae 需要已登录。wheretoken sources 列出全部受支持的工具。',
@@ -168,7 +167,6 @@ describe('observatoryEmptyHint', () => {
       observatoryEmptyHint({
         all: { ...zeroAll, total: 1185, requests: 2 },
         by_source: [],
-        by_vendor: [],
       }),
     ).toBe('')
   })
@@ -178,7 +176,6 @@ describe('observatoryEmptyHint', () => {
       observatoryEmptyHint({
         all: zeroAll,
         by_source: [row({ id: 'cursor', label: 'Cursor', quality: 'degraded' })],
-        by_vendor: [],
       }),
     ).toBe('')
   })
