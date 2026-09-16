@@ -6,10 +6,10 @@
       <feDistantLight azimuth="315" elevation="58"/>
     </feDiffuseLighting>
     <feComponentTransfer in="lit">
-      <feFuncR type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncG type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncB type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncA type="linear" slope="0.58"/>
+      <feFuncR type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncG type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncB type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncA type="linear" slope="0.64"/>
     </feComponentTransfer>
   </filter>
   <rect width="131" height="127" fill="#808080" filter="url(#fiber-a)"/>

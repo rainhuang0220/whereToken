@@ -331,8 +331,8 @@ test("keeps structural ink separate from Activity data accents", async ({ page }
   expect(newsprint.paper).toContain("newsprint-fiber-b.svg");
   expect(newsprint.paper).not.toContain("newsprint-folds.svg");
   const paperSize = await page.locator("body").evaluate((node) => getComputedStyle(node).backgroundSize);
-  expect(paperSize).toContain("2560px");
-  expect(paperSize).toContain("3200px");
+  expect(paperSize).toContain("1920px");
+  expect(paperSize).toContain("2400px");
   expect(paperSize).not.toContain("100%");
   expect(await page.locator("body").evaluate((node) => getComputedStyle(node, "::before").content)).toBe("none");
 });

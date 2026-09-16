@@ -156,7 +156,7 @@ func TestSwatchDoesNotStretchMaterialToViewport(t *testing.T) {
 	if strings.Contains(html, "background-size:100%") || strings.Contains(html, "100% 100%") {
 		t.Fatal("swatch must not stretch the master sheet to the viewport")
 	}
-	want := "2560px 3200px"
+	want := "1920px 2400px"
 	if !strings.Contains(html, want) {
 		t.Fatalf("swatch missing fixed master size %q", want)
 	}

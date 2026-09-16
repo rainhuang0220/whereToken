@@ -11,10 +11,10 @@ func fiberPrimary() []byte {
       <feDistantLight azimuth="315" elevation="58"/>
     </feDiffuseLighting>
     <feComponentTransfer in="lit">
-      <feFuncR type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncG type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncB type="linear" slope="0.27" intercept="0.365"/>
-      <feFuncA type="linear" slope="0.58"/>
+      <feFuncR type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncG type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncB type="linear" slope="0.30" intercept="0.350"/>
+      <feFuncA type="linear" slope="0.64"/>
     </feComponentTransfer>
   </filter>
   <rect width="131" height="127" fill="#808080" filter="url(#fiber-a)"/>
@@ -31,10 +31,10 @@ func fiberSecondary() []byte {
       <feDistantLight azimuth="318" elevation="60"/>
     </feDiffuseLighting>
     <feComponentTransfer in="lit">
-      <feFuncR type="linear" slope="0.18" intercept="0.41"/>
-      <feFuncG type="linear" slope="0.18" intercept="0.41"/>
-      <feFuncB type="linear" slope="0.18" intercept="0.41"/>
-      <feFuncA type="linear" slope="0.34"/>
+      <feFuncR type="linear" slope="0.20" intercept="0.40"/>
+      <feFuncG type="linear" slope="0.20" intercept="0.40"/>
+      <feFuncB type="linear" slope="0.20" intercept="0.40"/>
+      <feFuncA type="linear" slope="0.37"/>
     </feComponentTransfer>
   </filter>
   <rect width="173" height="149" fill="#808080" filter="url(#fiber-b)"/>
@@ -54,7 +54,7 @@ body{
   background-size:131px 127px,173px 149px,%dpx %dpx;
   background-repeat:repeat,repeat,repeat;
   background-position:0 0,41px 23px,0 0;
-  background-blend-mode:soft-light,soft-light,soft-light;
+  background-blend-mode:soft-light,soft-light,overlay;
   color:#171717;
   font:14px/1.5 Georgia,serif;
 }

@@ -175,9 +175,9 @@ body {
     url("./newsprint-fiber-b.svg"),
     url("./newsprint-surface.png");
   background-repeat: repeat, repeat, repeat;
-  background-size: 131px 127px, 173px 149px, 2560px 3200px;
+  background-size: 131px 127px, 173px 149px, 1920px 2400px;
   background-position: 0 0, 41px 23px, 0 0;
-  background-blend-mode: soft-light, soft-light, soft-light;
+  background-blend-mode: soft-light, soft-light, overlay;
 }
 :root[data-theme="dark"][data-activity-palette="newsprint"] body { background-image: none; }
 @media (prefers-color-scheme: dark) {

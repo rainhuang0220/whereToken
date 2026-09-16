@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	// Stored texels. Displayed at displayWidth×displayHeight CSS pixels so the
-	// unique sheet covers a full profile without repeating, while PNG stays in budget.
-	productionWidth  = 1280
-	productionHeight = 1600
-	displayWidth     = 2560
-	displayHeight    = 3200
+	// 1:1 CSS pixels. v4 stored 1280×1600 and displayed it at 2560×3200, which
+	// bilinear-softened the meso shape. Unique coverage is 1920×2400 CSS px.
+	productionWidth  = 1920
+	productionHeight = 2400
+	displayWidth     = 1920
+	displayHeight    = 2400
 	materialSeed     = uint64(0x7768657265546f6b) // "whereTok"
 	maxSurfaceBytes  = 700 * 1024
 )
@@ -52,7 +52,7 @@ func main() {
 		if err != nil {
 			fail(err)
 		}
-		fmt.Printf("probe PNG 640x800 = %d bytes; %dx%d linear estimate ~ %d bytes\n", len(payload), productionWidth, productionHeight, len(payload)*4)
+		fmt.Printf("probe PNG 640x800 = %d bytes; %dx%d linear estimate ~ %d bytes\n", len(payload), productionWidth, productionHeight, len(payload)*9)
 		return
 	}
 
@@ -113,7 +113,7 @@ func lightAndEncode(heights []float64, width, height int) ([]byte, error) {
 	slopeRMS := math.Sqrt(slopeEnergy / float64(width*height))
 	// v3 used 0.075 after global RMS normalize. +33% keeps regional contrast
 	// while making local slopes slightly more nonlinear under Lambert.
-	slopeScale := 0.11 / math.Max(slopeRMS, 1e-9)
+	slopeScale := 0.14 / math.Max(slopeRMS, 1e-9)
 
 	var mean float64
 	for y := 0; y < height; y++ {
@@ -136,8 +136,8 @@ func lightAndEncode(heights []float64, width, height int) ([]byte, error) {
 
 	img := image.NewGray(image.Rect(0, 0, width, height))
 	for i, d := range diffuse {
-		v := 128 + 16.0*(d-mean)/math.Max(stddev, 1e-9)
-		v = math.Max(104, math.Min(154, v))
+		v := 128 + 21.0*(d-mean)/math.Max(stddev, 1e-9)
+		v = math.Max(92, math.Min(164, v))
 		img.Pix[i] = uint8(math.Round(v))
 	}
 

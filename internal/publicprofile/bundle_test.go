@@ -107,7 +107,7 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 	if !strings.Contains(css, `./newsprint-fiber-b.svg`) {
 		t.Fatal("generated live stylesheet does not reference the secondary newsprint fiber")
 	}
-	if !strings.Contains(css, `2560px 3200px`) {
+	if !strings.Contains(css, `1920px 2400px`) {
 		t.Fatal("generated live stylesheet does not keep the master sheet at a fixed CSS-pixel scale")
 	}
 	if strings.Contains(css, `background-size: 100% 100%`) {

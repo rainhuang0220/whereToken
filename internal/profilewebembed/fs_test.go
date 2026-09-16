@@ -36,11 +36,11 @@ func TestNewsprintMaterialAssetsAreEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode newsprint surface: %v", err)
 	}
-	if got := decoded.Bounds().Dx(); got != 1280 {
-		t.Fatalf("surface width=%d want 1280", got)
+	if got := decoded.Bounds().Dx(); got != 1920 {
+		t.Fatalf("surface width=%d want 1920", got)
 	}
-	if got := decoded.Bounds().Dy(); got != 1600 {
-		t.Fatalf("surface height=%d want 1600", got)
+	if got := decoded.Bounds().Dy(); got != 2400 {
+		t.Fatalf("surface height=%d want 2400", got)
 	}
 	if _, ok := decoded.(*image.Gray); !ok {
 		t.Fatalf("surface must be 8-bit grayscale, got %T", decoded)
@@ -86,7 +86,7 @@ func TestNewsprintDoesNotRewriteOtherPalettesOrIntensity(t *testing.T) {
 		`--theme-label: #0969da;`,
 		`--data-accent: #c2185b;`,
 		`--theme-label: #c2185b;`,
-		`background-size: 131px 127px, 173px 149px, 2560px 3200px;`,
+		`background-size: 131px 127px, 173px 149px, 1920px 2400px;`,
 		`./newsprint-fiber-b.svg`,
 	} {
 		if !strings.Contains(s, want) {

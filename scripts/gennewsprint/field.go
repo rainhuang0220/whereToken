@@ -132,7 +132,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 			kind: featHill,
 			cx:   cx, cy: cy, rx: rx, ry: ry,
 			cos: math.Cos(rot), sin: math.Sin(rot),
-			amp:  sign * (0.16 + 0.28*rng.unit()),
+			amp:  sign * (0.19 + 0.33*rng.unit()),
 			warp: sc.r(6 + 12*rng.unit()),
 		}
 		f.setBounds(3.2)
@@ -143,7 +143,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 			kind: featPucker,
 			cx:   cx, cy: cy, rx: rx, ry: ry,
 			cos: math.Cos(rot), sin: math.Sin(rot),
-			amp:  0.18 + 0.22*rng.unit(),
+			amp:  0.21 + 0.26*rng.unit(),
 			warp: sc.r(5 + 8*rng.unit()),
 		}
 		if rng.unit() < 0.3 {
@@ -157,7 +157,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 			kind: featSaddle,
 			cx:   cx, cy: cy, rx: rx, ry: ry,
 			cos: math.Cos(rot), sin: math.Sin(rot),
-			amp:  0.18 + 0.28*rng.unit(),
+			amp:  0.21 + 0.33*rng.unit(),
 			warp: sc.r(8 + 10*rng.unit()),
 		}
 		f.setBounds(3.0)
@@ -165,9 +165,9 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 	})
 	place(8, 150, 36, 150, func(cx, cy, length, _, rot float64) feature {
 		width := sc.r(12 + 24*rng.unit())
-		amp := 0.16 + 0.22*rng.unit()
+		amp := 0.19 + 0.26*rng.unit()
 		if rng.unit() < 0.18 {
-			amp = 0.36 + 0.20*rng.unit()
+			amp = 0.42 + 0.24*rng.unit()
 		}
 		if rng.unit() < 0.4 {
 			amp = -amp
@@ -216,7 +216,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 				kind: featPucker,
 				cx:   px, cy: py, rx: rx, ry: ry,
 				cos: math.Cos(rot), sin: math.Sin(rot),
-				amp:    (0.08 + 0.12*rng.unit()) * signUnit(rng),
+				amp:    (0.10 + 0.14*rng.unit()) * signUnit(rng),
 				warp:   sc.r(3),
 				useEnv: true, envCx: cx, envCy: cy, envR: envR,
 			}
@@ -229,7 +229,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 			cx:   cx, cy: cy,
 			rx: sc.r(50 + 70*rng.unit()), ry: sc.r(40 + 80*rng.unit()),
 			cos: math.Cos(rot), sin: math.Sin(rot),
-			amp:    0.10 + 0.14*rng.unit(),
+			amp:    0.12 + 0.16*rng.unit(),
 			useEnv: true, envCx: cx, envCy: cy, envR: envR,
 		}
 		saddle.setBounds(3.0)
@@ -251,7 +251,7 @@ func placeFeatures(rng *splitMix64, sc sheetScale, width, height int) []feature 
 				p1x: bx - sin*bend, p1y: by + cos*bend,
 				p2x: p2x, p2y: p2y,
 				width:  width,
-				amp:    (0.10 + 0.16*rng.unit()) * signUnit(rng),
+				amp:    (0.12 + 0.19*rng.unit()) * signUnit(rng),
 				cycles: 0.4 + 0.5*rng.unit(),
 				phase:  2 * math.Pi * rng.unit(),
 				useEnv: true, envCx: cx, envCy: cy, envR: envR,
@@ -332,13 +332,13 @@ func (m *paperModel) sample(x, y float64) float64 {
 	wx := x + 24*m.sx*fbm2(x/(118*m.sx), y/(118*m.sy), 2, m.seedWarpX)
 	wy := y + 24*m.sy*fbm2(x/(118*m.sx)+31, y/(118*m.sy), 2, m.seedWarpY)
 
-	h := 0.05 * fbm2(x/(680*m.sx), y/(760*m.sy), 2, m.seedForm)
-	h += 0.12 * (0.25 + 0.75*A) * fbm2(wx/(300*m.sx), wy/(330*m.sy), 1, m.seedWave)
+	h := 0.04 * fbm2(x/(680*m.sx), y/(760*m.sy), 2, m.seedForm)
+	h += 0.14 * (0.25 + 0.75*A) * fbm2(wx/(300*m.sx), wy/(330*m.sy), 1, m.seedWave)
 
 	coarse := fbm2(wx/(190*m.sx), wy/(210*m.sy), 1, m.seedCoarse)
 	mid := fbm2(wx/(100*m.sx), wy/(112*m.sy), 1, m.seedMid)
 	fine := fbm2(wx/(52*m.sx), wy/(58*m.sy), 1, m.seedFine)
-	h += A * (0.55*gate(S, 0.06, 0.52)*coarse + 0.42*gate(S, 0.30, 0.80)*mid + 0.18*gate(S, 0.58, 1.08)*fine)
+	h += A * (0.70*gate(S, 0.06, 0.52)*coarse + 0.54*gate(S, 0.30, 0.80)*mid + 0.22*gate(S, 0.58, 1.08)*fine)
 
 	var fsum float64
 	for _, mode := range m.modes {
