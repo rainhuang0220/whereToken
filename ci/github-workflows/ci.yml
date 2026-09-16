@@ -57,7 +57,7 @@ jobs:
 
       - name: Web tests
         working-directory: web
-        run: npm ci && npm test
+        run: npm ci && npm run typecheck && npm test
 
       - name: Public profile browser tests (Linux)
         if: runner.os == 'Linux'
@@ -80,3 +80,44 @@ jobs:
       - name: govulncheck
         if: runner.os == 'Linux'
         run: bash scripts/govulncheck.sh
+
+  hosted:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: wheretoken
+          MYSQL_ROOT_PASSWORD: wttest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pwttest"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      WHERETOKEN_MYSQL_TEST_DSN: root:wttest@tcp(127.0.0.1:3306)/wheretoken?parseTime=true&charset=utf8mb4
+      WHERETOKEN_REQUIRE_MYSQL: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+
+      - name: Hosted MySQL tests
+        run: go test -count=1 ./internal/hosted ./cmd/wheretoken-hosted
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Hosted production artifact
+        working-directory: web
+        run: npm ci
+
+      - name: Build hosted binary and SPA
+        run: bash scripts/build-hosted.sh "$RUNNER_TEMP/wheretoken-hosted"
