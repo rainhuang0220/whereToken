@@ -50,7 +50,6 @@ func NewMux(opts MuxOptions) http.Handler {
 
 type server struct {
 	opts    MuxOptions
-	pending sync.Map
 	limiter map[string][]time.Time
 	limMu   sync.Mutex
 }

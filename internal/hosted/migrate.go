@@ -1,6 +1,11 @@
 package hosted
 
-import "context"
+import (
+	"context"
+	"errors"
+
+	mysqlDriver "github.com/go-sql-driver/mysql"
+)
 
 var migrations = []string{
 	`CREATE TABLE IF NOT EXISTS users (
@@ -63,6 +68,7 @@ var migrations = []string{
   display_code CHAR(8) NOT NULL,
   secret_hash BINARY(32) NOT NULL,
   user_id BIGINT NULL,
+  device_id BIGINT NULL,
   device_meta JSON NOT NULL,
   expires_at DATETIME NOT NULL,
   consumed_at DATETIME NULL,
@@ -70,7 +76,8 @@ var migrations = []string{
   created_ip_hash BINARY(32) NULL,
   created_at DATETIME NOT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_pair_code (display_code)
+  UNIQUE KEY uq_pair_code (display_code),
+  UNIQUE KEY uq_pair_device_id (device_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	`CREATE TABLE IF NOT EXISTS usage_daily_model (
   user_id BIGINT NOT NULL,
@@ -124,5 +131,40 @@ func (s *Store) Migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	return s.ensurePairDeviceLink(ctx)
+}
+
+func (s *Store) ensurePairDeviceLink(ctx context.Context) error {
+	var columns int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pairing_challenges' AND COLUMN_NAME='device_id'`).Scan(&columns); err != nil {
+		return err
+	}
+	if columns == 0 {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE pairing_challenges ADD COLUMN device_id BIGINT NULL AFTER user_id`); err != nil && !mysqlError(err, 1060) {
+			return err
+		}
+	}
+	var indexes int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pairing_challenges' AND INDEX_NAME='uq_pair_device_id'`).Scan(&indexes); err != nil {
+		return err
+	}
+	if indexes == 0 {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE pairing_challenges ADD UNIQUE KEY uq_pair_device_id (device_id)`); err != nil && !mysqlError(err, 1061) {
+			return err
+		}
+	}
 	return nil
+}
+
+func mysqlError(err error, codes ...uint16) bool {
+	var my *mysqlDriver.MySQLError
+	if !errors.As(err, &my) {
+		return false
+	}
+	for _, code := range codes {
+		if my.Number == code {
+			return true
+		}
+	}
+	return false
 }
