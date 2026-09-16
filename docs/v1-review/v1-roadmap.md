@@ -4,6 +4,58 @@ Date: 2026-09-16
 Product direction: a local-first developer identity built from honest
 coding-agent usage
 
+## Implementation outcome (this review branch)
+
+The Gate A correctness items were implemented and verified against real
+MySQL/InnoDB (MariaDB 10.11) semantics, including concurrent-request races:
+
+- equal-revision comparison now covers every persisted measure, not only
+  `miss`;
+- sync idempotency now hashes the full request envelope and applies usage,
+  timezone, and source status atomically in one transaction, claiming the
+  idempotency key first so a concurrent identical retry cannot double-apply;
+- `syncagg.Build` now canonicalizes with `metric.CanonicalEvents`, the same
+  function the local report, dashboard, and public profile use, instead of a
+  second implementation that assigned duplicate stream rows to the wrong
+  local date;
+- device pairing is now one locked transaction (`Store.ApprovePair`); the
+  CLI-generated `device_secret` is the eventual bearer token itself, so a
+  dropped status response or process restart no longer strands the
+  credential;
+- the hosted CSRF check now requires the `X-CSRF-Token` header with no
+  cookie fallback, matching the documented contract (the existing frontend
+  already sent the header everywhere, so this closed the gap with no UI
+  change);
+- `DecodeBatch` now bounds and validates every field (dates, revisions,
+  token/count ranges, and quality/derivation/status enums) instead of
+  trusting an authenticated bearer's request body.
+
+Gate C privacy documentation was updated: README (English and Chinese) and
+SECURITY.md now disclose the hosted sync network path with its exact
+uploaded fields, alongside the pre-existing Community Rank and local-only
+modes. The hosted ADR's status was corrected from "Proposed" to
+"Implemented," and host-specific operational inventory (IP address, SSH key
+names, sibling-application ports, stored-password notes) was removed from
+version control.
+
+Gate D (visual restraint) was evaluated and no visual change was made. The
+design review's only concrete recommendations were taste opinions (replace
+the theme-gallery keyboard preview; iterate Newsprint toward more cockling)
+rather than defects, and the current Newsprint material already satisfies
+this review's standard: real scanned paper, restrained processing, no fake
+crease paths, no procedural noise as the primary realism source. Per the
+operating principle that a mature maintainer does not maximize changes, both
+were left as-is. Real-browser screenshots taken after all backend changes
+(`public_profile_newsprint_desktop.png`, `public_profile_newsprint_mobile.png`,
+`dashboard_demo_after_hosted_fixes.png`) confirm no regression: the kiln
+dashboard, KPI grid, and Newsprint public profile render identically to
+before this branch's changes, because no frontend or asset code was touched.
+
+Deferred to a later pass, per the P1/P2 priority list below: hosted
+readiness/graceful-shutdown, rate limiting correct for the real proxy
+topology, a maintained (non-EOL) database baseline, and the
+internationalization strategy decision.
+
 ## Product promise
 
 whereToken answers one question:
