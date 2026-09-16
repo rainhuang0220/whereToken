@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
 type SourceInput struct {
@@ -105,7 +106,12 @@ func Build(in BuildInput) (Batch, error) {
 		DailyModelUsage:     []DailyModel{},
 	}
 
-	merged := mergeByRequest(in.Events)
+	// Canonicalize with the same request-merge behavior the local report,
+	// dashboard, and public profile use (max per token component, latest
+	// timestamp wins, quality promoted by rank, negative rows dropped) so a
+	// hosted view cannot silently disagree with the local ledger it was
+	// synced from.
+	merged := metric.CanonicalEvents(in.Events)
 	rows := map[rowKey]*DailyModel{}
 	turnCount := map[string]int64{}
 
@@ -251,50 +257,6 @@ func sourceScopes(rows []DailyModel, tool string) []SourceScope {
 		out = append(out, ScopeDeviceLocal)
 	}
 	return out
-}
-
-func mergeByRequest(events []event.UsageEvent) []event.UsageEvent {
-	var out []event.UsageEvent
-	index := map[string]int{}
-	for _, e := range events {
-		if e.RequestID == "" {
-			out = append(out, e)
-			continue
-		}
-		key := e.Source + "\x00" + e.RequestID
-		if i, ok := index[key]; ok {
-			out[i] = maxEvent(out[i], e)
-			continue
-		}
-		index[key] = len(out)
-		out = append(out, e)
-	}
-	return out
-}
-
-func maxEvent(a, b event.UsageEvent) event.UsageEvent {
-	if b.Miss > a.Miss {
-		a.Miss = b.Miss
-	}
-	if b.CacheRead > a.CacheRead {
-		a.CacheRead = b.CacheRead
-	}
-	if b.CacheCreate > a.CacheCreate {
-		a.CacheCreate = b.CacheCreate
-	}
-	if b.Output > a.Output {
-		a.Output = b.Output
-	}
-	if b.SkipRequest {
-		a.SkipRequest = true
-	}
-	if a.Derivation == "" {
-		a.Derivation = b.Derivation
-	}
-	if a.Quality == "" {
-		a.Quality = b.Quality
-	}
-	return a
 }
 
 func DecodeBatch(raw []byte) (Batch, error) {

@@ -210,6 +210,78 @@ func TestDecodeBatchRejectsUnknownScopeAndFields(t *testing.T) {
 	}
 }
 
+// TestBuildAssignsDuplicateRowsToTheSameDateAsLocalMetric guards against the
+// exact drift the architecture review flagged: a duplicate stream row for
+// one request must land on the same local calendar date the local report,
+// dashboard, and public profile would assign it to (the latest observed
+// timestamp), not the earliest one, and a later-in-time row's larger token
+// counts must win even when it crosses midnight from the first row.
+func TestBuildAssignsDuplicateRowsToTheSameDateAsLocalMetric(t *testing.T) {
+	t.Parallel()
+	loc := shanghai(t)
+	in := testBuildInput(t)
+	in.Events = []event.UsageEvent{
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "cross-midnight",
+			Timestamp: time.Date(2026, 9, 3, 23, 59, 0, 0, loc),
+			Miss:      1_000, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw,
+		},
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "cross-midnight",
+			Timestamp: time.Date(2026, 9, 4, 0, 0, 5, 0, loc),
+			Miss:      5_000, Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+		},
+	}
+	in.Turns = nil
+	b, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.DailyModelUsage) != 1 {
+		t.Fatalf("want one canonical row, got %+v", b.DailyModelUsage)
+	}
+	row := b.DailyModelUsage[0]
+	if row.Date != "2026-09-04" {
+		t.Fatalf("canonical request must land on its latest local date, got %s", row.Date)
+	}
+	if row.Miss != 5_000 {
+		t.Fatalf("canonical row must keep the max per component, got miss=%d", row.Miss)
+	}
+	// metric.CanonicalEvents is deliberately pessimistic: if any duplicate
+	// row for this request ever looked degraded, the merged request stays
+	// degraded rather than upgrading to the better-looking sibling row.
+	if row.Quality != string(event.QualityDegraded) {
+		t.Fatalf("canonical row must keep the worse-observed quality, got %s", row.Quality)
+	}
+}
+
+// TestBuildDropsNegativeTokenRowsLikeLocalMetric ensures the same defensive
+// filter internal/metric applies to malformed local events also applies
+// before a batch is aggregated for upload, rather than silently uploading a
+// negative count for the hosted store to further mishandle.
+func TestBuildDropsNegativeTokenRowsLikeLocalMetric(t *testing.T) {
+	t.Parallel()
+	in := testBuildInput(t)
+	in.Events = []event.UsageEvent{
+		{
+			Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6",
+			RequestID: "poisoned",
+			Timestamp: time.Date(2026, 9, 3, 10, 0, 0, 0, shanghai(t)),
+			Miss:      -1, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw,
+		},
+	}
+	in.Turns = nil
+	b, err := Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.DailyModelUsage) != 0 {
+		t.Fatalf("negative-token row must be dropped, got %+v", b.DailyModelUsage)
+	}
+}
+
 func TestBuildRequiresHashKey(t *testing.T) {
 	t.Parallel()
 	in := testBuildInput(t)
