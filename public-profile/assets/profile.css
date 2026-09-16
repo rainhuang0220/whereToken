@@ -19,10 +19,10 @@
   --tip-bg: #1b1b1b;
   --tip-text: #ffffff;
   --tip-muted: #d4d4d4;
-  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' seed='5147' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.15'/%3E%3C/svg%3E");
-  --paper-texture: var(--paper-grain), radial-gradient(ellipse 72% 58% at 12% 8%, rgb(0 0 0 / 0.022), transparent 72%), radial-gradient(ellipse 65% 48% at 91% 78%, rgb(255 255 255 / 0.78), transparent 76%);
-  --paper-size: 180px 180px, auto, auto;
-  --paper-crease: linear-gradient(90deg, transparent 58.6%, rgb(0 0 0 / 0.025) 59.1%, rgb(0 0 0 / 0.065) 59.45%, rgb(255 255 255 / 0.72) 59.7%, transparent 60.25%), linear-gradient(171deg, transparent 31.9%, rgb(0 0 0 / 0.018) 32.15%, rgb(0 0 0 / 0.042) 32.34%, rgb(255 255 255 / 0.64) 32.52%, transparent 32.86%);
+  --paper-texture: url("./newsprint-paper.svg");
+  --paper-size: 1024px 1024px;
+  --paper-crease: url("./newsprint-folds.svg");
+  --paper-crease-size: 100% 100%;
   --cell: 15px;
   --cell-gap: 3px;
   color-scheme: light;
@@ -86,9 +86,10 @@
   --tip-bg: #1b1b1b;
   --tip-text: #ffffff;
   --tip-muted: #d4d4d4;
-  --paper-texture: var(--paper-grain), radial-gradient(ellipse 72% 58% at 12% 8%, rgb(0 0 0 / 0.022), transparent 72%), radial-gradient(ellipse 65% 48% at 91% 78%, rgb(255 255 255 / 0.78), transparent 76%);
-  --paper-size: 180px 180px, auto, auto;
-  --paper-crease: linear-gradient(90deg, transparent 58.6%, rgb(0 0 0 / 0.025) 59.1%, rgb(0 0 0 / 0.065) 59.45%, rgb(255 255 255 / 0.72) 59.7%, transparent 60.25%), linear-gradient(171deg, transparent 31.9%, rgb(0 0 0 / 0.018) 32.15%, rgb(0 0 0 / 0.042) 32.34%, rgb(255 255 255 / 0.64) 32.52%, transparent 32.86%);
+  --paper-texture: url("./newsprint-paper.svg");
+  --paper-size: 1024px 1024px;
+  --paper-crease: url("./newsprint-folds.svg");
+  --paper-crease-size: 100% 100%;
 }
 
 [data-theme="dark"] {
@@ -110,6 +111,7 @@
   --paper-texture: none;
   --paper-size: auto;
   --paper-crease: none;
+  --paper-crease-size: auto;
   color-scheme: dark;
 }
 
@@ -136,6 +138,7 @@
     --paper-texture: none;
     --paper-size: auto;
     --paper-crease: none;
+    --paper-crease-size: auto;
     color-scheme: dark;
   }
   :root:not([data-theme="light"])[data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
@@ -156,6 +159,7 @@
   --paper-texture: none;
   --paper-size: auto;
   --paper-crease: none;
+  --paper-crease-size: auto;
 }
 :root[data-theme="dark"][data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
 :root[data-theme="dark"][data-activity-palette="magenta"] { --data-accent: #f26ca8; --theme-label: #f26ca8; }
@@ -176,6 +180,7 @@
     --paper-texture: none;
     --paper-size: auto;
     --paper-crease: none;
+    --paper-crease-size: auto;
   }
   :root:not([data-theme="light"])[data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
   :root:not([data-theme="light"])[data-activity-palette="magenta"] { --data-accent: #f26ca8; --theme-label: #f26ca8; }
@@ -198,10 +203,13 @@ body {
 
 body { position: relative; }
 body::before {
-  position: fixed;
+  position: absolute;
   z-index: 0;
   inset: 0;
   background: var(--paper-crease);
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: var(--paper-crease-size);
   content: "";
   pointer-events: none;
 }
@@ -456,10 +464,17 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 .cell.lv4 { background: var(--lv4); }
 .cell.lv5 { background: var(--lv5); }
 .cell.newsprint {
-  background-image: var(--paper-grain);
-  background-size: 96px 96px;
-  background-blend-mode: soft-light;
+  background-image: url("./newsprint-paper.svg");
+  background-size: 160px 160px;
+  background-blend-mode: multiply;
 }
+.cell.newsprint:nth-child(7n + 1) { background-position: 11px 7px; }
+.cell.newsprint:nth-child(7n + 2) { background-position: 43px 29px; }
+.cell.newsprint:nth-child(7n + 3) { background-position: 79px 53px; }
+.cell.newsprint:nth-child(7n + 4) { background-position: 101px 17px; }
+.cell.newsprint:nth-child(7n + 5) { background-position: 23px 91px; }
+.cell.newsprint:nth-child(7n + 6) { background-position: 67px 113px; }
+.cell.newsprint:nth-child(7n) { background-position: 127px 71px; }
 .cell.peak { box-shadow: inset 0 0 0 1px var(--text); }
 @media (hover: hover) {
   .cell:hover { box-shadow: inset 0 0 0 1px var(--text); }

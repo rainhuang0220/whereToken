@@ -45,7 +45,7 @@ func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
 		t.Fatalf("asset revision must exist independently of snapshot id: %q", assetRevision)
 	}
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js"} {
+	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-paper.svg", "assets/newsprint-folds.svg"} {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])
@@ -98,6 +98,24 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 	if !strings.Contains(css, `.cell.newsprint`) {
 		t.Fatal("generated live stylesheet does not provide the newsprint cell treatment")
 	}
+	if !strings.Contains(css, `./newsprint-paper.svg`) {
+		t.Fatal("generated live stylesheet does not reference the canonical newsprint material")
+	}
+	if !strings.Contains(css, `./newsprint-folds.svg`) {
+		t.Fatal("generated live stylesheet does not reference the canonical newsprint folds")
+	}
+	paper := string(files["assets/newsprint-paper.svg"])
+	for _, want := range []string{"feTurbulence", "fractalNoise"} {
+		if !strings.Contains(paper, want) {
+			t.Fatalf("generated newsprint material is missing %q", want)
+		}
+	}
+	folds := string(files["assets/newsprint-folds.svg"])
+	for _, want := range []string{`id="vertical-fold"`, `id="diagonal-fold"`} {
+		if !strings.Contains(folds, want) {
+			t.Fatalf("generated newsprint folds are missing %q", want)
+		}
+	}
 }
 
 func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
@@ -105,7 +123,7 @@ func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),
 		filepath.Join("..", "..", "public-profile"),
 	} {
-		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js"} {
+		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-paper.svg", "assets/newsprint-folds.svg"} {
 			got, err := os.ReadFile(filepath.Join(root, name))
 			if err != nil {
 				t.Fatal(err)

@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-09-09",
-  "asset_revision": "sha256:595a3cda887aaf97576def295ecf24bbf020f115c534dbc37bf667d085896b04",
+  "asset_revision": "sha256:0e5c2db7c0e08cb7403a642752cb774afd49ae9d0675f866942db49dc7674535",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -8,6 +8,8 @@
     "index.html",
     "assets/profile.css",
     "assets/profile.js",
+    "assets/newsprint-paper.svg",
+    "assets/newsprint-folds.svg",
     "manifest.json"
   ],
   "generated_at": "2026-09-09T07:00:00Z",

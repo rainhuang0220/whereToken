@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1800" viewBox="0 0 1600 1800" preserveAspectRatio="none">
+  <defs>
+    <filter id="broad-blur" x="-30%" y="-10%" width="160%" height="120%">
+      <feGaussianBlur stdDeviation="4.2"/>
+    </filter>
+    <filter id="ridge-blur" x="-30%" y="-10%" width="160%" height="120%">
+      <feGaussianBlur stdDeviation="0.75"/>
+    </filter>
+    <linearGradient id="vertical-fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.24"/>
+      <stop offset="0.13" stop-color="#fff" stop-opacity="0.72"/>
+      <stop offset="0.43" stop-color="#fff" stop-opacity="0.46"/>
+      <stop offset="0.68" stop-color="#fff" stop-opacity="0.76"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="diagonal-fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.1" stop-color="#fff" stop-opacity="0.26"/>
+      <stop offset="0.28" stop-color="#fff" stop-opacity="0.58"/>
+      <stop offset="0.58" stop-color="#fff" stop-opacity="0.38"/>
+      <stop offset="0.8" stop-color="#fff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="vertical-mask"><rect width="1600" height="1800" fill="url(#vertical-fade)"/></mask>
+    <mask id="diagonal-mask"><rect width="1600" height="1800" fill="url(#diagonal-fade)"/></mask>
+  </defs>
+  <g id="vertical-fold" mask="url(#vertical-mask)" fill="none" stroke-linecap="round">
+    <path d="M 956 -50 C 946 190 972 382 957 610 C 941 844 970 1034 951 1260 C 943 1452 965 1642 954 1850" transform="translate(5 0)" stroke="#111820" stroke-opacity="0.052" stroke-width="14" filter="url(#broad-blur)"/>
+    <path d="M 956 -50 C 946 190 972 382 957 610 C 941 844 970 1034 951 1260 C 943 1452 965 1642 954 1850" transform="translate(2.2 0)" stroke="#111820" stroke-opacity="0.08" stroke-width="4" filter="url(#ridge-blur)"/>
+    <path d="M 956 -50 C 946 190 972 382 957 610 C 941 844 970 1034 951 1260 C 943 1452 965 1642 954 1850" stroke="#161b22" stroke-opacity="0.11" stroke-width="1"/>
+    <path d="M 956 -50 C 946 190 972 382 957 610 C 941 844 970 1034 951 1260 C 943 1452 965 1642 954 1850" transform="translate(-1.8 0)" stroke="#fff" stroke-opacity="0.52" stroke-width="1.6" filter="url(#ridge-blur)"/>
+    <path d="M 956 -50 C 946 190 972 382 957 610 C 941 844 970 1034 951 1260 C 943 1452 965 1642 954 1850" transform="translate(-5 0)" stroke="#fff" stroke-opacity="0.12" stroke-width="7" filter="url(#broad-blur)"/>
+  </g>
+  <g id="diagonal-fold" mask="url(#diagonal-mask)" fill="none" stroke-linecap="round">
+    <path d="M -90 728 C 220 671 424 588 650 551 S 985 470 1190 409 C 1310 373 1410 390 1510 426" transform="translate(0 4.5)" stroke="#111820" stroke-opacity="0.035" stroke-width="11" filter="url(#broad-blur)"/>
+    <path d="M -90 728 C 220 671 424 588 650 551 S 985 470 1190 409 C 1310 373 1410 390 1510 426" transform="translate(0 2)" stroke="#111820" stroke-opacity="0.06" stroke-width="3.2" filter="url(#ridge-blur)"/>
+    <path d="M -90 728 C 220 671 424 588 650 551 S 985 470 1190 409 C 1310 373 1410 390 1510 426" stroke="#161b22" stroke-opacity="0.075" stroke-width="0.9"/>
+    <path d="M -90 728 C 220 671 424 588 650 551 S 985 470 1190 409 C 1310 373 1410 390 1510 426" transform="translate(0 -1.8)" stroke="#fff" stroke-opacity="0.38" stroke-width="1.5" filter="url(#ridge-blur)"/>
+    <path d="M -90 728 C 220 671 424 588 650 551 S 985 470 1190 409 C 1310 373 1410 390 1510 426" transform="translate(0 -4.5)" stroke="#fff" stroke-opacity="0.08" stroke-width="6" filter="url(#broad-blur)"/>
+  </g>
+</svg>
