@@ -297,12 +297,10 @@ func (sess Session) ValidCSRF(token string) bool {
 }
 
 func (s *server) requireCSRF(w http.ResponseWriter, r *http.Request, sess Session) bool {
+	// Header-only: a cookie fallback would let a same-site sibling origin's
+	// ambient cookie satisfy this check without ever reading the CSRF value,
+	// defeating the point of the double-submit token.
 	token := r.Header.Get("X-CSRF-Token")
-	if token == "" {
-		if c, err := r.Cookie(cookieCSRF); err == nil {
-			token = c.Value
-		}
-	}
 	if !sess.ValidCSRF(token) {
 		http.Error(w, "csrf", http.StatusForbidden)
 		return false
