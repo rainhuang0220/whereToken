@@ -1,6 +1,8 @@
 # whereToken Newsprint Material Design v3
 
-> Status: superseded. The v3 procedural height-field bake was rejected in review (obvious, not real, not aesthetically acceptable). Production Newsprint is now a reference-first adaptation of ambientCG Paper001 (CC0); see `scripts/gennewsprint/vendor/SOURCE.md`.
+> Status: superseded as a production bake. The v3 *procedural Fourier* height field was rejected (obvious, cloudy, not aesthetically acceptable). Production Newsprint still follows the PBR-lite *stack* specified here — height, normals, roughness, desk-key lighting, ink as a separate absorbing layer — but the height source is photoscanned ambientCG Paper001 displacement, not synthesized cockling. See `scripts/gennewsprint/vendor/SOURCE.md`.
+>
+> Iteration 2 (printed-paper simulation): `scripts/gennewsprint` reconstructs normals from the scanned height, varies roughness by valley/calender, lights a shaded RGB sheet, and the live page multiplies existing inked pixels over that substrate. It does not retile a fiber JPEG as a grayscale overlay.
 >
 > Status: implementation specification
 > Scope: only the `Newsprint` theme of the live public profile

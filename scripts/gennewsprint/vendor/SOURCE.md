@@ -27,4 +27,12 @@ Poly Haven has no paper category in its texture catalog. Paper Shaders remain a 
 
 ## Bake
 
-`go run ./scripts/gennewsprint` retints an albedo-led fiber mix onto a near-white sheet and writes `newsprint-surface.jpg`. Displacement is a quiet extra tooth, not a page-scale lighting field.
+`go run ./scripts/gennewsprint` treats the photoscanned displacement as a **height field**, not as a grayscale overlay.
+
+1. **Height** — calender the raw displacement toward newsprint (felt kept at low mix; only scan-derived sheet formation, no Fourier cockling).
+2. **Normals** — wrapped finite differences, slope RMS locked so the relief stays paper-thin.
+3. **Roughness** — valleys and remaining felt are broader / more absorptive; calendered highs keep a tighter sheen.
+4. **Lighting** — one soft desk key (upper-left) plus a faint fill, micro-occlusion in fiber pits, and a sub-2% calender sheen. The JPEG is the shaded RGB sheet.
+5. **Ink** — not painted into the JPEG. Live Newsprint CSS multiplies existing type, rules, heat cells, rank fills, and the trend over this substrate so ink reduces paper albedo and sits slightly darker in the valleys already carved by the height field.
+
+The previous high-pass-and-tint bake was a paper-looking shader: isotropic fiber noise on `#f7f6f1`. This pass is a printed-paper simulation. Do not reintroduce `feTurbulence`, crease SVGs, or a grayscale soft-light overlay.

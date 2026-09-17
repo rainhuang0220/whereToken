@@ -1,5 +1,7 @@
-// Command gennewsprint bakes the Newsprint substrate from a photoscanned
-// paper material. It does not synthesize the page as procedural cockling.
+// Command gennewsprint bakes a printed-paper sheet from photoscanned
+// Paper001 maps: height field, reconstructed normals, roughness, and
+// desk-key lighting. It does not synthesize Fourier cockling or ship a
+// grayscale overlay.
 package main
 
 import (

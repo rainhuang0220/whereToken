@@ -181,6 +181,59 @@ body {
   :root:not([data-theme="light"])[data-activity-palette="newsprint"] body { background-image: none; }
 }
 
+/* Printed ink: existing marks reduce paper albedo instead of covering it.
+   0.35px text-shadow is print gain / fiber soak, not a type-size change. */
+:root[data-activity-palette="newsprint"] .cell.newsprint,
+:root[data-activity-palette="newsprint"] .rank-bar i,
+:root[data-activity-palette="newsprint"] .trend .line,
+:root[data-activity-palette="newsprint"] .trend .dot,
+:root[data-activity-palette="newsprint"] .brand strong,
+:root[data-activity-palette="newsprint"] .hero-value,
+:root[data-activity-palette="newsprint"] h2,
+:root[data-activity-palette="newsprint"] .rank-name,
+:root[data-activity-palette="newsprint"] .rank-value {
+  mix-blend-mode: multiply;
+}
+:root[data-activity-palette="newsprint"] .brand strong,
+:root[data-activity-palette="newsprint"] .hero-value,
+:root[data-activity-palette="newsprint"] h2 {
+  text-shadow: 0 0 0.35px rgb(22 22 22 / 0.22);
+}
+:root[data-theme="dark"][data-activity-palette="newsprint"] .cell.newsprint,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .rank-bar i,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .trend .line,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .trend .dot,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .brand strong,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .hero-value,
+:root[data-theme="dark"][data-activity-palette="newsprint"] h2,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .rank-name,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .rank-value {
+  mix-blend-mode: normal;
+}
+:root[data-theme="dark"][data-activity-palette="newsprint"] .brand strong,
+:root[data-theme="dark"][data-activity-palette="newsprint"] .hero-value,
+:root[data-theme="dark"][data-activity-palette="newsprint"] h2 {
+  text-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .cell.newsprint,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .rank-bar i,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .trend .line,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .trend .dot,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .brand strong,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .hero-value,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] h2,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .rank-name,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .rank-value {
+    mix-blend-mode: normal;
+  }
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .brand strong,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] .hero-value,
+  :root:not([data-theme="light"])[data-activity-palette="newsprint"] h2 {
+    text-shadow: none;
+  }
+}
+
 button,
 a { font: inherit; touch-action: manipulation; }
 

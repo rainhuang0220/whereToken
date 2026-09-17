@@ -67,6 +67,7 @@ func TestNewsprintDoesNotRewriteOtherPalettesOrIntensity(t *testing.T) {
 		`background-size: 560px auto;`,
 		`./newsprint-surface.jpg`,
 		`--page: #f7f6f1;`,
+		`mix-blend-mode: multiply`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("stylesheet missing %q", want)

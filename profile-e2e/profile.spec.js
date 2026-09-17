@@ -333,6 +333,8 @@ test("keeps structural ink separate from Activity data accents", async ({ page }
   expect(paperSize).toContain("560px");
   expect(paperSize).not.toContain("100%");
   expect(await page.locator("body").evaluate((node) => getComputedStyle(node, "::before").content)).toBe("none");
+  await expect.poll(() => page.locator("#wall .cell.newsprint").first().evaluate((node) => getComputedStyle(node).mixBlendMode)).toBe("multiply");
+  await expect.poll(() => page.locator(".rank-bar i").first().evaluate((node) => getComputedStyle(node).mixBlendMode)).toBe("multiply");
 });
 
 test("keeps an explicit dark display preference when the Activity palette changes", async ({ page }) => {
