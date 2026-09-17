@@ -19,7 +19,7 @@ body{
 }
 .label{margin:0 0 28px;font:600 13px/1.2 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}
 .blocks{display:flex;gap:28px;align-items:flex-end;max-width:520px}
-.block{width:240px;height:150px}
+.block{width:240px;height:150px;mix-blend-mode:multiply}
 .gray{background-color:#b6b5b0}
 .black{background-color:#4a4946}
 .rules{margin-top:36px;max-width:420px}
@@ -29,10 +29,10 @@ body{
 .copy strong{font-size:20px}
 </style>
 <body>
-<p class="label">Newsprint material · scanned sheet · folds 0</p>
+<p class="label">Newsprint material · height / normal / roughness / ink</p>
 <div class="blocks"><div class="block gray"></div><div class="block black"></div></div>
 <div class="rules"><div class="one"></div><div class="two"></div></div>
-<p class="copy"><strong>whereToken local token accounting</strong><br>Matte ink sits on a near-white uncoated sheet. Type remains crisp while the substrate carries a quiet paper body.</p>
+<p class="copy"><strong>whereToken local token accounting</strong><br>Coldset ink multiplies into a calendered newsprint sheet. Formation lives in the paper color; the remaining tooth is not a lit watercolor stamp.</p>
 </body></html>
 `, displayWidthCSS)
 	return []byte(body)

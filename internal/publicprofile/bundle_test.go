@@ -107,6 +107,9 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 	if !strings.Contains(css, `background-size: 560px auto`) {
 		t.Fatal("generated live stylesheet does not keep the scanned sheet at a fixed CSS-pixel scale")
 	}
+	if !strings.Contains(css, `mix-blend-mode: multiply`) {
+		t.Fatal("generated live stylesheet does not treat newsprint marks as absorbing ink")
+	}
 	if strings.Contains(css, `background-size: 100% 100%`) {
 		t.Fatal("generated live stylesheet stretches the paper material to the viewport")
 	}

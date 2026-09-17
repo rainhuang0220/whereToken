@@ -10,20 +10,40 @@ import (
 	"os"
 )
 
+// Newsprint-specific paper model. Paper001 is watercolor / drawing stock;
+// the bake must not ship that tooth as a lit relief stamp.
+//
+//   height  — calender the scan; keep only the scan's real mid-frequency
+//             pulp (no Fourier, no contrast-normalized sheet clouds)
+//   normal  — fixed paper-thin slope gain; never RMS-lock (that re-amplifies
+//             leftover drawing-paper pebbles into a tiled shader)
+//   albedo  — remaining tooth and cheap-paper mottling live in the paper
+//             color, not as a bump film
+//   lighting — almost ambient, one soft desk key, matte, tiny occlusion
+//
+// Ink is not painted into this asset. Live CSS multiplies existing inked
+// pixels over this substrate so type/rules/heat reduce paper albedo.
+
 const (
-	dispBlurRadius    = 6.2
-	albedoBlurRadius  = 4.4
-	fiberDispWeight   = 0.72
-	fiberAlbedoWeight = 0.28
-	mixAlbedoWeight   = 0.62
-	mixDispWeight     = 0.38
-	fiberUnitStd      = 12.0
-	fiberGain         = 0.44
-	softenRadius      = 0.35
-	baseR             = 247.0
-	baseG             = 246.0
-	baseB             = 241.0
-	jpegQuality       = 86
+	calenderRadius      = 2.5
+	feltMix             = 0.11
+	toothGain           = 0.82
+	flockRadius         = 10.0
+	flockGain           = 0.28
+	aoRadius            = 3.4
+	aoGain              = 0.030
+	newsprintSlopeScale = 7.0
+	sheenPeak           = 0.007
+	albedoGain          = 0.24
+	flockToneGain       = 28.0
+	keyWeight           = 0.14
+	fillWeight          = 0.04
+	ambientWeight       = 0.82
+	baseR               = 247.0
+	baseG               = 246.0
+	baseB               = 241.0
+	jpegQuality         = 84
+	softenRadius        = 0.40
 )
 
 func bakeFromVendor(colorPath, dispPath string) ([]byte, image.Point, error) {
@@ -40,16 +60,16 @@ func bakeFromVendor(colorPath, dispPath string) ([]byte, image.Point, error) {
 	}
 	b := colorImg.Bounds()
 	w, h := b.Dx(), b.Dy()
-	albedo, rch, gch, bch := rgbaPlanes(colorImg)
+	_, rch, gch, bch := rgbaPlanes(colorImg)
 	disp := grayPlane(dispImg)
 
-	fiberDisp := unitFiber(highpass(disp, w, h, dispBlurRadius), w*h)
-	fiberAlb := unitFiber(highpass(albedo, w, h, albedoBlurRadius), w*h)
-	fiber := unitFiber(weightedSum(fiberDisp, fiberAlb, fiberDispWeight, fiberAlbedoWeight), w*h)
-	mixed := unitFiber(weightedSum(fiberAlb, fiber, mixAlbedoWeight, mixDispWeight), w*h)
+	height := heightField(disp, w, h)
+	nx, ny, nz := reconstructNormals(height, w, h, newsprintSlopeScale)
+	rough := roughnessField(height, w, h)
+	albedo := retintAlbedo(rch, gch, bch, disp, w, h)
+	rgb := shadePaper(albedo, height, nx, ny, nz, rough, w, h)
+	rgb = gaussianRGBWrap(rgb, w, h, softenRadius)
 
-	rgb := colorize(mixed, rch, gch, bch, w, h)
-	rgb = gaussianRGB(rgb, w, h, softenRadius)
 	dw := productionWidth
 	dh := int(math.Round(float64(h) * float64(dw) / float64(w)))
 	rgb = resizeRGB(rgb, w, h, dw, dh)
@@ -109,64 +129,158 @@ func grayPlane(img image.Image) []float64 {
 	return out
 }
 
-func highpass(src []float64, w, h int, radius float64) []float64 {
-	blurred := gaussian(src, w, h, radius)
-	out := make([]float64, len(src))
-	for i, v := range src {
-		out[i] = v - blurred[i]
+func heightField(disp []float64, w, h int) []float64 {
+	raw := make([]float64, len(disp))
+	for i, v := range disp {
+		raw[i] = v / 255
+	}
+	calendered := gaussianWrap(raw, w, h, calenderRadius)
+	tooth := make([]float64, len(raw))
+	for i := range raw {
+		tooth[i] = calendered[i]*(1-feltMix) + raw[i]*feltMix
+	}
+	flock := gaussianWrap(raw, w, h, flockRadius)
+	tMean, fMean := meanOf(tooth), meanOf(flock)
+	out := make([]float64, len(raw))
+	for i := range raw {
+		// Actual scan amplitudes. Contrast-normalizing formation turns
+		// scanner low-frequency into the rejected cloudy field.
+		out[i] = clamp01(0.5 + (tooth[i]-tMean)*toothGain + (flock[i]-fMean)*flockGain)
 	}
 	return out
 }
 
-func unitFiber(src []float64, n int) []float64 {
-	var mean float64
-	for _, v := range src {
-		mean += v
+func unit01(src []float64) []float64 {
+	u := zeroMeanUnit(src)
+	out := make([]float64, len(src))
+	for i, v := range u {
+		out[i] = clamp01(0.5 + v*0.22)
 	}
-	mean /= float64(n)
+	return out
+}
+
+func zeroMeanUnit(src []float64) []float64 {
+	m := meanOf(src)
 	var acc float64
 	for _, v := range src {
-		d := v - mean
+		d := v - m
 		acc += d * d
 	}
-	std := math.Sqrt(acc / float64(n))
+	std := math.Sqrt(acc / float64(len(src)))
 	if std < 1e-6 {
 		std = 1e-6
 	}
-	scale := fiberUnitStd / std
-	out := make([]float64, n)
+	out := make([]float64, len(src))
 	for i, v := range src {
-		out[i] = (v - mean) * scale
+		out[i] = (v - m) / std
 	}
 	return out
 }
 
-func weightedSum(a, b []float64, wa, wb float64) []float64 {
-	out := make([]float64, len(a))
-	for i := range a {
-		out[i] = wa*a[i] + wb*b[i]
+func reconstructNormals(height []float64, w, h int, slopeScale float64) (nx, ny, nz []float64) {
+	n := w * h
+	nx = make([]float64, n)
+	ny = make([]float64, n)
+	nz = make([]float64, n)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			i := y*w + x
+			dx := sample(height, w, h, x+1, y) - sample(height, w, h, x-1, y)
+			dy := sample(height, w, h, x, y+1) - sample(height, w, h, x, y-1)
+			nx[i], ny[i], nz[i] = normalize3(-slopeScale*dx, -slopeScale*dy, 1)
+		}
+	}
+	return nx, ny, nz
+}
+
+func roughnessField(height []float64, w, h int) []float64 {
+	// Machine-calendered newsprint is almost uniformly matte.
+	blur := gaussianWrap(height, w, h, 2.4)
+	out := make([]float64, len(height))
+	for i, hgt := range height {
+		valley := clamp01((blur[i] - hgt) * 2.2)
+		out[i] = clamp01(0.86 + 0.08*valley + 0.04*(1-hgt))
 	}
 	return out
 }
 
-func colorize(fiber, _, _, _ []float64, w, h int) []float64 {
-	out := make([]float64, w*h*3)
-	for i, v := range fiber {
-		s := v * fiberGain
-		out[i*3+0] = clamp8(baseR + s)
-		out[i*3+1] = clamp8(baseG + s)
-		out[i*3+2] = clamp8(baseB + s)
+func retintAlbedo(r, g, b, disp []float64, w, h int) []float64 {
+	n := w * h
+	raw := make([]float64, n)
+	for i, v := range disp {
+		raw[i] = v / 255
+	}
+	flock := gaussianWrap(raw, w, h, flockRadius)
+	fMean := meanOf(flock)
+	meanR, meanG, meanB := meanOf(r), meanOf(g), meanOf(b)
+	out := make([]float64, n*3)
+	for i := 0; i < n; i++ {
+		// Residual tooth / pulp lives in the paper color, not as a bump film.
+		tone := (flock[i] - fMean) * flockToneGain
+		out[i*3+0] = clamp8(baseR + (r[i]-meanR)*albedoGain + tone)
+		out[i*3+1] = clamp8(baseG + (g[i]-meanG)*albedoGain + tone*0.92)
+		out[i*3+2] = clamp8(baseB + (b[i]-meanB)*albedoGain + tone*0.80)
 	}
 	return out
 }
 
-func gaussian(src []float64, w, h int, radius float64) []float64 {
+func shadePaper(albedo, height, nx, ny, nz, rough []float64, w, h int) []float64 {
+	n := w * h
+	lx, ly, lz := normalize3(-0.36, -0.58, 0.73)
+	fx, fy, fz := normalize3(0.40, 0.16, 0.90)
+	ao := microOcclusion(height, w, h)
+	irr := make([]float64, n)
+	spec := make([]float64, n)
+	var meanI float64
+	for i := 0; i < n; i++ {
+		wrap := 0.08 + 0.22*rough[i]
+		key := wrapDiffuse(nx[i]*lx+ny[i]*ly+nz[i]*lz, wrap)
+		fill := wrapDiffuse(nx[i]*fx+ny[i]*fy+nz[i]*fz, wrap+0.06)
+		irr[i] = (ambientWeight*ao[i] + keyWeight*key + fillWeight*fill)
+		meanI += irr[i]
+		hx, hy, hz := normalize3(lx, ly, lz+1)
+		specPow := 7 + 20*(1-rough[i])
+		specAmt := sheenPeak * (0.30 + 0.70*(1-rough[i])) * (0.50 + 0.50*height[i])
+		spec[i] = math.Pow(clamp01(nx[i]*hx+ny[i]*hy+nz[i]*hz), specPow) * specAmt
+	}
+	meanI /= float64(n)
+
+	out := make([]float64, n*3)
+	for i := 0; i < n; i++ {
+		shade := irr[i] / math.Max(meanI, 1e-6)
+		out[i*3+0] = clamp8(albedo[i*3+0]*shade + spec[i]*252)
+		out[i*3+1] = clamp8(albedo[i*3+1]*shade + spec[i]*248)
+		out[i*3+2] = clamp8(albedo[i*3+2]*shade + spec[i]*236)
+	}
+	return out
+}
+
+func microOcclusion(height []float64, w, h int) []float64 {
+	blur := gaussianWrap(height, w, h, aoRadius)
+	out := make([]float64, len(height))
+	for i, hgt := range height {
+		out[i] = clamp01(1 - aoGain*clamp01((blur[i]-hgt)*4.2))
+	}
+	return out
+}
+
+func wrapDiffuse(ndotl, wrap float64) float64 {
+	return clamp01((ndotl + wrap) / (1 + wrap))
+}
+
+func sample(src []float64, w, h, x, y int) float64 {
+	x = (x%w + w) % w
+	y = (y%h + h) % h
+	return src[y*w+x]
+}
+
+func gaussianWrap(src []float64, w, h int, radius float64) []float64 {
 	k := gaussKernel(radius)
-	tmp := conv1D(src, w, h, k, true)
-	return conv1D(tmp, w, h, k, false)
+	tmp := conv1D(src, w, h, k, true, true)
+	return conv1D(tmp, w, h, k, false, true)
 }
 
-func gaussianRGB(src []float64, w, h int, radius float64) []float64 {
+func gaussianRGBWrap(src []float64, w, h int, radius float64) []float64 {
 	n := w * h
 	ch := make([][]float64, 3)
 	for c := 0; c < 3; c++ {
@@ -174,7 +288,7 @@ func gaussianRGB(src []float64, w, h int, radius float64) []float64 {
 		for i := 0; i < n; i++ {
 			plane[i] = src[i*3+c]
 		}
-		ch[c] = gaussian(plane, w, h, radius)
+		ch[c] = gaussianWrap(plane, w, h, radius)
 	}
 	out := make([]float64, n*3)
 	for i := 0; i < n; i++ {
@@ -203,7 +317,7 @@ func gaussKernel(sigma float64) []float64 {
 	return k
 }
 
-func conv1D(src []float64, w, h int, k []float64, horizontal bool) []float64 {
+func conv1D(src []float64, w, h int, k []float64, horizontal, wrap bool) []float64 {
 	r := len(k) / 2
 	dst := make([]float64, len(src))
 	if horizontal {
@@ -213,7 +327,9 @@ func conv1D(src []float64, w, h int, k []float64, horizontal bool) []float64 {
 				var acc float64
 				for i, kv := range k {
 					xx := x + i - r
-					if xx < 0 {
+					if wrap {
+						xx = (xx%w + w) % w
+					} else if xx < 0 {
 						xx = 0
 					} else if xx >= w {
 						xx = w - 1
@@ -230,7 +346,9 @@ func conv1D(src []float64, w, h int, k []float64, horizontal bool) []float64 {
 			var acc float64
 			for i, kv := range k {
 				yy := y + i - r
-				if yy < 0 {
+				if wrap {
+					yy = (yy%h + h) % h
+				} else if yy < 0 {
 					yy = 0
 				} else if yy >= h {
 					yy = h - 1
@@ -298,12 +416,38 @@ func encodeJPEG(rgb []float64, w, h, quality int) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+func meanOf(src []float64) float64 {
+	var sum float64
+	for _, v := range src {
+		sum += v
+	}
+	return sum / float64(len(src))
+}
+
+func normalize3(x, y, z float64) (float64, float64, float64) {
+	length := math.Sqrt(x*x + y*y + z*z)
+	if length < 1e-12 {
+		return 0, 0, 1
+	}
+	return x / length, y / length, z / length
+}
+
 func clamp8(v float64) float64 {
 	if v < 0 {
 		return 0
 	}
 	if v > 255 {
 		return 255
+	}
+	return v
+}
+
+func clamp01(v float64) float64 {
+	if v < 0 {
+		return 0
+	}
+	if v > 1 {
+		return 1
 	}
 	return v
 }

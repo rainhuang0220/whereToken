@@ -27,4 +27,12 @@ Poly Haven has no paper category in its texture catalog. Paper Shaders remain a 
 
 ## Bake
 
-`go run ./scripts/gennewsprint` retints an albedo-led fiber mix onto a near-white sheet and writes `newsprint-surface.jpg`. Displacement is a quiet extra tooth, not a page-scale lighting field.
+`go run ./scripts/gennewsprint` treats the photoscanned displacement as a **height field**, not as a grayscale overlay.
+
+1. **Height** — calender Paper001's watercolor tooth toward machine-finished newsprint. Add only the scan's real mid-frequency pulp (no Fourier, and no contrast-normalization of low-frequency — that reconstructs the rejected cloudy field).
+2. **Normals** — wrapped finite differences with a fixed paper-thin slope gain. Do not RMS-lock: that re-amplifies leftover pebbles into a tiled shader stamp.
+3. **Albedo** — remaining tooth is a paper-color change from the same displacement, not a bump film. Scanned speckle stays quiet.
+4. **Roughness / lighting** — almost uniformly matte; one soft desk key, faint fill, tiny occlusion, sub-1% sheen. The JPEG is the shaded RGB sheet.
+5. **Ink** — not painted into the JPEG. Live Newsprint CSS multiplies existing type, rules, heat cells, rank fills, and the trend over this substrate so ink reduces paper albedo.
+
+The previous height-lit bake still read as a watercolor-paper website: uniformly loud tooth, lighting as a tiled JPEG stamp. This pass is a newsprint-specific paper model from the same scan. Do not reintroduce `feTurbulence`, crease SVGs, or a grayscale soft-light overlay.
