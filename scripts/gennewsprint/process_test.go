@@ -112,7 +112,7 @@ func TestNewsprintHeightPrefersFormationOverTooth(t *testing.T) {
 	disp := make([]float64, w*h)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			tooth := float64((x + y) % 2) * 80
+			tooth := float64((x+y)%2) * 80
 			roll := 48 * float64(x) / float64(w-1)
 			disp[y*w+x] = 100 + tooth + roll
 		}
