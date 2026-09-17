@@ -10,36 +10,40 @@ import (
 	"os"
 )
 
-// Printed-paper bake. The production JPEG is a shaded RGB sheet, not a
-// grayscale overlay. Stack:
+// Newsprint-specific paper model. Paper001 is watercolor / drawing stock;
+// the bake must not ship that tooth as a lit relief stamp.
 //
-//   height  — photoscanned displacement, calendered toward newsprint
-//   normal  — wrapped finite differences of that height field
-//   roughness — valleys and steep felt are broader / more absorptive
-//   lighting — one soft desk key + faint fill + micro-occlusion + sheen
-//   albedo  — scanned color retinted to the CSS paper base
+//   height  — calender the scan; keep only the scan's real mid-frequency
+//             pulp (no Fourier, no contrast-normalized sheet clouds)
+//   normal  — fixed paper-thin slope gain; never RMS-lock (that re-amplifies
+//             leftover drawing-paper pebbles into a tiled shader)
+//   albedo  — remaining tooth and cheap-paper mottling live in the paper
+//             color, not as a bump film
+//   lighting — almost ambient, one soft desk key, matte, tiny occlusion
 //
 // Ink is not painted into this asset. Live CSS multiplies existing inked
 // pixels over this substrate so type/rules/heat reduce paper albedo.
 
 const (
-	calenderRadius = 1.05
-	feltMix        = 0.38
-	broadRadius    = 34.0
-	broadWeight    = 0.05
-	aoRadius       = 2.4
-	aoGain         = 0.085
-	targetSlopeRMS = 0.58
-	sheenPeak      = 0.022
-	albedoGain     = 0.28
-	keyWeight      = 0.30
-	fillWeight     = 0.05
-	ambientWeight  = 0.65
-	baseR          = 247.0
-	baseG          = 246.0
-	baseB          = 241.0
-	jpegQuality    = 83
-	softenRadius   = 0.32
+	calenderRadius      = 2.5
+	feltMix             = 0.11
+	toothGain           = 0.82
+	flockRadius         = 10.0
+	flockGain           = 0.28
+	aoRadius            = 3.4
+	aoGain              = 0.030
+	newsprintSlopeScale = 7.0
+	sheenPeak           = 0.007
+	albedoGain          = 0.24
+	flockToneGain       = 28.0
+	keyWeight           = 0.14
+	fillWeight          = 0.04
+	ambientWeight       = 0.82
+	baseR               = 247.0
+	baseG               = 246.0
+	baseB               = 241.0
+	jpegQuality         = 84
+	softenRadius        = 0.40
 )
 
 func bakeFromVendor(colorPath, dispPath string) ([]byte, image.Point, error) {
@@ -60,9 +64,9 @@ func bakeFromVendor(colorPath, dispPath string) ([]byte, image.Point, error) {
 	disp := grayPlane(dispImg)
 
 	height := heightField(disp, w, h)
-	nx, ny, nz := reconstructNormals(height, w, h, targetSlopeRMS)
+	nx, ny, nz := reconstructNormals(height, w, h, newsprintSlopeScale)
 	rough := roughnessField(height, w, h)
-	albedo := retintAlbedo(rch, gch, bch, w, h)
+	albedo := retintAlbedo(rch, gch, bch, disp, w, h)
 	rgb := shadePaper(albedo, height, nx, ny, nz, rough, w, h)
 	rgb = gaussianRGBWrap(rgb, w, h, softenRadius)
 
@@ -131,20 +135,31 @@ func heightField(disp []float64, w, h int) []float64 {
 		raw[i] = v / 255
 	}
 	calendered := gaussianWrap(raw, w, h, calenderRadius)
-	felt := make([]float64, len(raw))
+	tooth := make([]float64, len(raw))
 	for i := range raw {
-		felt[i] = calendered[i]*(1-feltMix) + raw[i]*feltMix
+		tooth[i] = calendered[i]*(1-feltMix) + raw[i]*feltMix
 	}
-	broad := gaussianWrap(raw, w, h, broadRadius)
-	broadMean := meanOf(broad)
+	flock := gaussianWrap(raw, w, h, flockRadius)
+	tMean, fMean := meanOf(tooth), meanOf(flock)
 	out := make([]float64, len(raw))
 	for i := range raw {
-		out[i] = felt[i] + (broad[i]-broadMean)*broadWeight
+		// Actual scan amplitudes. Contrast-normalizing formation turns
+		// scanner low-frequency into the rejected cloudy field.
+		out[i] = clamp01(0.5 + (tooth[i]-tMean)*toothGain + (flock[i]-fMean)*flockGain)
 	}
-	return unit01(out)
+	return out
 }
 
 func unit01(src []float64) []float64 {
+	u := zeroMeanUnit(src)
+	out := make([]float64, len(src))
+	for i, v := range u {
+		out[i] = clamp01(0.5 + v*0.22)
+	}
+	return out
+}
+
+func zeroMeanUnit(src []float64) []float64 {
 	m := meanOf(src)
 	var acc float64
 	for _, v := range src {
@@ -157,55 +172,54 @@ func unit01(src []float64) []float64 {
 	}
 	out := make([]float64, len(src))
 	for i, v := range src {
-		out[i] = clamp01(0.5 + (v-m)*0.22/std)
+		out[i] = (v - m) / std
 	}
 	return out
 }
 
-func reconstructNormals(height []float64, w, h int, targetRMS float64) (nx, ny, nz []float64) {
+func reconstructNormals(height []float64, w, h int, slopeScale float64) (nx, ny, nz []float64) {
 	n := w * h
-	dx := make([]float64, n)
-	dy := make([]float64, n)
-	var energy float64
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			i := y*w + x
-			dx[i] = sample(height, w, h, x+1, y) - sample(height, w, h, x-1, y)
-			dy[i] = sample(height, w, h, x, y+1) - sample(height, w, h, x, y-1)
-			energy += dx[i]*dx[i] + dy[i]*dy[i]
-		}
-	}
-	rms := math.Sqrt(energy / float64(n))
-	scale := targetRMS / math.Max(rms, 1e-9)
 	nx = make([]float64, n)
 	ny = make([]float64, n)
 	nz = make([]float64, n)
-	for i := 0; i < n; i++ {
-		nx[i], ny[i], nz[i] = normalize3(-scale*dx[i], -scale*dy[i], 1)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			i := y*w + x
+			dx := sample(height, w, h, x+1, y) - sample(height, w, h, x-1, y)
+			dy := sample(height, w, h, x, y+1) - sample(height, w, h, x, y-1)
+			nx[i], ny[i], nz[i] = normalize3(-slopeScale*dx, -slopeScale*dy, 1)
+		}
 	}
 	return nx, ny, nz
 }
 
 func roughnessField(height []float64, w, h int) []float64 {
-	// Uncoated newsprint is matte. Valleys and high-slope felt are
-	// rougher; calendered highs keep a slightly tighter response.
-	blur := gaussianWrap(height, w, h, 1.8)
+	// Machine-calendered newsprint is almost uniformly matte.
+	blur := gaussianWrap(height, w, h, 2.4)
 	out := make([]float64, len(height))
 	for i, hgt := range height {
-		valley := clamp01((blur[i] - hgt) * 3.2)
-		out[i] = clamp01(0.70 + 0.18*valley + 0.08*(1-hgt))
+		valley := clamp01((blur[i] - hgt) * 2.2)
+		out[i] = clamp01(0.86 + 0.08*valley + 0.04*(1-hgt))
 	}
 	return out
 }
 
-func retintAlbedo(r, g, b []float64, w, h int) []float64 {
+func retintAlbedo(r, g, b, disp []float64, w, h int) []float64 {
 	n := w * h
+	raw := make([]float64, n)
+	for i, v := range disp {
+		raw[i] = v / 255
+	}
+	flock := gaussianWrap(raw, w, h, flockRadius)
+	fMean := meanOf(flock)
 	meanR, meanG, meanB := meanOf(r), meanOf(g), meanOf(b)
 	out := make([]float64, n*3)
 	for i := 0; i < n; i++ {
-		out[i*3+0] = clamp8(baseR + (r[i]-meanR)*albedoGain)
-		out[i*3+1] = clamp8(baseG + (g[i]-meanG)*albedoGain)
-		out[i*3+2] = clamp8(baseB + (b[i]-meanB)*albedoGain)
+		// Residual tooth / pulp lives in the paper color, not as a bump film.
+		tone := (flock[i] - fMean) * flockToneGain
+		out[i*3+0] = clamp8(baseR + (r[i]-meanR)*albedoGain + tone)
+		out[i*3+1] = clamp8(baseG + (g[i]-meanG)*albedoGain + tone*0.92)
+		out[i*3+2] = clamp8(baseB + (b[i]-meanB)*albedoGain + tone*0.80)
 	}
 	return out
 }

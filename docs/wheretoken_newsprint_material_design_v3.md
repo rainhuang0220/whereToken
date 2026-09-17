@@ -4,6 +4,8 @@
 >
 > Iteration 2 (printed-paper simulation): `scripts/gennewsprint` reconstructs normals from the scanned height, varies roughness by valley/calender, lights a shaded RGB sheet, and the live page multiplies existing inked pixels over that substrate. It does not retile a fiber JPEG as a grayscale overlay.
 >
+> Iteration 3 (art-direction): the height-lit Paper001 bake still read as a watercolor-paper website (loud tooth, tiled lighting stamp). Production now uses a newsprint-specific paper model — harder calender, scan-derived formation in the paper color, paper-thin lighting without RMS-lock. Same scan, no new stock.
+>
 > Status: implementation specification
 > Scope: only the `Newsprint` theme of the live public profile
 > Baseline inspected: `7d9a1629efef67fdad5954a12e5563f382175a35` (`fix(profile): render newsprint as procedural paper`)

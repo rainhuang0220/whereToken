@@ -29,10 +29,10 @@ Poly Haven has no paper category in its texture catalog. Paper Shaders remain a 
 
 `go run ./scripts/gennewsprint` treats the photoscanned displacement as a **height field**, not as a grayscale overlay.
 
-1. **Height** — calender the raw displacement toward newsprint (felt kept at low mix; only scan-derived sheet formation, no Fourier cockling).
-2. **Normals** — wrapped finite differences, slope RMS locked so the relief stays paper-thin.
-3. **Roughness** — valleys and remaining felt are broader / more absorptive; calendered highs keep a tighter sheen.
-4. **Lighting** — one soft desk key (upper-left) plus a faint fill, micro-occlusion in fiber pits, and a sub-2% calender sheen. The JPEG is the shaded RGB sheet.
-5. **Ink** — not painted into the JPEG. Live Newsprint CSS multiplies existing type, rules, heat cells, rank fills, and the trend over this substrate so ink reduces paper albedo and sits slightly darker in the valleys already carved by the height field.
+1. **Height** — calender Paper001's watercolor tooth toward machine-finished newsprint. Add only the scan's real mid-frequency pulp (no Fourier, and no contrast-normalization of low-frequency — that reconstructs the rejected cloudy field).
+2. **Normals** — wrapped finite differences with a fixed paper-thin slope gain. Do not RMS-lock: that re-amplifies leftover pebbles into a tiled shader stamp.
+3. **Albedo** — remaining tooth is a paper-color change from the same displacement, not a bump film. Scanned speckle stays quiet.
+4. **Roughness / lighting** — almost uniformly matte; one soft desk key, faint fill, tiny occlusion, sub-1% sheen. The JPEG is the shaded RGB sheet.
+5. **Ink** — not painted into the JPEG. Live Newsprint CSS multiplies existing type, rules, heat cells, rank fills, and the trend over this substrate so ink reduces paper albedo.
 
-The previous high-pass-and-tint bake was a paper-looking shader: isotropic fiber noise on `#f7f6f1`. This pass is a printed-paper simulation. Do not reintroduce `feTurbulence`, crease SVGs, or a grayscale soft-light overlay.
+The previous height-lit bake still read as a watercolor-paper website: uniformly loud tooth, lighting as a tiled JPEG stamp. This pass is a newsprint-specific paper model from the same scan. Do not reintroduce `feTurbulence`, crease SVGs, or a grayscale soft-light overlay.

@@ -1,7 +1,7 @@
-// Command gennewsprint bakes a printed-paper sheet from photoscanned
-// Paper001 maps: height field, reconstructed normals, roughness, and
-// desk-key lighting. It does not synthesize Fourier cockling or ship a
-// grayscale overlay.
+// Command gennewsprint bakes a newsprint sheet from photoscanned Paper001
+// maps. The scan is watercolor stock; the bake calenders that tooth and
+// keeps only scan-derived formation. It does not synthesize Fourier
+// cockling or ship a grayscale overlay.
 package main
 
 import (

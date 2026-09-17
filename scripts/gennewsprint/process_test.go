@@ -106,6 +106,41 @@ func TestWrapSampleIsPeriodic(t *testing.T) {
 	}
 }
 
+func TestNewsprintHeightPrefersFormationOverTooth(t *testing.T) {
+	t.Parallel()
+	w, h := 64, 48
+	disp := make([]float64, w*h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			tooth := float64((x + y) % 2) * 80
+			roll := 48 * float64(x) / float64(w-1)
+			disp[y*w+x] = 100 + tooth + roll
+		}
+	}
+	got := heightField(disp, w, h)
+	var adj float64
+	var n int
+	for y := 0; y < h; y++ {
+		for x := 1; x < w; x++ {
+			adj += math.Abs(got[y*w+x] - got[y*w+x-1])
+			n++
+		}
+	}
+	if meanAdj := adj / float64(n); meanAdj > 0.085 {
+		t.Fatalf("calendered newsprint still has drawing-paper tooth: adjacent mean %g", meanAdj)
+	}
+	var left, right float64
+	var c int
+	for y := 8; y < h-8; y++ {
+		left += got[y*w+6]
+		right += got[y*w+w-7]
+		c++
+	}
+	if right <= left {
+		t.Fatalf("sheet formation roll was lost: left %g right %g", left/float64(c), right/float64(c))
+	}
+}
+
 func TestBakeFromVendorIsDeterministicAndBudgeted(t *testing.T) {
 	dir := t.TempDir()
 	colorPath := filepath.Join(dir, "color.jpg")
@@ -165,7 +200,7 @@ func litRampMean(w, h int, leftFacing bool) float64 {
 			}
 		}
 	}
-	nx, ny, nz := reconstructNormals(height, w, h, 0.22)
+	nx, ny, nz := reconstructNormals(height, w, h, 12)
 	rough := make([]float64, w*h)
 	for i := range rough {
 		rough[i] = 0.74
