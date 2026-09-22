@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Public Profile palette is separate from the dashboard glaze. `wheretoken profile palette` and My Token “应用到公开 Profile” save `cobalt` / `magenta` / `newsprint`; `profile build` and the local bundle write that default into `presentation.json` and both preview SVGs. A visitor override stays in the browser. `snapshot_id` stays data-only.
 - Fix: Windows Command Prompt installer exports PATH to the calling `cmd.exe` (`setlocal` no longer rolls it back), so `wheretoken` works in the same window after the README one-liner
 - Windows PowerShell installer detects WOW64 (`PROCESSOR_ARCHITEW6432`), fails clearly on download errors instead of falling back to `go install`, and does not `exit` the `irm | iex` host
 - README: one-command install, then `wheretoken` in the same terminal. Command Prompt uses `call` and a quoted `%TEMP%` path

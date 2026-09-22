@@ -217,6 +217,28 @@ func TestNewsprintPreviewUsesTheSameAbsoluteInkScale(t *testing.T) {
 	if ThemeLightNewsprint.Heat.colorAt(math.Sqrt(.8)).L >= ThemeLightNewsprint.Heat.colorAt(math.Sqrt(.2)).L {
 		t.Fatal("800M newsprint ink must be darker than 200M ink")
 	}
+	if strings.Contains(svg, `fill="#fff" fill-opacity=".14"`) {
+		t.Fatal("newsprint ink must not use the old halftone dot")
+	}
+}
+
+func TestNewsprintDarkPreviewLightensWithActivity(t *testing.T) {
+	low := ThemeDarkNewsprint.Heat.colorAt(math.Sqrt(0.2)).L
+	high := ThemeDarkNewsprint.Heat.colorAt(math.Sqrt(0.8)).L
+	if high <= low {
+		t.Fatalf("dark newsprint must lighten toward larger days: low=%g high=%g", low, high)
+	}
+	for _, theme := range []Theme{ThemeDarkCobalt, ThemeDarkMagenta, ThemeDarkNewsprint} {
+		for _, intensity := range []float64{0, heatMidPosition, heatHighPosition, 1} {
+			if !inSRGBGamut(gamutMapToSRGB(theme.Heat.colorAt(intensity))) {
+				t.Fatalf("%s intensity %g leaves sRGB", theme.Name, intensity)
+			}
+		}
+	}
+	light, dark := ThemesFor(PaletteCobalt)
+	if light.Name == dark.Name || dark.Text == light.Text {
+		t.Fatal("cobalt dark preview must be its own theme")
+	}
 }
 
 func TestRenderRampStripShowsEmptyAndFourActiveStops(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
@@ -60,6 +61,7 @@ type Flags struct {
 	CardPath        string
 	ProfileAction   string
 	ProfilePath     string
+	PublicPalette   string
 	IncludeModels   bool
 	IncludeCost     bool
 	Production      bool
@@ -280,6 +282,7 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.BoolVar(&f.NoSync, "no-sync", f.NoSync, "")
 	fs.BoolVar(&f.IncludeModels, "include-models", f.IncludeModels, "")
 	fs.BoolVar(&f.IncludeCost, "include-cost", f.IncludeCost, "")
+	fs.StringVar(&f.PublicPalette, "public-palette", f.PublicPalette, "")
 	fs.BoolVar(&f.Production, "production", f.Production, "")
 	fs.BoolVar(&f.AllowPartial, "allow-partial", f.AllowPartial, "")
 	tf.bind(fs)
@@ -537,7 +540,7 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 			break
 		}
 		args = args[1:]
-		if f.ProfileAction == "" && (a == "build" || a == "validate") {
+		if f.ProfileAction == "" && (a == "build" || a == "validate" || a == "palette") {
 			f.ProfileAction = a
 			continue
 		}
@@ -557,10 +560,21 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 		}
 	}
 	if f.ProfileAction == "" {
-		return Flags{}, usageError{msg: "profile requires build or validate\ntry `wheretoken --help`"}
+		return Flags{}, usageError{msg: "profile requires build, validate, or palette\ntry `wheretoken --help`"}
+	}
+	if f.ProfileAction == "palette" {
+		return finishProfilePalette(f)
 	}
 	if strings.TrimSpace(f.ProfilePath) == "" {
 		return Flags{}, usageError{msg: "profile " + f.ProfileAction + " requires a path\ntry `wheretoken --help`"}
+	}
+	if f.PublicPalette != "" {
+		if f.ProfileAction != "build" {
+			return Flags{}, usageError{msg: "--public-palette is for profile build\ntry `wheretoken --help`"}
+		}
+		if err := publicprofile.ValidatePalette(f.PublicPalette); err != nil {
+			return Flags{}, usageError{msg: "public palette must be cobalt, magenta, or newsprint\ntry `wheretoken --help`"}
+		}
 	}
 	if f.Today || f.Since != "" || f.From != "" || f.To != "" {
 		return Flags{}, usageError{msg: "profile always publishes fixed periods; it does not take --today/--since/--from/--to\ntry `wheretoken --help`"}
@@ -570,6 +584,27 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 	}
 	if f.AllowPartial && !f.Production {
 		return Flags{}, usageError{msg: "--allow-partial requires --production\ntry `wheretoken --help`"}
+	}
+	return *f, nil
+}
+
+func finishProfilePalette(f *Flags) (Flags, error) {
+	if f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Production || f.AllowPartial || f.IncludeModels || f.IncludeCost {
+		return Flags{}, usageError{msg: "profile palette only accepts a palette id\ntry `wheretoken --help`"}
+	}
+	id := strings.TrimSpace(f.ProfilePath)
+	flagID := strings.TrimSpace(f.PublicPalette)
+	if flagID != "" {
+		if id != "" && id != flagID {
+			return Flags{}, usageError{msg: "profile palette received two different ids\ntry `wheretoken --help`"}
+		}
+		id = flagID
+		f.ProfilePath = id
+	}
+	if id != "" {
+		if err := publicprofile.ValidatePalette(id); err != nil {
+			return Flags{}, usageError{msg: "public palette must be cobalt, magenta, or newsprint\ntry `wheretoken --help`"}
+		}
 	}
 	return *f, nil
 }

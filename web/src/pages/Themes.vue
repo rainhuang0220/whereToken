@@ -26,6 +26,7 @@ import {
 import HostedAccountMenu from '../components/HostedAccountMenu.vue'
 import { isHosted } from '../mode'
 import MockKeyboard from '../themes/MockKeyboard.vue'
+import PublicAppearance from '../themes/PublicAppearance.vue'
 
 const hosted = isHosted()
 
@@ -297,5 +298,6 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
         </article>
       </div>
     </div>
+    <PublicAppearance v-show="!openId" />
   </div>
 </template>

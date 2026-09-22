@@ -45,7 +45,7 @@ func TestBundleManifestCarriesSnapshotAndProvenance(t *testing.T) {
 		t.Fatalf("asset revision must exist independently of snapshot id: %q", assetRevision)
 	}
 	h := sha256.New()
-	for _, name := range []string{"preview-light.svg", "preview-dark.svg", "index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.jpg"} {
+	for _, name := range AssetRevisionInputs {
 		h.Write([]byte(name))
 		h.Write([]byte{0})
 		h.Write(files[name])
@@ -89,7 +89,7 @@ func TestBundleOffersSelectedWallPalettesAndNewsprintTreatment(t *testing.T) {
 		t.Fatal("generated live page does not expose an activity-color switcher")
 	}
 	js := string(files["assets/profile.js"])
-	for _, want := range []string{"Cobalt", "Magenta", "Newsprint", "ABSOLUTE_TOKEN_CAP", "wt-wall-palette"} {
+	for _, want := range []string{"Cobalt", "Magenta", "Newsprint", "ABSOLUTE_TOKEN_CAP", "wt-visitor-palette", "presentation.json"} {
 		if !strings.Contains(js, want) {
 			t.Fatalf("generated live script is missing %q", want)
 		}

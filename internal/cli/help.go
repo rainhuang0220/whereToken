@@ -20,6 +20,7 @@ USAGE
   wheretoken [flags] completion bash|zsh|fish|powershell
   wheretoken [flags] profile build <dir>     public snapshot + light/dark preview + live page
   wheretoken [flags] profile validate <path> check a profile.json or bundle
+  wheretoken profile palette [cobalt|magenta|newsprint]  save the public Profile default
   wheretoken profile validate <path> --production   fail incomplete cloud token coverage
   wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
@@ -67,6 +68,7 @@ FLAGS
   --width N            cap ranking width; drop 估价 then 回合/请求 before truncating names
   --include-models     profile build: export model breakdown (off by default)
   --include-cost       profile build: export API list-price equivalent (off by default)
+  --public-palette ID  profile build: cobalt, magenta, or newsprint (else the saved palette)
   --production         profile validate: fail if a cloud source skipped account usage
   --allow-partial      profile validate: allow a production snapshot with partial coverage
 
@@ -78,6 +80,8 @@ ENV
   WHERETOKEN_COMMUNITY=off  same as --no-community (also DO_NOT_TRACK=1)
   WHERETOKEN_COMMUNITY_URL  rank service (unset = no upload; no public cluster)
   WHERETOKEN_COMMUNITY_FILE override community.json (Unix ~/.config/wheretoken, Windows %APPDATA%\\whereToken)
+  WHERETOKEN_PUBLIC_PROFILE_FILE  override the saved public palette file
+  WHERETOKEN_PUBLIC_PROFILE_DIR   local bundle used by My Token apply/preview
   WHERETOKEN_INDEX     path to the local scan cache (default ~/.cache/wheretoken/index.v1.db)
   WHERETOKEN_NO_INDEX=1  skip the scan cache
   WHERETOKEN_EXTRA_ROOTS   extra homes (Unix :, Windows ;, or commas)
@@ -131,6 +135,8 @@ EXAMPLES
   wheretoken card ./wheretoken-wall.svg
   wheretoken card profile.svg --offline
   wheretoken profile build ./public-profile
+  wheretoken profile build ./public-profile --public-palette newsprint
+  wheretoken profile palette cobalt
   wheretoken profile validate ./public-profile --production
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787

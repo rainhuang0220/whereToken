@@ -232,7 +232,8 @@ summary:focus-visible {
 
 .brand span,
 .freshness,
-.gh { color: var(--muted); font-size: 12px; }
+.gh,
+.my-token { color: var(--muted); font-size: 12px; }
 
 .header-actions {
   display: flex;
@@ -243,8 +244,10 @@ summary:focus-visible {
 }
 
 .freshness { margin: 0; white-space: nowrap; }
-.gh { text-decoration: none; border-bottom: 1px solid transparent; }
-.gh:hover { color: var(--text); border-color: currentColor; }
+.gh,
+.my-token { text-decoration: none; border-bottom: 1px solid transparent; }
+.gh:hover,
+.my-token:hover { color: var(--text); border-color: currentColor; }
 
 .theme { display: flex; align-items: center; gap: 9px; }
 .theme button {

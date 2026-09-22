@@ -20,7 +20,11 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	files, err := publicprofile.Bundle(snap)
+	presentation := publicprofile.DefaultPresentation()
+	if existing, err := publicprofile.ReadBundlePresentation(*dir); err == nil {
+		presentation = existing
+	}
+	files, err := publicprofile.BundleWith(snap, presentation)
 	if err != nil {
 		fail(err)
 	}

@@ -1889,3 +1889,190 @@ body:has(.glaze-hall.is-open) {
     padding: 1.2rem 0.9rem 3rem;
   }
 }
+
+.public-face {
+  margin-top: 2.6rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--copper);
+}
+
+.public-face-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  align-items: flex-end;
+}
+
+.public-face h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.public-face-head p {
+  margin: 0.35rem 0 0;
+  color: var(--ash);
+  font-size: 0.82rem;
+}
+
+.public-face-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin: 0;
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.public-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.public-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--copper);
+  background: color-mix(in srgb, var(--void) 88%, var(--bone));
+  color: var(--bone);
+  text-align: left;
+  cursor: pointer;
+}
+
+.public-choice[aria-checked='true'] {
+  border-color: var(--ember-4);
+}
+
+.public-choice-name {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-mini,
+.public-wall {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 4px);
+  grid-auto-columns: 4px;
+  gap: 1px;
+  width: max-content;
+}
+
+.public-mini i,
+.public-wall i {
+  display: block;
+  width: 4px;
+  height: 4px;
+}
+
+.public-stage-tools {
+  display: flex;
+  gap: 0.8rem;
+  margin: 1rem 0 0.6rem;
+}
+
+.public-stage-tools button {
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--ash);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.public-stage-tools button[aria-pressed='true'] {
+  color: var(--bone);
+  border-color: currentColor;
+}
+
+.public-stage {
+  max-width: 760px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--copper);
+  background-color: var(--stage-page);
+  background-image: var(--stage-paper);
+  background-repeat: repeat;
+  background-size: 560px auto;
+  color: var(--stage-ink);
+}
+
+.public-stage.mobile {
+  width: min(100%, 390px);
+}
+
+.public-stage-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font: 600 13px/1.2 ui-serif, Georgia, serif;
+}
+
+.public-stage-top span,
+.public-stage-total {
+  color: var(--stage-muted);
+  font-weight: 400;
+}
+
+.public-stage-total {
+  margin: 10px 0 12px;
+  font: 600 28px/1 ui-serif, Georgia, serif;
+  color: var(--stage-ink);
+}
+
+.public-wall-scroll {
+  overflow-x: auto;
+}
+
+.public-wall {
+  grid-template-rows: repeat(7, 9px);
+  grid-auto-columns: 9px;
+  gap: 2px;
+}
+
+.public-wall i {
+  width: 9px;
+  height: 9px;
+}
+
+.public-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.public-copy,
+.public-command {
+  margin: 0.7rem 0 0;
+  color: var(--ash);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.public-command code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--bone);
+}
+
+@media (max-width: 800px) {
+  .public-face-head,
+  .public-choices {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

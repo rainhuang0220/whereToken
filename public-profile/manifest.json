@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-09-15",
-  "asset_revision": "sha256:83f60880f1a1faff404d114e8dc08c7e3836a060626691b97191c82df069bb53",
+  "asset_revision": "sha256:b355d2618b0815eef08fa74ea9335ac4616a4b1a8f86699eeb7887c18260bcf7",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -9,10 +9,12 @@
     "assets/profile.css",
     "assets/profile.js",
     "assets/newsprint-surface.jpg",
+    "presentation.json",
     "manifest.json"
   ],
   "generated_at": "2026-09-15T09:33:58Z",
   "provenance": "local_sanitized_snapshot",
+  "public_palette": "newsprint",
   "schema": "wheretoken.public-profile",
   "snapshot_id": "sha256:15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62"
 }

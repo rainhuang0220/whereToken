@@ -12,6 +12,7 @@ let server;
 let baseURL;
 let baseline;
 let snapshot;
+let presentation = null;
 let requests;
 
 test.beforeAll(async () => {
@@ -31,6 +32,11 @@ test.beforeAll(async () => {
       res.end(JSON.stringify(snapshot));
       return;
     }
+    if (relative === "presentation.json" && presentation) {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(presentation));
+      return;
+    }
     const safePath = path.resolve(staticBundle, relative);
     if (!safePath.startsWith(staticBundle + path.sep)) {
       res.writeHead(403).end("forbidden");
@@ -38,7 +44,7 @@ test.beforeAll(async () => {
     }
     try {
       const body = await fs.readFile(safePath);
-      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : relative.endsWith(".jpg") ? "image/jpeg" : "text/html";
+      const type = relative.endsWith(".css") ? "text/css" : relative.endsWith(".js") ? "text/javascript" : relative.endsWith(".svg") ? "image/svg+xml" : relative.endsWith(".png") ? "image/png" : relative.endsWith(".jpg") ? "image/jpeg" : relative.endsWith(".json") ? "application/json" : "text/html";
       res.setHeader("content-type", type);
       res.end(body);
     } catch {
@@ -55,6 +61,7 @@ test.afterAll(async () => {
 
 test.beforeEach(() => {
   snapshot = structuredClone(baseline);
+  presentation = null;
   requests = [];
 });
 
@@ -446,7 +453,36 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/assets/profile.js",
     "/whereToken/profile/assets/newsprint-surface.jpg",
     "/whereToken/profile/profile.json",
+    "/whereToken/profile/presentation.json",
   ].sort());
+});
+
+test("uses the owner palette for a clean visitor and keeps a visitor choice local", async ({ browser }) => {
+  presentation = { schema_version: 1, public_palette: "cobalt", revision: "9" };
+  const owner = await browser.newContext();
+  const page = await owner.newPage();
+  await page.goto(baseURL);
+  await expect(page.getByRole("tab", { name: "Cobalt", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "Magenta", exact: true })).toHaveAttribute("aria-selected", "true");
+  await owner.close();
+
+  const visitor = await browser.newContext();
+  const fresh = await visitor.newPage();
+  await fresh.goto(baseURL);
+  await expect(fresh.getByRole("tab", { name: "Cobalt", exact: true })).toHaveAttribute("aria-selected", "true");
+  await fresh.goto(`${baseURL}?palette=newsprint`);
+  await expect(fresh.getByRole("tab", { name: "Newsprint", exact: true })).toHaveAttribute("aria-selected", "true");
+  await fresh.goto(baseURL);
+  await expect(fresh.getByRole("tab", { name: "Cobalt", exact: true })).toHaveAttribute("aria-selected", "true");
+  await visitor.close();
+});
+
+test("an unknown public palette configuration falls back to Newsprint", async ({ page }) => {
+  presentation = { schema_version: 99, public_palette: "cobalt" };
+  await page.goto(baseURL);
+  await expect(page.getByRole("tab", { name: "Newsprint", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("does not fall back to All when selected token series is missing", async ({ page }) => {

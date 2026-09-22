@@ -93,6 +93,42 @@ func TestRunProfileBuildPreservesUserFiles(t *testing.T) {
 	}
 }
 
+func TestProfilePaletteFeedsTheNextBuild(t *testing.T) {
+	home := t.TempDir()
+	app, stdout, stderr := testApp([]string{"--home", home, "profile", "palette", "cobalt"})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("save %d %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "saved public_palette=cobalt") {
+		t.Fatalf("stdout=%q", stdout.String())
+	}
+	dir := t.TempDir()
+	app, _, stderr = testApp([]string{"--home", home, "--quiet", "profile", "build", dir})
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("build %d %s", code, stderr.String())
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "presentation.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"public_palette": "cobalt"`) {
+		t.Fatalf("presentation=%s", raw)
+	}
+	light, err := os.ReadFile(filepath.Join(dir, "preview-light.svg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(light), "newsprint-ink-") {
+		t.Fatal("cobalt build still rendered newsprint ink")
+	}
+	if _, err := Parse([]string{"profile", "palette", "kiln"}); err == nil || !IsUsage(err) {
+		t.Fatalf("kiln palette: %v", err)
+	}
+	if _, err := Parse([]string{"profile", "validate", "out", "--public-palette", "cobalt"}); err == nil || !IsUsage(err) {
+		t.Fatalf("validate palette flag: %v", err)
+	}
+}
+
 func TestRunProfileValidate(t *testing.T) {
 	dir := t.TempDir()
 	app, _, stderr := testApp([]string{"profile", "build", dir, "--quiet"})

@@ -41,7 +41,9 @@ Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (versi
 
 Every snapshot contains a deterministic `sha256:…` `snapshot_id`. The hash excludes only `generated_at`, so rebuilding unchanged data at a later minute keeps the same ID; changing public data changes it. `manifest.json`, `profile.json`, and both previews carry the same ID.
 
-The bundle manifest also contains a content-derived `asset_revision`. It hashes both preview SVGs and the embedded HTML/CSS/JavaScript, so a renderer-only or style-only publication changes the asset revision without changing the data identity.
+The bundle manifest also contains a content-derived `asset_revision`. It hashes both preview SVGs, `presentation.json`, and the embedded HTML/CSS/JavaScript, so a renderer-only, palette-only, or style-only publication changes the asset revision without changing the data identity.
+
+`presentation.json` is the published palette (`cobalt`, `magenta`, or `newsprint`). It is not usage data. `wheretoken profile palette <id>` saves the owner default on this machine; `wheretoken profile build <dir>` reads that file unless `--public-palette` is set. A visitor's browser and `?palette=` can override the view. They do not rewrite the file. My Token → 公开 Profile applies the same file and, when `./public-profile` or `WHERETOKEN_PUBLIC_PROFILE_DIR` already holds a bundle, rewrites that bundle's previews. The command does not push GitHub Pages. See [`docs/architecture/public-profile-theme-publication.md`](architecture/public-profile-theme-publication.md).
 
 Use `SNAPSHOT_HEX-ASSET_HEX` as the cache-busting query in Profile READMEs:
 

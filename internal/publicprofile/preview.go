@@ -91,20 +91,59 @@ var ThemeLightNewsprint = Theme{
 	},
 }
 
-// ThemeLight is the selected external preview default. The interactive page
-// still lets visitors switch between the three published activity palettes.
+// ThemeLight is the newsprint sheet. Bundle picks a palette-specific pair.
 var ThemeLight = ThemeLightNewsprint
 
-var ThemeDark = Theme{
-	Name: "dark provisional",
+// Dark previews are drawn for a dark README, not produced by inverting the
+// light bitmap. Newsprint activity gets lighter as the day gets larger.
+var ThemeDarkNewsprint = Theme{
+	Name: "Newsprint dark",
+	Text: "#F2EEE8", Secondary: "#B7B0A8", Empty: "#24211E",
+	Future: "#1C1916", Unknown: "#3A342E", Hairline: "#4A433C",
+	Newsprint: true,
+	Heat: HeatRamp{
+		Low:  OKLCH{L: 0.40, C: 0, H: 0},
+		Mid:  OKLCH{L: 0.55, C: 0, H: 0},
+		High: OKLCH{L: 0.72, C: 0, H: 0},
+		Max:  OKLCH{L: 0.88, C: 0, H: 0},
+	},
+}
+
+var ThemeDarkCobalt = Theme{
+	Name: "Cobalt dark",
 	Text: "#F0F3F6", Secondary: "#9EA7B3", Empty: "#24292F",
 	Future: "#1C2128", Unknown: "#444C56", Hairline: "#373E47",
 	Heat: HeatRamp{
-		Low:  OKLCH{L: 0.35, C: 0.055, H: 145},
-		Mid:  OKLCH{L: 0.48, C: 0.080, H: 145},
-		High: OKLCH{L: 0.64, C: 0.120, H: 145},
-		Max:  OKLCH{L: 0.78, C: 0.160, H: 145},
+		Low:  OKLCH{L: 0.42, C: 0.055, H: 260},
+		Mid:  OKLCH{L: 0.56, C: 0.110, H: 260},
+		High: OKLCH{L: 0.70, C: 0.130, H: 260},
+		Max:  OKLCH{L: 0.82, C: 0.110, H: 260},
 	},
+}
+
+var ThemeDarkMagenta = Theme{
+	Name: "Magenta dark",
+	Text: "#F0F3F6", Secondary: "#9EA7B3", Empty: "#24292F",
+	Future: "#1C2128", Unknown: "#444C56", Hairline: "#373E47",
+	Heat: HeatRamp{
+		Low:  OKLCH{L: 0.42, C: 0.070, H: 340},
+		Mid:  OKLCH{L: 0.56, C: 0.130, H: 340},
+		High: OKLCH{L: 0.70, C: 0.140, H: 340},
+		Max:  OKLCH{L: 0.82, C: 0.120, H: 340},
+	},
+}
+
+var ThemeDark = ThemeDarkNewsprint
+
+func ThemesFor(palette string) (light, dark Theme) {
+	switch palette {
+	case PaletteCobalt:
+		return ThemeLightCobalt, ThemeDarkCobalt
+	case PaletteMagenta:
+		return ThemeLightMagenta, ThemeDarkMagenta
+	default:
+		return ThemeLightNewsprint, ThemeDarkNewsprint
+	}
 }
 
 type monthTick struct {
@@ -210,15 +249,48 @@ func writeNewsprintDefs(b *strings.Builder, s Snapshot, th Theme) {
 	}
 	ser := tokenSeries(s)
 	scale := newMagnitudeScale(ser.Values, ser.States)
-	b.WriteString("<defs>\n")
+	var defs strings.Builder
 	for i := 0; i < len(s.Activity.Dates) && i < WallDays; i++ {
 		if i >= len(ser.States) || ser.States[i] != CellActive || i >= len(ser.Values) || ser.Values[i] <= 0 {
 			continue
 		}
-		ink := heatColor(th.Heat, scale.intensity(ser.Values[i]))
-		fmt.Fprintf(b, `<pattern id="newsprint-ink-%d" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" fill="%s"/><circle cx="1.5" cy="1.5" r="0.22" fill="#fff" fill-opacity=".14"/></pattern>`+"\n", i, ink)
+		ink, speck := newsprintInk(th.Heat, scale.intensity(ser.Values[i]), i)
+		sx := (i * 3) % 11
+		sy := (i * 5) % 11
+		fmt.Fprintf(&defs, `<pattern id="newsprint-ink-%d" width="13" height="13" patternUnits="userSpaceOnUse"><rect width="13" height="13" fill="%s"/><rect x="%d" y="%d" width="1" height="1" fill="%s" fill-opacity="0.16"/></pattern>`+"\n", i, ink, sx, sy, speck)
 	}
+	if defs.Len() == 0 {
+		return
+	}
+	b.WriteString("<defs>\n")
+	b.WriteString(defs.String())
 	b.WriteString("</defs>\n")
+}
+
+// newsprintInk shifts lightness by a fixed formation of the cell index.
+// The shift is an art-direction stand-in for uneven pigment on the same
+// sheet. It is not a calibrated absorption length.
+func newsprintInk(ramp HeatRamp, intensity float64, cell int) (ink, speck string) {
+	base := gamutMapToSRGB(ramp.colorAt(intensity))
+	varied := base
+	varied.L += inkJitter(cell) * 0.012
+	if varied.L < 0 {
+		varied.L = 0
+	}
+	if varied.L > 1 {
+		varied.L = 1
+	}
+	fiber := varied
+	fiber.L += 0.035
+	if fiber.L > 1 {
+		fiber.L = 1
+	}
+	return oklchHex(gamutMapToSRGB(varied)), oklchHex(gamutMapToSRGB(fiber))
+}
+
+func inkJitter(i int) float64 {
+	n := uint32(i*1103515245 + 12345)
+	return float64(n%2001)/1000 - 1
 }
 
 func tokenSeries(s Snapshot) Series {

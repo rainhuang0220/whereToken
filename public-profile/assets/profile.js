@@ -40,7 +40,9 @@
     tab: params.get("tab") || "agents",
     filter: params.get("filter") || "",
     metric: params.get("metric") === "requests" ? "requests" : "tokens",
-    palette: storedWallPalette(),
+    palette: "newsprint",
+    published: "newsprint",
+    explicit: false,
     snap: null,
   };
   let tipTimer = 0;
@@ -62,20 +64,27 @@
     });
   }
 
-  function storedWallPalette() {
+  function publishedPalette(pres) {
+    if (!pres || typeof pres !== "object" || pres.schema_version !== 1) return "newsprint";
+    return WALL_PALETTES[pres.public_palette] ? pres.public_palette : "newsprint";
+  }
+
+  function visitorPalette() {
     try {
-      const saved = localStorage.getItem("wt-wall-palette");
-      return WALL_PALETTES[saved] ? saved : "newsprint";
+      const saved = localStorage.getItem("wt-visitor-palette");
+      return WALL_PALETTES[saved] ? saved : "";
     } catch (_) {
-      return "newsprint";
+      return "";
     }
   }
 
-  function applyWallPalette(id) {
+  function applyWallPalette(id, persist) {
     if (!WALL_PALETTES[id]) return;
     state.palette = id;
     document.documentElement.setAttribute("data-activity-palette", id);
-    try { localStorage.setItem("wt-wall-palette", id); } catch (_) {}
+    if (!persist) return;
+    state.explicit = true;
+    try { localStorage.setItem("wt-visitor-palette", id); } catch (_) {}
   }
 
   function wallPalette() {
@@ -171,6 +180,7 @@
     if (state.tab !== "agents") q.set("tab", state.tab);
     if (state.filter) q.set("filter", state.filter);
     if (state.metric !== "tokens") q.set("metric", state.metric);
+    if (state.palette && state.palette !== state.published) q.set("palette", state.palette);
     const s = q.toString();
     history.replaceState(null, "", s ? "?" + s : location.pathname);
   }
@@ -294,7 +304,8 @@
       state.range = id; writeURL(); render();
     });
     renderSeg($("palettes"), Object.entries(WALL_PALETTES).map(([id, palette]) => ({ id, label: palette.label })), state.palette, (id) => {
-      applyWallPalette(id);
+      applyWallPalette(id, true);
+      writeURL();
       render();
     });
     $("range-readout").textContent = (p.active_days.display || "—") + " active days";
@@ -724,12 +735,27 @@
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("scroll", dismissTip, { passive: true, capture: true });
-  applyWallPalette(state.palette);
+  const urlPalette = params.get("palette");
+  if (WALL_PALETTES[urlPalette]) {
+    state.palette = urlPalette;
+    state.explicit = true;
+  } else {
+    const saved = visitorPalette();
+    if (saved) {
+      state.palette = saved;
+      state.explicit = true;
+    }
+  }
+  applyWallPalette(state.palette, false);
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
 
-  fetch("./profile.json", { cache: "no-store" })
-    .then((r) => { if (!r.ok) throw new Error("snapshot missing"); return r.json(); })
-    .then((snap) => {
+  Promise.all([
+    fetch("./presentation.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).catch(() => null),
+    fetch("./profile.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("snapshot missing"); return r.json(); }),
+  ])
+    .then(([pres, snap]) => {
+      state.published = publishedPalette(pres);
+      if (!state.explicit) applyWallPalette(state.published, false);
       validateSnapshot(snap);
       state.snap = snap;
       render();

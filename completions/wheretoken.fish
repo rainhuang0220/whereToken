@@ -27,5 +27,7 @@ complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-models
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-cost
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l public-palette -r -a "cobalt magenta newsprint"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l production
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l allow-partial
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette cobalt magenta newsprint"

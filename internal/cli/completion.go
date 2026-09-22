@@ -61,7 +61,7 @@ _wheretoken() {
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
-    profile) opts="build validate --include-models --include-cost --production --allow-partial --quiet -q --offline --home --help" ;;
+    profile) opts="build validate palette cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --quiet -q --offline --home --help" ;;
     *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -166,9 +166,11 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--include-models[export model breakdown]' \
         '--include-cost[export API list-price equivalent]' \
+        '--public-palette[public profile palette]:palette:(cobalt magenta newsprint)' \
         '--production[fail incomplete cloud token coverage]' \
         '--allow-partial[allow a production snapshot with partial coverage]' \
-        '1:action:(build validate)' \
+        '1:action:(build validate palette)' \
+        '2:palette:(cobalt magenta newsprint)' \
         '2:path:_files'
       ;;
     pricing)
@@ -250,8 +252,10 @@ complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-models
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-cost
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l public-palette -r -a "cobalt magenta newsprint"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l production
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l allow-partial
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette cobalt magenta newsprint"
 `
 
 const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
@@ -293,7 +297,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }
-    'profile' { @('build','validate','--include-models','--include-cost','--production','--allow-partial','--quiet','--offline','--home','--help') }
+    'profile' { @('build','validate','palette','cobalt','magenta','newsprint','--include-models','--include-cost','--public-palette','--production','--allow-partial','--quiet','--offline','--home','--help') }
     'login' { @('--no-sync','--quiet','--offline','--home','--help') }
     default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','profile','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }

@@ -73,6 +73,9 @@ func NewMuxFull(home adapter.Home, adapters []adapter.Adapter, noCommunity bool,
 	mux.HandleFunc("/api/summary", s.getSummary)
 	mux.HandleFunc("/api/scan", s.postScan)
 	mux.HandleFunc("/api/community", s.handleCommunity)
+	mux.HandleFunc("/api/public-profile", s.publicProfile)
+	mux.HandleFunc("/api/public-profile/surface.jpg", s.newsprintSurface)
+	mux.HandleFunc("/preview/public-profile/", s.previewPublicProfile)
 	mux.HandleFunc("/v1/community/", func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	})

@@ -63,6 +63,9 @@ wheretoken \- local coding-agent token usage as a character table
 [\fIflags\fR]
 .B profile validate
 \fIpath\fR
+.br
+.B wheretoken profile palette
+[\fIcobalt\fR|\fImagenta\fR|\fInewsprint\fR]
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
 OpenClaw, Codex, OpenCode, Cursor, Trae) and prints token totals, cache hit rate, streaks, request and turn counts,
@@ -269,6 +272,12 @@ generated public snapshot, not a live cloud sync. Optional
 .B --include-models
 and
 .B --include-cost .
+.B --public-palette
+selects
+.BR cobalt ", " magenta ", or " newsprint
+for that build; otherwise the saved owner palette is used, then Newsprint.
+.B profile palette
+saves that owner palette on this machine. It does not push GitHub Pages.
 Does not take
 .BR --today " / " --since .
 .TP
