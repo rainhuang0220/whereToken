@@ -3,9 +3,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"flag"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 )
@@ -25,6 +28,13 @@ func main() {
 		filepath.Join(vendor, "Paper001_Color.jpg"),
 		filepath.Join(vendor, "Paper001_Displacement.jpg"),
 	)
+	if err == nil {
+		if img, decErr := jpeg.Decode(bytes.NewReader(surface)); decErr == nil {
+			rgb := imageToRGB(img)
+			mean, std, edge := lumaStats(rgb, size.X, size.Y)
+			fmt.Printf("sheet luma mean=%.1f std=%.2f edge=%.2f\n", mean, std, edge)
+		}
+	}
 	if err != nil {
 		fail(err)
 	}
@@ -56,6 +66,23 @@ func main() {
 			fail(err)
 		}
 	}
+}
+
+func imageToRGB(img image.Image) []float64 {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	out := make([]float64, w*h*3)
+	i := 0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			r, g, bl, _ := img.At(x, y).RGBA()
+			out[i] = float64(r >> 8)
+			out[i+1] = float64(g >> 8)
+			out[i+2] = float64(bl >> 8)
+			i += 3
+		}
+	}
+	return out
 }
 
 func fail(err error) {

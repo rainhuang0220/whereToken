@@ -41,6 +41,10 @@ None of these mean GitHub Pages changed. The UI shows `wheretoken profile build 
 
 `预览公开 Profile` opens `/preview/public-profile/` on the local server. A palette that is not yet in the bundle is passed as `?palette=`, so the preview does not overwrite the owner file.
 
+## Newsprint sheet
+
+The public page background is `assets/newsprint-surface.jpg`, baked by `go run ./scripts/gennewsprint` from the CC0 Paper001 color and displacement extracts. One height field produces the normals and the roughness. Shading is linear-light Oren–Nayar plus a very small specular term. The JPEG is the shipped material. Provenance and the art-direction scales are in `scripts/gennewsprint/vendor/SOURCE.md`.
+
 ## Cache
 
 A palette-only rebuild changes `asset_revision` and the README query `SNAPSHOT_HEX-ASSET_HEX`. It does not change `snapshot_id`.

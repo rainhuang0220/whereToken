@@ -27,4 +27,13 @@ Poly Haven has no paper category in its texture catalog. Paper Shaders remain a 
 
 ## Bake
 
-`go run ./scripts/gennewsprint` retints an albedo-led fiber mix onto a near-white sheet and writes `newsprint-surface.jpg`. Displacement is a quiet extra tooth, not a page-scale lighting field.
+`go run ./scripts/gennewsprint` builds one height field from this displacement and writes `newsprint-surface.jpg` (1280×798 JPEG, under 250 KiB).
+
+The displacement JPEG is a relative height proxy, not a calibrated millimeter map. At the 1280px sheet:
+
+- broad cockling: Gaussian σ 42, amplitude 0.07
+- formation: σ 7.5, amplitude 0.48
+- fiber: σ 2.2, mixed from displacement and albedo high-pass, amplitude 0.82
+- a 0.25px Gaussian settles the shared height before shading
+
+Normals are wrapped central differences of that height, with derivative scale 1.55. Roughness stays high (about 0.88, with a small formation term). Lighting is evaluated in linear light: a broad key from the upper left, Oren–Nayar diffuse, and a very small GGX term, then encoded to sRGB. The sheet is retinted toward editorial near-white. The same image is the public page background. Dark mode does not invert it.

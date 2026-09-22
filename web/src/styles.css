@@ -1964,17 +1964,30 @@ body:has(.glaze-hall.is-open) {
 .public-wall {
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, 4px);
-  grid-auto-columns: 4px;
+  grid-template-rows: repeat(7, 5px);
   gap: 1px;
+}
+
+.public-mini {
+  width: 100%;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.public-mini i {
+  display: block;
+  width: 100%;
+  height: 5px;
+}
+
+.public-wall {
+  grid-auto-columns: 9px;
   width: max-content;
 }
 
-.public-mini i,
 .public-wall i {
   display: block;
-  width: 4px;
-  height: 4px;
+  width: 9px;
+  height: 9px;
 }
 
 .public-stage-tools {
@@ -2046,6 +2059,11 @@ body:has(.glaze-hall.is-open) {
 .public-wall i {
   width: 9px;
   height: 9px;
+}
+
+.public-actions .lever {
+  text-transform: none;
+  letter-spacing: 0.04em;
 }
 
 .public-actions {

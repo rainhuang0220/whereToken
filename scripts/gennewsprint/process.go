@@ -38,24 +38,21 @@ func bakeFromVendor(colorPath, dispPath string) ([]byte, image.Point, error) {
 	if colorImg.Bounds() != dispImg.Bounds() {
 		return nil, image.Point{}, fmt.Errorf("color %s and displacement %s bounds differ", colorImg.Bounds(), dispImg.Bounds())
 	}
-	b := colorImg.Bounds()
-	w, h := b.Dx(), b.Dy()
-	albedo, rch, gch, bch := rgbaPlanes(colorImg)
-	disp := grayPlane(dispImg)
-
-	fiberDisp := unitFiber(highpass(disp, w, h, dispBlurRadius), w*h)
-	fiberAlb := unitFiber(highpass(albedo, w, h, albedoBlurRadius), w*h)
-	fiber := unitFiber(weightedSum(fiberDisp, fiberAlb, fiberDispWeight, fiberAlbedoWeight), w*h)
-	mixed := unitFiber(weightedSum(fiberAlb, fiber, mixAlbedoWeight, mixDispWeight), w*h)
-
-	rgb := colorize(mixed, rch, gch, bch, w, h)
-	rgb = gaussianRGB(rgb, w, h, softenRadius)
-	dw := productionWidth
-	dh := int(math.Round(float64(h) * float64(dw) / float64(w)))
-	rgb = resizeRGB(rgb, w, h, dw, dh)
-	payload, err := encodeJPEG(rgb, dw, dh, jpegQuality)
+	rgb, dw, dh, err := bakeSheet(colorImg, dispImg)
 	if err != nil {
 		return nil, image.Point{}, err
+	}
+	quality := jpegQuality
+	var payload []byte
+	for {
+		payload, err = encodeJPEG(rgb, dw, dh, quality)
+		if err != nil {
+			return nil, image.Point{}, err
+		}
+		if len(payload) <= maxSurfaceBytes || quality <= 74 {
+			break
+		}
+		quality -= 4
 	}
 	return payload, image.Pt(dw, dh), nil
 }
