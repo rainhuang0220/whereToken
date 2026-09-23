@@ -2,8 +2,11 @@
 
 ## Unreleased
 
-- Newsprint’s public sheet is shaded from one scanned height field (normals, roughness, linear light) instead of a flat fiber tint.
-- Public Profile palette is separate from the dashboard glaze. `wheretoken profile palette` and My Token “应用到公开 Profile” save `cobalt` / `magenta` / `newsprint`; `profile build` and the local bundle write that default into `presentation.json` and both preview SVGs. A visitor override stays in the browser. `snapshot_id` stays data-only.
+## 0.7.4 — 2026-09-23 (Alpha)
+
+- Public Profile hands the selected Cobalt, Magenta, or Newsprint color to My Token on this computer. `发布到我的 GitHub 主页` shows the two-repository preflight and pushes only after an explicit confirmation. `仅保存本机` still writes only the local owner file and bundle. Publishing uses the existing `gh` login and a configured checkout; it does not add a hosted write token. The GitHub profile README stays a static SVG, and the live Newsprint light stays on the linked public page.
+- Newsprint on the public page is shaded in the browser from the scanned Paper001 height field: WebGL2 normals, roughness, and a broad window. The static JPEG remains the fallback. A fine pointer eases the light; reduced motion and touch keep it fixed.
+- Public Profile palette stays separate from the dashboard glaze. `wheretoken profile palette` saves `cobalt` / `magenta` / `newsprint`. `profile build` and `profile publish` write that default into `presentation.json` and both preview SVGs. A visitor override stays in the browser. `snapshot_id` stays data-only.
 - Fix: Windows Command Prompt installer exports PATH to the calling `cmd.exe` (`setlocal` no longer rolls it back), so `wheretoken` works in the same window after the README one-liner
 - Windows PowerShell installer detects WOW64 (`PROCESSOR_ARCHITEW6432`), fails clearly on download errors instead of falling back to `go install`, and does not `exit` the `irm | iex` host
 - README: one-command install, then `wheretoken` in the same terminal. Command Prompt uses `call` and a quoted `%TEMP%` path
