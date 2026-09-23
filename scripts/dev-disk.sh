@@ -8,6 +8,12 @@ echo "disk"
 df -h / /tmp "$HOME" 2>/dev/null || df -h /
 
 echo
+echo "mysqld processes"
+ps aux | awk '/mysqld/ && !/awk/ { printf "%s %s %s\n", $2, $3, $11 }'
+echo "A test mysqld whose /tmp datadir was deleted can still fill the disk until that process stops."
+echo "Stop only that test process. Leave the Homebrew MySQL server running."
+
+echo
 echo "regenerable caches"
 for path in \
   "$HOME/Library/Caches/go-build" \
