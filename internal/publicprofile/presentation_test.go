@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +49,34 @@ func TestWriteBundleKeepsSnapshotIdentity(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "bundle_dir") {
 		t.Fatal("bundle presentation contains a local path field")
+	}
+}
+
+func TestOwnerConfigPathFollowsPlatform(t *testing.T) {
+	t.Setenv("WHERETOKEN_PUBLIC_PROFILE_FILE", "")
+	home := testhome.New(t.TempDir())
+	unix := filepath.Join(home.XDGConfig("wheretoken"), "public-profile.json")
+	win := filepath.Join(home.AppData("whereToken"), "public-profile.json")
+	if unix == win {
+		t.Fatal("testhome XDGConfig and AppData public-profile paths must differ")
+	}
+	want := unix
+	if runtime.GOOS == "windows" {
+		want = win
+	}
+	if got := ConfigPath(home); got != want {
+		t.Fatalf("ConfigPath=%q want %q (unix=%q windows=%q)", got, want, unix, win)
+	}
+	if got := ConfigPathIn(home); got != want {
+		t.Fatalf("ConfigPathIn=%q want %q", got, want)
+	}
+	custom := filepath.Join(t.TempDir(), "override.json")
+	t.Setenv("WHERETOKEN_PUBLIC_PROFILE_FILE", custom)
+	if got := ConfigPath(home); got != custom {
+		t.Fatalf("ConfigPath=%q want override %q", got, custom)
+	}
+	if got := ConfigPathIn(home); got != want {
+		t.Fatalf("ConfigPathIn must ignore the file override, got %q", got)
 	}
 }
 

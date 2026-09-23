@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -80,7 +79,7 @@ func TestPublicProfileAPIIsLocalAndDoesNotInventPublication(t *testing.T) {
 	if strings.Contains(applied["status"].(string), "published") && applied["status"] != publicprofile.StatusReadyToPublish {
 		t.Fatal(applied["status"])
 	}
-	raw, err := os.ReadFile(filepath.Join(root, ".config", "wheretoken", "public-profile.json"))
+	raw, err := os.ReadFile(publicprofile.ConfigPath(testhome.New(root)))
 	if err != nil {
 		t.Fatal(err)
 	}
