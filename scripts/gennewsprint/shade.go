@@ -15,11 +15,11 @@ const (
 	broadAmp    = 0.07
 	formAmp     = 0.48
 	fiberAmp    = 0.82
-	normalScale = 1.55
-	roughBase   = 0.88
-	roughAmp    = 0.03
-	ambientGain = 0.88
-	keyGain     = 0.12
+	normalScale = 2.4
+	roughBase   = 0.86
+	roughAmp    = 0.04
+	ambientGain = 0.78
+	keyGain     = 0.2
 	specGain    = 0.008
 	chromaMix   = 0.10
 	albedoForm  = 0.004

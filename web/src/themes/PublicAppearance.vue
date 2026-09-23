@@ -122,8 +122,8 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
   <section class="public-face" aria-labelledby="public-face-h">
     <header class="public-face-head">
       <div>
-        <h2 id="public-face-h">公开 Profile</h2>
-        <p>Cobalt / Magenta / Newsprint。本机釉色另算。</p>
+        <h2 id="public-face-h">公开 Profile 外观</h2>
+        <p>选 Cobalt、Magenta 或 Newsprint。应用到公开包只写本机文件，不会直接上线。</p>
       </div>
       <p class="public-face-state" role="status">
         <span>公开包 {{ shipped ? PALETTE_LABEL[shipped] : '未生成' }}</span>

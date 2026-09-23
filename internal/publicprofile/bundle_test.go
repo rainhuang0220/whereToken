@@ -128,7 +128,7 @@ func TestCommittedBundlesUseEmbeddedProfileAssets(t *testing.T) {
 		filepath.Join("..", "..", "docs", "media", "public-profile-demo"),
 		filepath.Join("..", "..", "public-profile"),
 	} {
-		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/newsprint-surface.jpg"} {
+		for _, name := range []string{"index.html", "assets/profile.css", "assets/profile.js", "assets/paper.js", "assets/newsprint-surface.jpg", "assets/newsprint-height.jpg"} {
 			got, err := os.ReadFile(filepath.Join(root, name))
 			if err != nil {
 				t.Fatal(err)

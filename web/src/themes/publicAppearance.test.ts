@@ -47,7 +47,7 @@ describe('public profile appearance', () => {
   it('marks a selected palette pending until the local bundle matches', () => {
     expect(publicationPending('cobalt', view({ bundle_palette: 'newsprint', status: 'pending' }))).toBe(true)
     expect(publicationPending('newsprint', view({ status: 'ready_to_publish' }))).toBe(false)
-    expect(statusCopy(view({ status: 'ready_to_publish' }))).toContain('GitHub Pages')
+    expect(statusCopy(view({ status: 'ready_to_publish' }))).toContain('推送')
     expect(statusCopy(view({ status: 'saved_locally' }))).not.toContain('已发布到')
   })
 

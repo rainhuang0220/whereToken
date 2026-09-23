@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-09-09",
-  "asset_revision": "sha256:19bd11280015d20667d8d053f91397540f4bf07bbe89143715973d127c2da38e",
+  "asset_revision": "sha256:969fe02f6c44a05069deb95d54ed2ddfa5a528ed7e96a128599fa3a7c4e8f6c0",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -8,7 +8,9 @@
     "index.html",
     "assets/profile.css",
     "assets/profile.js",
+    "assets/paper.js",
     "assets/newsprint-surface.jpg",
+    "assets/newsprint-height.jpg",
     "presentation.json",
     "manifest.json"
   ],

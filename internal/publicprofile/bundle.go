@@ -16,7 +16,9 @@ var GeneratedFiles = []string{
 	"index.html",
 	"assets/profile.css",
 	"assets/profile.js",
+	"assets/paper.js",
 	"assets/newsprint-surface.jpg",
+	"assets/newsprint-height.jpg",
 	"presentation.json",
 	"manifest.json",
 }
@@ -29,7 +31,9 @@ var AssetRevisionInputs = []string{
 	"index.html",
 	"assets/profile.css",
 	"assets/profile.js",
+	"assets/paper.js",
 	"assets/newsprint-surface.jpg",
+	"assets/newsprint-height.jpg",
 	"presentation.json",
 }
 
@@ -94,6 +98,16 @@ func BundleWith(snap Snapshot, presentation Presentation) (map[string][]byte, er
 		return nil, err
 	}
 	out["assets/newsprint-surface.jpg"] = surface
+	paperJS, err := profilewebembed.Read("assets/paper.js")
+	if err != nil {
+		return nil, err
+	}
+	out["assets/paper.js"] = paperJS
+	height, err := profilewebembed.Read("assets/newsprint-height.jpg")
+	if err != nil {
+		return nil, err
+	}
+	out["assets/newsprint-height.jpg"] = height
 	assetRevision := bundleAssetRevision(out)
 	man, err := json.MarshalIndent(map[string]any{
 		"asset_revision": assetRevision,

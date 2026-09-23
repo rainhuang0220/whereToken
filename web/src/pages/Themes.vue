@@ -235,7 +235,7 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
     <header class="rail glaze-head" :inert="Boolean(openId)">
       <h1>釉</h1>
       <div class="rail-meta">
-        <p class="when">点一块看整页。应用才带走。</p>
+        <p class="when">公开页在下一节。釉色只留在这台机器。</p>
         <div class="rail-actions">
           <router-link class="lever" to="/">返回</router-link>
           <HostedAccountMenu v-if="hosted" />
@@ -243,6 +243,8 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
       </div>
     </header>
 
+    <PublicAppearance id="public-profile" />
+    <h2 class="glaze-local">本机外观</h2>
     <div class="glaze-shelf">
       <div v-for="t in themes" :key="t.id" class="glaze-slot">
         <article
@@ -298,6 +300,5 @@ function onSlabKey(e: KeyboardEvent, id: ThemeId) {
         </article>
       </div>
     </div>
-    <PublicAppearance v-show="!openId" />
   </div>
 </template>

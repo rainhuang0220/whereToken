@@ -104,11 +104,11 @@ export function statusCopy(view: PublicationView): string {
     case 'failed':
       return view.error || '写入失败。'
     case 'ready_to_publish':
-      return '本地公开包已是这个外观。推送到 GitHub Pages 后，干净访客会看到它。'
+      return '本地公开包已生成。线上页面要等这些文件被提交并推送后才会变。'
     case 'saved_locally':
-      return '外观已写进本机配置。下一步生成本地公开包。'
+      return '已记在本机。还没有写入本地公开包。'
     case 'pending':
-      return '本机配置已更新。本地公开包还是上一份外观。'
+      return '本机选择已保存。本地公开包仍是上一份。'
     default:
       return '公开 Profile 默认是 Newsprint。'
   }

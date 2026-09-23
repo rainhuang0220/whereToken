@@ -24,10 +24,9 @@ func main() {
 	flag.Parse()
 
 	vendor := filepath.Join(*root, "scripts", "gennewsprint", "vendor")
-	surface, size, err := bakeFromVendor(
-		filepath.Join(vendor, "Paper001_Color.jpg"),
-		filepath.Join(vendor, "Paper001_Displacement.jpg"),
-	)
+	colorPath := filepath.Join(vendor, "Paper001_Color.jpg")
+	dispPath := filepath.Join(vendor, "Paper001_Displacement.jpg")
+	surface, size, err := bakeFromVendor(colorPath, dispPath)
 	if err == nil {
 		if img, decErr := jpeg.Decode(bytes.NewReader(surface)); decErr == nil {
 			rgb := imageToRGB(img)
@@ -42,9 +41,22 @@ func main() {
 		fail(fmt.Errorf("surface JPEG is %d bytes; budget is %d", len(surface), maxSurfaceBytes))
 	}
 
+	dispImg, err := loadImage(dispPath)
+	if err != nil {
+		fail(err)
+	}
+	height, hsize, err := encodeHeightJPEG(dispImg)
+	if err != nil {
+		fail(err)
+	}
+	if len(height) > maxHeightBytes {
+		fail(fmt.Errorf("height JPEG is %d bytes; budget is %d", len(height), maxHeightBytes))
+	}
+
 	assetDir := filepath.Join(*root, "internal", "profilewebembed", "static", "assets")
 	outputs := map[string][]byte{
 		filepath.Join(assetDir, "newsprint-surface.jpg"):                        surface,
+		filepath.Join(assetDir, "newsprint-height.jpg"):                         height,
 		filepath.Join(*root, "scripts", "gennewsprint", "material-swatch.html"): swatchHTML(),
 	}
 	for name, payload := range outputs {
@@ -55,7 +67,8 @@ func main() {
 			fail(err)
 		}
 		digest := sha256.Sum256(payload)
-		fmt.Printf("wrote %s (%d bytes, %dx%d, sha256:%x)\n", name, len(payload), size.X, size.Y, digest)
+		fmt.Printf("wrote %s (%d bytes, sha256:%x)\n", name, len(payload), digest)
+		_ = hsize
 	}
 	for _, stale := range []string{
 		filepath.Join(assetDir, "newsprint-surface.png"),

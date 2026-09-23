@@ -447,10 +447,13 @@ test("keeps mobile month labels and wrapped metadata rules clean", async ({ page
 test("makes no external runtime request", async ({ page }) => {
   await page.goto(baseURL);
   await expect(page.locator("#hero-value")).not.toBeEmpty();
+  await expect.poll(() => requests.some((url) => url.includes("newsprint-height.jpg"))).toBe(true);
   expect(requests.sort()).toEqual([
     "/whereToken/profile/",
+    "/whereToken/profile/assets/paper.js",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
+    "/whereToken/profile/assets/newsprint-height.jpg",
     "/whereToken/profile/assets/newsprint-surface.jpg",
     "/whereToken/profile/profile.json",
     "/whereToken/profile/presentation.json",

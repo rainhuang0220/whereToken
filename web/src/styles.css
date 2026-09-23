@@ -1890,10 +1890,50 @@ body:has(.glaze-hall.is-open) {
   }
 }
 
+.glaze-local {
+  margin: 2.2rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
 .public-face {
-  margin-top: 2.6rem;
-  padding-top: 1.3rem;
+  margin-top: 1.4rem;
+  padding-top: 0.2rem;
+}
+
+.glaze-hall.is-open .public-face {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0.55rem 0.9rem 0.75rem;
+  background: var(--void);
   border-top: 1px solid var(--copper);
+}
+
+.glaze-hall.is-open .public-face .public-stage,
+.glaze-hall.is-open .public-face .public-stage-tools,
+.glaze-hall.is-open .public-face .public-command,
+.glaze-hall.is-open .public-face .public-copy,
+.glaze-hall.is-open .public-face .public-mini,
+.glaze-hall.is-open .public-face .public-face-head p {
+  display: none;
+}
+
+.glaze-hall.is-open .public-face-head {
+  align-items: center;
+}
+
+.glaze-hall.is-open .public-choices {
+  margin-top: 0.35rem;
+}
+
+.glaze-hall.is-open .glaze-slab.hero {
+  padding-bottom: 8.5rem;
 }
 
 .public-face-head {
