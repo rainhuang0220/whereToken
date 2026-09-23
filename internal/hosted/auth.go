@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -183,6 +185,30 @@ func (s *server) failOAuth(w http.ResponseWriter, r *http.Request, rid, stage st
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
+func oauthTransportClass(err error) string {
+	if err == nil {
+		return ""
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return "timeout"
+	}
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline"):
+		return "timeout"
+	case strings.Contains(msg, "reset"):
+		return "reset"
+	case strings.Contains(msg, "certificate") || strings.Contains(msg, "tls"):
+		return "tls"
+	default:
+		return "network"
+	}
+}
+
 func sanitizeOAuthLog(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -216,7 +242,7 @@ func (s *server) exchangeGitHub(ctx context.Context, code, verifier, rid string)
 	req.Header.Set("User-Agent", "whereToken-hosted")
 	res, err := g.HTTPClient.Do(req)
 	if err != nil {
-		s.logf("oauth request_id=%s stage=github_token_exchange status=0 error=transport error_description=network content_type=", rid)
+		s.logf("oauth request_id=%s stage=github_token_exchange status=0 error=transport error_description=%s content_type=", rid, oauthTransportClass(err))
 		return "", githubAPIError{stage: "github_token_exchange", ErrorCode: "transport"}
 	}
 	defer res.Body.Close()

@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -65,27 +66,60 @@ type rawDial func(ctx context.Context, network, address string) (net.Conn, error
 type tlsWrap func(raw net.Conn, serverName string) (net.Conn, error)
 
 func connectAddresses(ctx context.Context, addresses []string, serverName string, dial rawDial, wrap tlsWrap) (net.Conn, error) {
-	var last error
-	for _, address := range addresses {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		attempt, cancel := context.WithTimeout(ctx, 4*time.Second)
-		raw, err := dial(attempt, "tcp", address)
-		if err != nil {
-			cancel()
-			last = err
-			continue
-		}
-		secured, err := wrap(raw, serverName)
-		cancel()
-		if err != nil {
-			_ = raw.Close()
-			last = err
-			continue
-		}
-		return secured, nil
+	if len(addresses) == 0 {
+		return nil, errors.New("github dial")
 	}
+	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	type result struct {
+		conn net.Conn
+		err  error
+	}
+	ch := make(chan result, len(addresses))
+	var wg sync.WaitGroup
+	for _, address := range addresses {
+		wg.Add(1)
+		go func(address string) {
+			defer wg.Done()
+			attempt, attemptCancel := context.WithTimeout(ctx, 8*time.Second)
+			defer attemptCancel()
+			raw, err := dial(attempt, "tcp", address)
+			if err != nil {
+				ch <- result{err: err}
+				return
+			}
+			secured, err := wrap(raw, serverName)
+			if err != nil {
+				_ = raw.Close()
+				ch <- result{err: err}
+				return
+			}
+			ch <- result{conn: secured}
+		}(address)
+	}
+	var last error
+	received := 0
+	for received < len(addresses) {
+		res := <-ch
+		received++
+		if res.err != nil {
+			last = res.err
+			continue
+		}
+		cancel()
+		rest := len(addresses) - received
+		go func() {
+			for i := 0; i < rest; i++ {
+				extra := <-ch
+				if extra.conn != nil {
+					_ = extra.conn.Close()
+				}
+			}
+			wg.Wait()
+		}()
+		return res.conn, nil
+	}
+	cancel()
+	wg.Wait()
 	if last == nil {
 		last = errors.New("github dial")
 	}
@@ -99,7 +133,7 @@ func productionWrap(raw net.Conn, serverName string) (net.Conn, error) {
 		return nil, errors.New("tls verification disabled")
 	}
 	conn := tls.Client(raw, cfg)
-	_ = raw.SetDeadline(time.Now().Add(5 * time.Second))
+	_ = raw.SetDeadline(time.Now().Add(8 * time.Second))
 	err := conn.Handshake()
 	_ = raw.SetDeadline(time.Time{})
 	if err != nil {
