@@ -15,12 +15,13 @@ func TestShellAssetsAreContentAddressed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page := string(html)
+	page := strings.ReplaceAll(string(html), "\r\n", "\n")
 	for _, name := range []string{"assets/profile.css", "assets/profile.js", "assets/paper.js"} {
 		body, err := Read(name)
 		if err != nil {
 			t.Fatal(err)
 		}
+		body = bytes.ReplaceAll(body, []byte("\r\n"), []byte("\n"))
 		sum := sha256.Sum256(body)
 		want := "./" + name + "?v=" + hex.EncodeToString(sum[:])
 		if !strings.Contains(page, want) {
