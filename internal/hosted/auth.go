@@ -39,7 +39,7 @@ func (s *server) github() GitHubEndpoints {
 		g.UserURL = "https://api.github.com/user"
 	}
 	if g.HTTPClient == nil {
-		g.HTTPClient = &http.Client{Timeout: 10 * time.Second}
+		g.HTTPClient = githubOAuthClient()
 	}
 	return g
 }

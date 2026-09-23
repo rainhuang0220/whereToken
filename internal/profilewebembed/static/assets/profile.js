@@ -872,19 +872,35 @@
     return true;
   }
 
+  function profileDemo() {
+    return location.pathname.indexOf("/profile-demo/") >= 0;
+  }
+
   function updateOwnerChrome() {
     const mode = $("palette-mode");
     const button = $("apply-github");
     if (!mode || !button) return;
     const owner = liveOwner(state.snap);
-    button.hidden = !(liveOrigin() && owner);
     const session = readSession();
     const label = (WALL_PALETTES[state.published] || WALL_PALETTES.newsprint).label;
-    if (session && session.login === owner) {
-      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览 · 已发布 " + label;
-    } else {
+    if (profileDemo() || !liveOrigin() || !owner) {
+      button.hidden = true;
       mode.textContent = "仅预览";
+      return;
     }
+    if (session && session.login !== owner) {
+      button.hidden = true;
+      mode.textContent = "仅预览";
+      return;
+    }
+    button.hidden = false;
+    if (session && session.login === owner) {
+      button.textContent = "应用到我的 GitHub 主页";
+      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览 · 已发布 " + label;
+      return;
+    }
+    button.textContent = "登录并应用到我的 GitHub 主页";
+    mode.textContent = "预览主题";
   }
 
   function openPublish() {
@@ -912,7 +928,7 @@
     const progress = $("publish-progress");
     const phase = job && job.phase;
     if (phase === "published" || phase === "already_published") {
-      progress.textContent = "已应用";
+      progress.textContent = "已应用 ✓";
       state.published = state.palette;
       $("publish-confirm").hidden = true;
       $("publish-retry").hidden = true;
@@ -954,7 +970,7 @@
     const session = readSession();
     const owner = liveOwner(state.snap);
     if (!session || session.login !== owner) return;
-    $("publish-progress").textContent = "正在发布";
+    $("publish-progress").textContent = "正在发布…";
     $("publish-confirm").disabled = true;
     fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/publish", {
       method: "POST",

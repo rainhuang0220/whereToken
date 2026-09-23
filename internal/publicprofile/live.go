@@ -159,10 +159,63 @@ func validRepoSegment(s string) bool {
 	return true
 }
 
-// RewriteReadmeProjection replaces only the three whereToken preview URLs.
-// The new origin must be the raw GitHub base for this installation. Every
-// other line, including other images, stays byte-for-byte.
-func RewriteReadmeProjection(src, assetBase, snapshotID, assetRevision string) (string, []ReadmeEdit, error) {
+// ReadmeFacts is the sanitized snapshot text the README alt must match.
+// It is separate from snapshot_id and from the preview asset revision.
+type ReadmeFacts struct {
+	TotalDisplay string
+	DataStatus   string
+	AsOfDate     string
+}
+
+// ReadmeAlt is the preview image alt built from the current sanitized snapshot.
+func ReadmeAlt(facts ReadmeFacts) (string, error) {
+	when, err := time.Parse("2006-01-02", strings.TrimSpace(facts.AsOfDate))
+	if err != nil {
+		return "", errors.New("publicprofile: readme alt date")
+	}
+	date := when.Format("January 2, 2006")
+	display := strings.TrimSpace(facts.TotalDisplay)
+	var total, coverage string
+	switch facts.DataStatus {
+	case StatusUnavailable:
+		total = "unavailable"
+		coverage = "coverage unavailable"
+	case StatusPartial:
+		coverage = "partial coverage"
+		if !readmeDisplayOK(display) {
+			return "", errors.New("publicprofile: readme alt total")
+		}
+		total = display + " measured tokens"
+	case StatusAvailable:
+		coverage = "complete coverage"
+		if !readmeDisplayOK(display) {
+			return "", errors.New("publicprofile: readme alt total")
+		}
+		total = display + " measured tokens"
+	default:
+		return "", errors.New("publicprofile: readme alt status")
+	}
+	return escapeAttr("Coding activity snapshot: " + total + ", " + coverage + ", updated " + date), nil
+}
+
+func readmeDisplayOK(display string) bool {
+	if display == "" || display == emDash || display == "-" {
+		return false
+	}
+	return !strings.ContainsAny(display, "\"<>\n\r&")
+}
+
+func escapeAttr(value string) string {
+	value = strings.ReplaceAll(value, "&", "&amp;")
+	value = strings.ReplaceAll(value, `"`, "&quot;")
+	value = strings.ReplaceAll(value, "<", "&lt;")
+	return value
+}
+
+// RewriteReadmeProjection replaces the three whereToken preview URLs and the
+// alt on that same preview image. The new origin must be the raw GitHub base
+// for this installation. Every other byte, including other images, stays.
+func RewriteReadmeProjection(src, assetBase, snapshotID, assetRevision string, facts ReadmeFacts) (string, []ReadmeEdit, error) {
 	key, err := CacheKey(snapshotID, assetRevision)
 	if err != nil {
 		return "", nil, err
@@ -212,7 +265,61 @@ func RewriteReadmeProjection(src, assetBase, snapshotID, assetRevision string) (
 	if strings.Count(out, "preview-dark.svg") != 1 || strings.Count(out, "preview-light.svg") != 2 {
 		return "", nil, errors.New("publicprofile: README has more than one whereToken preview picture")
 	}
+	alt, err := ReadmeAlt(facts)
+	if err != nil {
+		return "", nil, err
+	}
+	out, err = replacePreviewAlt(out, alt)
+	if err != nil {
+		return "", nil, err
+	}
 	return out, edits, nil
+}
+
+func replacePreviewAlt(src, alt string) (string, error) {
+	if strings.Contains(alt, `"`) {
+		return "", errors.New("publicprofile: readme preview alt")
+	}
+	var spans [][2]int
+	for i := 0; i < len(src); {
+		rel := strings.Index(src[i:], "<img")
+		if rel < 0 {
+			break
+		}
+		start := i + rel
+		endRel := strings.Index(src[start:], ">")
+		if endRel < 0 {
+			return "", errors.New("publicprofile: readme img")
+		}
+		end := start + endRel + 1
+		if strings.Contains(src[start:end], "preview-light.svg") {
+			spans = append(spans, [2]int{start, end})
+		}
+		i = end
+	}
+	if len(spans) != 1 {
+		return "", errors.New("publicprofile: readme preview alt")
+	}
+	start, end := spans[0][0], spans[0][1]
+	tag := src[start:end]
+	const attr = `alt="`
+	if strings.Count(tag, attr) > 1 {
+		return "", errors.New("publicprofile: readme preview alt")
+	}
+	var newTag string
+	if at := strings.Index(tag, attr); at >= 0 {
+		rest := tag[at+len(attr):]
+		quote := strings.Index(rest, `"`)
+		if quote < 0 {
+			return "", errors.New("publicprofile: readme preview alt")
+		}
+		newTag = tag[:at] + attr + alt + `"` + rest[quote+1:]
+	} else if strings.HasSuffix(tag, ">") {
+		newTag = tag[:len(tag)-1] + ` alt="` + alt + `">`
+	} else {
+		return "", errors.New("publicprofile: readme preview alt")
+	}
+	return src[:start] + newTag + src[end:], nil
 }
 
 func validateRawBase(base string) error {

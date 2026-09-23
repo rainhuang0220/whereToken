@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self' https://wheretoken.plainlist.space; base-uri 'none'; form-action 'none'">
   <link rel="icon" href="data:,">
   <title>whereToken · coding activity</title>
-  <link rel="stylesheet" href="./assets/profile.css">
+  <link rel="stylesheet" href="./assets/profile.css?v=21fa675f0959a5a5b74b99e1139d8adb1eeeeead9b9398c9cc458a7f16144dfb">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -60,6 +60,21 @@
         <div class="seg" role="tablist" aria-label="Time range" id="ranges"></div>
         <div class="seg palette-seg" role="tablist" aria-label="Activity color" id="palettes"></div>
       </div>
+      <div class="publish-row" id="publish-row">
+        <p id="palette-mode" class="publish-mode">预览主题</p>
+        <button type="button" id="apply-github">登录并应用到我的 GitHub 主页</button>
+        <div id="publish-dialog" class="publish-dialog" hidden>
+          <h3 id="publish-title">应用到 GitHub 主页</h3>
+          <p id="publish-summary"></p>
+          <p id="publish-target"></p>
+          <p id="publish-progress" role="status"></p>
+          <div class="publish-actions">
+            <button type="button" id="publish-cancel">取消</button>
+            <button type="button" id="publish-confirm">确认发布</button>
+            <button type="button" id="publish-retry" hidden>重试 README</button>
+          </div>
+        </div>
+      </div>
 
       <div class="heat-panel">
         <div class="heat-layout">
@@ -73,22 +88,9 @@
           <p id="wall-hint" class="wall-hint">53 weeks · <span class="mobile-only">scroll sideways · </span>latest on the right</p>
           <div class="legend" id="legend" aria-label="Activity scale"></div>
           <p class="owner-set" id="owner-set">
-            <span id="palette-mode">仅预览</span>
-            <button type="button" id="apply-github" hidden>应用到我的 GitHub 主页</button>
             <a id="owner-set-link" href="http://127.0.0.1:8787/themes?public_palette=newsprint&amp;intent=publish#public-profile">本机发布</a>
             <span id="owner-set-note">Choosing a color previews it in this browser. It does not change your GitHub profile until you apply it.</span>
           </p>
-          <div id="publish-dialog" class="publish-dialog" hidden>
-            <h3 id="publish-title">应用到 GitHub 主页</h3>
-            <p id="publish-summary"></p>
-            <p id="publish-target"></p>
-            <p id="publish-progress" role="status"></p>
-            <div class="publish-actions">
-              <button type="button" id="publish-cancel">取消</button>
-              <button type="button" id="publish-confirm">确认发布</button>
-              <button type="button" id="publish-retry" hidden>重试 README</button>
-            </div>
-          </div>
         </div>
         <div id="wall-empty" class="wall-empty" hidden></div>
       </div>
@@ -128,7 +130,7 @@
       </div>
     </details>
   </main>
-  <script src="./assets/profile.js"></script>
-  <script src="./assets/paper.js"></script>
+  <script src="./assets/profile.js?v=22143b42fadb5115cd508ae5222e85162d827240f2d1826895a1a2dc41484293"></script>
+  <script src="./assets/paper.js?v=81761384fe72a1f36d7d022f945bd9e642c361854a081551a92a6c6432abe683"></script>
 </body>
 </html>

@@ -150,7 +150,16 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if readmeErr != nil {
 		return s.failPublish(ctx, user, palette, kind, retry, "readme read"), readmeErr
 	}
-	if presErr == nil && pres.Palette == palette && pres.AssetRevision == assetRev && readmeHasCacheKey(readme.Content, cacheKey) {
+	facts := publicprofile.ReadmeFacts{
+		TotalDisplay: snap.Periods.All.Totals.Total.Display,
+		DataStatus:   snap.DataStatus,
+		AsOfDate:     snap.AsOfDate,
+	}
+	alt, altErr := publicprofile.ReadmeAlt(facts)
+	if altErr != nil {
+		return s.failPublish(ctx, user, palette, kind, retry, "readme alt"), altErr
+	}
+	if presErr == nil && pres.Palette == palette && pres.AssetRevision == assetRev && readmeHasCacheKey(readme.Content, cacheKey) && strings.Contains(string(readme.Content), `alt="`+alt+`"`) {
 		job := s.beginJob(ctx, user, palette, kind, beforeID, retry)
 		job.Phase = phaseAlreadyPublished
 		job.ResultCode = resultAlreadyPublished
@@ -185,7 +194,7 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if err := s.putPreview(ctx, client, target, target.DarkPath, dark); err != nil {
 		return s.finishGit(ctx, job, err)
 	}
-	rewritten, _, err := publicprofile.RewriteReadmeProjection(string(readme.Content), target.AssetBase, beforeID, assetRev)
+	rewritten, _, err := publicprofile.RewriteReadmeProjection(string(readme.Content), target.AssetBase, beforeID, assetRev, facts)
 	if err != nil {
 		return s.finish(ctx, job, phasePartialFailure, err.Error())
 	}

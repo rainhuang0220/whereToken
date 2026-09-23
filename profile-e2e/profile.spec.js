@@ -448,7 +448,8 @@ test("makes no external runtime request", async ({ page }) => {
   await page.goto(baseURL);
   await expect(page.locator("#hero-value")).not.toBeEmpty();
   await expect.poll(() => requests.some((url) => url.includes("newsprint-height.jpg"))).toBe(true);
-  expect(requests.sort()).toEqual([
+  const paths = requests.map((url) => url.split("?")[0]);
+  expect(paths.sort()).toEqual([
     "/whereToken/profile/",
     "/whereToken/profile/assets/paper.js",
     "/whereToken/profile/assets/profile.css",
@@ -458,6 +459,10 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/profile.json",
     "/whereToken/profile/presentation.json",
   ].sort());
+  for (const name of ["profile.css", "profile.js", "paper.js"]) {
+    expect(requests.find((url) => url.includes("/assets/" + name))).toMatch(/\?v=[0-9a-f]{64}$/);
+  }
+  expect(requests.find((url) => url.includes("profile.json"))).not.toContain("?v=");
 });
 
 test("uses the owner palette for a clean visitor and keeps a visitor choice local", async ({ browser }) => {
@@ -650,10 +655,26 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);
-  await expect(page.locator("#palette-mode")).toHaveText("仅预览");
+  await expect(page.locator("#palette-mode")).toHaveText("预览主题");
+  const apply = page.locator("#apply-github");
+  await expect(apply).toBeVisible();
+  await expect(apply).toHaveText("登录并应用到我的 GitHub 主页");
+  const paletteBox = await page.locator("#palettes").boundingBox();
+  const applyBox = await apply.boundingBox();
+  expect(applyBox.y).toBeGreaterThan(paletteBox.y);
+  expect(applyBox.y).toBeLessThan(paletteBox.y + 120);
   await page.getByRole("tab", { name: "Magenta", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-activity-palette", "magenta");
   expect(calls.some((line) => line.includes("/publish"))).toBe(false);
+  await page.evaluate(() => sessionStorage.setItem("wt-profile-session", JSON.stringify({
+    token: "wtp_1.visitor",
+    csrf: "csrf-visitor",
+    login: "someoneelse",
+    expires_at: "2099-01-01T00:00:00.000Z",
+  })));
+  await page.reload();
+  await expect(page.locator("#apply-github")).toBeHidden();
+  await expect(page.locator("#palette-mode")).toHaveText("仅预览");
   await page.evaluate(() => sessionStorage.setItem("wt-profile-session", JSON.stringify({
     token: "wtp_1.owner",
     csrf: "csrf-owner",
@@ -663,6 +684,7 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   await page.reload();
   await page.getByRole("tab", { name: "Magenta", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("button", { name: "应用到我的 GitHub 主页" })).toBeVisible();
   await page.getByRole("button", { name: "应用到我的 GitHub 主页" }).click();
   await expect(page.locator("#publish-dialog")).toBeVisible();
   await expect(page.locator("#publish-summary")).toContainText("Newsprint");
@@ -670,7 +692,7 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   await expect(page.locator("#publish-target")).toHaveText("https://github.com/rainhuang0220");
   expect(calls.filter((line) => line.includes("/publish"))).toHaveLength(0);
   await page.getByRole("button", { name: "确认发布" }).click();
-  await expect(page.locator("#publish-progress")).toHaveText("已应用");
+  await expect(page.locator("#publish-progress")).toHaveText("已应用 ✓");
   expect(calls.some((line) => line.startsWith("POST") && line.includes("/publish"))).toBe(true);
 });
 

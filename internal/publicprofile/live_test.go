@@ -34,6 +34,71 @@ func TestShouldMaterializeReadmeCoalescesUsageAndPublishesThemeImmediately(t *te
 	}
 }
 
+func readmeFactsPartial() ReadmeFacts {
+	return ReadmeFacts{TotalDisplay: "11.19B", DataStatus: StatusPartial, AsOfDate: "2026-09-23"}
+}
+
+func TestRewriteReadmeProjectionUpdatesAltFromTheSameSnapshot(t *testing.T) {
+	const snap = "15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62"
+	const asset = "3e30d4babdb260f4570aa1fea89a21ff9f00376c190a0615cdf6cdbfa0d76fe5"
+	const stale = `alt="Coding activity snapshot: 10.76B measured tokens, partial coverage, updated September 15, 2026"`
+	const fresh = `alt="Coding activity snapshot: 11.19B measured tokens, partial coverage, updated September 23, 2026"`
+	src := strings.Replace(sampleReadme, `alt="Coding activity snapshot"`, stale, 1) +
+		"\nkeep-this-line\n<img src=\"https://github.com/rainhuang0220.png\" alt=\"portrait\">\n"
+	base, err := RawPreviewBase("rainhuang0220/rainhuang0220", "main", "wheretoken")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _, err := RewriteReadmeProjection(src, base, "sha256:"+snap, "sha256:"+asset, readmeFactsPartial())
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := snap + "-" + asset
+	oldLight := "https://rainhuang0220.github.io/whereToken/profile/preview-light.svg?v=" + snap + "-2f221b6893380bf9ebaecd0cce4fe8bf2abea777805c8dac1c88d9d34c4245cc"
+	oldDark := "https://rainhuang0220.github.io/whereToken/profile/preview-dark.svg?v=" + snap + "-2f221b6893380bf9ebaecd0cce4fe8bf2abea777805c8dac1c88d9d34c4245cc"
+	want := strings.ReplaceAll(src, oldLight, base+"/preview-light.svg?v="+key)
+	want = strings.ReplaceAll(want, oldDark, base+"/preview-dark.svg?v="+key)
+	want = strings.Replace(want, stale, fresh, 1)
+	if got != want {
+		t.Fatalf("readme bytes changed outside the preview urls and alt\n got: %s\nwant: %s", got, want)
+	}
+	if strings.Contains(got, "10.76B") || strings.Contains(got, "September 15, 2026") {
+		t.Fatal("stale alt remained")
+	}
+	again, _, err := RewriteReadmeProjection(got, base, "sha256:"+snap, "sha256:"+asset, readmeFactsPartial())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again != got {
+		t.Fatal("rewriting the current alt must be stable")
+	}
+
+	unavailable, _, err := RewriteReadmeProjection(src, base, "sha256:"+snap, "sha256:"+asset, ReadmeFacts{
+		TotalDisplay: "0",
+		DataStatus:   StatusUnavailable,
+		AsOfDate:     "2026-09-15",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(unavailable, "0 measured") || strings.Contains(unavailable, "0.00") {
+		t.Fatal("missing usage was written as zero")
+	}
+	if !strings.Contains(unavailable, `alt="Coding activity snapshot: unavailable, coverage unavailable, updated September 15, 2026"`) {
+		t.Fatalf("unavailable alt\n%s", unavailable)
+	}
+	if !strings.Contains(unavailable, `alt="portrait"`) {
+		t.Fatal("unrelated alt changed")
+	}
+	if _, _, err := RewriteReadmeProjection(src, base, "sha256:"+snap, "sha256:"+asset, ReadmeFacts{
+		TotalDisplay: emDash,
+		DataStatus:   StatusPartial,
+		AsOfDate:     "2026-09-23",
+	}); err == nil {
+		t.Fatal("partial snapshot without a total was accepted")
+	}
+}
+
 func TestRewriteReadmeProjectionKeepsUnrelatedContent(t *testing.T) {
 	const snap = "15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62"
 	const asset = "3e30d4babdb260f4570aa1fea89a21ff9f00376c190a0615cdf6cdbfa0d76fe5"
@@ -42,7 +107,7 @@ func TestRewriteReadmeProjectionKeepsUnrelatedContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, edits, err := RewriteReadmeProjection(src, base, "sha256:"+snap, "sha256:"+asset)
+	got, edits, err := RewriteReadmeProjection(src, base, "sha256:"+snap, "sha256:"+asset, readmeFactsPartial())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +127,7 @@ func TestRewriteReadmeProjectionKeepsUnrelatedContent(t *testing.T) {
 	if !strings.Contains(got, base+"/preview-dark.svg?v="+key) || !strings.Contains(got, base+"/preview-light.svg?v="+key) {
 		t.Fatalf("preview base\n%s", got)
 	}
-	again, _, err := RewriteReadmeProjection(got, base, "sha256:"+snap, "sha256:"+asset)
+	again, _, err := RewriteReadmeProjection(got, base, "sha256:"+snap, "sha256:"+asset, readmeFactsPartial())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,11 +143,11 @@ func TestRewriteReadmeProjectionRejectsAmbiguousOrForeignURLs(t *testing.T) {
 	}
 	const snap = "sha256:15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62"
 	const asset = "sha256:3e30d4babdb260f4570aa1fea89a21ff9f00376c190a0615cdf6cdbfa0d76fe5"
-	if _, _, err := RewriteReadmeProjection(sampleReadme+"\n"+sampleReadme, base, snap, asset); err == nil {
+	if _, _, err := RewriteReadmeProjection(sampleReadme+"\n"+sampleReadme, base, snap, asset, readmeFactsPartial()); err == nil {
 		t.Fatal("ambiguous readme was accepted")
 	}
 	foreign := strings.ReplaceAll(sampleReadme, "https://rainhuang0220.github.io", "https://evil.example")
-	if _, _, err := RewriteReadmeProjection(foreign, base, snap, asset); err == nil {
+	if _, _, err := RewriteReadmeProjection(foreign, base, snap, asset, readmeFactsPartial()); err == nil {
 		t.Fatal("foreign preview host was accepted")
 	}
 	if _, err := RawPreviewBase("rainhuang0220/rainhuang0220", "main", "../wheretoken"); err == nil {

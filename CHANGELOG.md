@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The public profile shows `登录并应用到我的 GitHub 主页` under the palette before login. Profile script URLs carry a content hash so a cached `profile.js` cannot leave that control hidden. The hosted README alt is rewritten from the same sanitized snapshot as the preview. GitHub OAuth tries another verified `github.com` address when the DNS address does not connect.
 - The public profile shell can replace its committed snapshot with a hosted projection after `wheretoken sync` or a paired scan. `wheretoken serve` repeats that sync every 15 minutes. The page labels hosted, committed, and unavailable data separately. Palette confirmation on the public page publishes through a server-side GitHub App; the browser does not receive a GitHub write token. README images stay static and change only on an explicit theme confirmation or a coalesced usage update. The product repository is not the live database. Local `profile publish` remains the fallback.
 
 ## 0.7.4 — 2026-09-23 (Alpha)

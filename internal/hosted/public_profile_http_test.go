@@ -299,6 +299,20 @@ func TestPublicProfileSyncPublishAndRetry(t *testing.T) {
 	if !strings.Contains(readme, "raw.githubusercontent.com/rainhuang0220/rainhuang0220/main/wheretoken/preview-light.svg?v=") {
 		t.Fatalf("readme preview\n%s", readme)
 	}
+	alt, err := publicprofile.ReadmeAlt(publicprofile.ReadmeFacts{
+		TotalDisplay: snap.Periods.All.Totals.Total.Display,
+		DataStatus:   snap.DataStatus,
+		AsOfDate:     snap.AsOfDate,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(readme, `alt="`+alt+`"`) || !strings.Contains(readme, `alt="portrait"`) {
+		t.Fatalf("readme alt\n%s", readme)
+	}
+	if strings.Contains(readme, "0 measured") || strings.Contains(readme, "0.00") {
+		t.Fatal("missing usage was written as zero")
+	}
 	puts := git.puts
 	again := publishRequestTo(t, h, session, csrf, "cobalt", true, "")
 	if again.Code != http.StatusOK {

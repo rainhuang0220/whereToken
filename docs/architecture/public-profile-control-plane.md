@@ -133,9 +133,11 @@ path. The app is not installed by this change.
 
 `wheretoken profile publish` and My Token on `127.0.0.1` still perform the
 v0.7.4 two-repository publish. The public page links to that computer as
-`本机发布`. The primary button on the public page is `应用到我的 GitHub 主页`,
-and it stays on that page through confirmation, progress, and `已应用`.
+`本机发布`. Directly under the palette, the public page shows
+`登录并应用到我的 GitHub 主页` before a profile session and
+`应用到我的 GitHub 主页` for the signed-in owner. Confirmation stays on that
+page through `正在发布…` and `已应用`.
 
-Visitors see the same three colors as `仅预览`. An owner session sees the
-published palette and the apply button. Job state is not part of the public
-GET.
+Visitors who are not the owner keep preview-only theme switching. An owner
+session sees the published palette and the apply button. Job state is not
+part of the public GET.

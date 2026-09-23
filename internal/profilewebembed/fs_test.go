@@ -2,11 +2,38 @@ package profilewebembed
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"image"
 	"image/jpeg"
 	"strings"
 	"testing"
 )
+
+func TestShellAssetsAreContentAddressed(t *testing.T) {
+	html, err := Read("index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(html)
+	for _, name := range []string{"assets/profile.css", "assets/profile.js", "assets/paper.js"} {
+		body, err := Read(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sum := sha256.Sum256(body)
+		want := "./" + name + "?v=" + hex.EncodeToString(sum[:])
+		if !strings.Contains(page, want) {
+			t.Fatalf("index.html missing %s", want)
+		}
+	}
+	if strings.Contains(page, "profile.json?v=") {
+		t.Fatal("snapshot url must stay separate from the asset revision")
+	}
+	if strings.Contains(page, `id="apply-github" hidden`) {
+		t.Fatal("apply control starts hidden")
+	}
+}
 
 func TestLivePageHasNoDashboardAPIs(t *testing.T) {
 	js, err := Read("assets/profile.js")
