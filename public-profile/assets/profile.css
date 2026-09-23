@@ -379,6 +379,18 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 .seg button[aria-selected="true"] { border-color: var(--ui-accent); color: var(--text); }
 .palette-seg button[aria-selected="true"] { color: var(--theme-label); }
 .palette-seg { margin-left: auto; }
+.owner-set {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  color: var(--subtle);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.owner-set a { color: var(--text); text-underline-offset: 3px; }
 
 .heat-panel { padding-top: 2px; }
 .heat-layout {

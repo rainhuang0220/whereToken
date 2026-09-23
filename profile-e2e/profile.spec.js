@@ -535,6 +535,22 @@ test("switches Tokens and Requests without treating counts as tokens", async ({ 
   await expect(page.locator("#tip")).not.toContainText("tokens");
 });
 
+test("hands the selected palette to local My Token without publishing", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(baseURL);
+  const link = page.locator("#owner-set-link");
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", /public_palette=newsprint/);
+  await expect(link).toHaveAttribute("href", /intent=publish/);
+  await expect(link).toHaveAttribute("href", /127\.0\.0\.1:8787\/themes/);
+  await expect(page.locator("#owner-set-note")).toContainText("does not change your GitHub profile");
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await expect(link).toHaveAttribute("href", /public_palette=magenta/);
+  expect(requests.some((url) => url.includes(":8787"))).toBe(false);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(link).toBeVisible();
+});
+
 function formatExpectedDay(iso) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",

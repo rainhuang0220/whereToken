@@ -95,6 +95,109 @@ export function publicationPending(selected: PublicPaletteId, view: PublicationV
   return selected !== shipped
 }
 
+export function handoffFromQuery(query: Record<string, unknown> | undefined): { palette: PublicPaletteId | null; publish: boolean } {
+  const raw = queryValue(query?.public_palette)
+  const intent = queryValue(query?.intent)
+  const palette = isPublicPalette(raw) ? raw : null
+  return { palette, publish: intent === 'publish' && palette !== null }
+}
+
+function queryValue(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value) && typeof value[0] === 'string') return value[0]
+  return ''
+}
+
+export interface PublishEdit {
+  slot: string
+  before: string
+  after: string
+}
+
+export interface PublishPreflight {
+  preflight_id: string
+  csrf: string
+  phase: string
+  phase_label: string
+  ready: boolean
+  idempotent?: boolean
+  palette: string
+  live_palette?: string
+  local_palette?: string
+  product_repo?: string
+  product_branch?: string
+  profile_repo?: string
+  profile_branch?: string
+  readme_path?: string
+  pages_url?: string
+  snapshot_id?: string
+  asset_revision?: string
+  cache_key?: string
+  github_login?: string
+  validation?: string
+  provenance?: string
+  static_svg?: boolean
+  release_note?: string
+  blockers?: string[]
+  ahead?: string[]
+  files?: { path: string; action: string }[]
+  readme_edits?: PublishEdit[]
+  presentation_before?: string
+  presentation_after?: string
+}
+
+export interface PublishJob {
+  phase: string
+  phase_label: string
+  palette?: string
+  product_url?: string
+  pages_run_url?: string
+  profile_url?: string
+  live_page?: string
+  error?: string
+  retry_readme?: boolean
+  cache_key?: string
+}
+
+export function publishRunning(phase: string | undefined): boolean {
+  return phase === 'updating_bundle' || phase === 'pushing_product' || phase === 'waiting_pages' || phase === 'live_verified' || phase === 'updating_readme'
+}
+
+export async function loadPreflight(palette: PublicPaletteId): Promise<PublishPreflight> {
+  const res = await fetch('/api/public-profile/publish?palette=' + encodeURIComponent(palette), { cache: 'no-store' })
+  if (!res.ok) throw new Error('could not prepare publish')
+  return res.json() as Promise<PublishPreflight>
+}
+
+export async function postPublish(preflight: PublishPreflight, action: 'approve' | 'retry_readme'): Promise<PublishJob> {
+  const res = await fetch('/api/public-profile/publish', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-WhereToken-CSRF': preflight.csrf,
+    },
+    body: JSON.stringify({
+      action,
+      preflight_id: preflight.preflight_id,
+      csrf: preflight.csrf,
+      palette: preflight.palette,
+    }),
+  })
+  if (!res.ok) throw new Error('publish was refused')
+  return res.json() as Promise<PublishJob>
+}
+
+export async function loadPublishJob(): Promise<PublishJob | null> {
+  const res = await fetch('/api/public-profile/publish/job', { cache: 'no-store' })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('could not read publish job')
+  return res.json() as Promise<PublishJob>
+}
+
+export function handoffURL(palette: PublicPaletteId): string {
+  return 'http://127.0.0.1:8787/themes?public_palette=' + encodeURIComponent(palette) + '&intent=publish#public-profile'
+}
+
 export function statusCopy(view: PublicationView): string {
   switch (view.status) {
     case 'loading':

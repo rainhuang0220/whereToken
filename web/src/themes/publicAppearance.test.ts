@@ -3,9 +3,11 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  handoffFromQuery,
   heatHex,
   previewIntensity,
   publicationPending,
+  publishRunning,
   resolveVisitorPalette,
   statusCopy,
   type PublicationView,
@@ -38,7 +40,9 @@ describe('public profile appearance', () => {
     expect(page).toContain('PublicAppearance')
     expect(page).not.toContain('kiln-to-newsprint')
     const panel = readFileSync(join(root, 'PublicAppearance.vue'), 'utf8')
-    expect(panel).toContain('应用到公开 Profile')
+    expect(panel).toContain('仅保存本机')
+    expect(panel).toContain('发布到我的 GitHub 主页')
+    expect(panel).toContain('确认发布到这两个仓库')
     expect(panel).toContain('预览公开 Profile')
     expect(panel).toContain('外观预览')
     expect(panel).not.toContain('wheretoken.theme')
@@ -49,6 +53,17 @@ describe('public profile appearance', () => {
     expect(publicationPending('newsprint', view({ status: 'ready_to_publish' }))).toBe(false)
     expect(statusCopy(view({ status: 'ready_to_publish' }))).toContain('推送')
     expect(statusCopy(view({ status: 'saved_locally' }))).not.toContain('已发布到')
+  })
+
+  it('treats a publish link as a draft until the owner confirms', () => {
+    expect(handoffFromQuery({ public_palette: 'magenta', intent: 'publish' })).toEqual({ palette: 'magenta', publish: true })
+    expect(handoffFromQuery({ public_palette: 'kiln', intent: 'publish' })).toEqual({ palette: null, publish: false })
+    expect(handoffFromQuery({ public_palette: '../whereToken', intent: 'publish' })).toEqual({ palette: null, publish: false })
+    expect(handoffFromQuery({ public_palette: 'cobalt' })).toEqual({ palette: 'cobalt', publish: false })
+    expect(publishRunning('waiting_pages')).toBe(true)
+    expect(publishRunning('verified')).toBe(false)
+    const panel = readFileSync(join(root, 'PublicAppearance.vue'), 'utf8')
+    expect(panel).toContain('@click="confirmPublish"')
   })
 
   it('paints newsprint as neutral ink and cobalt as a distinct color', () => {

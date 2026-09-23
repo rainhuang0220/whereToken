@@ -37,7 +37,9 @@ Statuses returned by the API:
 - `ready_to_publish` — the local bundle matches the owner file
 - `failed` — the save or bundle write failed
 
-None of these mean GitHub Pages changed. The UI shows `wheretoken profile build <dir> --public-palette <id>`. Publishing remains: build, commit, push. Pages copies `public-profile/` to `/profile/` only when that bundle is a `local_sanitized_snapshot`.
+None of these mean GitHub Pages changed. The UI shows `wheretoken profile build <dir> --public-palette <id>`. `仅保存本机` is that local write.
+
+`发布到我的 GitHub 主页` is a separate, explicit step. The public page only links to `http://127.0.0.1:8787/themes?public_palette=<id>&intent=publish#public-profile`. Opening that URL does not save or push. The local page runs a read-only preflight, then waits for `确认发布到这两个仓库`. That POST is localhost-only, same-origin, and carries a one-time CSRF token. It updates `public-profile/` without rescanning usage, fast-forwards `whereToken`, waits for the Pages run of that commit, checks the live palette and asset revision, then rewrites the three preview URLs in the configured personal `README.md`. `gh` and the existing git credentials stay outside the page. Repository names live in the local `profile-publish.json`, not in the public bundle. `wheretoken profile publish` prints the same preflight; `--yes` is the terminal form of the same approval. A failed README step after a verified Pages deploy stays `PARTIALLY_PUBLISHED` and can be retried without another product commit.
 
 `预览公开 Profile` opens `/preview/public-profile/` on the local server. A palette that is not yet in the bundle is passed as `?palette=`, so the preview does not overwrite the owner file.
 

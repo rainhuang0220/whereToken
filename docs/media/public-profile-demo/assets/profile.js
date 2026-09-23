@@ -78,10 +78,39 @@
     }
   }
 
+  function ownerHref(id) {
+    return "http://127.0.0.1:8787/themes?public_palette=" + encodeURIComponent(id) + "&intent=publish#public-profile";
+  }
+
+  function syncOwnerLink() {
+    const link = $("owner-set-link");
+    if (!link) return;
+    link.href = ownerHref(state.palette || "newsprint");
+  }
+
+  function bindOwnerLink() {
+    const link = $("owner-set-link");
+    const note = $("owner-set-note");
+    if (!link || link.dataset.bound === "1") return;
+    link.dataset.bound = "1";
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const href = link.href;
+      const done = "已复制。请在运行 wheretoken serve 的电脑上打开。手机上的 127.0.0.1 不是那台电脑。";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(href).then(() => { note.textContent = done; }, () => { note.textContent = href; });
+      } else {
+        note.textContent = href;
+      }
+    });
+  }
+
   function applyWallPalette(id, persist) {
     if (!WALL_PALETTES[id]) return;
     state.palette = id;
     document.documentElement.setAttribute("data-activity-palette", id);
+    syncOwnerLink();
     if (!persist) return;
     state.explicit = true;
     try { localStorage.setItem("wt-visitor-palette", id); } catch (_) {}
@@ -680,6 +709,7 @@
     tip.append(title, body);
     if (src.textContent) tip.append(src);
     tip.classList.add("is-on");
+    placeTip(target, tip);
     tipFrame = requestAnimationFrame(() => {
       if (tipTarget !== target || !target.isConnected) return;
       placeTip(target, tip);
@@ -732,6 +762,8 @@
   document.querySelectorAll("[data-theme-set]").forEach((b) => {
     b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme-set")));
   });
+  bindOwnerLink();
+  syncOwnerLink();
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("scroll", dismissTip, { passive: true, capture: true });

@@ -30,4 +30,10 @@ complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-cost
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l public-palette -r -a "cobalt magenta newsprint"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l production
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l allow-partial
-complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette cobalt magenta newsprint"
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l dry-run
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l yes
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l product -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l profile-repo -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l pages -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l checkout -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette publish cobalt magenta newsprint"

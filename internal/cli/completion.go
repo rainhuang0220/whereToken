@@ -61,7 +61,7 @@ _wheretoken() {
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
-    profile) opts="build validate palette cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --quiet -q --offline --home --help" ;;
+    profile) opts="build validate palette publish cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --dry-run --yes --product --profile-repo --pages --checkout --quiet -q --offline --home --help" ;;
     *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -169,7 +169,13 @@ _wheretoken() {
         '--public-palette[public profile palette]:palette:(cobalt magenta newsprint)' \
         '--production[fail incomplete cloud token coverage]' \
         '--allow-partial[allow a production snapshot with partial coverage]' \
-        '1:action:(build validate palette)' \
+        '1:action:(build validate palette publish)' \
+        '--dry-run[show the two-repository publish plan]' \
+        '--yes[push the approved publish]' \
+        '--product[product repository owner/name]' \
+        '--profile-repo[GitHub profile repository owner/name]' \
+        '--pages[https profile pages URL]' \
+        '--checkout[local whereToken checkout]' \
         '2:palette:(cobalt magenta newsprint)' \
         '2:path:_files'
       ;;
@@ -255,7 +261,13 @@ complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l include-cost
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l public-palette -r -a "cobalt magenta newsprint"
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l production
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l allow-partial
-complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette cobalt magenta newsprint"
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l dry-run
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l yes
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l product -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l profile-repo -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l pages -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l checkout -r
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette publish cobalt magenta newsprint"
 `
 
 const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {

@@ -106,9 +106,9 @@ GitHub Profile README 应链到预览图和 live page（不要把 SVG 本身当�
 <p align="center">
   <a href="https://rainhuang0220.github.io/whereToken/profile-demo/">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-969fe02f6c44a05069deb95d54ed2ddfa5a528ed7e96a128599fa3a7c4e8f6c0">
-      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-969fe02f6c44a05069deb95d54ed2ddfa5a528ed7e96a128599fa3a7c4e8f6c0">
-      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-969fe02f6c44a05069deb95d54ed2ddfa5a528ed7e96a128599fa3a7c4e8f6c0" width="800" alt="whereToken 公开画像合成演示；点击打开交互演示">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/public-profile-demo/preview-dark.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-99138cc83121162ba697fedd0e1323fde9b507d536ad5a0e8fff95270f1f85e7">
+      <source media="(prefers-color-scheme: light)" srcset="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-99138cc83121162ba697fedd0e1323fde9b507d536ad5a0e8fff95270f1f85e7">
+      <img src="docs/media/public-profile-demo/preview-light.svg?v=6d43c1f193eff56ffc9e4c18f8f275558417029d172492a574b0fb925ebb09e5-99138cc83121162ba697fedd0e1323fde9b507d536ad5a0e8fff95270f1f85e7" width="800" alt="whereToken 公开画像合成演示；点击打开交互演示">
     </picture>
   </a>
 </p>

@@ -62,6 +62,12 @@ type Flags struct {
 	ProfileAction   string
 	ProfilePath     string
 	PublicPalette   string
+	PublishYes      bool
+	PublishDryRun   bool
+	ProductRepo     string
+	ProfileRepoFlag string
+	PublishPages    string
+	PublishCheckout string
 	IncludeModels   bool
 	IncludeCost     bool
 	Production      bool
@@ -113,6 +119,9 @@ func Parse(args []string) (Flags, error) {
 			return Flags{}, err
 		}
 		return finishCard(&f, fs.Args())
+	}
+	if err := rejectForeignPublishFlags(f); err != nil {
+		return Flags{}, err
 	}
 	if f.Command == CommandProfile {
 		return finishProfile(&f, fs.Args())
@@ -285,6 +294,12 @@ func newFlagSet(f *Flags, tf *toolFlags) *flag.FlagSet {
 	fs.StringVar(&f.PublicPalette, "public-palette", f.PublicPalette, "")
 	fs.BoolVar(&f.Production, "production", f.Production, "")
 	fs.BoolVar(&f.AllowPartial, "allow-partial", f.AllowPartial, "")
+	fs.BoolVar(&f.PublishYes, "yes", f.PublishYes, "")
+	fs.BoolVar(&f.PublishDryRun, "dry-run", f.PublishDryRun, "")
+	fs.StringVar(&f.ProductRepo, "product", f.ProductRepo, "")
+	fs.StringVar(&f.ProfileRepoFlag, "profile-repo", f.ProfileRepoFlag, "")
+	fs.StringVar(&f.PublishPages, "pages", f.PublishPages, "")
+	fs.StringVar(&f.PublishCheckout, "checkout", f.PublishCheckout, "")
 	tf.bind(fs)
 	return fs
 }
@@ -540,7 +555,7 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 			break
 		}
 		args = args[1:]
-		if f.ProfileAction == "" && (a == "build" || a == "validate" || a == "palette") {
+		if f.ProfileAction == "" && (a == "build" || a == "validate" || a == "palette" || a == "publish") {
 			f.ProfileAction = a
 			continue
 		}
@@ -556,14 +571,21 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 			return Flags{}, err
 		}
 		if leftover := fs2.Args(); len(leftover) > 0 {
-			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+			if (f.ProfileAction == "publish" || f.ProfileAction == "palette") && f.ProfilePath == "" && len(leftover) == 1 && !strings.HasPrefix(leftover[0], "-") {
+				f.ProfilePath = leftover[0]
+			} else {
+				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+			}
 		}
 	}
 	if f.ProfileAction == "" {
-		return Flags{}, usageError{msg: "profile requires build, validate, or palette\ntry `wheretoken --help`"}
+		return Flags{}, usageError{msg: "profile requires build, validate, palette, or publish\ntry `wheretoken --help`"}
 	}
 	if f.ProfileAction == "palette" {
 		return finishProfilePalette(f)
+	}
+	if f.ProfileAction == "publish" {
+		return finishProfilePublish(f)
 	}
 	if strings.TrimSpace(f.ProfilePath) == "" {
 		return Flags{}, usageError{msg: "profile " + f.ProfileAction + " requires a path\ntry `wheretoken --help`"}
@@ -607,6 +629,42 @@ func finishProfilePalette(f *Flags) (Flags, error) {
 		}
 	}
 	return *f, nil
+}
+
+func finishProfilePublish(f *Flags) (Flags, error) {
+	if f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Production || f.AllowPartial || f.IncludeModels || f.IncludeCost {
+		return Flags{}, usageError{msg: "profile publish does not scan or filter usage\ntry `wheretoken --help`"}
+	}
+	if f.PublishYes && f.PublishDryRun {
+		return Flags{}, usageError{msg: "profile publish takes either --dry-run or --yes\ntry `wheretoken --help`"}
+	}
+	id := strings.TrimSpace(f.ProfilePath)
+	flagID := strings.TrimSpace(f.PublicPalette)
+	if flagID != "" {
+		if id != "" && id != flagID {
+			return Flags{}, usageError{msg: "profile publish received two different ids\ntry `wheretoken --help`"}
+		}
+		id = flagID
+	}
+	if id == "" {
+		id = "newsprint"
+	}
+	if err := publicprofile.ValidatePalette(id); err != nil {
+		return Flags{}, usageError{msg: "public palette must be cobalt, magenta, or newsprint\ntry `wheretoken --help`"}
+	}
+	f.ProfilePath = id
+	f.PublicPalette = id
+	return *f, nil
+}
+
+func rejectForeignPublishFlags(f Flags) error {
+	if f.Command == CommandProfile {
+		return nil
+	}
+	if f.PublishYes || f.PublishDryRun || f.ProductRepo != "" || f.ProfileRepoFlag != "" || f.PublishPages != "" || f.PublishCheckout != "" {
+		return usageError{msg: "publish flags belong to profile publish\ntry `wheretoken profile publish --help`"}
+	}
+	return nil
 }
 
 func validateCardPath(p string) error {

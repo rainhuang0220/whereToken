@@ -19,6 +19,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/webembed"
 )
@@ -34,6 +35,11 @@ type server struct {
 	version     string
 	comm        *community.Client
 	commMu      sync.Mutex
+	publisher   profilePublisher
+	publishMu   sync.Mutex
+	publishJob  *publicprofile.Job
+	publishRun  bool
+	tickets     map[string]publishTicket
 }
 
 func NewHTTPServer(addr string, home adapter.Home, offline bool) *http.Server {
@@ -69,11 +75,17 @@ func NewMuxFull(home adapter.Home, adapters []adapter.Adapter, noCommunity bool,
 		version = "dev"
 	}
 	s := &server{home: home, adapters: adapters, offline: scan.CloudSkipped(adapters), noCommunity: noCommunity, version: version}
+	return withSafeHeaders(s.routes())
+}
+
+func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/summary", s.getSummary)
 	mux.HandleFunc("/api/scan", s.postScan)
 	mux.HandleFunc("/api/community", s.handleCommunity)
 	mux.HandleFunc("/api/public-profile", s.publicProfile)
+	mux.HandleFunc("/api/public-profile/publish", s.publicProfilePublish)
+	mux.HandleFunc("/api/public-profile/publish/job", s.publicProfilePublishJob)
 	mux.HandleFunc("/api/public-profile/surface.jpg", s.newsprintSurface)
 	mux.HandleFunc("/preview/public-profile/", s.previewPublicProfile)
 	mux.HandleFunc("/v1/community/", func(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +103,7 @@ func NewMuxFull(home adapter.Home, adapters []adapter.Adapter, noCommunity bool,
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		io.WriteString(w, "whereToken")
 	})
-	return withSafeHeaders(mux)
+	return mux
 }
 
 func withSafeHeaders(h http.Handler) http.Handler {

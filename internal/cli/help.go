@@ -21,6 +21,8 @@ USAGE
   wheretoken [flags] profile build <dir>     public snapshot + light/dark preview + live page
   wheretoken [flags] profile validate <path> check a profile.json or bundle
   wheretoken profile palette [cobalt|magenta|newsprint]  save the public Profile default
+  wheretoken profile publish [cobalt|magenta|newsprint]   dry-run the GitHub profile publish
+  wheretoken profile publish --yes                       push only after the dry-run is accepted
   wheretoken profile validate <path> --production   fail incomplete cloud token coverage
   wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG

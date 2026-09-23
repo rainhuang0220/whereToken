@@ -1903,6 +1903,27 @@ body:has(.glaze-hall.is-open) {
   padding-top: 0.2rem;
 }
 
+.public-preflight {
+  margin-top: 0.8rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--copper);
+  background: var(--void);
+  color: var(--bone);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.public-preflight p,
+.public-preflight ul {
+  margin: 0.35rem 0;
+}
+
+.public-preflight code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ash);
+}
+
 .glaze-hall.is-open .public-face {
   position: fixed;
   z-index: 60;
@@ -1920,6 +1941,7 @@ body:has(.glaze-hall.is-open) {
 .glaze-hall.is-open .public-face .public-command,
 .glaze-hall.is-open .public-face .public-copy,
 .glaze-hall.is-open .public-face .public-mini,
+.glaze-hall.is-open .public-face .public-preflight,
 .glaze-hall.is-open .public-face .public-face-head p {
   display: none;
 }
