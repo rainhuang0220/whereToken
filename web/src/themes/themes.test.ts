@@ -77,10 +77,10 @@ describe('theme pack manifest', () => {
     ])
     expect(themes.map((t) => t.id)).toEqual([...THEME_IDS])
     expect(themes.map((t) => t.mark)).toEqual(['窑', '苔', '瓷', '绛', '昼', '墨', '漫', '端'])
-    expect(THEME_IDS).not.toContain('qingmo')
-    expect(THEME_IDS).not.toContain('frost')
-    expect(themes.some((t) => t.id === 'qingmo' || t.mark === '青' || t.name === '青墨')).toBe(false)
-    expect(themes.some((t) => t.id === 'frost' || t.mark === '霜' || t.name === '霜碳')).toBe(false)
+    expect(THEME_IDS as readonly string[]).not.toContain('qingmo')
+    expect(THEME_IDS as readonly string[]).not.toContain('frost')
+    expect(themes.some((t) => String(t.id) === 'qingmo' || t.mark === '青' || t.name === '青墨')).toBe(false)
+    expect(themes.some((t) => String(t.id) === 'frost' || t.mark === '霜' || t.name === '霜碳')).toBe(false)
   })
 
   it('gives each glaze 1–3 short Chinese sentences, not a swatch caption', () => {

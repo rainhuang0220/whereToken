@@ -197,12 +197,7 @@ func (s *Store) InsertDevice(ctx context.Context, userID int64, meta DeviceMeta)
 		return Device{}, "", err
 	}
 	now := s.clock()
-	if meta.Label == "" {
-		meta.Label = meta.OS + " " + meta.Arch
-	}
-	if len(meta.ClientVersion) > 64 {
-		meta.ClientVersion = meta.ClientVersion[:64]
-	}
+	meta = normalizeDeviceMeta(meta)
 	res, err := s.db.ExecContext(ctx, `INSERT INTO devices (user_id, public_id, label, os, arch, client_version, token_hash, token_version, created_at, last_seen_at) VALUES (?,?,?,?,?,?,?,1,?,?)`,
 		userID, publicID, meta.Label, meta.OS, meta.Arch, meta.ClientVersion, hash, now, now)
 	if err != nil {
@@ -215,22 +210,68 @@ func (s *Store) InsertDevice(ctx context.Context, userID int64, meta DeviceMeta)
 	return Device{ID: pk, UserID: userID, PublicID: publicID, Label: meta.Label, OS: meta.OS, Arch: meta.Arch, ClientVersion: meta.ClientVersion}, raw, nil
 }
 
+func normalizeDeviceMeta(meta DeviceMeta) DeviceMeta {
+	if meta.Label == "" {
+		meta.Label = strings.TrimSpace(meta.OS + " " + meta.Arch)
+	}
+	if len(meta.Label) > 128 {
+		meta.Label = meta.Label[:128]
+	}
+	if len(meta.OS) > 32 {
+		meta.OS = meta.OS[:32]
+	}
+	if len(meta.Arch) > 32 {
+		meta.Arch = meta.Arch[:32]
+	}
+	if len(meta.ClientVersion) > 64 {
+		meta.ClientVersion = meta.ClientVersion[:64]
+	}
+	return meta
+}
+
+// storedRow mirrors the persisted measures of one usage_daily_model row that
+// participate in equal-revision comparison. Anything not listed here
+// (writer_device_id, updated_at) is bookkeeping, not a measure, and does not
+// gate the comparison.
+type storedRow struct {
+	Revision                             int64
+	Miss, CacheRead, CacheCreate, Output int64
+	Requests, UserTurns                  int64
+	Quality, Derivation                  string
+}
+
+func (a storedRow) equalMeasures(b syncagg.DailyModel) bool {
+	return a.Miss == b.Miss && a.CacheRead == b.CacheRead && a.CacheCreate == b.CacheCreate &&
+		a.Output == b.Output && a.Requests == b.Requests && a.UserTurns == b.UserTurns &&
+		a.Quality == b.Quality && a.Derivation == b.Derivation
+}
+
 func (s *Store) ApplyUsage(ctx context.Context, userID, deviceID int64, rows []syncagg.DailyModel) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	now := s.clock()
+	if err := applyUsageTx(ctx, tx, s.clock(), userID, deviceID, rows); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// applyUsageTx is the transaction body shared by ApplyUsage (used directly
+// by tests and by any future non-idempotency-tracked caller) and SyncBatch,
+// which must apply usage, timezone, source status, and the idempotency
+// record as one atomic unit rather than as separate best-effort writes.
+func applyUsageTx(ctx context.Context, tx *sql.Tx, now time.Time, userID, deviceID int64, rows []syncagg.DailyModel) error {
 	for _, row := range rows {
 		canonDevice := deviceID
 		if row.SourceScope == syncagg.ScopeAccountGlobal {
 			canonDevice = 0
 		}
-		var storedRev, storedMiss sql.NullInt64
-		err := tx.QueryRowContext(ctx, `SELECT revision, miss FROM usage_daily_model WHERE user_id=? AND source_scope=? AND device_id=? AND tool=? AND source_key_hash=? AND date=? AND vendor=? AND model=?`,
+		var stored storedRow
+		err := tx.QueryRowContext(ctx, `SELECT revision, miss, cache_read, cache_create, output, requests, user_turns, quality, derivation FROM usage_daily_model WHERE user_id=? AND source_scope=? AND device_id=? AND tool=? AND source_key_hash=? AND date=? AND vendor=? AND model=? FOR UPDATE`,
 			userID, string(row.SourceScope), canonDevice, row.Tool, row.SourceKeyHash, row.Date, row.Vendor, row.Model,
-		).Scan(&storedRev, &storedMiss)
+		).Scan(&stored.Revision, &stored.Miss, &stored.CacheRead, &stored.CacheCreate, &stored.Output, &stored.Requests, &stored.UserTurns, &stored.Quality, &stored.Derivation)
 		switch {
 		case err == sql.ErrNoRows:
 			if _, err := tx.ExecContext(ctx, `INSERT INTO usage_daily_model (user_id, device_id, source_scope, tool, source_key_hash, date, vendor, model, miss, cache_read, cache_create, output, requests, user_turns, quality, derivation, revision, writer_device_id, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -242,11 +283,16 @@ func (s *Store) ApplyUsage(ctx context.Context, userID, deviceID int64, rows []s
 		case err != nil:
 			return err
 		default:
-			if row.Revision < storedRev.Int64 {
+			if row.Revision < stored.Revision {
 				return ErrStaleRevision
 			}
-			if row.Revision == storedRev.Int64 {
-				if row.Miss != storedMiss.Int64 {
+			if row.Revision == stored.Revision {
+				// Equal revision must mean an identical retry (safe no-op)
+				// or a genuine conflict — never a silent partial update.
+				// Comparing only one column (historically `miss`) let a
+				// same-revision retry with different cache/output/request/
+				// quality/derivation values through unnoticed.
+				if !stored.equalMeasures(row) {
 					return ErrRevisionClash
 				}
 				continue
@@ -259,42 +305,74 @@ func (s *Store) ApplyUsage(ctx context.Context, userID, deviceID int64, rows []s
 			}
 		}
 	}
-	return tx.Commit()
+	return nil
 }
 
+// SyncBatch applies one sync request as a single atomic unit: usage rows,
+// the caller's timezone, per-source status, and the idempotency record
+// either all commit together or none do. A prior version wrote these as
+// separate best-effort statements outside any shared transaction and
+// discarded the timezone/source-state errors, so a client could see HTTP 200
+// while accounting rows committed but status metadata silently did not.
+//
+// Idempotency is keyed on the full request envelope (schema version, device,
+// timezone, price catalog version, client version, sources, and usage rows),
+// not only the usage rows, so replaying an identical retry after a changed
+// source-status list is correctly treated as a *different* body rather than
+// a no-op.
 func (s *Store) SyncBatch(ctx context.Context, userID, deviceID int64, batch syncagg.Batch) error {
-	body, err := json.Marshal(batch.DailyModelUsage)
+	body, err := json.Marshal(batch)
 	if err != nil {
 		return err
 	}
 	sum := sha256.Sum256(body)
-	var existing []byte
-	err = s.db.QueryRowContext(ctx, `SELECT body_hash FROM sync_revisions WHERE device_id=? AND idempotency_key=?`, deviceID, batch.IdempotencyKey).Scan(&existing)
-	if err == nil {
+	now := s.clock()
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Claim the idempotency key before doing any accounting work. On MySQL/
+	// InnoDB, a duplicate-key error from one statement does not abort the
+	// surrounding transaction, so the losing side of a race can safely fall
+	// through to compare hashes instead of double-applying usage.
+	_, err = tx.ExecContext(ctx, `INSERT INTO sync_revisions (user_id, device_id, idempotency_key, body_hash, schema_version, created_at) VALUES (?,?,?,?,?,?)`,
+		userID, deviceID, batch.IdempotencyKey, sum[:], batch.SchemaVersion, now)
+	if isDuplicateKeyErr(err) {
+		var existing []byte
+		if scanErr := tx.QueryRowContext(ctx, `SELECT body_hash FROM sync_revisions WHERE device_id=? AND idempotency_key=?`, deviceID, batch.IdempotencyKey).Scan(&existing); scanErr != nil {
+			return scanErr
+		}
 		if string(existing) != string(sum[:]) {
 			return ErrIdempotency
 		}
-		return nil
+		return tx.Commit()
 	}
-	if err != sql.ErrNoRows {
+	if err != nil {
 		return err
 	}
-	if err := s.ApplyUsage(ctx, userID, deviceID, batch.DailyModelUsage); err != nil {
+
+	if err := applyUsageTx(ctx, tx, now, userID, deviceID, batch.DailyModelUsage); err != nil {
 		return err
 	}
 	if tz := strings.TrimSpace(batch.Timezone); tz != "" {
-		_, _ = s.db.ExecContext(ctx, `UPDATE users SET timezone=? WHERE id=?`, tz, userID)
-	}
-	if len(batch.Sources) > 0 {
-		now := s.clock()
-		for _, src := range batch.Sources {
-			_, _ = s.db.ExecContext(ctx, `INSERT INTO source_states (user_id, device_id, tool, source_scope, source_key_hash, status, quality, detected, updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status), quality=VALUES(quality), detected=VALUES(detected), updated_at=VALUES(updated_at)`,
-				userID, deviceID, src.Tool, string(src.SourceScope), src.SourceKeyHash, src.Status, src.Quality, boolToInt(src.Detected), now)
+		if _, err := tx.ExecContext(ctx, `UPDATE users SET timezone=? WHERE id=?`, tz, userID); err != nil {
+			return err
 		}
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO sync_revisions (user_id, device_id, idempotency_key, body_hash, schema_version, created_at) VALUES (?,?,?,?,?,?)`,
-		userID, deviceID, batch.IdempotencyKey, sum[:], batch.SchemaVersion, s.clock())
-	return err
+	for _, src := range batch.Sources {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO source_states (user_id, device_id, tool, source_scope, source_key_hash, status, quality, detected, updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status), quality=VALUES(quality), detected=VALUES(detected), updated_at=VALUES(updated_at)`,
+			userID, deviceID, src.Tool, string(src.SourceScope), src.SourceKeyHash, src.Status, src.Quality, boolToInt(src.Detected), now); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func isDuplicateKeyErr(err error) bool {
+	return mysqlError(err, 1062)
 }
 
 func boolToInt(v bool) int {
@@ -465,8 +543,16 @@ type pairRow struct {
 	SecretHash []byte
 	Meta       DeviceMeta
 	ExpiresAt  time.Time
+	UserID     sql.NullInt64
+	DeviceID   sql.NullInt64
 	ConsumedAt sql.NullTime
 	DeniedAt   sql.NullTime
+}
+
+type PairApproval struct {
+	Device        Device
+	UserLogin     string
+	SourceHMACKey []byte
 }
 
 func (s *Store) CreatePairChallenge(ctx context.Context, code string, secretHash []byte, meta DeviceMeta, exp time.Time) error {
@@ -482,8 +568,8 @@ func (s *Store) CreatePairChallenge(ctx context.Context, code string, secretHash
 func (s *Store) GetPairChallenge(ctx context.Context, code string) (pairRow, error) {
 	var row pairRow
 	var meta []byte
-	err := s.db.QueryRowContext(ctx, `SELECT secret_hash, device_meta, expires_at, consumed_at, denied_at FROM pairing_challenges WHERE display_code=?`, code).Scan(
-		&row.SecretHash, &meta, &row.ExpiresAt, &row.ConsumedAt, &row.DeniedAt,
+	err := s.db.QueryRowContext(ctx, `SELECT secret_hash, device_meta, expires_at, user_id, device_id, consumed_at, denied_at FROM pairing_challenges WHERE display_code=?`, code).Scan(
+		&row.SecretHash, &meta, &row.ExpiresAt, &row.UserID, &row.DeviceID, &row.ConsumedAt, &row.DeniedAt,
 	)
 	if err == sql.ErrNoRows {
 		return pairRow{}, ErrNotFound
@@ -496,15 +582,149 @@ func (s *Store) GetPairChallenge(ctx context.Context, code string) (pairRow, err
 }
 
 func (s *Store) DenyPair(ctx context.Context, code string, userID int64) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE pairing_challenges SET denied_at=?, user_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
+	res, err := s.db.ExecContext(ctx, `UPDATE pairing_challenges SET denied_at=?, user_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
 		s.clock(), userID, code)
-	return err
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return ErrNotFound
+	}
+	return nil
 }
 
-func (s *Store) ConsumePair(ctx context.Context, code string, userID int64) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE pairing_challenges SET consumed_at=?, user_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
-		s.clock(), userID, code)
-	return err
+func (s *Store) ApprovePair(ctx context.Context, code string, userID int64) (Device, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Device{}, err
+	}
+	defer tx.Rollback()
+
+	var row pairRow
+	var meta []byte
+	err = tx.QueryRowContext(ctx, `SELECT secret_hash, device_meta, expires_at, user_id, device_id, consumed_at, denied_at FROM pairing_challenges WHERE display_code=? FOR UPDATE`, code).Scan(
+		&row.SecretHash, &meta, &row.ExpiresAt, &row.UserID, &row.DeviceID, &row.ConsumedAt, &row.DeniedAt,
+	)
+	if err == sql.ErrNoRows {
+		return Device{}, ErrNotFound
+	}
+	if err != nil {
+		return Device{}, err
+	}
+	if err := json.Unmarshal(meta, &row.Meta); err != nil {
+		return Device{}, err
+	}
+	if row.DeniedAt.Valid {
+		return Device{}, ErrNotFound
+	}
+	// Retrieving an already-approved device must survive a dropped response
+	// or restart even after the original 10-minute pairing window elapses;
+	// only a *new* approval is gated by expiry.
+	if row.ConsumedAt.Valid {
+		if !row.UserID.Valid || row.UserID.Int64 != userID || !row.DeviceID.Valid {
+			return Device{}, ErrUnauthorized
+		}
+		dev, err := deviceByIDTx(ctx, tx, row.DeviceID.Int64, userID)
+		if err != nil {
+			return Device{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return Device{}, err
+		}
+		return dev, nil
+	}
+	if !row.ExpiresAt.After(s.clock()) {
+		return Device{}, ErrNotFound
+	}
+
+	publicID, err := newUUID4()
+	if err != nil {
+		return Device{}, err
+	}
+	row.Meta = normalizeDeviceMeta(row.Meta)
+	now := s.clock()
+	res, err := tx.ExecContext(ctx, `INSERT INTO devices (user_id, public_id, label, os, arch, client_version, token_hash, token_version, created_at, last_seen_at) VALUES (?,?,?,?,?,?,?,1,?,?)`,
+		userID, publicID, row.Meta.Label, row.Meta.OS, row.Meta.Arch, row.Meta.ClientVersion, row.SecretHash, now, now)
+	if err != nil {
+		return Device{}, err
+	}
+	deviceID, err := res.LastInsertId()
+	if err != nil {
+		return Device{}, err
+	}
+	updated, err := tx.ExecContext(ctx, `UPDATE pairing_challenges SET consumed_at=?, user_id=?, device_id=? WHERE display_code=? AND consumed_at IS NULL AND denied_at IS NULL`,
+		now, userID, deviceID, code)
+	if err != nil {
+		return Device{}, err
+	}
+	n, err := updated.RowsAffected()
+	if err != nil {
+		return Device{}, err
+	}
+	if n != 1 {
+		return Device{}, ErrNotFound
+	}
+	if err := tx.Commit(); err != nil {
+		return Device{}, err
+	}
+	return Device{
+		ID: deviceID, UserID: userID, PublicID: publicID, Label: row.Meta.Label,
+		OS: row.Meta.OS, Arch: row.Meta.Arch, ClientVersion: row.Meta.ClientVersion,
+	}, nil
+}
+
+func deviceByIDTx(ctx context.Context, tx *sql.Tx, deviceID, userID int64) (Device, error) {
+	var d Device
+	var lastSync, revoked sql.NullTime
+	err := tx.QueryRowContext(ctx, `SELECT id, user_id, public_id, label, os, arch, client_version, last_seen_at, last_sync_at, revoked_at FROM devices WHERE id=? AND user_id=?`,
+		deviceID, userID).Scan(
+		&d.ID, &d.UserID, &d.PublicID, &d.Label, &d.OS, &d.Arch, &d.ClientVersion, &d.LastSeenAt, &lastSync, &revoked,
+	)
+	if err == sql.ErrNoRows {
+		return Device{}, ErrNotFound
+	}
+	if err != nil {
+		return Device{}, err
+	}
+	if lastSync.Valid {
+		d.LastSyncAt = lastSync.Time
+	}
+	d.Revoked = revoked.Valid
+	if d.Revoked {
+		return Device{}, ErrUnauthorized
+	}
+	return d, nil
+}
+
+func (s *Store) GetPairApproval(ctx context.Context, code string) (PairApproval, error) {
+	var out PairApproval
+	var lastSync, revoked sql.NullTime
+	err := s.db.QueryRowContext(ctx, `SELECT d.id, d.user_id, d.public_id, d.label, d.os, d.arch, d.client_version, d.last_seen_at, d.last_sync_at, d.revoked_at, u.github_login, u.source_hmac_key
+FROM pairing_challenges p
+JOIN devices d ON d.id=p.device_id
+JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+WHERE p.display_code=? AND p.consumed_at IS NOT NULL AND p.denied_at IS NULL`, code).Scan(
+		&out.Device.ID, &out.Device.UserID, &out.Device.PublicID, &out.Device.Label, &out.Device.OS, &out.Device.Arch,
+		&out.Device.ClientVersion, &out.Device.LastSeenAt, &lastSync, &revoked, &out.UserLogin, &out.SourceHMACKey,
+	)
+	if err == sql.ErrNoRows {
+		return PairApproval{}, ErrNotFound
+	}
+	if err != nil {
+		return PairApproval{}, err
+	}
+	if lastSync.Valid {
+		out.Device.LastSyncAt = lastSync.Time
+	}
+	out.Device.Revoked = revoked.Valid
+	if out.Device.Revoked {
+		return PairApproval{}, ErrUnauthorized
+	}
+	return out, nil
 }
 
 func (s *Store) newDisplayCode(ctx context.Context) (string, error) {

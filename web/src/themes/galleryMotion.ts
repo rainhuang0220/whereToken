@@ -164,7 +164,7 @@ export function captureFlip(
   }
   if (typeof Flip?.getState !== 'function') return null
   try {
-    return Flip.getState(targets)
+    return Flip.getState(els)
   } catch {
     return null
   }

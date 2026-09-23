@@ -1,34 +1,30 @@
 # ADR: whereToken Hosted Web App v0.7.0
 
-**Status:** Proposed (audit complete, implementation next)  
-**Date:** 2026-09-04  
-**Stable base:** `v0.6.4` (`f400e38`). Do not move that tag.  
-**Workspace HEAD:** `bf28d96` (`main` = `origin/main`)
+**Status:** Implemented in `v0.7.0` (`internal/hosted`, `cmd/wheretoken-hosted`, `wheretoken login`/`sync`/`logout`). Sections below describe the accepted architecture as designed; see [`docs/v1-review/architecture-review.md`](../v1-review/architecture-review.md) for a post-implementation correctness review and the hardening work it drove.  
+**Original planning date:** 2026-09-04  
+**Stable base at the time:** `v0.6.4`.
 
-This document records architecture for turning `https://wheretoken.plainlist.space` into a login-gated app that shows **the signed-in user's real whereToken metrics**. It is not a port of PlainList. Every choice below exists because of whereToken's local scanner, Cursor account-global usage, price/portrait engines, and privacy boundary.
+This document records the architecture for turning `https://wheretoken.plainlist.space` into a login-gated app that shows **the signed-in user's real whereToken metrics**. Every choice below exists because of whereToken's local scanner, Cursor account-global usage, price/portrait engines, and privacy boundary. It is not a port of any other product.
+
+### Status update (post-implementation)
+
+The design below shipped substantially as planned: GitHub OAuth + PKCE, device pairing, daily-by-model sync, `source_scope` REPLACE/SUM semantics, and hosted dashboard reconstruction through the shared `internal/metric` engine. The v1 maturity review found and fixed several correctness gaps against this design — equal-revision comparison covering only one column, idempotency keyed on a partial request body, non-atomic sync persistence, an in-memory-only pairing credential, and a CSRF cookie fallback that didn't match the header-only contract described below. Those fixes live in `internal/hosted` and `internal/syncagg`; this document is not re-litigated line by line to match every implementation detail, so treat mismatches between prose here and current code as documentation drift to fix, not as evidence the running service does something different on purpose.
+
+Deferred, not yet done: mandatory (not best-effort) rate limiting correct for the actual reverse-proxy topology, a maintained (non-EOL) database baseline with a real migration ledger, process-level graceful shutdown, and a `/api/health` check that verifies database reachability rather than only that the process is running.
 
 ---
 
-## Discovery (re-verified this session)
+## Discovery (at original design time)
+
+This table is the starting inventory this ADR was written against. It intentionally omits server hostnames/IPs, SSH key names, sibling-application inventory, and other host-specific operational details that do not belong in a public repository; that information lives in the maintainer's private deployment notes, not here.
 
 | Fact | Value |
 | --- | --- |
-| Repo | `https://github.com/rainhuang0220/whereToken.git` at `/Users/rainhuang/Desktop/whereToken` |
-| Latest tag | `v0.6.4` |
-| CLI commands today | report (default), serve, scan, sources, doctor, rebuild, update, uninstall, completion, community, pricing. **No login/sync.** |
+| CLI commands at the time | report (default), serve, scan, sources, doctor, rebuild, update, uninstall, completion, community, pricing. **No login/sync yet.** |
 | Local dashboard | `wheretoken serve` → `127.0.0.1:8787–8797` → `GET /api/summary` + `POST /api/scan`. Non-localhost bind refused. |
-| Go module deps | `go-isatty`, `modernc.org/sqlite`. **No MySQL, OAuth, session, or Keychain library.** |
+| Go module deps at the time | `go-isatty`, `modernc.org/sqlite`. **No MySQL, OAuth, session, or Keychain library yet.** |
 | Project site | `https://rainhuang0220.github.io/whereToken/` (GitHub Pages). Demo at `/whereToken/demo/`. |
-| Server | `ubuntu@175.24.134.228` (SSH with `id_rsa`; `id_ed25519` rejected) |
-| DNS | `wheretoken.plainlist.space` A = `175.24.134.228` |
-| Live hostname today | Dedicated nginx vhost + valid Let's Encrypt cert + **HTTP 301 → HTTPS** |
-| What that vhost serves | `VITE_DEMO=1` Vue SPA + `/sample/{all,today,7d,30d}.json`. `/api/summary` returns HTML. Status copy: **演示数据**. |
-| Sibling apps | Foreshadow (`8765`), PlainList (`3001`), Locus (`3333`), kiln.plainlist.space (`17777`). Untouched. |
-| Port `3400` | Free. `8787` on the server is already uvicorn. |
-| MySQL | 5.7.43. Schemas: `plainlist`, `fire_db`, system schemas. **No `wheretoken` database.** |
-| Disk / RAM / Go | 88% disk (5.9G free), 1.9Gi RAM, **no Go toolchain**. Cross-compile off-box. |
-
-The current hostname is **not** Foreshadow fallthrough (that historical accident is already patched with a dedicated `server_name`). It is the other forbidden shape: **a public synthetic demo pretending to be the product.** v0.7.0 replaces that root.
+| Hostname before this work | Served a `VITE_DEMO=1` build behind the intended production hostname — a public synthetic demo standing in for the product. This ADR's v0.7.0 work replaces that root with the real login-gated app. |
 
 ---
 
@@ -492,22 +488,22 @@ Deletion (real rows, not UI-only):
 ## 12. Deployment
 
 ```
-nginx (existing aaPanel)
+nginx
   server_name wheretoken.plainlist.space;
-  listen 80  → ACME + 301 HTTPS   (already in place)
+  listen 80  → ACME + 301 HTTPS
   listen 443 → SPA + API
     location /api/  → http://127.0.0.1:3400
-    location /      → /www/wwwroot/wheretoken-releases/<sha>/
+    location /      → <hosted release directory>/
                       try_files $uri $uri/ /index.html
                       (Hosted dist, not VITE_DEMO)
 
 wheretoken-hosted
   bind 127.0.0.1:3400
-  PM2 name wheretoken-hosted
-  env file /home/ubuntu/wheretoken/shared/.env  (0600)
+  process supervisor: whereToken's maintainer-managed choice
+  env file: 0600, outside the web root
 ```
 
-Do not proxy the whole site to Go if nginx can serve hashed assets; the API stays loopback. Do not bind `0.0.0.0:3400`.
+Do not proxy the whole site to Go if nginx can serve hashed assets; the API stays loopback. Do not bind `0.0.0.0:3400`. Host-specific paths, process-supervisor configuration, and any sibling applications sharing the deployment host are documented in the maintainer's private operational notes, not in this repository.
 
 Env (names, not values):
 
@@ -523,7 +519,7 @@ Health: `GET /api/health` → `{"ok":true,"version":"0.7.0"}`. No DSN, paths, or
 
 Logs: structured, request id, auth/sync/DB errors. Never log device tokens, OAuth secrets, or full sync bodies.
 
-Foreshadow / PlainList / Locus / kiln vhosts are not edited. Smoke after deploy: those three hostnames still return themselves; whereToken no longer serves `sample/all.json` as the product.
+Sibling applications on the same deployment host are not edited by this work. Smoke after deploy: those hostnames still return themselves; whereToken no longer serves `sample/all.json` as the product.
 
 `site/index.html` gains one CTA: **Open Web App** → `https://wheretoken.plainlist.space`. Demo / Download / GitHub / Docs stay. CLI footer, once Hosted is live, prefers the Web App URL; `--help` and README keep the Project Site. Until Hosted shows real data, do not point the default report at a demo hostname.
 
@@ -535,7 +531,7 @@ v0.6.4 users have no hosted account. There is no ledger to import.
 
 Deploy sequence:
 
-1. Create MySQL database `wheretoken` + user (panel/admin; panel's stored root password currently 1045s)
+1. Create MySQL database `wheretoken` and a least-privilege application user with a freshly generated password stored only in the 0600 env file
 2. Cross-compile `wheretoken-hosted` (`GOOS=linux GOARCH=amd64`)
 3. Build `web` with `VITE_HOSTED=1` (and **not** `VITE_DEMO`)
 4. Write `.env` 0600
@@ -551,12 +547,12 @@ GitHub Pages, Homebrew, and `v0.6.4` GitHub Release are not part of this migrate
 
 | Failure | Action |
 | --- | --- |
-| Hosted binary crash | PM2 previous sha; nginx still serves last Hosted dist or bak-demo |
-| Bad SPA | point `root` at previous `wheretoken-releases/<sha>` |
-| Need the old public demo back | `root` → `wheretoken.plainlist.space.bak-demo` (synthetic, honest as demo only) |
-| API schema mistake | no user data of value in v1; `DROP DATABASE` is acceptable before public accounts exist |
+| Hosted binary crash | Restart from the previous known-good build; nginx still serves the last Hosted dist or the pre-launch demo backup |
+| Bad SPA | Point nginx `root` back at the previous release directory |
+| Need the old public demo back | Restore the pre-launch demo backup (synthetic, honest as demo only) |
+| API schema mistake | No user data of value in v1; `DROP DATABASE` is acceptable before public accounts exist |
 
-Never: retag `v0.6.4`, force-push `main`, edit Foreshadow to “fix” whereToken, or ship a Pages CNAME.
+Never: retag `v0.6.4`, force-push `main`, edit an unrelated sibling application to "fix" whereToken, or ship a Pages CNAME.
 
 CLI rollback for users is `wheretoken update` staying on 0.6.4 until the 0.7.0 tag exists. `login`/`sync` are new commands; old binaries ignore them.
 
@@ -663,9 +659,7 @@ Community Rank as a public board, social feed, teams, billing, public profiles, 
 
 ---
 
-## External blocker
-
-A dedicated GitHub OAuth App cannot be created from this repo. All other work proceeds. When the App exists, set:
+## GitHub OAuth App configuration
 
 ```
 Application name:              whereToken
@@ -673,9 +667,9 @@ Homepage URL:                  https://wheretoken.plainlist.space
 Authorization callback URL:    https://wheretoken.plainlist.space/api/v1/auth/github/callback
 ```
 
-No extra scopes. Put Client ID / Secret only in `/home/ubuntu/wheretoken/shared/.env` (0600).
+No extra scopes. Put Client ID / Secret only in the 0600 env file the hosted binary reads; never in the repository or in a web-served path.
 
-A second deploy-time task: create MySQL database `wheretoken` and user (aaPanel stored root password currently does not authenticate).
+Deploy-time task: create the MySQL database and application user described in [§13](#13-migration) before starting the hosted binary.
 
 ---
 

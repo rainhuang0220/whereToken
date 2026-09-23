@@ -14,7 +14,7 @@ import {
 const DIR = dirname(fileURLToPath(import.meta.url))
 
 function rowCodes(i: number): string[] {
-  return MAIN_ROWS[i].filter((slot) => !isGap(slot)).map((slot) => slot.code)
+  return MAIN_ROWS[i].flatMap((slot) => (isGap(slot) ? [] : [slot.code]))
 }
 
 function fakeKey() {

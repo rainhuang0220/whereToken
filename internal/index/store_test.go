@@ -229,11 +229,29 @@ func TestReplaceSameSizeDifferentInodeForcesFull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(path); err != nil {
+	old := mustStat(t, path)
+	replacement := filepath.Join(dir, "replacement.jsonl")
+	if err := os.WriteFile(replacement, []byte("same-bytes\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte("same-bytes\n"), 0o644); err != nil {
+	if err := os.Chtimes(replacement, old.ModTime(), old.ModTime()); err != nil {
 		t.Fatal(err)
+	}
+	oldInode := inodeOf(old)
+	replacementInode := inodeOf(mustStat(t, replacement))
+	if oldInode != 0 && replacementInode != 0 && oldInode == replacementInode {
+		t.Fatalf("test setup: coexisting files share inode %d", oldInode)
+	}
+	if err := os.Rename(replacement, path); err != nil {
+		// Windows cannot replace an existing file with Rename. Removing the
+		// destination first is still safe here because the replacement already
+		// exists with a verified, distinct identity.
+		if removeErr := os.Remove(path); removeErr != nil {
+			t.Fatal(removeErr)
+		}
+		if renameErr := os.Rename(replacement, path); renameErr != nil {
+			t.Fatal(renameErr)
+		}
 	}
 	parsed := 0
 	evs, _, mode, err := store.LoadOrParse("claude", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
@@ -243,11 +261,15 @@ func TestReplaceSameSizeDifferentInodeForcesFull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if inodeOf(mustStat(t, path)) == 0 {
+	newInode := inodeOf(mustStat(t, path))
+	if oldInode == 0 || newInode == 0 {
 		if mode != ModeUnchanged && mode != ModeFull {
 			t.Fatalf("no inode: mode=%s", mode)
 		}
 		return
+	}
+	if newInode == oldInode {
+		t.Fatalf("test setup: replacement reused inode %d", oldInode)
 	}
 	if mode != ModeFull || parsed != 1 || evs[0].RequestID != "new" {
 		t.Fatalf("replaced file mode=%s parsed=%d evs=%+v", mode, parsed, evs)

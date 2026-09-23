@@ -262,9 +262,35 @@ A request made through Claude Code using a MiniMax model is reported as:
 
 ### Local-first
 
-whereToken is designed to operate locally and does not require a whereToken cloud service. Local-first remains the core.
+whereToken is designed to operate locally and does not require a whereToken cloud service. Local-first remains the core. Three things can put data on a network, and each is separately opt-in — running the CLI or the local dashboard never does any of them on its own:
 
-### Data collection
+| Mode | Command | Trigger | What leaves the machine |
+| --- | --- | --- | --- |
+| Local (default) | `wheretoken`, `wheretoken serve` | Always local | Nothing. Cursor/Trae adapters may call *those products'* own account APIs with credentials those apps already store, to read token columns the local files don't have |
+| Hosted sync | `wheretoken login`, `wheretoken sync` | Explicit login, then each sync | Daily × tool × model **aggregates** (see below) to `wheretoken.plainlist.space` |
+| Public profile | `wheretoken profile build` | Explicit build + manual publish | Nothing automatically. You choose what to publish and where |
+| Community Rank | `wheretoken community on`, or `WHERETOKEN_COMMUNITY_URL` set | Explicit opt-in | One anonymous daily total to a URL you configure |
+
+### Hosted sync (opt-in)
+
+`wheretoken login` pairs this machine to a whereToken account via GitHub OAuth (identity only; no `repo` or `workflow` scopes, and the GitHub access token is discarded right after fetching your id/login/avatar) and stores a device credential locally (OS keychain when available, otherwise a `0600` file). `wheretoken sync` then uploads **daily-by-model aggregates**, not events:
+
+- calendar date, tool id, vendor, raw model id
+- miss / cache-read / cache-create / output token counts, requests, user turns
+- a per-source quality/derivation label and an HMAC-derived source key (never a raw path, username, or session id)
+- device id, timezone, price-catalog version, client version
+
+It never uploads prompts, code, conversation text, file paths, workspace names, session or request ids, API keys, OAuth tokens, or raw SQLite/JSONL. `internal/syncagg` enforces this with tests that plant those fields in local data and assert they cannot reach the serialized payload.
+
+The hosted dashboard at `wheretoken.plainlist.space` shows only what has been synced — it is a separate, previously-uploaded aggregate, not a live view of your machine. Manage or remove it any time:
+
+```bash
+wheretoken logout                # revokes this device and deletes its local credential
+```
+
+Deleting synced data or the account itself (Settings → Privacy on the hosted site) removes the stored aggregates, sessions, and devices server-side. See [`docs/architecture/hosted-web-v070.md`](docs/architecture/hosted-web-v070.md) for the full data model.
+
+### Community Rank
 
 Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_COMMUNITY_URL` is set; there is no public whereToken rank URL (a remote deploy blocker). When configured, it uploads **anonymous daily totals** only (participant UUID, local calendar day, token count, optional API-equivalent estimated cost, client version). A missing price is omitted, never sent as $0. It does not upload prompts, sessions, paths, request ids, credentials, raw events, or the SQLite index. Participation is on by default in that mode; `wheretoken community off`, `WHERETOKEN_COMMUNITY=0`, or `DO_NOT_TRACK=1` turns it off. Rank **累计** is the sum of days this client uploaded, not the kiln 全部 ledger. This is not a global, worldwide, or all-AI-users rank. See [`docs/community.md`](docs/community.md).
 
@@ -300,6 +326,7 @@ whereToken is currently in **alpha**.
 - Cost estimate: [`docs/cost.md`](docs/cost.md)
 - Community Rank: [`docs/community.md`](docs/community.md)
 - Public deployment: [`docs/deployment.md`](docs/deployment.md)
+- Hosted sync architecture: [`docs/architecture/hosted-web-v070.md`](docs/architecture/hosted-web-v070.md)
 - Adding an adapter: [`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON output format: [`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - Completions: [`completions/`](completions/)

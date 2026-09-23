@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -30,8 +31,11 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 	if len(code) < 8 || secret == "" {
 		t.Fatalf("%s", startRec.Body.Bytes())
 	}
-	if strings.Contains(startRec.Body.String(), "wtd_1.") {
-		t.Fatal("start must not issue device token")
+	// The CLI-generated device_secret is the eventual bearer credential
+	// itself, held only by the process that started pairing; the server
+	// never has to hand a second, separately-generated secret back later.
+	if !strings.HasPrefix(secret, "wtd_1.") {
+		t.Fatalf("device_secret must already carry the bearer prefix: %q", secret)
 	}
 
 	peek := httptest.NewRequest(http.MethodGet, "/api/v1/pair/challenge?code="+url.QueryEscape(code), nil)
@@ -83,18 +87,82 @@ func TestPairStartStatusConfirmAndSingleToken(t *testing.T) {
 		t.Fatalf("approved %d %+v", st, m)
 	}
 	tok, _ := m["device_token"].(string)
-	if !strings.HasPrefix(tok, "wtd_1.") {
-		t.Fatalf("token %v", m["device_token"])
+	if tok != secret {
+		t.Fatalf("device_token must equal the original device_secret, got %q want %q", tok, secret)
 	}
 	if m["source_hmac_key"] == nil || m["source_hmac_key"] == "" {
-		t.Fatal("approved poll must return the user HMAC key once")
+		t.Fatal("approved poll must return the user HMAC key")
 	}
+
+	// A dropped response, a slow client, or a server restart must not turn a
+	// successful approval into an unrecoverable "consumed" dead end: polling
+	// again with the same (code, secret) must keep returning the same
+	// approval rather than requiring the user to re-pair.
 	_, m2 := status()
-	if m2["status"] != "consumed" {
-		t.Fatalf("second poll %+v", m2)
+	if m2["status"] != "approved" {
+		t.Fatalf("repeated poll after approval: %+v", m2)
 	}
-	if m2["device_token"] != nil && m2["device_token"] != "" {
-		t.Fatal("raw token replayed")
+	if m2["device_token"] != secret {
+		t.Fatalf("repeated poll returned a different token: %+v", m2)
+	}
+}
+
+// TestPairConcurrentConfirmCreatesOneDevice proves that two overlapping
+// approvals of the same pairing challenge by the same signed-in user cannot
+// race into two devices sharing one challenge, and that both requests
+// observe the same terminal device identity.
+func TestPairConcurrentConfirmCreatesOneDevice(t *testing.T) {
+	h := testMux(t, githubStub())
+	auth := loginAuth(t, h)
+
+	startReq := httptest.NewRequest(http.MethodPost, "/api/v1/pair/start", strings.NewReader(`{"os":"linux","arch":"amd64","client_version":"0.7.0"}`))
+	startReq.Header.Set("Content-Type", "application/json")
+	startRec := httptest.NewRecorder()
+	h.ServeHTTP(startRec, startReq)
+	var started map[string]any
+	if err := json.Unmarshal(startRec.Body.Bytes(), &started); err != nil {
+		t.Fatal(err)
+	}
+	code := started["display_code"].(string)
+
+	confirmOnce := func() (int, map[string]any) {
+		body, _ := json.Marshal(map[string]any{"display_code": code, "accept": true})
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/pair/confirm", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		auth.apply(req)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		var m map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &m)
+		return rec.Code, m
+	}
+
+	const n = 8
+	results := make([]struct {
+		code int
+		body map[string]any
+	}, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			results[i].code, results[i].body = confirmOnce()
+		}(i)
+	}
+	wg.Wait()
+
+	deviceIDs := map[string]struct{}{}
+	for _, r := range results {
+		if r.code != http.StatusOK {
+			t.Fatalf("confirm %d: %+v", r.code, r.body)
+		}
+		if id, _ := r.body["device_id"].(string); id != "" {
+			deviceIDs[id] = struct{}{}
+		}
+	}
+	if len(deviceIDs) != 1 {
+		t.Fatalf("concurrent confirms produced %d distinct devices: %v", len(deviceIDs), deviceIDs)
 	}
 }
 

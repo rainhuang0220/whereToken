@@ -5,7 +5,6 @@ project_name: wheretoken
 
 before:
   hooks:
-    - go mod tidy
     - sh -c "cd web && npm ci && npm run build && rm -rf ../internal/webembed/dist && mkdir -p ../internal/webembed/dist && cp -R dist/. ../internal/webembed/dist/"
 
 builds:

@@ -257,9 +257,35 @@ whereToken 发现各 coding agent 的用量信息，把来源各异的记录归�
 
 ### 本机优先
 
-whereToken 设计为在本机运行，不依赖 whereToken 云服务。本机优先仍是核心。
+whereToken 设计为在本机运行，不依赖 whereToken 云服务。本机优先仍是核心。以下三件事才会让数据上网，且都需要单独主动开启——只运行命令行或本机仪表盘本身不会触发任何一项：
 
-### 数据采集
+| 模式 | 命令 | 触发方式 | 会离开本机的内容 |
+| --- | --- | --- | --- |
+| 本机（默认） | `wheretoken`、`wheretoken serve` | 始终本机 | 不会离开本机。Cursor/Trae 适配器可能用那些应用自己已保存的凭证访问**它们自己**的账号接口，以获取本地文件里没有的 token 列 |
+| 云端同步 | `wheretoken login`、`wheretoken sync` | 主动登录后，每次同步 | 按日 × 工具 × 模型的**聚合数据**（见下）上传到 `wheretoken.plainlist.space` |
+| 公开画像 | `wheretoken profile build` | 主动构建 + 手动发布 | 不会自动上传任何内容。发布什么、发到哪里由你决定 |
+| Community Rank | `wheretoken community on`，或设置 `WHERETOKEN_COMMUNITY_URL` | 主动开启 | 每天一条匿名合计，发到你自己配置的地址 |
+
+### 云端同步（可选）
+
+`wheretoken login` 通过 GitHub OAuth 把本机与一个 whereToken 账号配对（只用于身份识别，不请求 `repo` 或 `workflow` 权限；GitHub access token 在取到 id/login/avatar 后立即丢弃），并在本机保存一个设备凭证（能用系统密钥链就用，否则是 0600 权限的文件）。之后 `wheretoken sync` 上传的是**按日、按模型的合计**，不是逐条事件：
+
+- 日历日期、工具 id、厂家、原始模型 id
+- 未命中 / 缓存读 / 缓存写 / 输出 token 数、请求数、用户回合数
+- 每个来源的质量/derivation 标签，以及一个 HMAC 派生的来源 key（绝不是原始路径、用户名或 session id）
+- 设备 id、时区、价目卡版本、客户端版本
+
+不会上传提示词、代码、对话正文、文件路径、工作区名、session/request id、API key、OAuth token，或原始的 SQLite/JSONL。`internal/syncagg` 用测试强制这一点：故意在本机数据里放入这些字段，断言它们不会进入序列化后的上传体。
+
+`wheretoken.plainlist.space` 上的云端仪表盘只显示已经同步过的内容——那是此前上传的聚合数据，不是本机的实时视图。随时可以管理或撤销：
+
+```bash
+wheretoken logout                # 撤销这台设备并删除本机凭证
+```
+
+在云端网站的 Settings → Privacy 里删除已同步数据或整个账号，会在服务端一并删除保存的聚合数据、会话和设备记录。完整数据模型见 [`docs/architecture/hosted-web-v070.md`](docs/architecture/hosted-web-v070.md)。
+
+### Community Rank
 
 本机分析留在这台电脑上。Community Rank 仅在设置了 `WHERETOKEN_COMMUNITY_URL` 时才会连远程；本仓库没有公开的排名服务地址，这是远程部署阻塞项。配置后只会上传**匿名每日合计**（参与者 UUID、本地日历日、token 数、可选的 API 等价估价、客户端版本）。没有标价会省略，不会写成 $0。不会上传提示词、会话、路径、request id、凭证、原始事件或 SQLite 索引。该模式下默认参加；`wheretoken community off`、`WHERETOKEN_COMMUNITY=0` 或 `DO_NOT_TRACK=1` 可关闭。排名的「累计」是这台客户端上传过的那些天，不是窑墙「全部」。这不是全球、全世界或全体 AI 用户排名。见 [`docs/community.md`](docs/community.md)。
 
@@ -295,6 +321,7 @@ whereToken 目前处于 **alpha**。
 - 估价：[`docs/cost.md`](docs/cost.md)
 - 社区排名：[`docs/community.md`](docs/community.md)
 - 公网部署：[`docs/deployment.md`](docs/deployment.md)
+- 云端同步架构：[`docs/architecture/hosted-web-v070.md`](docs/architecture/hosted-web-v070.md)
 - 增加适配器：[`docs/adding-an-adapter.md`](docs/adding-an-adapter.md)
 - JSON 输出格式：[`docs/cli-json.schema.json`](docs/cli-json.schema.json)
 - 补全：[`completions/`](completions/)
