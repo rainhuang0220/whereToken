@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
@@ -468,6 +469,256 @@ func publishRequestTo(t *testing.T, h http.Handler, session, csrf, palette strin
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
+}
+
+func TestPublicProjectionRejectsWeakerSnapshot(t *testing.T) {
+	h := publishMux(t, newMemGit(publishReadme))
+	token := seedLogin(t, 777001, "snapshot-guard")
+	now := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
+	complete := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-2*time.Hour), 1000),
+			authEvent("cursor", "cursor", now.Add(-time.Hour), 5000),
+		},
+	})
+	updated := mustProjection(t, publicprofile.Input{
+		Now: now.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-2*time.Hour), 1100),
+			authEvent("cursor", "cursor", now.Add(-time.Hour), 5200),
+		},
+	})
+	putProjection(t, h, token, complete.raw)
+	if got := publicSnapshotID(t, h, "snapshot-guard"); got != complete.snap.SnapshotID {
+		t.Fatalf("stored %s", got)
+	}
+	putProjection(t, h, token, updated.raw)
+	if got := publicSnapshotID(t, h, "snapshot-guard"); got != updated.snap.SnapshotID {
+		t.Fatal("complete update did not replace the public snapshot")
+	}
+	partial := mustProjection(t, publicprofile.Input{
+		Now: now.Add(2 * time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			{Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-2 * time.Hour), Miss: 1000, Quality: event.QualityDegraded},
+		},
+	})
+	if partial.snap.DataStatus != publicprofile.StatusPartial {
+		t.Fatalf("partial status %s", partial.snap.DataStatus)
+	}
+	kept := putProjection(t, h, token, partial.raw)
+	if kept["kept"] != "previous" || kept["snapshot_id"] != updated.snap.SnapshotID {
+		t.Fatalf("downgrade response %+v", kept)
+	}
+	if got := publicSnapshotID(t, h, "snapshot-guard"); got != updated.snap.SnapshotID {
+		t.Fatal("partial snapshot replaced a complete public projection")
+	}
+}
+
+func TestPublicProjectionRestoresCoverageAndKeepsProviderHistory(t *testing.T) {
+	h := publishMux(t, newMemGit(publishReadme))
+	token := seedLogin(t, 777002, "coverage-guard")
+	now := time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC)
+	partial := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			{Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-time.Hour), Miss: 40, Quality: event.QualityDegraded},
+		},
+	})
+	complete := mustProjection(t, publicprofile.Input{
+		Now: now.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-time.Hour), 40),
+			authEvent("cursor", "cursor", now.Add(-time.Hour), 80),
+		},
+	})
+	putProjection(t, h, token, partial.raw)
+	putProjection(t, h, token, complete.raw)
+	if got := publicSnapshotID(t, h, "coverage-guard"); got != complete.snap.SnapshotID {
+		t.Fatal("complete snapshot did not replace a partial projection")
+	}
+
+	history := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-2*time.Hour), 100),
+			authEvent("cursor", "cursor", now.Add(-time.Hour), 900),
+		},
+	})
+	failed := mustProjection(t, publicprofile.Input{
+		Now: now.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Errors: []string{"cursor: upstream"},
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-2*time.Hour), 100),
+			{
+				Source: "cursor", Vendor: "cursor", RequestID: "cursor-local",
+				Timestamp: now.Add(-time.Hour),
+				Quality:   event.QualityDegraded, Derivation: event.DeriveRaw,
+			},
+		},
+	})
+	if failed.snap.DataStatus != publicprofile.StatusPartial {
+		t.Fatalf("provider failure status %s", failed.snap.DataStatus)
+	}
+	cursor, ok := agentByID(failed.snap, "cursor")
+	if !ok || cursor.Coverage.Reason != publicprofile.ReasonAPIFailed || cursor.Coverage.Tokens != publicprofile.StatusUnavailable {
+		t.Fatalf("cursor failure was not visible: %+v", cursor.Coverage)
+	}
+	alt, err := publicprofile.ReadmeAlt(publicprofile.ReadmeFacts{
+		TotalDisplay: failed.snap.Periods.All.Totals.Total.Display,
+		DataStatus:   failed.snap.DataStatus,
+		AsOfDate:     failed.snap.AsOfDate,
+	})
+	if err != nil || !strings.Contains(alt, "partial coverage") || !strings.Contains(alt, "September 23, 2026") {
+		t.Fatalf("readme alt %q err=%v", alt, err)
+	}
+	token2 := seedLogin(t, 777003, "cursor-guard")
+	putProjection(t, h, token2, history.raw)
+	kept := putProjection(t, h, token2, failed.raw)
+	if kept["kept"] != "previous" || publicSnapshotID(t, h, "cursor-guard") != history.snap.SnapshotID {
+		t.Fatal("cursor API failure replaced measured public history")
+	}
+}
+
+func TestPublishNewsprintAfterMagentaMatchesCommittedFiles(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	_, session, csrf := seedOwner(t)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: time.Date(2026, 9, 23, 12, 0, 0, 0, time.UTC), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", time.Date(2026, 9, 23, 10, 0, 0, 0, time.UTC), 250),
+		},
+	})
+	device := seedLogin(t, 4242, "rainhuang0220")
+	putProjection(t, h, device, proj.raw)
+
+	magenta := publishRequestTo(t, h, session, csrf, "magenta", true, "")
+	if magenta.Code != http.StatusOK {
+		t.Fatalf("magenta %d %s", magenta.Code, magenta.Body.String())
+	}
+	light := git.file("wheretoken/preview-light.svg")
+	dark := git.file("wheretoken/preview-dark.svg")
+	if bytes.Contains(light, []byte("newsprint-ink-")) || bytes.Contains(dark, []byte("newsprint-ink-")) {
+		t.Fatal("magenta preview contained newsprint ink")
+	}
+	news := publishRequestTo(t, h, session, csrf, "newsprint", true, "")
+	if news.Code != http.StatusOK {
+		t.Fatalf("newsprint %d %s", news.Code, news.Body.String())
+	}
+	light = git.file("wheretoken/preview-light.svg")
+	dark = git.file("wheretoken/preview-dark.svg")
+	readme := git.readme()
+	if !bytes.Contains(light, []byte("newsprint-ink-")) || !bytes.Contains(dark, []byte("newsprint-ink-")) {
+		t.Fatal("newsprint publish did not commit newsprint ink")
+	}
+	if !strings.Contains(readme, "raw.githubusercontent.com/rainhuang0220/rainhuang0220/main/wheretoken/preview-light.svg?v=") {
+		t.Fatalf("readme did not point at the newsprint revision\n%s", readme)
+	}
+	puts := git.puts
+	fake := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>magenta</text></svg>`)
+	git.replace("wheretoken/preview-light.svg", fake)
+	git.replace("wheretoken/preview-dark.svg", fake)
+	again := publishRequestTo(t, h, session, csrf, "newsprint", true, "")
+	if again.Code != http.StatusOK {
+		t.Fatalf("repair %d %s", again.Code, again.Body.String())
+	}
+	if git.puts == puts {
+		t.Fatal("already-published skipped a magenta file while the request was newsprint")
+	}
+	if !bytes.Contains(git.file("wheretoken/preview-light.svg"), []byte("newsprint-ink-")) || !bytes.Contains(git.file("wheretoken/preview-dark.svg"), []byte("newsprint-ink-")) {
+		t.Fatal("repair left a non-newsprint preview committed")
+	}
+}
+
+func authEvent(source, vendor string, at time.Time, miss int64) event.UsageEvent {
+	return event.UsageEvent{Source: source, Vendor: vendor, Timestamp: at, Miss: miss, Quality: event.QualityAuthoritative}
+}
+
+type builtProjection struct {
+	raw  []byte
+	snap publicprofile.Snapshot
+}
+
+func mustProjection(t *testing.T, in publicprofile.Input) builtProjection {
+	t.Helper()
+	snap, err := publicprofile.Build(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := publicprofile.Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return builtProjection{raw: raw, snap: snap}
+}
+
+func seedLogin(t *testing.T, id int64, login string) string {
+	t.Helper()
+	st := readyStore(t)
+	user, err := st.UpsertGitHubUser(context.Background(), GitHubIdentity{ID: id, Login: login, AvatarURL: "https://avatars.githubusercontent.com/u/1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, token, err := st.InsertDevice(context.Background(), user.ID, DeviceMeta{OS: "darwin", Arch: "arm64", ClientVersion: "test", Label: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+
+func putProjection(t *testing.T, h http.Handler, token string, raw []byte) map[string]any {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/sync/public-profile", bytes.NewReader(raw))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("sync %d %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	return body
+}
+
+func publicSnapshotID(t *testing.T, h http.Handler, login string) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/"+login, nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get %d %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Snapshot struct {
+			SnapshotID string `json:"snapshot_id"`
+		} `json:"snapshot"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	return body.Snapshot.SnapshotID
+}
+
+func agentByID(snap publicprofile.Snapshot, id string) (publicprofile.Breakdown, bool) {
+	for _, row := range snap.Periods.All.ByAgent {
+		if row.ID == id {
+			return row, true
+		}
+	}
+	return publicprofile.Breakdown{}, false
+}
+
+func (g *memGit) file(path string) []byte {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return append([]byte(nil), g.files["rainhuang0220/rainhuang0220\n"+path].Body...)
+}
+
+func (g *memGit) replace(path string, body []byte) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.files["rainhuang0220/rainhuang0220\n"+path] = memGitFile{SHA: memDigest(body), Body: append([]byte(nil), body...)}
 }
 
 func boolJSON(v bool) string {

@@ -1,6 +1,7 @@
 package publicprofile
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -265,6 +266,34 @@ func writeNewsprintDefs(b *strings.Builder, s Snapshot, th Theme) {
 	b.WriteString("<defs>\n")
 	b.WriteString(defs.String())
 	b.WriteString("</defs>\n")
+}
+
+// PreviewMatchesPalette reports whether a rendered preview is the requested
+// palette. Newsprint with activity uses newsprint-ink patterns. Any other
+// palette must not. An empty newsprint sheet has no active cells and
+// therefore no ink patterns.
+func PreviewMatchesPalette(svg []byte, palette string, active bool) bool {
+	if err := ValidatePalette(palette); err != nil {
+		return false
+	}
+	ink := bytes.Contains(svg, []byte("newsprint-ink-"))
+	if palette == PaletteNewsprint {
+		if active {
+			return ink
+		}
+		return !ink
+	}
+	return !ink
+}
+
+func SnapshotHasActiveDays(s Snapshot) bool {
+	ser := tokenSeries(s)
+	for i, state := range ser.States {
+		if state == CellActive && i < len(ser.Values) && ser.Values[i] > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // newsprintInk shifts lightness by a fixed formation of the cell index.

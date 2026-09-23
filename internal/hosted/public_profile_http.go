@@ -88,6 +88,17 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	prevTotal := int64(0)
 	prevID := ""
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
+		var prevSnap publicprofile.Snapshot
+		if json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"ok":          true,
+				"snapshot_id": prevSnap.SnapshotID,
+				"kept":        "previous",
+				"readme":      "kept",
+			})
+			return
+		}
 		prevTotal = prev.TotalTokens
 		prevID = prev.SnapshotID
 	}

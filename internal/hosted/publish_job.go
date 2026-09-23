@@ -140,6 +140,10 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if bytes.Contains(bytes.ToLower(light), []byte("<script")) || bytes.Contains(bytes.ToLower(dark), []byte("<script")) {
 		return s.failPublish(ctx, user, palette, kind, retry, "preview rejected"), errors.New("preview rejected")
 	}
+	active := publicprofile.SnapshotHasActiveDays(snap)
+	if !publicprofile.PreviewMatchesPalette(light, palette, active) || !publicprofile.PreviewMatchesPalette(dark, palette, active) {
+		return s.failPublish(ctx, user, palette, kind, retry, "palette mismatch"), errors.New("palette mismatch")
+	}
 	assetRev := publicprofile.HostedAssetRevision(light, dark, palette)
 	cacheKey, err := publicprofile.CacheKey(beforeID, assetRev)
 	if err != nil {
@@ -159,7 +163,16 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if altErr != nil {
 		return s.failPublish(ctx, user, palette, kind, retry, "readme alt"), altErr
 	}
-	if presErr == nil && pres.Palette == palette && pres.AssetRevision == assetRev && readmeHasCacheKey(readme.Content, cacheKey) && strings.Contains(string(readme.Content), `alt="`+alt+`"`) {
+	lightRemote, lightRemoteErr := client.GetFile(ctx, target.Repo, target.LightPath, target.Branch)
+	darkRemote, darkRemoteErr := client.GetFile(ctx, target.Repo, target.DarkPath, target.Branch)
+	if lightRemoteErr != nil && !errors.Is(lightRemoteErr, ErrGitMissing) {
+		return s.failPublish(ctx, user, palette, kind, retry, "light read"), lightRemoteErr
+	}
+	if darkRemoteErr != nil && !errors.Is(darkRemoteErr, ErrGitMissing) {
+		return s.failPublish(ctx, user, palette, kind, retry, "dark read"), darkRemoteErr
+	}
+	remoteMatches := lightRemoteErr == nil && darkRemoteErr == nil && bytes.Equal(lightRemote.Content, light) && bytes.Equal(darkRemote.Content, dark)
+	if presErr == nil && pres.Palette == palette && pres.AssetRevision == assetRev && remoteMatches && readmeHasCacheKey(readme.Content, cacheKey) && strings.Contains(string(readme.Content), `alt="`+alt+`"`) {
 		job := s.beginJob(ctx, user, palette, kind, beforeID, retry)
 		job.Phase = phaseAlreadyPublished
 		job.ResultCode = resultAlreadyPublished

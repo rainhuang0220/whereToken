@@ -12,6 +12,40 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
+func TestPreviewMatchesRequestedPalette(t *testing.T) {
+	loc := time.UTC
+	now := time.Date(2026, 9, 23, 12, 0, 0, 0, loc)
+	snap, err := Build(Input{
+		Now: now, Loc: loc, Version: "test",
+		Events: []event.UsageEvent{{
+			Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-time.Hour),
+			Miss: 100, Output: 20, Quality: event.QualityAuthoritative,
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !SnapshotHasActiveDays(snap) {
+		t.Fatal("fixture has no active day")
+	}
+	var news, magenta bytes.Buffer
+	if err := RenderPreview(&news, snap, ThemeLightNewsprint); err != nil {
+		t.Fatal(err)
+	}
+	if err := RenderPreview(&magenta, snap, ThemeLightMagenta); err != nil {
+		t.Fatal(err)
+	}
+	if !PreviewMatchesPalette(news.Bytes(), PaletteNewsprint, true) || !bytes.Contains(news.Bytes(), []byte("newsprint-ink-")) {
+		t.Fatal("newsprint preview lost its ink")
+	}
+	if PreviewMatchesPalette(magenta.Bytes(), PaletteNewsprint, true) || bytes.Contains(magenta.Bytes(), []byte("newsprint-ink-")) {
+		t.Fatal("magenta preview was accepted as newsprint")
+	}
+	if !PreviewMatchesPalette(magenta.Bytes(), PaletteMagenta, true) {
+		t.Fatal("magenta preview was rejected")
+	}
+}
+
 func TestMagnitudeScaleUsesFixedAbsoluteCapAcrossDatasets(t *testing.T) {
 	active := func(n int) []string {
 		states := make([]string, n)
