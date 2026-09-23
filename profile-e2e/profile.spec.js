@@ -535,6 +535,145 @@ test("switches Tokens and Requests without treating counts as tokens", async ({ 
   await expect(page.locator("#tip")).not.toContainText("tokens");
 });
 
+test("replaces the fallback when a newer hosted snapshot is valid", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.periods.all.totals.total = { value: 42000000, display: "42.00M", status: "available" };
+  await page.addInitScript(() => {
+    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
+    window.__WT_LIVE_OWNER = "rainhuang0220";
+  });
+  await page.route("https://wheretoken.plainlist.space/**", (route) => {
+    const url = route.request().url();
+    if (route.request().method() !== "GET" || !url.endsWith("/rainhuang0220")) {
+      return route.abort();
+    }
+    return route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        schema: "wheretoken.public-profile-live",
+        schema_version: 1,
+        freshness: { mode: "near_real_time", source: "hosted", updated_at: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+        data_revision: hosted.snapshot_id,
+        presentation_revision: "1",
+        asset_revision: "",
+        presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
+        snapshot: hosted,
+      }),
+    });
+  });
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-value")).toHaveText("42.00M");
+  await expect(page.locator("#freshness")).toContainText("hosted");
+  await expect(page.locator("#freshness")).toContainText("min ago");
+});
+
+test("keeps the committed snapshot when the hosted profile is unavailable or invalid", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const fallback = snapshot.periods.all.totals.total.display;
+  await page.addInitScript(() => {
+    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
+    window.__WT_LIVE_OWNER = "rainhuang0220";
+  });
+  await page.route("https://wheretoken.plainlist.space/**", (route) => route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: "{}",
+  }));
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-value")).toHaveText(fallback);
+  await expect(page.locator("#freshness")).toContainText("hosted unavailable");
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
+
+  await page.unroute("https://wheretoken.plainlist.space/**");
+  await page.route("https://wheretoken.plainlist.space/**", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ schema: "wheretoken.public-profile-live", schema_version: 99 }),
+  }));
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText(fallback);
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
+});
+
+test("rejects a hosted snapshot that contains a private path", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const fallback = snapshot.periods.all.totals.total.display;
+  const leaked = structuredClone(snapshot);
+  leaked.periods.all.totals.total = { value: 1, display: "/Users/secret", status: "available" };
+  await page.addInitScript(() => {
+    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
+    window.__WT_LIVE_OWNER = "rainhuang0220";
+  });
+  await page.route("https://wheretoken.plainlist.space/**", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      schema: "wheretoken.public-profile-live",
+      schema_version: 1,
+      freshness: { mode: "near_real_time", source: "hosted", updated_at: "2026-09-23T03:00:00Z" },
+      presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
+      snapshot: leaked,
+    }),
+  }));
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-value")).toHaveText(fallback);
+  await expect(page.locator("#hero-value")).not.toContainText("/Users/");
+});
+
+test("a visitor palette does not publish and an owner confirms on the same page", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const calls = [];
+  await page.addInitScript(() => {
+    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
+    window.__WT_LIVE_OWNER = "rainhuang0220";
+  });
+  await page.route("https://wheretoken.plainlist.space/**", (route) => {
+    calls.push(route.request().method() + " " + route.request().url());
+    if (route.request().method() === "POST" && route.request().url().endsWith("/publish")) {
+      const headers = route.request().headers();
+      if (headers.authorization !== "Bearer wtp_1.owner" || headers["x-csrf-token"] !== "csrf-owner") {
+        return route.fulfill({ status: 403, body: "csrf" });
+      }
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "job-1",
+          phase: "published",
+          phase_label: "已应用",
+          palette: "magenta",
+          result: "published",
+          snapshot_id: snapshot.snapshot_id,
+          retry_readme: false,
+        }),
+      });
+    }
+    return route.fulfill({ status: 404, body: "{}" });
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(baseURL);
+  await expect(page.locator("#palette-mode")).toHaveText("仅预览");
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-activity-palette", "magenta");
+  expect(calls.some((line) => line.includes("/publish"))).toBe(false);
+  await page.evaluate(() => sessionStorage.setItem("wt-profile-session", JSON.stringify({
+    token: "wtp_1.owner",
+    csrf: "csrf-owner",
+    login: "rainhuang0220",
+    expires_at: "2099-01-01T00:00:00.000Z",
+  })));
+  await page.reload();
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "应用到我的 GitHub 主页" }).click();
+  await expect(page.locator("#publish-dialog")).toBeVisible();
+  await expect(page.locator("#publish-summary")).toContainText("Newsprint");
+  await expect(page.locator("#publish-summary")).toContainText("Magenta");
+  await expect(page.locator("#publish-target")).toHaveText("https://github.com/rainhuang0220");
+  expect(calls.filter((line) => line.includes("/publish"))).toHaveLength(0);
+  await page.getByRole("button", { name: "确认发布" }).click();
+  await expect(page.locator("#publish-progress")).toHaveText("已应用");
+  expect(calls.some((line) => line.startsWith("POST") && line.includes("/publish"))).toBe(true);
+});
+
 test("hands the selected palette to local My Token without publishing", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);

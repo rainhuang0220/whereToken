@@ -83,7 +83,7 @@ func TestRunProfileBuildPreservesUserFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, bad := range []string{"/api/summary", "/api/v1/", "wheretoken login", "wheretoken sync"} {
+	for _, bad := range []string{"/api/summary", "/api/v1/sync", "/api/v1/dashboard", "/api/v1/account", "/api/v1/devices", "wheretoken login", "wheretoken sync"} {
 		if strings.Contains(string(js), bad) {
 			t.Fatalf("live page contains %q", bad)
 		}

@@ -3,6 +3,7 @@ package hosted
 import (
 	"fmt"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -14,6 +15,28 @@ type Config struct {
 	PublicURL          string
 	CookieSecure       bool
 	Version            string
+	Publish            ProfilePublish
+}
+
+// ProfilePublish is the server-side GitHub App used to materialize a profile
+// README. Empty AppID leaves publishing unavailable. The browser cannot
+// supply a repository, branch, or path.
+type ProfilePublish struct {
+	AppID          string
+	InstallationID string
+	PrivateKeyPEM  []byte
+	Repo           string
+	Branch         string
+	ReadmePath     string
+	PreviewDir     string
+	Origins        []string
+}
+
+func (p ProfilePublish) configured() bool {
+	return strings.TrimSpace(p.AppID) != "" &&
+		strings.TrimSpace(p.InstallationID) != "" &&
+		len(p.PrivateKeyPEM) > 0 &&
+		strings.TrimSpace(p.Repo) != ""
 }
 
 func ParseListen(addr string) (string, error) {
@@ -55,5 +78,48 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 	if cfg.MySQLDSN == "" || cfg.GitHubClientID == "" || cfg.GitHubClientSecret == "" || cfg.PublicURL == "" {
 		return Config{}, fmt.Errorf("WHERETOKEN_MYSQL_DSN, WHERETOKEN_GITHUB_CLIENT_ID, WHERETOKEN_GITHUB_CLIENT_SECRET, and WHERETOKEN_PUBLIC_URL are required")
 	}
+	publish, err := profilePublishFromEnv(getenv)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Publish = publish
 	return cfg, nil
+}
+
+func profilePublishFromEnv(getenv func(string) string) (ProfilePublish, error) {
+	p := ProfilePublish{
+		AppID:          strings.TrimSpace(getenv("WHERETOKEN_GITHUB_APP_ID")),
+		InstallationID: strings.TrimSpace(getenv("WHERETOKEN_GITHUB_APP_INSTALLATION_ID")),
+		Repo:           strings.TrimSpace(getenv("WHERETOKEN_PROFILE_REPO")),
+		Branch:         strings.TrimSpace(getenv("WHERETOKEN_PROFILE_BRANCH")),
+		ReadmePath:     strings.TrimSpace(getenv("WHERETOKEN_PROFILE_README")),
+		PreviewDir:     strings.TrimSpace(getenv("WHERETOKEN_PROFILE_PREVIEW_DIR")),
+	}
+	if p.Branch == "" {
+		p.Branch = "main"
+	}
+	if p.ReadmePath == "" {
+		p.ReadmePath = "README.md"
+	}
+	if p.PreviewDir == "" {
+		p.PreviewDir = "wheretoken"
+	}
+	if raw := strings.TrimSpace(getenv("WHERETOKEN_PUBLIC_PROFILE_ORIGINS")); raw != "" {
+		for _, part := range strings.Split(raw, ",") {
+			if origin := strings.TrimRight(strings.TrimSpace(part), "/"); origin != "" {
+				p.Origins = append(p.Origins, origin)
+			}
+		}
+	}
+	if len(p.Origins) == 0 {
+		p.Origins = []string{"https://rainhuang0220.github.io"}
+	}
+	if path := strings.TrimSpace(getenv("WHERETOKEN_GITHUB_APP_PRIVATE_KEY_FILE")); path != "" {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return ProfilePublish{}, fmt.Errorf("WHERETOKEN_GITHUB_APP_PRIVATE_KEY_FILE: %w", err)
+		}
+		p.PrivateKeyPEM = b
+	}
+	return p, nil
 }

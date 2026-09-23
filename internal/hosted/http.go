@@ -10,12 +10,13 @@ import (
 )
 
 type MuxOptions struct {
-	Version string
-	Store   *Store
-	Config  Config
-	Now     func() time.Time
-	GitHub  GitHubEndpoints
-	Log     *log.Logger
+	Version  string
+	Store    *Store
+	Config   Config
+	Now      func() time.Time
+	GitHub   GitHubEndpoints
+	Log      *log.Logger
+	Contents ContentsClient
 }
 
 func NewMux(opts MuxOptions) http.Handler {
@@ -42,6 +43,8 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/devices/self/revoke", s.revokeSelf)
 	mux.HandleFunc("/api/v1/devices/", s.deviceRoutes)
 	mux.HandleFunc("/api/v1/sync/batch", s.putSyncBatch)
+	mux.HandleFunc("/api/v1/sync/public-profile", s.putPublicProjection)
+	mux.HandleFunc("/api/v1/public-profile/", s.publicProfile)
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
 	mux.HandleFunc("/api/v1/account/usage", s.deleteUsage)
 	mux.HandleFunc("/api/v1/account", s.deleteAccount)
@@ -49,10 +52,11 @@ func NewMux(opts MuxOptions) http.Handler {
 }
 
 type server struct {
-	opts    MuxOptions
-	pending sync.Map
-	limiter map[string][]time.Time
-	limMu   sync.Mutex
+	opts      MuxOptions
+	pending   sync.Map
+	limiter   map[string][]time.Time
+	limMu     sync.Mutex
+	publishMu sync.Mutex
 }
 
 func (s *server) logf(format string, args ...any) {

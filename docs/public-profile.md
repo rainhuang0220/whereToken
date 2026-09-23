@@ -1,6 +1,6 @@
 # Public Profile
 
-`wheretoken profile build <dir>` writes a **public snapshot** of local coding-agent usage: JSON, GitHub-light and GitHub-dark preview SVGs, and a static live page. The interactive page is live in the browser. The usage data itself is a locally generated public snapshot, not a live cloud sync.
+`wheretoken profile build <dir>` writes a **public snapshot** of local coding-agent usage: JSON, GitHub-light and GitHub-dark preview SVGs, and a static shell. The shell renders immediately from that committed snapshot. On the maintainer's GitHub Pages profile it then requests the hosted projection and replaces the snapshot only when a newer valid envelope arrives. That refresh is near-real-time after `wheretoken sync` or a paired `wheretoken scan`, not a push for every token event. See [`docs/architecture/public-profile-control-plane.md`](architecture/public-profile-control-plane.md).
 
 A real personal profile must be built **online** so cloud-enriched sources (Cursor, Trae) can read their account usage APIs:
 

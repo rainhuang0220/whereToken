@@ -14,10 +14,13 @@ func TestLivePageHasNoDashboardAPIs(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(js)
-	for _, bad := range []string{"/api/summary", "/api/v1/", "wheretoken login", "wheretoken sync", "community"} {
+	for _, bad := range []string{"/api/summary", "/api/v1/sync", "/api/v1/dashboard", "/api/v1/account", "/api/v1/devices", "wheretoken login", "wheretoken sync", "community"} {
 		if strings.Contains(s, bad) {
 			t.Fatalf("forbidden %q", bad)
 		}
+	}
+	if !strings.Contains(s, "/api/v1/public-profile/") {
+		t.Fatal("live page does not request the hosted public profile")
 	}
 	if !strings.Contains(s, "./profile.json") {
 		t.Fatal("must fetch ./profile.json")

@@ -222,6 +222,7 @@ func TestSyncUploadsAllowlistPayload(t *testing.T) {
 		credstore.KeyHMAC:        base64.RawURLEncoding.EncodeToString(hmacKey),
 	}}
 	var gotBody []byte
+	var profileBody []byte
 	app, _, errb := testApp([]string{"sync"})
 	app.Creds = creds
 	app.Home = testhome.New(t.TempDir())
@@ -245,6 +246,10 @@ func TestSyncUploadsAllowlistPayload(t *testing.T) {
 			gotBody, _ = io.ReadAll(req.Body)
 			return jsonRes(200, map[string]any{"ok": true})
 		}
+		if req.Method == http.MethodPut && strings.HasSuffix(req.URL.Path, "/sync/public-profile") {
+			profileBody, _ = io.ReadAll(req.Body)
+			return jsonRes(200, map[string]any{"ok": true, "readme": "coalesced"})
+		}
 		return jsonRes(404, nil)
 	}
 	if code := app.Run(); code != 0 {
@@ -255,6 +260,18 @@ func TestSyncUploadsAllowlistPayload(t *testing.T) {
 		if strings.Contains(low, bad) {
 			t.Fatalf("payload contains %q: %s", bad, gotBody)
 		}
+	}
+	if len(profileBody) == 0 {
+		t.Fatal("sync did not upload a public profile")
+	}
+	profileText := strings.ToLower(string(profileBody))
+	for _, bad := range []string{"/users/rainhuang", "source_root", "access_token", "device_token"} {
+		if strings.Contains(profileText, bad) {
+			t.Fatalf("public profile contains %q", bad)
+		}
+	}
+	if !strings.Contains(profileText, "wheretoken.public-profile") || !strings.Contains(profileText, `"live_sync": false`) {
+		t.Fatalf("public profile shape: %s", profileBody)
 	}
 }
 

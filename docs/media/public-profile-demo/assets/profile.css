@@ -390,7 +390,40 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
   font-size: 12px;
   line-height: 1.45;
 }
-.owner-set a { color: var(--text); text-underline-offset: 3px; }
+.owner-set a,
+.owner-set button { color: var(--text); text-underline-offset: 3px; }
+.owner-set button {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.publish-dialog {
+  flex: 1 0 100%;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.publish-dialog[hidden] { display: none; }
+.publish-dialog h3 { margin: 0 0 6px; font-size: 14px; font-weight: 650; }
+.publish-dialog p { margin: 0 0 6px; }
+.publish-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.publish-actions button {
+  min-height: 34px;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+#publish-confirm { border-bottom-color: var(--ui-accent); }
 
 .heat-panel { padding-top: 2px; }
 .heat-layout {

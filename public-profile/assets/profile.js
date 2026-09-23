@@ -44,7 +44,13 @@
     published: "newsprint",
     explicit: false,
     snap: null,
+    freshnessSource: "fallback",
+    hostedUpdatedAt: "",
+    jobID: "",
   };
+  const SESSION_KEY = "wt-profile-session";
+  const LIVE_PROFILE = "/api/v1/public-profile/";
+  const LIVE_AUTH = "/api/v1/auth/github";
   let tipTimer = 0;
   let tipFrame = 0;
   let tipTarget = null;
@@ -284,9 +290,18 @@
     dismissTip();
     const p = periodOf(snap, state.range);
     const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
-    const when = (snap.as_of_date || "").slice(0, 10);
-    const pretty = when ? formatDay(when).replace(/,\s+\d{4}$/, "") : "";
-    $("freshness").textContent = (demo ? "DEMO DATA · " : "") + (pretty ? "updated " + pretty : "");
+    const when = state.hostedUpdatedAt || snap.generated_at || snap.as_of_date || "";
+    const pretty = relativeAge(when);
+    if (demo) {
+      $("freshness").textContent = "DEMO DATA · " + (pretty ? "updated " + pretty : "");
+    } else if (state.freshnessSource === "hosted") {
+      $("freshness").textContent = "updated " + pretty + " · hosted";
+    } else if (state.freshnessSource === "offline") {
+      $("freshness").textContent = "updated " + pretty + " · hosted unavailable · committed snapshot";
+    } else {
+      $("freshness").textContent = "updated " + pretty + " · committed snapshot";
+    }
+    updateOwnerChrome();
     const owner = snap.owner || {};
     const identityNode = $("identity");
     identityNode.textContent = owner.display_name || owner.github_login || "";
@@ -763,6 +778,7 @@
     b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme-set")));
   });
   bindOwnerLink();
+  bindApply();
   syncOwnerLink();
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
@@ -781,6 +797,261 @@
   applyWallPalette(state.palette, false);
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
 
+  function relativeAge(iso) {
+    if (!iso) return "";
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return "";
+    const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + " min ago";
+    const hours = Math.round(mins / 60);
+    if (hours < 36) return hours + " hr ago";
+    const days = Math.round(hours / 24);
+    if (days < 14) return days + " day ago";
+    return formatDay(String(iso).slice(0, 10));
+  }
+
+  function liveOrigin() {
+    const hooked = window.__WT_LIVE_ORIGIN;
+    if (typeof hooked === "string" && /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?$/.test(hooked)) return hooked.replace(/\/$/, "");
+    if (location.hostname === "rainhuang0220.github.io") return "https://wheretoken.plainlist.space";
+    return "";
+  }
+
+  function liveOwner(snap) {
+    const hooked = window.__WT_LIVE_OWNER;
+    if (typeof hooked === "string" && /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(hooked)) return hooked;
+    const login = snap && snap.owner && snap.owner.github_login;
+    if (typeof login === "string" && login) return login;
+    if (location.hostname === "rainhuang0220.github.io" && location.pathname.indexOf("/profile-demo/") < 0 && location.pathname.indexOf("/profile") >= 0) {
+      return "rainhuang0220";
+    }
+    return "";
+  }
+
+  function readSession() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const sess = JSON.parse(raw);
+      if (!sess || typeof sess.token !== "string" || typeof sess.csrf !== "string" || typeof sess.login !== "string") return null;
+      if (sess.expires_at && Date.parse(sess.expires_at) < Date.now()) return null;
+      return sess;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeSession(sess) {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      token: sess.token,
+      csrf: sess.csrf,
+      login: sess.login,
+      expires_at: sess.expires_at || "",
+    }));
+  }
+
+  function unsafeSnapshot(snap) {
+    let raw = "";
+    try { raw = JSON.stringify(snap); } catch (_) { return true; }
+    const low = raw.toLowerCase();
+    return low.indexOf("/users/") >= 0 || low.indexOf("/home/") >= 0 || low.indexOf("access_token") >= 0 ||
+      low.indexOf("device_token") >= 0 || low.indexOf("begin rsa") >= 0 || Boolean(snap.privacy && snap.privacy.raw_events);
+  }
+
+  function hostedNewer(fallback, envelope) {
+    if (!envelope || envelope.schema !== "wheretoken.public-profile-live" || envelope.schema_version !== 1) return false;
+    const fresh = envelope.freshness || {};
+    if (fresh.mode !== "near_real_time" || fresh.source !== "hosted" || !fresh.updated_at) return false;
+    const snap = envelope.snapshot;
+    if (!snap || snap.schema !== "wheretoken.public-profile") return false;
+    const hostedAt = Date.parse(fresh.updated_at);
+    const fallbackAt = Date.parse(fallback.generated_at || "");
+    if (Number.isNaN(hostedAt)) return false;
+    if (!Number.isNaN(fallbackAt) && hostedAt < fallbackAt) return false;
+    return true;
+  }
+
+  function updateOwnerChrome() {
+    const mode = $("palette-mode");
+    const button = $("apply-github");
+    if (!mode || !button) return;
+    const owner = liveOwner(state.snap);
+    button.hidden = !(liveOrigin() && owner);
+    const session = readSession();
+    const label = (WALL_PALETTES[state.published] || WALL_PALETTES.newsprint).label;
+    if (session && session.login === owner) {
+      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览 · 已发布 " + label;
+    } else {
+      mode.textContent = "仅预览";
+    }
+  }
+
+  function openPublish() {
+    const dialog = $("publish-dialog");
+    if (!dialog) return;
+    const from = (WALL_PALETTES[state.published] || WALL_PALETTES.newsprint).label;
+    const to = (WALL_PALETTES[state.palette] || WALL_PALETTES.newsprint).label;
+    const owner = liveOwner(state.snap);
+    $("publish-summary").textContent = from + " → " + to;
+    $("publish-target").textContent = owner ? "https://github.com/" + owner : "";
+    $("publish-progress").textContent = "确认后才会写入 GitHub。";
+    $("publish-confirm").hidden = false;
+    $("publish-confirm").disabled = false;
+    $("publish-retry").hidden = true;
+    dialog.hidden = false;
+  }
+
+  function closePublish() {
+    const dialog = $("publish-dialog");
+    if (dialog) dialog.hidden = true;
+  }
+
+  function showJob(job) {
+    state.jobID = job && job.id || state.jobID;
+    const progress = $("publish-progress");
+    const phase = job && job.phase;
+    if (phase === "published" || phase === "already_published") {
+      progress.textContent = "已应用";
+      state.published = state.palette;
+      $("publish-confirm").hidden = true;
+      $("publish-retry").hidden = true;
+      updateOwnerChrome();
+      return;
+    }
+    if (phase === "partial_failure" || phase === "conflict") {
+      progress.textContent = (job.phase_label || "发布未完成") + (job.retry_readme ? "。可以只重试 README。" : "");
+      $("publish-confirm").hidden = true;
+      $("publish-retry").hidden = !job.retry_readme;
+      return;
+    }
+    progress.textContent = (job && job.phase_label) || "正在发布";
+  }
+
+  function authHeaders() {
+    const session = readSession();
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + (session ? session.token : ""),
+      "X-CSRF-Token": session ? session.csrf : "",
+    };
+  }
+
+  function pollJob(owner, id, left) {
+    if (!id || left <= 0) return Promise.resolve();
+    return fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/jobs/" + encodeURIComponent(id), {
+      headers: authHeaders(),
+    }).then((r) => r.ok ? r.json() : Promise.reject(new Error("job"))).then((job) => {
+      showJob(job);
+      if (job.phase === "published" || job.phase === "already_published" || job.phase === "failed" || job.phase === "partial_failure" || job.phase === "conflict") {
+        return job;
+      }
+      return new Promise((resolve) => setTimeout(resolve, 400)).then(() => pollJob(owner, id, left - 1));
+    });
+  }
+
+  function confirmPublish() {
+    const session = readSession();
+    const owner = liveOwner(state.snap);
+    if (!session || session.login !== owner) return;
+    $("publish-progress").textContent = "正在发布";
+    $("publish-confirm").disabled = true;
+    fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/publish", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ palette: state.palette, confirm: true }),
+    }).then((r) => r.json().then((job) => ({ ok: r.ok, job }))).then(({ job }) => {
+      showJob(job);
+      if (job && job.id && job.phase !== "published" && job.phase !== "already_published" && job.phase !== "failed" && job.phase !== "partial_failure" && job.phase !== "conflict") {
+        return pollJob(owner, job.id, 8);
+      }
+      return job;
+    }).catch(() => {
+      $("publish-progress").textContent = "发布失败";
+      $("publish-confirm").disabled = false;
+    });
+  }
+
+  function retryPublish() {
+    const owner = liveOwner(state.snap);
+    if (!state.jobID || !readSession()) return;
+    $("publish-progress").textContent = "正在重试 README";
+    fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/jobs/" + encodeURIComponent(state.jobID) + "/retry", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ confirm: true }),
+    }).then((r) => r.json()).then((job) => showJob(job)).catch(() => {
+      $("publish-progress").textContent = "发布失败";
+    });
+  }
+
+  function bindApply() {
+    const button = $("apply-github");
+    if (!button || button.dataset.bound === "1") return;
+    button.dataset.bound = "1";
+    button.addEventListener("click", () => {
+      const owner = liveOwner(state.snap);
+      const session = readSession();
+      if (!session || session.login !== owner) {
+        const back = location.origin + location.pathname;
+        location.assign(liveOrigin() + LIVE_AUTH + "?return_to=" + encodeURIComponent(back));
+        return;
+      }
+      openPublish();
+    });
+    const cancel = $("publish-cancel");
+    const confirm = $("publish-confirm");
+    const retry = $("publish-retry");
+    if (cancel) cancel.addEventListener("click", closePublish);
+    if (confirm) confirm.addEventListener("click", confirmPublish);
+    if (retry) retry.addEventListener("click", retryPublish);
+  }
+
+  function consumeExchange() {
+    const origin = liveOrigin();
+    if (!origin) return Promise.resolve();
+    const match = location.hash.match(/(?:^#|&)wt_code=([^&]+)/);
+    if (!match) return Promise.resolve();
+    const code = decodeURIComponent(match[1]);
+    history.replaceState(null, "", location.pathname + location.search);
+    return fetch(origin + LIVE_PROFILE + "session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code }),
+    }).then((r) => { if (!r.ok) throw new Error("auth"); return r.json(); }).then((sess) => {
+      writeSession(sess);
+      updateOwnerChrome();
+      if (sess.login && sess.login === liveOwner(state.snap)) openPublish();
+    }).catch(() => {});
+  }
+
+  function refreshHosted(fallback) {
+    const origin = liveOrigin();
+    const owner = liveOwner(fallback);
+    if (!origin || !owner) return Promise.resolve();
+    if (fallback.provenance && fallback.provenance.kind === "synthetic_demo" && !window.__WT_LIVE_ORIGIN) return Promise.resolve();
+    return fetch(origin + LIVE_PROFILE + encodeURIComponent(owner), { cache: "no-store" })
+      .then((r) => { if (!r.ok) throw new Error("hosted status"); return r.json(); })
+      .then((envelope) => {
+        if (!hostedNewer(fallback, envelope)) throw new Error("hosted schema");
+        const snap = envelope.snapshot;
+        if (unsafeSnapshot(snap)) throw new Error("hosted privacy");
+        validateSnapshot(snap);
+        state.snap = snap;
+        state.hostedUpdatedAt = (envelope.freshness && envelope.freshness.updated_at) || "";
+        state.freshnessSource = "hosted";
+        const published = publishedPalette(envelope.presentation);
+        state.published = published;
+        if (!state.explicit) applyWallPalette(published, false);
+        render();
+      })
+      .catch(() => {
+        state.freshnessSource = origin ? "offline" : "fallback";
+        state.hostedUpdatedAt = "";
+        render();
+      });
+  }
+
   Promise.all([
     fetch("./presentation.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).catch(() => null),
     fetch("./profile.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("snapshot missing"); return r.json(); }),
@@ -790,7 +1061,9 @@
       if (!state.explicit) applyWallPalette(state.published, false);
       validateSnapshot(snap);
       state.snap = snap;
+      state.freshnessSource = "fallback";
       render();
+      return refreshHosted(snap).then(() => consumeExchange());
     })
     .catch((err) => {
       $("status").hidden = false;

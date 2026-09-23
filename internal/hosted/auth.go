@@ -72,6 +72,13 @@ func (s *server) startGitHub(w http.ResponseWriter, r *http.Request) {
 	if next := r.URL.Query().Get("next"); strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") {
 		s.setCookie(w, "wt_next", next, oauthTTL)
 	}
+	if ret := strings.TrimSpace(r.URL.Query().Get("return_to")); ret != "" {
+		if !s.returnAllowed(ret) {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		s.setCookie(w, "wt_return", ret, oauthTTL)
+	}
 	g := s.github()
 	q := url.Values{}
 	q.Set("client_id", s.opts.Config.GitHubClientID)
@@ -135,6 +142,16 @@ func (s *server) callbackGitHub(w http.ResponseWriter, r *http.Request) {
 		next = c.Value
 	}
 	s.setCookie(w, "wt_next", "", -time.Hour)
+	if c, err := r.Cookie("wt_return"); err == nil && s.returnAllowed(c.Value) {
+		s.setCookie(w, "wt_return", "", -time.Hour)
+		code, err := s.opts.Store.CreateExchangeCode(r.Context(), user.ID)
+		if err != nil {
+			http.Error(w, "server error", http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, c.Value+"#wt_code="+url.QueryEscape(code), http.StatusFound)
+		return
+	}
 	http.Redirect(w, r, s.opts.Config.PublicURL+next, http.StatusFound)
 }
 

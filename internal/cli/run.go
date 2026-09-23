@@ -269,6 +269,7 @@ func (a *App) runScanJSON(home adapter.Home, quiet, offline bool) int {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail
 	}
+	a.maybeHostedSync(Flags{Quiet: true, Offline: offline}, home, res)
 	return ExitOK
 }
 
@@ -338,6 +339,7 @@ func (a *App) runServe(flags Flags, home adapter.Home) int {
 	}
 	var lastErr error
 	offline := a.wantOffline(flags)
+	a.startHostedRefresh(home, offline)
 	for p := start; p <= end; p++ {
 		addr := fmt.Sprintf("127.0.0.1:%d", p)
 		if a.Serve != nil {

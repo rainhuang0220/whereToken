@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The public profile shell can replace its committed snapshot with a hosted projection after `wheretoken sync` or a paired scan. `wheretoken serve` repeats that sync every 15 minutes. The page labels hosted, committed, and unavailable data separately. Palette confirmation on the public page publishes through a server-side GitHub App; the browser does not receive a GitHub write token. README images stay static and change only on an explicit theme confirmation or a coalesced usage update. The product repository is not the live database. Local `profile publish` remains the fallback.
+
 ## 0.7.4 — 2026-09-23 (Alpha)
 
 - Public Profile hands the selected Cobalt, Magenta, or Newsprint color to My Token on this computer. `发布到我的 GitHub 主页` shows the two-repository preflight and pushes only after an explicit confirmation. `仅保存本机` still writes only the local owner file and bundle. Publishing uses the existing `gh` login and a configured checkout; it does not add a hosted write token. The GitHub profile README stays a static SVG, and the live Newsprint light stays on the linked public page.

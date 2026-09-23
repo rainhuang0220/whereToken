@@ -7,12 +7,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/price"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/syncagg"
 )
@@ -28,21 +30,33 @@ func (a *App) runSync(flags Flags, home adapter.Home) int {
 }
 
 func (a *App) syncOnce(flags Flags, home adapter.Home) (days, sources int, err error) {
-	cs := a.credStore(home)
-	tok, err := cs.Get(credstore.KeyDeviceToken)
+	tok, devID, key, err := a.syncCreds(home)
 	if err != nil {
-		return 0, 0, fmt.Errorf("not logged in; run wheretoken login")
-	}
-	devID, _ := cs.Get(credstore.KeyDeviceID)
-	hmacB64, err := cs.Get(credstore.KeyHMAC)
-	if err != nil {
-		return 0, 0, fmt.Errorf("missing pairing key; run wheretoken login")
-	}
-	key, err := base64.RawURLEncoding.DecodeString(hmacB64)
-	if err != nil || len(key) != 32 {
-		return 0, 0, fmt.Errorf("invalid pairing key; run wheretoken login")
+		return 0, 0, err
 	}
 	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	return a.syncResult(flags, home, res, tok, devID, key)
+}
+
+func (a *App) syncCreds(home adapter.Home) (token, deviceID string, key []byte, err error) {
+	cs := a.credStore(home)
+	token, err = cs.Get(credstore.KeyDeviceToken)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("not logged in; run wheretoken login")
+	}
+	deviceID, _ = cs.Get(credstore.KeyDeviceID)
+	hmacB64, err := cs.Get(credstore.KeyHMAC)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("missing pairing key; run wheretoken login")
+	}
+	key, err = base64.RawURLEncoding.DecodeString(hmacB64)
+	if err != nil || len(key) != 32 {
+		return "", "", nil, fmt.Errorf("invalid pairing key; run wheretoken login")
+	}
+	return token, deviceID, key, nil
+}
+
+func (a *App) syncResult(flags Flags, home adapter.Home, res scan.Result, tok, devID string, key []byte) (days, sources int, err error) {
 	batch, err := syncagg.Build(syncagg.BuildInput{
 		DeviceID:            devID,
 		Timezone:            a.Loc.String(),
@@ -89,7 +103,80 @@ func (a *App) syncOnce(flags Flags, home adapter.Home) (days, sources int, err e
 	if n == 0 {
 		n = len(batch.Sources)
 	}
+	if err := a.uploadPublicProjection(flags, home, res, tok); err != nil {
+		fmt.Fprintf(a.Stderr, "public profile not updated: %s\n", err.Error())
+	}
 	return len(batch.DailyModelUsage), n, nil
+}
+
+func (a *App) maybeHostedSync(flags Flags, home adapter.Home, res scan.Result) {
+	tok, devID, key, err := a.syncCreds(home)
+	if err != nil {
+		return
+	}
+	if _, _, err := a.syncResult(flags, home, res, tok, devID, key); err != nil {
+		fmt.Fprintf(a.Stderr, "hosted sync skipped: %s\n", err.Error())
+	}
+}
+
+func (a *App) startHostedRefresh(home adapter.Home, offline bool) {
+	go func() {
+		ticker := time.NewTicker(15 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if _, _, _, err := a.syncCreds(home); err != nil {
+				continue
+			}
+			if _, _, err := a.syncOnce(Flags{Quiet: true, Offline: offline}, home); err != nil {
+				fmt.Fprintf(a.Stderr, "hosted sync skipped: %s\n", err.Error())
+			}
+		}
+	}()
+}
+
+func (a *App) uploadPublicProjection(flags Flags, home adapter.Home, res scan.Result, token string) error {
+	if flags.Offline || res.Offline {
+		return nil
+	}
+	snap, err := publicprofile.Build(publicprofile.Input{
+		Events:       res.Events,
+		Turns:        res.Turns,
+		Now:          a.Now(),
+		Loc:          a.Loc,
+		Version:      a.Version,
+		PortraitSeed: a.PortraitSeed(home),
+		Offline:      false,
+		Errors:       res.Errors,
+	})
+	if err != nil {
+		return err
+	}
+	if snap.DataStatus == publicprofile.StatusUnavailable {
+		return nil
+	}
+	if err := publicprofile.Validate(snap); err != nil {
+		return err
+	}
+	raw, err := publicprofile.Marshal(snap)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPut, a.hostedBase()+"/api/v1/sync/public-profile", strings.NewReader(string(raw)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := a.doHTTP(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (a *App) accountIDs(home adapter.Home) map[string]string {

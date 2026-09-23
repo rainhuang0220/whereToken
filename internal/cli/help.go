@@ -16,7 +16,7 @@ USAGE
   wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
   wheretoken [flags] login [--no-sync]  pair this device, then sync aggregated usage
   wheretoken [flags] logout      revoke the device token
-  wheretoken [flags] sync        upload privacy-safe daily usage to the hosted app
+  wheretoken [flags] sync        upload daily usage and the sanitized public profile
   wheretoken [flags] completion bash|zsh|fish|powershell
   wheretoken [flags] profile build <dir>     public snapshot + light/dark preview + live page
   wheretoken [flags] profile validate <path> check a profile.json or bundle

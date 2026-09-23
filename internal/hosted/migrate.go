@@ -116,6 +116,62 @@ var migrations = []string{
   PRIMARY KEY (device_id, idempotency_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	`ALTER TABLE devices MODIFY client_version VARCHAR(64) NOT NULL`,
+	`CREATE TABLE IF NOT EXISTS public_projections (
+  user_id BIGINT NOT NULL,
+  snapshot_json MEDIUMTEXT NOT NULL,
+  snapshot_id VARCHAR(80) NOT NULL,
+  total_tokens BIGINT NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`CREATE TABLE IF NOT EXISTS public_presentations (
+  user_id BIGINT NOT NULL,
+  palette VARCHAR(32) NOT NULL,
+  revision VARCHAR(80) NOT NULL,
+  asset_revision VARCHAR(80) NOT NULL,
+  preview_light MEDIUMBLOB NOT NULL,
+  preview_dark MEDIUMBLOB NOT NULL,
+  readme_cache_key VARCHAR(160) NOT NULL DEFAULT '',
+  readme_snapshot_id VARCHAR(80) NOT NULL DEFAULT '',
+  readme_materialized_at DATETIME NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`CREATE TABLE IF NOT EXISTS publish_jobs (
+  id CHAR(36) NOT NULL,
+  user_id BIGINT NOT NULL,
+  kind VARCHAR(16) NOT NULL,
+  palette VARCHAR(32) NOT NULL,
+  phase VARCHAR(32) NOT NULL,
+  snapshot_id VARCHAR(80) NOT NULL,
+  asset_revision VARCHAR(80) NOT NULL DEFAULT '',
+  cache_key VARCHAR(160) NOT NULL DEFAULT '',
+  error_text VARCHAR(400) NOT NULL DEFAULT '',
+  result_code VARCHAR(40) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_publish_jobs_user (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`CREATE TABLE IF NOT EXISTS profile_sessions (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  token_hash BINARY(32) NOT NULL,
+  csrf_hash BINARY(32) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_profile_sessions_token (token_hash),
+  KEY idx_profile_sessions_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	`CREATE TABLE IF NOT EXISTS profile_exchange_codes (
+  code_hash BINARY(32) NOT NULL,
+  user_id BIGINT NOT NULL,
+  expires_at DATETIME NOT NULL,
+  consumed_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (code_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 }
 
 func (s *Store) Migrate(ctx context.Context) error {

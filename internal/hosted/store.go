@@ -556,6 +556,9 @@ func (s *Store) DeleteUsage(ctx context.Context, userID int64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM sync_revisions WHERE user_id=?`, userID); err != nil {
 		return err
 	}
+	if err := s.deletePublicProfile(ctx, tx, userID); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -572,6 +575,11 @@ func (s *Store) DeleteAccount(ctx context.Context, userID int64) error {
 		`DELETE FROM pairing_challenges WHERE user_id=?`,
 		`DELETE FROM web_sessions WHERE user_id=?`,
 		`DELETE FROM devices WHERE user_id=?`,
+		`DELETE FROM public_projections WHERE user_id=?`,
+		`DELETE FROM public_presentations WHERE user_id=?`,
+		`DELETE FROM publish_jobs WHERE user_id=?`,
+		`DELETE FROM profile_sessions WHERE user_id=?`,
+		`DELETE FROM profile_exchange_codes WHERE user_id=?`,
 		`DELETE FROM users WHERE id=?`,
 	} {
 		if _, err := tx.ExecContext(ctx, q, userID); err != nil {

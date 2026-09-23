@@ -1,6 +1,9 @@
 # Public Profile theme publication
 
-The dashboard glaze and the public Profile palette are different catalogs. This is the path that is actually built.
+The primary owner path is the public profile page itself. It confirms a
+palette and asks the hosted service to publish. This document is the local
+fallback: `wheretoken profile publish` and My Token on `127.0.0.1`. The
+dashboard glaze and the public Profile palette are different catalogs.
 
 ## Ownership
 
