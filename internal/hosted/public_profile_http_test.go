@@ -510,6 +510,113 @@ func getPreview(t *testing.T, h http.Handler, name string) []byte {
 	return rec.Body.Bytes()
 }
 
+func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	device, session, csrf := seedOwner(t)
+	now := time.Date(2026, 9, 24, 4, 0, 0, 0, time.UTC)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-time.Hour), 4000),
+		},
+	})
+	putProjection(t, h, device, proj.raw)
+	first := publishRequestTo(t, h, session, csrf, "cobalt", true, "")
+	if first.Code != http.StatusOK {
+		t.Fatalf("cobalt %d %s", first.Code, first.Body.String())
+	}
+	if palette, id := publishedPalette(t, h, "rainhuang0220"); palette != "cobalt" || id != proj.snap.SnapshotID {
+		t.Fatalf("promoted palette %s snapshot %s", palette, id)
+	}
+	readme := git.readme()
+	light := append([]byte(nil), git.file("wheretoken/preview-light.svg")...)
+	dark := append([]byte(nil), git.file("wheretoken/preview-dark.svg")...)
+	puts := git.puts
+
+	git.failPath = "wheretoken/preview-light.svg"
+	failed := publishRequestTo(t, h, session, csrf, "magenta", true, "")
+	if failed.Code != http.StatusConflict {
+		t.Fatalf("svg failure %d %s", failed.Code, failed.Body.String())
+	}
+	var job map[string]any
+	if err := json.Unmarshal(failed.Body.Bytes(), &job); err != nil {
+		t.Fatal(err)
+	}
+	if job["phase"] == phasePublished || job["result"] == "published" || job["result"] == resultAlreadyPublished {
+		t.Fatalf("failed upload reported success: %+v", job)
+	}
+	if job["retry_readme"] != true {
+		t.Fatalf("retry was not preserved: %+v", job)
+	}
+	if palette, id := publishedPalette(t, h, "rainhuang0220"); palette != "cobalt" || id != proj.snap.SnapshotID {
+		t.Fatalf("api promoted magenta before github verified it: palette %s snapshot %s", palette, id)
+	}
+	if git.readme() != readme || !bytes.Equal(git.file("wheretoken/preview-light.svg"), light) || !bytes.Equal(git.file("wheretoken/preview-dark.svg"), dark) {
+		t.Fatal("failed svg upload changed the published github files")
+	}
+	if !bytes.Equal(getPreview(t, h, "preview-light.svg"), light) || !bytes.Equal(getPreview(t, h, "preview-dark.svg"), dark) {
+		t.Fatal("hosted previews moved ahead of the github files")
+	}
+
+	retry := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/rainhuang0220/jobs/"+job["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
+	retry.Header.Set("Authorization", "Bearer "+session)
+	retry.Header.Set("X-CSRF-Token", csrf)
+	retryRec := httptest.NewRecorder()
+	h.ServeHTTP(retryRec, retry)
+	if retryRec.Code != http.StatusOK {
+		t.Fatalf("retry %d %s", retryRec.Code, retryRec.Body.String())
+	}
+	var retried map[string]any
+	if err := json.Unmarshal(retryRec.Body.Bytes(), &retried); err != nil {
+		t.Fatal(err)
+	}
+	if retried["result"] != "published" || retried["snapshot_id"] != proj.snap.SnapshotID {
+		t.Fatalf("retry job %+v", retried)
+	}
+	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != "magenta" {
+		t.Fatalf("retry did not promote magenta, palette %s", palette)
+	}
+	if git.readme() == readme || bytes.Equal(git.file("wheretoken/preview-light.svg"), light) {
+		t.Fatal("retry left the previous palette on github")
+	}
+	if !bytes.Equal(getPreview(t, h, "preview-light.svg"), git.file("wheretoken/preview-light.svg")) {
+		t.Fatal("promoted preview does not match github")
+	}
+	puts = git.puts
+	again := publishRequestTo(t, h, session, csrf, "magenta", true, "")
+	if again.Code != http.StatusOK {
+		t.Fatalf("again %d %s", again.Code, again.Body.String())
+	}
+	var idem map[string]any
+	if err := json.Unmarshal(again.Body.Bytes(), &idem); err != nil {
+		t.Fatal(err)
+	}
+	if idem["result"] != resultAlreadyPublished || git.puts != puts {
+		t.Fatalf("second magenta publish %+v puts %d -> %d", idem, puts, git.puts)
+	}
+}
+
+func publishedPalette(t *testing.T, h http.Handler, login string) (string, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/"+login, nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get %d %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		DataRevision string `json:"data_revision"`
+		Presentation struct {
+			Palette string `json:"public_palette"`
+		} `json:"presentation"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	return body.Presentation.Palette, body.DataRevision
+}
+
 func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	git := newMemGit(publishReadme)
 	git.conflict = 1

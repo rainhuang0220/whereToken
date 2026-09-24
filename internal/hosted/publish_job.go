@@ -189,16 +189,10 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if err := s.opts.Store.UpdateJob(ctx, job); err != nil {
 		return job, err
 	}
-	revision := strings.TrimPrefix(assetRev, "sha256:")
-	if len(revision) > 80 {
-		revision = revision[:80]
-	}
-	if err := s.opts.Store.SavePresentation(ctx, user.ID, palette, revision, assetRev, light, dark); err != nil {
-		return s.finish(ctx, job, phaseFailed, "could not store presentation")
-	}
 	if snap.SnapshotID != beforeID {
 		return s.finish(ctx, job, phaseFailed, "snapshot identity changed")
 	}
+	// The hosted palette is promoted only after GitHub verifies both previews and the README.
 	job.Phase = phasePublishingReadme
 	_ = s.opts.Store.UpdateJob(ctx, job)
 	if err := s.putPreview(ctx, client, target, target.LightPath, light); err != nil {
@@ -232,6 +226,13 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	darkFile, err := client.GetFile(ctx, target.Repo, target.DarkPath, target.Branch)
 	if err != nil || !bytes.Equal(darkFile.Content, dark) {
 		return s.finish(ctx, job, phasePartialFailure, "dark preview mismatch")
+	}
+	revision := strings.TrimPrefix(assetRev, "sha256:")
+	if len(revision) > 80 {
+		revision = revision[:80]
+	}
+	if err := s.opts.Store.SavePresentation(ctx, user.ID, palette, revision, assetRev, light, dark); err != nil {
+		return s.finish(ctx, job, phasePartialFailure, "could not store presentation")
 	}
 	if err := s.opts.Store.MarkReadmeMaterialized(ctx, user.ID, cacheKey, beforeID); err != nil {
 		return s.finish(ctx, job, phasePartialFailure, "materialize stamp")
