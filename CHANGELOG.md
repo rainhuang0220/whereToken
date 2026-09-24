@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.5 — 2026-09-24 (Alpha)
+
 - Public profile theme choices stay a preview (`预览中`). Publishing is the separate action `发布到 GitHub 主页`, confirmed once as `将 Cobalt 应用到 github.com/<login>`. Cobalt and Magenta heatmap cells use the same light and dark palette tokens as the README SVGs, including empty cells. Newsprint keeps its paper material.
 - A public sync keeps the current projection when the new snapshot has weaker coverage or drops a provider that previously had measured tokens. A palette publish aborts unless both rendered previews match the requested palette, and it does not treat a stored palette as published while the GitHub files still show another theme. Partial coverage stays labeled partial, including a provider whose account API failed.
 - The public profile shows `登录并应用到我的 GitHub 主页` under the palette before login. Profile script URLs carry a content hash so a cached `profile.js` cannot leave that control hidden. The hosted README alt is rewritten from the same sanitized snapshot as the preview. GitHub OAuth tries another verified `github.com` address when the DNS address does not connect.
