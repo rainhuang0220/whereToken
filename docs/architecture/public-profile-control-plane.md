@@ -134,9 +134,10 @@ path. The app is not installed by this change.
 `wheretoken profile publish` and My Token on `127.0.0.1` still perform the
 v0.7.4 two-repository publish. The public page links to that computer as
 `本机发布`. Directly under the palette, the public page shows
-`登录并应用到我的 GitHub 主页` before a profile session and
-`应用到我的 GitHub 主页` for the signed-in owner. Confirmation stays on that
-page through `正在发布…` and `已应用`.
+`登录并发布到 GitHub 主页` before a profile session and
+`发布到 GitHub 主页` for the signed-in owner. Choosing a color only previews
+it (`预览中`). Confirmation stays on that page: `将 Cobalt 应用到 github.com/<login>`,
+then `正在发布…` and `已发布`.
 
 Visitors who are not the owner keep preview-only theme switching. An owner
 session sees the published palette and the apply button. Job state is not

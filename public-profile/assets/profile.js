@@ -5,36 +5,60 @@
   const ABSOLUTE_TOKEN_CAP = 1_000_000_000;
   const HEAT_MID_POSITION = 0.25;
   const HEAT_HIGH_POSITION = 0.60;
-  const WALL_PALETTES = {
-    cobalt: {
-      label: "Cobalt",
-      stops: [
-        [0, [0.88, 0.055, 260]],
-        [HEAT_MID_POSITION, [0.72, 0.140, 260]],
-        [HEAT_HIGH_POSITION, [0.54, 0.170, 260]],
-        [1, [0.46, 0.180, 260]],
-      ],
-    },
-    magenta: {
-      label: "Magenta",
-      stops: [
-        [0, [0.88, 0.080, 340]],
-        [HEAT_MID_POSITION, [0.72, 0.180, 340]],
-        [HEAT_HIGH_POSITION, [0.54, 0.180, 340]],
-        [1, [0.46, 0.190, 340]],
-      ],
-    },
-    newsprint: {
-      label: "Newsprint",
-      texture: true,
-      stops: [
-        [0, [0.86, 0, 0]],
-        [HEAT_MID_POSITION, [0.67, 0, 0]],
-        [HEAT_HIGH_POSITION, [0.43, 0, 0]],
-        [1, [0.20, 0, 0]],
-      ],
-    },
-  };
+  // Same stops, empty, future, and unknown colors as the preview SVG themes.
+  // Newsprint keeps one light ink ramp in both color schemes. Its dark SVG is
+  // only the GitHub-dark sheet; this page does not invert the paper.
+  const WALL_PALETTE_TOKENS = JSON.parse(`{
+    "palettes": {
+      "cobalt": {
+        "label": "Cobalt",
+        "light": {
+          "empty": "#EFF2F5",
+          "future": "#F6F8FA",
+          "unknown": "#D1D9E0",
+          "stops": [[0, [0.88, 0.055, 260]], [0.25, [0.72, 0.140, 260]], [0.60, [0.54, 0.170, 260]], [1, [0.46, 0.180, 260]]]
+        },
+        "dark": {
+          "empty": "#24292F",
+          "future": "#1C2128",
+          "unknown": "#444C56",
+          "stops": [[0, [0.42, 0.055, 260]], [0.25, [0.56, 0.110, 260]], [0.60, [0.70, 0.130, 260]], [1, [0.82, 0.110, 260]]]
+        }
+      },
+      "magenta": {
+        "label": "Magenta",
+        "light": {
+          "empty": "#EFF2F5",
+          "future": "#F6F8FA",
+          "unknown": "#D1D9E0",
+          "stops": [[0, [0.88, 0.080, 340]], [0.25, [0.72, 0.180, 340]], [0.60, [0.54, 0.180, 340]], [1, [0.46, 0.190, 340]]]
+        },
+        "dark": {
+          "empty": "#24292F",
+          "future": "#1C2128",
+          "unknown": "#444C56",
+          "stops": [[0, [0.42, 0.070, 340]], [0.25, [0.56, 0.130, 340]], [0.60, [0.70, 0.140, 340]], [1, [0.82, 0.120, 340]]]
+        }
+      },
+      "newsprint": {
+        "label": "Newsprint",
+        "texture": true,
+        "light": {
+          "empty": "#E8E8E6",
+          "future": "#F1F1EF",
+          "unknown": "#D1D9E0",
+          "stops": [[0, [0.86, 0, 0]], [0.25, [0.67, 0, 0]], [0.60, [0.43, 0, 0]], [1, [0.20, 0, 0]]]
+        },
+        "dark": {
+          "empty": "#E6E2D8",
+          "future": "#EFECE6",
+          "unknown": "#D1D9E0",
+          "stops": [[0, [0.86, 0, 0]], [0.25, [0.67, 0, 0]], [0.60, [0.43, 0, 0]], [1, [0.20, 0, 0]]]
+        }
+      }
+    }
+  }`);
+  const WALL_PALETTES = WALL_PALETTE_TOKENS.palettes;
   const state = {
     range: params.get("range") || "all",
     tab: params.get("tab") || "agents",
@@ -68,6 +92,7 @@
     document.querySelectorAll("[data-theme-set]").forEach((b) => {
       b.setAttribute("aria-pressed", b.getAttribute("data-theme-set") === mode ? "true" : "false");
     });
+    if (state.snap) render();
   }
 
   function publishedPalette(pres) {
@@ -126,6 +151,18 @@
     return WALL_PALETTES[state.palette] || WALL_PALETTES.newsprint;
   }
 
+  function resolvedScheme() {
+    const mode = document.documentElement.getAttribute("data-theme");
+    if (mode === "dark" || mode === "light") return mode;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function activeRamp(palette) {
+    const scheme = resolvedScheme();
+    if (palette.texture) return palette[scheme] || palette.light;
+    return palette[scheme] || palette.light;
+  }
+
   function presentationIntensity(value, level) {
     if (state.metric === "tokens") {
       return Math.sqrt(Math.min(Math.max(Number(value) || 0, 0) / ABSOLUTE_TOKEN_CAP, 1));
@@ -133,24 +170,23 @@
     return level > 0 ? Math.min(level / 5, 1) : 0;
   }
 
-  function heatColor(palette, intensity) {
+  function rampColor(ramp, intensity) {
     intensity = Math.min(Math.max(intensity, 0), 1);
-    let from = palette.stops[0];
-    let to = palette.stops[palette.stops.length - 1];
-    for (let i = 1; i < palette.stops.length; i++) {
-      if (intensity <= palette.stops[i][0]) {
-        from = palette.stops[i - 1];
-        to = palette.stops[i];
+    let from = ramp.stops[0];
+    let to = ramp.stops[ramp.stops.length - 1];
+    for (let i = 1; i < ramp.stops.length; i++) {
+      if (intensity <= ramp.stops[i][0]) {
+        from = ramp.stops[i - 1];
+        to = ramp.stops[i];
         break;
       }
     }
     const span = to[0] - from[0] || 1;
     const t = (intensity - from[0]) / span;
-    const color = from[1].map((value, i) => value + (to[1][i] - value) * t);
-    return oklchHex(color[0], color[1], color[2]);
+    return from[1].map((value, i) => value + (to[1][i] - value) * t);
   }
 
-  function oklchHex(l, c, h) {
+  function linearSRGB(l, c, h) {
     const radians = h * Math.PI / 180;
     const a = c * Math.cos(radians);
     const b = c * Math.sin(radians);
@@ -160,21 +196,56 @@
     const ll = lRoot ** 3;
     const mm = mRoot ** 3;
     const ss = sRoot ** 3;
-    const rgb = [
+    return [
       4.0767416621 * ll - 3.3077115913 * mm + 0.2309699292 * ss,
       -1.2684380046 * ll + 2.6097574011 * mm - 0.3413193965 * ss,
       -0.0041960863 * ll - 0.7034186147 * mm + 1.707614701 * ss,
     ];
+  }
+
+  function inSRGB(l, c, h) {
+    return linearSRGB(l, c, h).every((channel) => channel >= 0 && channel <= 1);
+  }
+
+  function gamutMap(color) {
+    if (inSRGB(color[0], color[1], color[2])) return color;
+    let low = 0;
+    let high = color[1];
+    for (let i = 0; i < 24; i++) {
+      const mid = (low + high) / 2;
+      if (inSRGB(color[0], mid, color[2])) low = mid;
+      else high = mid;
+    }
+    return [color[0], low, color[2]];
+  }
+
+  function oklchHex(l, c, h) {
     const channel = (linear) => {
       const encoded = linear <= 0.0031308 ? 12.92 * linear : 1.055 * linear ** (1 / 2.4) - 0.055;
       return Math.round(Math.min(Math.max(encoded, 0), 1) * 255).toString(16).padStart(2, "0");
     };
-    return "#" + rgb.map(channel).join("");
+    return "#" + linearSRGB(l, c, h).map(channel).join("");
   }
 
-  function applyHeatPresentation(node, palette, intensity) {
-    node.style.backgroundColor = heatColor(palette, intensity);
-    node.classList.toggle("newsprint", Boolean(palette.texture));
+  function heatColor(ramp, intensity) {
+    const color = gamutMap(rampColor(ramp, intensity));
+    return oklchHex(color[0], color[1], color[2]);
+  }
+
+  function paintCell(node, palette, stateName, intensity) {
+    const ramp = activeRamp(palette);
+    if (palette.texture) {
+      if (stateName === "active" && intensity > 0) {
+        node.style.background = heatColor(palette.light, intensity);
+        node.classList.add("newsprint");
+      }
+      return;
+    }
+    let color = ramp.empty;
+    if (stateName === "future") color = ramp.future;
+    else if (stateName === "unknown") color = ramp.unknown;
+    else if (stateName === "active" && intensity > 0) color = heatColor(ramp, intensity);
+    node.style.background = color;
   }
 
   function periodOf(snap, id) {
@@ -357,6 +428,15 @@
     const ser = seriesFor(snap);
     const row = selectedRow(snap);
     $("series-heading").textContent = row ? row.label : "All agents";
+    const paletteNow = wallPalette();
+    const rampNow = activeRamp(paletteNow);
+    if (!paletteNow.texture) {
+      document.documentElement.style.setProperty("--empty", rampNow.empty);
+      document.documentElement.style.setProperty("--surface-2", rampNow.future);
+    } else {
+      document.documentElement.style.removeProperty("--empty");
+      document.documentElement.style.removeProperty("--surface-2");
+    }
     renderWall(snap, ser, row);
     renderTrend(snap, ser);
     renderBreakdown(snap, p);
@@ -458,9 +538,7 @@
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "cell " + st + (i === peakIdx ? " peak" : "");
-      if (st === "active" && val > 0) {
-        applyHeatPresentation(cell, palette, presentationIntensity(val, lv));
-      }
+      paintCell(cell, palette, st, presentationIntensity(val, lv));
       cell.dataset.date = date;
       cell.setAttribute("aria-describedby", "tip");
       cell.setAttribute("aria-label", formatDay(date) + ", " + tipValue(val, st) + (state.filter && ser.label ? ", " + ser.label : ""));
@@ -493,12 +571,15 @@
     const less = document.createElement("span");
     less.textContent = "Less";
     legend.append(less);
+    const legendRamp = palette.texture ? palette.light : activeRamp(palette);
     const legendSteps = [null, 0, HEAT_MID_POSITION, HEAT_HIGH_POSITION, 1];
     legendSteps.forEach((intensity) => {
       const i = document.createElement("i");
-      i.className = "cell";
-      if (intensity != null) {
-        applyHeatPresentation(i, palette, intensity);
+      i.className = "cell" + (palette.texture ? " newsprint" : "");
+      if (intensity == null) {
+        if (!palette.texture) i.style.background = legendRamp.empty;
+      } else {
+        i.style.background = heatColor(legendRamp, intensity);
       }
       legend.append(i);
     });
@@ -796,6 +877,9 @@
   }
   applyWallPalette(state.palette, false);
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (!document.documentElement.getAttribute("data-theme") && state.snap) render();
+  });
 
   function relativeAge(iso) {
     if (!iso) return "";
@@ -895,21 +979,21 @@
     }
     button.hidden = false;
     if (session && session.login === owner) {
-      button.textContent = "应用到我的 GitHub 主页";
-      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览 · 已发布 " + label;
+      button.textContent = "发布到 GitHub 主页";
+      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览中";
       return;
     }
-    button.textContent = "登录并应用到我的 GitHub 主页";
-    mode.textContent = "预览主题";
+    button.textContent = "登录并发布到 GitHub 主页";
+    mode.textContent = "预览中";
   }
 
   function openPublish() {
     const dialog = $("publish-dialog");
     if (!dialog) return;
-    const from = (WALL_PALETTES[state.published] || WALL_PALETTES.newsprint).label;
     const to = (WALL_PALETTES[state.palette] || WALL_PALETTES.newsprint).label;
     const owner = liveOwner(state.snap);
-    $("publish-summary").textContent = from + " → " + to;
+    $("publish-title").textContent = "发布到 GitHub 主页";
+    $("publish-summary").textContent = owner ? "将 " + to + " 应用到 github.com/" + owner : "将 " + to + " 应用到 GitHub 主页";
     $("publish-target").textContent = owner ? "https://github.com/" + owner : "";
     $("publish-progress").textContent = "确认后才会写入 GitHub。";
     $("publish-confirm").hidden = false;
@@ -928,7 +1012,7 @@
     const progress = $("publish-progress");
     const phase = job && job.phase;
     if (phase === "published" || phase === "already_published") {
-      progress.textContent = "已应用 ✓";
+      progress.textContent = "已发布 ✓";
       state.published = state.palette;
       $("publish-confirm").hidden = true;
       $("publish-retry").hidden = true;

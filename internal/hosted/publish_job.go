@@ -33,7 +33,7 @@ func phaseLabel(phase string) string {
 	case phaseVerifying:
 		return "正在核验"
 	case phasePublished:
-		return "已应用"
+		return "已发布"
 	case phaseAlreadyPublished:
 		return "已是当前主题"
 	case phasePartialFailure:

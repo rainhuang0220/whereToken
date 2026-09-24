@@ -643,7 +643,7 @@ test("a visitor palette does not publish and an owner confirms on the same page"
         body: JSON.stringify({
           id: "job-1",
           phase: "published",
-          phase_label: "已应用",
+          phase_label: "已发布",
           palette: "magenta",
           result: "published",
           snapshot_id: snapshot.snapshot_id,
@@ -655,10 +655,10 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);
-  await expect(page.locator("#palette-mode")).toHaveText("预览主题");
+  await expect(page.locator("#palette-mode")).toHaveText("预览中");
   const apply = page.locator("#apply-github");
   await expect(apply).toBeVisible();
-  await expect(apply).toHaveText("登录并应用到我的 GitHub 主页");
+  await expect(apply).toHaveText("登录并发布到 GitHub 主页");
   const paletteBox = await page.locator("#palettes").boundingBox();
   const applyBox = await apply.boundingBox();
   expect(applyBox.y).toBeGreaterThan(paletteBox.y);
@@ -682,18 +682,72 @@ test("a visitor palette does not publish and an owner confirms on the same page"
     expires_at: "2099-01-01T00:00:00.000Z",
   })));
   await page.reload();
+  await expect(page.locator("#palette-mode")).toHaveText("预览中");
+  await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
+  await expect(page.locator("#palette-mode")).toHaveText("已发布 · Newsprint");
   await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await expect(page.locator("#palette-mode")).toHaveText("预览中");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("button", { name: "应用到我的 GitHub 主页" })).toBeVisible();
-  await page.getByRole("button", { name: "应用到我的 GitHub 主页" }).click();
+  await expect(page.getByRole("button", { name: "发布到 GitHub 主页" })).toBeVisible();
+  await page.getByRole("button", { name: "发布到 GitHub 主页" }).click();
   await expect(page.locator("#publish-dialog")).toBeVisible();
-  await expect(page.locator("#publish-summary")).toContainText("Newsprint");
-  await expect(page.locator("#publish-summary")).toContainText("Magenta");
+  await expect(page.locator("#publish-title")).toHaveText("发布到 GitHub 主页");
+  await expect(page.locator("#publish-summary")).toHaveText("将 Magenta 应用到 github.com/rainhuang0220");
   await expect(page.locator("#publish-target")).toHaveText("https://github.com/rainhuang0220");
+  await expect(page.getByRole("button", { name: "确认发布" })).toBeVisible();
   expect(calls.filter((line) => line.includes("/publish"))).toHaveLength(0);
   await page.getByRole("button", { name: "确认发布" }).click();
-  await expect(page.locator("#publish-progress")).toHaveText("已应用 ✓");
+  await expect(page.locator("#publish-progress")).toHaveText("已发布 ✓");
   expect(calls.some((line) => line.startsWith("POST") && line.includes("/publish"))).toBe(true);
+});
+
+test("paints cobalt and magenta from the same tokens as the preview SVG", async ({ page }) => {
+  const series = snapshot.activity.series.find((item) => item.dimension === "all" && (item.metric || "tokens") === "tokens");
+  series.states.fill("empty");
+  series.values.fill(0);
+  series.levels.fill(5);
+  series.states[10] = "active";
+  series.values[10] = 10_000_000;
+  series.states[11] = "active";
+  series.values[11] = 1_000_000_000;
+  series.states[12] = "future";
+  series.states[13] = "unknown";
+  const rgb = (hex) => {
+    const n = Number.parseInt(hex.slice(1), 16);
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
+  const bg = (index) => page.locator("#wall .cell").nth(index).evaluate((node) => getComputedStyle(node).backgroundColor);
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(baseURL);
+  await page.getByRole("button", { name: "Light" }).click();
+  await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
+  await expect.poll(() => bg(0)).toBe(rgb("#EFF2F5"));
+  await expect.poll(() => bg(10)).toBe(rgb("#A1C4FD"));
+  await expect.poll(() => bg(11)).toBe(rgb("#084FBA"));
+  await expect.poll(() => bg(12)).toBe(rgb("#F6F8FA"));
+  await expect.poll(() => bg(13)).toBe(rgb("#D1D9E0"));
+
+  await page.getByRole("button", { name: "Dark" }).click();
+  await expect.poll(() => bg(0)).toBe(rgb("#24292F"));
+  await expect.poll(() => bg(10)).toBe(rgb("#425D88"));
+  await expect.poll(() => bg(11)).toBe(rgb("#A2C5FF"));
+  await expect.poll(() => bg(12)).toBe(rgb("#1C2128"));
+  await expect.poll(() => bg(13)).toBe(rgb("#444C56"));
+
+  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
+  await expect.poll(() => bg(10)).toBe(rgb("#7F466D"));
+  await expect.poll(() => bg(11)).toBe(rgb("#F8A5DD"));
+  await page.getByRole("button", { name: "Light" }).click();
+  await expect.poll(() => bg(10)).toBe(rgb("#F7A4DB"));
+  await expect.poll(() => bg(0)).toBe(rgb("#EFF2F5"));
+
+  await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
+  await expect.poll(() => bg(10)).toBe(rgb("#B8B8B8"));
+  await expect.poll(() => bg(0)).toBe(rgb("#E8E8E6"));
+  await page.getByRole("button", { name: "Dark" }).click();
+  await expect.poll(() => bg(10)).toBe(rgb("#B8B8B8"));
+  await expect.poll(() => bg(0)).toBe(rgb("#E6E2D8"));
 });
 
 test("hands the selected palette to local My Token without publishing", async ({ page }) => {
