@@ -511,9 +511,12 @@ func getPreview(t *testing.T, h http.Handler, name string) []byte {
 }
 
 func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
+	const login = "rainhuang0220"
 	git := newMemGit(publishReadme)
 	h := publishMux(t, git)
 	device, session, csrf := seedOwner(t)
+	clearOwnerPublication(t, login)
+	t.Cleanup(func() { clearOwnerPublication(t, login) })
 	now := time.Date(2026, 9, 24, 4, 0, 0, 0, time.UTC)
 	proj := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
@@ -521,12 +524,15 @@ func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
 			authEvent("claude", "anthropic", now.Add(-time.Hour), 4000),
 		},
 	})
-	putProjection(t, h, device, proj.raw)
-	first := publishRequestTo(t, h, session, csrf, "cobalt", true, "")
+	synced := putProjection(t, h, device, proj.raw)
+	if synced["snapshot_id"] != proj.snap.SnapshotID || synced["kept"] == "previous" {
+		t.Fatalf("sync did not store this snapshot: %+v", synced)
+	}
+	first := publishAs(t, h, login, session, csrf, "cobalt")
 	if first.Code != http.StatusOK {
 		t.Fatalf("cobalt %d %s", first.Code, first.Body.String())
 	}
-	if palette, id := publishedPalette(t, h, "rainhuang0220"); palette != "cobalt" || id != proj.snap.SnapshotID {
+	if palette, id := publishedPalette(t, h, login); palette != "cobalt" || id != proj.snap.SnapshotID {
 		t.Fatalf("promoted palette %s snapshot %s", palette, id)
 	}
 	readme := git.readme()
@@ -535,7 +541,7 @@ func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
 	puts := git.puts
 
 	git.failPath = "wheretoken/preview-light.svg"
-	failed := publishRequestTo(t, h, session, csrf, "magenta", true, "")
+	failed := publishAs(t, h, login, session, csrf, "magenta")
 	if failed.Code != http.StatusConflict {
 		t.Fatalf("svg failure %d %s", failed.Code, failed.Body.String())
 	}
@@ -549,17 +555,17 @@ func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
 	if job["retry_readme"] != true {
 		t.Fatalf("retry was not preserved: %+v", job)
 	}
-	if palette, id := publishedPalette(t, h, "rainhuang0220"); palette != "cobalt" || id != proj.snap.SnapshotID {
+	if palette, id := publishedPalette(t, h, login); palette != "cobalt" || id != proj.snap.SnapshotID {
 		t.Fatalf("api promoted magenta before github verified it: palette %s snapshot %s", palette, id)
 	}
 	if git.readme() != readme || !bytes.Equal(git.file("wheretoken/preview-light.svg"), light) || !bytes.Equal(git.file("wheretoken/preview-dark.svg"), dark) {
 		t.Fatal("failed svg upload changed the published github files")
 	}
-	if !bytes.Equal(getPreview(t, h, "preview-light.svg"), light) || !bytes.Equal(getPreview(t, h, "preview-dark.svg"), dark) {
+	if !bytes.Equal(previewBody(t, h, login, "preview-light.svg"), light) || !bytes.Equal(previewBody(t, h, login, "preview-dark.svg"), dark) {
 		t.Fatal("hosted previews moved ahead of the github files")
 	}
 
-	retry := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/rainhuang0220/jobs/"+job["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
+	retry := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/"+login+"/jobs/"+job["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
 	retry.Header.Set("Authorization", "Bearer "+session)
 	retry.Header.Set("X-CSRF-Token", csrf)
 	retryRec := httptest.NewRecorder()
@@ -574,17 +580,17 @@ func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
 	if retried["result"] != "published" || retried["snapshot_id"] != proj.snap.SnapshotID {
 		t.Fatalf("retry job %+v", retried)
 	}
-	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != "magenta" {
+	if palette, _ := publishedPalette(t, h, login); palette != "magenta" {
 		t.Fatalf("retry did not promote magenta, palette %s", palette)
 	}
 	if git.readme() == readme || bytes.Equal(git.file("wheretoken/preview-light.svg"), light) {
 		t.Fatal("retry left the previous palette on github")
 	}
-	if !bytes.Equal(getPreview(t, h, "preview-light.svg"), git.file("wheretoken/preview-light.svg")) {
+	if !bytes.Equal(previewBody(t, h, login, "preview-light.svg"), git.file("wheretoken/preview-light.svg")) {
 		t.Fatal("promoted preview does not match github")
 	}
 	puts = git.puts
-	again := publishRequestTo(t, h, session, csrf, "magenta", true, "")
+	again := publishAs(t, h, login, session, csrf, "magenta")
 	if again.Code != http.StatusOK {
 		t.Fatalf("again %d %s", again.Code, again.Body.String())
 	}
@@ -595,6 +601,45 @@ func TestFailedPreviewUploadDoesNotPromotePalette(t *testing.T) {
 	if idem["result"] != resultAlreadyPublished || git.puts != puts {
 		t.Fatalf("second magenta publish %+v puts %d -> %d", idem, puts, git.puts)
 	}
+}
+
+func clearOwnerPublication(t *testing.T, login string) {
+	t.Helper()
+	st := readyStore(t)
+	user, err := st.UserByLogin(context.Background(), login)
+	if err != nil {
+		return
+	}
+	for _, query := range []string{
+		`DELETE FROM public_projections WHERE user_id=?`,
+		`DELETE FROM public_presentations WHERE user_id=?`,
+		`DELETE FROM publish_jobs WHERE user_id=?`,
+	} {
+		if _, err := st.db.ExecContext(context.Background(), query, user.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func publishAs(t *testing.T, h http.Handler, login, session, csrf, palette string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/"+login+"/publish", strings.NewReader(`{"palette":"`+palette+`","confirm":true}`))
+	req.Header.Set("Authorization", "Bearer "+session)
+	req.Header.Set("X-CSRF-Token", csrf)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func previewBody(t *testing.T, h http.Handler, login, name string) []byte {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/"+login+"/"+name, nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview %s %d %s", name, rec.Code, rec.Body.String())
+	}
+	return rec.Body.Bytes()
 }
 
 func publishedPalette(t *testing.T, h http.Handler, login string) (string, string) {
