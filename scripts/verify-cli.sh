@@ -240,8 +240,12 @@ test -f "$prof/profile.json"
 test -f "$prof/preview-light.svg"
 test -f "$prof/index.html"
 "$dir/wheretoken" profile validate "$prof" | grep -q ok
-if grep -E '/api/summary|/api/v1/' "$prof/assets/profile.js"; then
-  echo "profile js talks to APIs" >&2
+if grep -E '/api/summary|/api/v1/sync|/api/v1/dashboard|/api/v1/account|/api/v1/devices' "$prof/assets/profile.js"; then
+  echo "profile js talks to private APIs" >&2
+  exit 1
+fi
+if ! grep -q '/api/v1/public-profile/' "$prof/assets/profile.js"; then
+  echo "profile js missing the public profile API" >&2
   exit 1
 fi
 

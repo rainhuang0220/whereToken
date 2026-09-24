@@ -39,6 +39,7 @@ type memGit struct {
 	puts       int
 	failReadme int
 	conflict   int
+	failPath   string
 	paths      []string
 }
 
@@ -95,6 +96,10 @@ func (g *memGit) PutFile(_ context.Context, repo, path, branch, message string, 
 	}
 	if path == "README.md" && g.failReadme > 0 {
 		g.failReadme--
+		return "", io.EOF
+	}
+	if g.failPath != "" && path == g.failPath {
+		g.failPath = ""
 		return "", io.EOF
 	}
 	if repo != "rainhuang0220/rainhuang0220" || (path != "README.md" && path != "wheretoken/preview-light.svg" && path != "wheretoken/preview-dark.svg") {
@@ -344,6 +349,165 @@ func TestPublicProfileSyncPublishAndRetry(t *testing.T) {
 			t.Fatalf("unexpected path %s", path)
 		}
 	}
+}
+
+func TestPublishedSurfacesShareOneSnapshot(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	device, session, csrf := seedOwner(t)
+	now := time.Date(2026, 9, 24, 3, 0, 0, 0, time.UTC)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-2*time.Hour), 1000),
+			authEvent("cursor", "cursor", now.Add(-time.Hour), 5000),
+		},
+	})
+	putProjection(t, h, device, proj.raw)
+	beforeReadme := git.readme()
+	puts := git.puts
+
+	git.failPath = "wheretoken/preview-light.svg"
+	failed := publishRequestTo(t, h, session, csrf, "cobalt", true, "")
+	if failed.Code != http.StatusConflict {
+		t.Fatalf("svg failure status %d %s", failed.Code, failed.Body.String())
+	}
+	var failedJob map[string]any
+	if err := json.Unmarshal(failed.Body.Bytes(), &failedJob); err != nil {
+		t.Fatal(err)
+	}
+	if failedJob["phase"] == phasePublished || failedJob["result"] == "published" || failedJob["result"] == resultAlreadyPublished {
+		t.Fatalf("svg failure reported success: %+v", failedJob)
+	}
+	if git.readme() != beforeReadme {
+		t.Fatal("failed svg write updated the README")
+	}
+	if len(git.file("wheretoken/preview-light.svg")) != 0 || len(git.file("wheretoken/preview-dark.svg")) != 0 {
+		t.Fatal("a failed preview write left an svg committed")
+	}
+
+	retryReq := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/rainhuang0220/jobs/"+failedJob["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
+	retryReq.Header.Set("Authorization", "Bearer "+session)
+	retryReq.Header.Set("X-CSRF-Token", csrf)
+	retryRec := httptest.NewRecorder()
+	h.ServeHTTP(retryRec, retryReq)
+	if retryRec.Code != http.StatusOK {
+		t.Fatalf("retry %d %s", retryRec.Code, retryRec.Body.String())
+	}
+	var published map[string]any
+	if err := json.Unmarshal(retryRec.Body.Bytes(), &published); err != nil {
+		t.Fatal(err)
+	}
+	if published["result"] != "published" || published["snapshot_id"] != proj.snap.SnapshotID {
+		t.Fatalf("retry job %+v", published)
+	}
+
+	puts = git.puts
+	againRetry := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/rainhuang0220/jobs/"+failedJob["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
+	againRetry.Header.Set("Authorization", "Bearer "+session)
+	againRetry.Header.Set("X-CSRF-Token", csrf)
+	againRec := httptest.NewRecorder()
+	h.ServeHTTP(againRec, againRetry)
+	if againRec.Code != http.StatusConflict || !strings.Contains(againRec.Body.String(), "not retryable") {
+		t.Fatalf("second retry %d %s", againRec.Code, againRec.Body.String())
+	}
+	if git.puts != puts {
+		t.Fatal("retry of a finished job wrote files")
+	}
+
+	puts = git.puts
+	second := publishRequestTo(t, h, session, csrf, "cobalt", true, "")
+	if second.Code != http.StatusOK {
+		t.Fatalf("second publish %d %s", second.Code, second.Body.String())
+	}
+	var idem map[string]any
+	if err := json.Unmarshal(second.Body.Bytes(), &idem); err != nil {
+		t.Fatal(err)
+	}
+	if idem["result"] != resultAlreadyPublished || idem["snapshot_id"] != proj.snap.SnapshotID {
+		t.Fatalf("second publish %+v", idem)
+	}
+	if git.puts != puts {
+		t.Fatalf("already published wrote %d files", git.puts-puts)
+	}
+
+	bad := httptest.NewRequest(http.MethodPut, "/api/v1/sync/public-profile", strings.NewReader(`{"schema":"wheretoken.public-profile"}`))
+	bad.Header.Set("Authorization", "Bearer "+device)
+	badRec := httptest.NewRecorder()
+	h.ServeHTTP(badRec, bad)
+	if badRec.Code != http.StatusBadRequest {
+		t.Fatalf("bad sync %d", badRec.Code)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("failed sync replaced the last good snapshot")
+	}
+
+	gotReq := httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/rainhuang0220", nil)
+	gotRec := httptest.NewRecorder()
+	h.ServeHTTP(gotRec, gotReq)
+	var envelope struct {
+		DataRevision string                 `json:"data_revision"`
+		Asset        string                 `json:"asset_revision"`
+		Snapshot     publicprofile.Snapshot `json:"snapshot"`
+	}
+	if err := json.Unmarshal(gotRec.Body.Bytes(), &envelope); err != nil {
+		t.Fatal(err)
+	}
+	if envelope.DataRevision != proj.snap.SnapshotID || envelope.Snapshot.SnapshotID != proj.snap.SnapshotID {
+		t.Fatalf("api snapshot %s data %s", envelope.Snapshot.SnapshotID, envelope.DataRevision)
+	}
+	if envelope.Snapshot.GeneratedAt != proj.snap.GeneratedAt || envelope.Snapshot.AsOfDate != proj.snap.AsOfDate {
+		t.Fatalf("timestamp generated %s/%s as_of %s/%s", envelope.Snapshot.GeneratedAt, proj.snap.GeneratedAt, envelope.Snapshot.AsOfDate, proj.snap.AsOfDate)
+	}
+	if envelope.Snapshot.Periods.All.Totals.Total.Display != proj.snap.Periods.All.Totals.Total.Display {
+		t.Fatal("api total changed")
+	}
+	light := getPreview(t, h, "preview-light.svg")
+	dark := getPreview(t, h, "preview-dark.svg")
+	if !bytes.Equal(light, git.file("wheretoken/preview-light.svg")) || !bytes.Equal(dark, git.file("wheretoken/preview-dark.svg")) {
+		t.Fatal("api previews differ from the files written to git")
+	}
+	for _, svg := range [][]byte{light, dark} {
+		if !bytes.Contains(svg, []byte("<metadata id=\"wheretoken-snapshot-id\">"+proj.snap.SnapshotID+"</metadata>")) {
+			t.Fatal("preview metadata snapshot differs")
+		}
+		if !bytes.Contains(svg, []byte("through "+proj.snap.AsOfDate)) {
+			t.Fatal("preview date differs from the snapshot")
+		}
+	}
+	key, err := publicprofile.CacheKey(proj.snap.SnapshotID, envelope.Asset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readme := git.readme()
+	if strings.Count(readme, "?v="+key) != 3 {
+		t.Fatalf("readme cache key count for %s\n%s", key, readme)
+	}
+	if strings.Contains(readme, "15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62-2f221b6893380bf9ebaecd0cce4fe8bf2abea777805c8dac1c88d9d34c4245cc") {
+		t.Fatal("readme kept the previous cache key")
+	}
+	alt, err := publicprofile.ReadmeAlt(publicprofile.ReadmeFacts{
+		TotalDisplay: proj.snap.Periods.All.Totals.Total.Display,
+		DataStatus:   proj.snap.DataStatus,
+		AsOfDate:     proj.snap.AsOfDate,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(readme, `alt="`+alt+`"`) || !strings.Contains(alt, proj.snap.Periods.All.Totals.Total.Display) {
+		t.Fatalf("readme total/date alt %q\n%s", alt, readme)
+	}
+}
+
+func getPreview(t *testing.T, h http.Handler, name string) []byte {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/rainhuang0220/"+name, nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("preview %s %d", name, rec.Code)
+	}
+	return rec.Body.Bytes()
 }
 
 func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
