@@ -16,10 +16,20 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/credstore"
 	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
-	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
 const profileRefreshInterval = 15 * time.Minute
+
+// profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
+// has no timeout; refresh does not use it.
+var profileRefreshTimeout = 30 * time.Second
+
+func (a *App) refreshDo(req *http.Request) (*http.Response, error) {
+	if a.HTTPDo != nil {
+		return a.HTTPDo(req)
+	}
+	return (&http.Client{Timeout: profileRefreshTimeout}).Do(req)
+}
 
 func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	switch flags.ProfileRefreshAction {
@@ -32,7 +42,7 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	case "watch":
 		return a.profileRefreshWatch(flags, home)
 	case "":
-		return a.executeProfileRefresh(context.Background(), flags, home, nil, false, nil)
+		return a.executeProfileRefresh(context.Background(), flags, home, nil)
 	default:
 		fmt.Fprintf(a.Stderr, "unknown profile refresh action %q\ntry `wheretoken --help`\n", flags.ProfileRefreshAction)
 		return ExitUsage
@@ -83,7 +93,7 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 		if ctx.Err() != nil {
 			return ExitOK
 		}
-		a.executeProfileRefresh(ctx, flags, home, nil, false, rejected)
+		a.executeProfileRefresh(ctx, flags, home, rejected)
 		timer := time.NewTimer(profileRefreshInterval)
 		select {
 		case <-ctx.Done():
@@ -94,21 +104,9 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 	}
 }
 
-func (a *App) maybeProfileRefresh(flags Flags, home adapter.Home, res scan.Result) {
-	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
-	if err != nil || !on {
-		return
-	}
-	a.executeProfileRefresh(context.Background(), flags, home, &res, true, nil)
-}
-
-func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, preset *scan.Result, fromReport bool, rejected map[string]struct{}) int {
-	out := io.Writer(a.Stdout)
-	if fromReport {
-		out = a.Stderr
-	}
+func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, rejected map[string]struct{}) int {
 	if a.wantOffline(flags) {
-		fmt.Fprintln(out, "phase=skipped 离线不覆盖已发布快照")
+		fmt.Fprintln(a.Stdout, "phase=skipped 离线不覆盖已发布快照")
 		return ExitOK
 	}
 	token, login, err := a.profileRefreshCreds(home)
@@ -116,23 +114,16 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
 		return ExitOK
 	}
-	if preset == nil {
-		release, ok, lockErr := proclock.TryLock(a.scanLockPath(home))
-		if lockErr != nil {
-			return a.refreshFailed(out, fromReport)
-		}
-		if !ok {
-			fmt.Fprintln(out, "phase=skipped 已有扫描，跳过本次")
-			return ExitOK
-		}
-		defer release()
+	release, ok, lockErr := proclock.TryLock(a.scanLockPath(home))
+	if lockErr != nil {
+		return a.refreshFailed()
 	}
-	res := scan.Result{}
-	if preset != nil {
-		res = *preset
-	} else {
-		res = a.doScanOpt(home, flags.Quiet, flags.Offline, flags.ASCII, false)
+	if !ok {
+		fmt.Fprintln(a.Stdout, "phase=skipped 已有扫描，跳过本次")
+		return ExitOK
 	}
+	defer release()
+	res := a.doScanOpt(home, flags.Quiet, flags.Offline, flags.ASCII, false)
 	snap, err := publicprofile.Build(publicprofile.Input{
 		Events:       res.Events,
 		Turns:        res.Turns,
@@ -144,11 +135,11 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		Errors:       res.Errors,
 	})
 	if err != nil {
-		return a.refreshFailed(out, fromReport)
+		return a.refreshFailed()
 	}
 	if snap.SnapshotID != "" && rejected != nil {
 		if _, seen := rejected[snap.SnapshotID]; seen {
-			fmt.Fprintln(out, "phase=idle 等待下一次")
+			fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
 			return ExitOK
 		}
 	}
@@ -161,19 +152,15 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		rejected[snap.SnapshotID] = struct{}{}
 	}
 	if applied.Transport || applied.Rejected {
-		return a.refreshFailed(out, fromReport)
+		return a.refreshFailed()
 	}
-	a.writeRefresh(out, applied.Decision, !fromReport)
+	a.writeRefresh(a.Stdout, applied.Decision, true)
 	return ExitOK
 }
 
-func (a *App) refreshFailed(out io.Writer, fromReport bool) int {
-	if fromReport {
-		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
-		return ExitOK
-	}
-	fmt.Fprintln(out, "phase=failed 更新失败，下次再试")
-	fmt.Fprintln(out, publicprofile.CodeWillRetry)
+func (a *App) refreshFailed() int {
+	fmt.Fprintln(a.Stdout, "phase=failed 更新失败，下次再试")
+	fmt.Fprintln(a.Stdout, publicprofile.CodeWillRetry)
 	fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 	return ExitFail
 }
@@ -228,7 +215,7 @@ func (p projectionClient) Fetch(ctx context.Context) (publicprofile.RemoteView, 
 	if err != nil {
 		return publicprofile.RemoteView{}, err
 	}
-	resp, err := p.app.doHTTP(req)
+	resp, err := p.app.refreshDo(req)
 	if err != nil {
 		return publicprofile.RemoteView{}, err
 	}
@@ -249,7 +236,7 @@ func (p projectionClient) Fetch(ctx context.Context) (publicprofile.RemoteView, 
 }
 
 func (p projectionClient) Put(ctx context.Context, body []byte) (publicprofile.PutResult, error) {
-	return p.app.putSanitizedProjection(ctx, p.token, body)
+	return p.app.putSanitizedProjectionDo(ctx, p.token, body, p.app.refreshDo)
 }
 
 func FormatProfileRefreshDoctor(home adapter.Home) string {

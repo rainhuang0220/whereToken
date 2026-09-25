@@ -82,12 +82,16 @@ func DecideRefresh(in RefreshInput) Decision {
 	if !ShouldReplaceProjection(*in.Remote, in.Local) {
 		return skipped("覆盖变弱，保留上次", "")
 	}
+	prevTotal := in.Remote.Periods.All.Totals.Total.Value
+	// A nil remote total is not zero, so it cannot prove the new total is
+	// at least as large. A smaller total never publishes, including when
+	// the local calendar date changed or the scan recorded errors.
+	if prevTotal == nil || *localTotal < *prevTotal {
+		return skipped("增量未到 0.01 M", CodeSkippedDelta)
+	}
 	dateChange := in.Local.AsOfDate != "" && in.Remote.AsOfDate != "" && in.Local.AsOfDate != in.Remote.AsOfDate
-	if !dateChange {
-		prevTotal := in.Remote.Periods.All.Totals.Total.Value
-		if prevTotal == nil || *localTotal-*prevTotal < RefreshMinDelta {
-			return skipped("增量未到 0.01 M", CodeSkippedDelta)
-		}
+	if !dateChange && *localTotal-*prevTotal < RefreshMinDelta {
+		return skipped("增量未到 0.01 M", CodeSkippedDelta)
 	}
 	if !in.RemoteUpdatedAt.IsZero() && in.Now.Sub(in.RemoteUpdatedAt) < RefreshCooldown {
 		return skipped("间隔未满 1 小时", CodeSkippedCooldown)

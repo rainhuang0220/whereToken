@@ -118,6 +118,31 @@ func TestDecideRefreshTable(t *testing.T) {
 			code:    CodePublished,
 		},
 		{
+			name: "date changed and total dropped",
+			in: RefreshInput{
+				Local: gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000-1), measured("claude", 1_000_000-1)),
+				Remote: func() *Snapshot {
+					s := gateSnap("sha256:prev", StatusAvailable, "2026-09-25", intPtr(1_000_000), measured("claude", 1_000_000))
+					return &s
+				}(),
+				RemoteUpdatedAt: updated,
+				Now:             later,
+			},
+			publish: false,
+			code:    CodeSkippedDelta,
+		},
+		{
+			name: "date changed and total held",
+			in: RefreshInput{
+				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000)),
+				Remote:          &remote,
+				RemoteUpdatedAt: updated,
+				Now:             later,
+			},
+			publish: true,
+			code:    CodeDateRollover,
+		},
+		{
 			name: "same day drop does not publish",
 			in: RefreshInput{
 				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000-1)),

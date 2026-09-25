@@ -109,11 +109,15 @@ PRIVACY
   wheretoken community off opts out. See docs/community.md.
   card writes a static SVG from this machine's ledgers. It does not
   upload the usage ledger, and it never calls Community Rank.
-  profile refresh (off unless you run profile refresh on) PUTs only the
-  sanitized public snapshot. It does not upload events, prompts, paths,
-  or the daily batch. The GitHub README stays on the coarser materialize
+  The default report does not upload a public snapshot.
+  profile refresh PUTs only the sanitized public snapshot. It is not part
+  of wheretoken with no command. profile refresh on arms profile refresh
+  watch; the bare profile refresh command is an explicit one-shot even
+  when the switch is off. It does not upload events, prompts, paths, or
+  the daily batch. The GitHub README stays on the coarser materialize
   gate; a new local date can rewrite it only after one confirmed palette
   publish. Intra-day token updates refresh the hosted JSON first.
+  A smaller all-time total is not published.
 
 EXAMPLES
   wheretoken

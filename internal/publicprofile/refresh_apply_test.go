@@ -196,6 +196,31 @@ func TestApplyRefreshTransportRetriesOnceAndDoesNotRepostAStoredSnapshot(t *test
 	}
 }
 
+func TestApplyRefreshDoesNotPutWhenRemoteAlreadyHasTheSnapshot(t *testing.T) {
+	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
+	local := mustBuild(t, usageInput(now, time.UTC, 8_000))
+	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: local, UpdatedAt: now.Add(-2 * time.Hour)}}
+	got := ApplyRefresh(context.Background(), local, now, false, pub)
+	if pub.puts != 0 || got.Decision.Publish {
+		t.Fatalf("puts=%d publish=%v %+v", pub.puts, got.Decision.Publish, got.Decision)
+	}
+}
+
+func TestApplyRefreshRateLimitRetriesOnTheNextInvocation(t *testing.T) {
+	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
+	remote := mustBuild(t, usageInput(now.Add(-2*time.Hour), time.UTC, 1_000))
+	local := mustBuild(t, usageInput(now, time.UTC, 1_000+10_000))
+	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: now.Add(-2 * time.Hour)}, status: 429}
+	first := ApplyRefresh(context.Background(), local, now, false, pub)
+	if !first.Transport || first.Rejected || pub.puts != 1 {
+		t.Fatalf("first puts=%d transport=%v rejected=%v", pub.puts, first.Transport, first.Rejected)
+	}
+	second := ApplyRefresh(context.Background(), local, now, false, pub)
+	if pub.puts != 2 || !second.Transport {
+		t.Fatalf("retry puts=%d transport=%v", pub.puts, second.Transport)
+	}
+}
+
 func TestApplyRefreshRejectsValidationWithoutAnotherPut(t *testing.T) {
 	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
 	remote := mustBuild(t, usageInput(now.Add(-2*time.Hour), time.UTC, 1_000))

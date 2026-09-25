@@ -2,6 +2,7 @@ package cli
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -96,7 +97,7 @@ func TestProfileRefreshSwitchFileStaysMinimal(t *testing.T) {
 	}
 }
 
-func TestProfileRefreshDoctorAndOptedOutReportDoNotPut(t *testing.T) {
+func TestProfileRefreshDoctorAndReportDoNotPut(t *testing.T) {
 	dir := t.TempDir()
 	home := testhome.New(dir)
 	app, out, errb := testApp([]string{"doctor"})
@@ -111,12 +112,19 @@ func TestProfileRefreshDoctorAndOptedOutReportDoNotPut(t *testing.T) {
 		t.Fatal("doctor created the refresh switch")
 	}
 
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+		t.Fatal(err)
+	}
 	puts := 0
 	app, out, errb = testApp([]string{"--quiet"})
 	app.Home = home
+	app.Creds = &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
 	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
 		puts++
-		t.Errorf("opted-out report called %s %s", req.Method, req.URL.Path)
+		t.Errorf("report called %s %s", req.Method, req.URL.Path)
 		return jsonRes(500, nil)
 	}
 	if code := app.Run(); code != ExitOK {
@@ -125,10 +133,10 @@ func TestProfileRefreshDoctorAndOptedOutReportDoNotPut(t *testing.T) {
 	if puts != 0 {
 		t.Fatalf("puts %d", puts)
 	}
-	if strings.Contains(errb.String(), "phase=") {
-		t.Fatalf("opted-out report wrote a refresh line: %s", errb.String())
+	combined := out.String() + errb.String()
+	if strings.Contains(combined, "phase=") || strings.Contains(combined, "PUBLISHED") || strings.Contains(combined, "用量已更新") {
+		t.Fatalf("report printed a refresh line:\n%s", combined)
 	}
-	_ = out
 }
 
 func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
@@ -234,5 +242,167 @@ func TestProfileRefreshWatchOffDoesNotLoop(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "phase=idle 未开启") {
 		t.Fatalf("%s", out.String())
+	}
+}
+
+func TestProfileRefreshOffIsDurableAndOneShotStillPublishes(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
+	creds := &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
+	app, _, errb := testApp([]string{"profile", "refresh", "on"})
+	app.Home = home
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("on %d %s", code, errb.String())
+	}
+	app, _, errb = testApp([]string{"profile", "refresh", "off"})
+	app.Home = home
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("off %d %s", code, errb.String())
+	}
+	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
+	if err != nil || on {
+		t.Fatalf("switch stayed on: %v %v", on, err)
+	}
+	puts := 0
+	app, _, errb = testApp([]string{"profile", "refresh", "watch"})
+	app.Home = home
+	app.Creds = creds
+	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodPut {
+			puts++
+		}
+		return jsonRes(http.StatusNotFound, nil)
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("watch %d %s", code, errb.String())
+	}
+	if puts != 0 {
+		t.Fatalf("watch after off put %d", puts)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh"})
+	app.Home = home
+	app.Creds = creds
+	app.Now = func() time.Time { return now }
+	app.Loc = time.UTC
+	app.Scan = func(adapter.Home) scan.Result {
+		ev := event.UsageEvent{Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-time.Hour), Miss: 12_000, Quality: event.QualityAuthoritative}
+		return scan.Result{Events: []event.UsageEvent{ev}}
+	}
+	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+		if req.Header.Get("Authorization") != "" && strings.Contains(req.URL.RawQuery, "wtd_1") {
+			t.Fatal("token leaked into the URL")
+		}
+		if req.Method == http.MethodGet {
+			return jsonRes(http.StatusNotFound, nil)
+		}
+		if req.Method == http.MethodPut {
+			puts++
+			return jsonRes(200, map[string]any{"ok": true})
+		}
+		return jsonRes(500, nil)
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("one-shot %d %s", code, errb.String())
+	}
+	if puts != 1 || !strings.Contains(out.String(), "PUBLISHED") {
+		t.Fatalf("puts=%d %s", puts, out.String())
+	}
+	if creds.m[credstore.KeyDeviceToken] != "wtd_1.tok" {
+		t.Fatal("one-shot deleted the device token")
+	}
+}
+
+func TestProfileRefreshAuthAndRateLimitDoNotDeleteTokenOrLoop(t *testing.T) {
+	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests} {
+		home := testhome.New(t.TempDir())
+		creds := &memCreds{m: map[string]string{
+			credstore.KeyDeviceToken: "wtd_1.secret",
+			credstore.KeyLogin:       "rainhuang0220",
+		}}
+		calls := 0
+		app, out, errb := testApp([]string{"profile", "refresh"})
+		app.Home = home
+		app.Creds = creds
+		app.Now = func() time.Time { return now }
+		app.Loc = time.UTC
+		app.Scan = func(adapter.Home) scan.Result {
+			ev := event.UsageEvent{Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-time.Hour), Miss: 12_000, Quality: event.QualityAuthoritative}
+			return scan.Result{Events: []event.UsageEvent{ev}}
+		}
+		app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+			calls++
+			if strings.Contains(req.Header.Get("Authorization"), "wtd_1.secret") && calls > 4 {
+				t.Fatal("tight retry")
+			}
+			return jsonRes(status, map[string]any{"error": "wtd_1.secret"})
+		}
+		code := app.Run()
+		combined := out.String() + errb.String()
+		if strings.Contains(combined, "wtd_1.secret") || strings.Contains(combined, "Bearer") {
+			t.Fatalf("status %d leaked a credential\n%s", status, combined)
+		}
+		if creds.m[credstore.KeyDeviceToken] != "wtd_1.secret" {
+			t.Fatalf("status %d deleted the token", status)
+		}
+		if calls > 3 {
+			t.Fatalf("status %d calls=%d", status, calls)
+		}
+		if status == http.StatusTooManyRequests && code != ExitFail {
+			t.Fatalf("429 exit %d %s", code, combined)
+		}
+		if status != http.StatusTooManyRequests && code != ExitOK {
+			t.Fatalf("%d exit %d %s", status, code, combined)
+		}
+	}
+}
+
+func TestProfileRefreshHTTPClientTimesOut(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		time.Sleep(2 * time.Second)
+		_ = conn.Close()
+	}()
+	old := profileRefreshTimeout
+	profileRefreshTimeout = 200 * time.Millisecond
+	defer func() { profileRefreshTimeout = old }()
+	home := testhome.New(t.TempDir())
+	app, _, errb := testApp([]string{"profile", "refresh"})
+	app.Home = home
+	app.Creds = &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
+	app.LookupEnv = func(k string) string {
+		if k == "WHERETOKEN_HOSTED_URL" {
+			return "http://" + ln.Addr().String()
+		}
+		return ""
+	}
+	app.Scan = func(adapter.Home) scan.Result {
+		ev := event.UsageEvent{Source: "claude", Vendor: "anthropic", Timestamp: time.Date(2026, 9, 25, 14, 0, 0, 0, time.UTC), Miss: 12_000, Quality: event.QualityAuthoritative}
+		return scan.Result{Events: []event.UsageEvent{ev}}
+	}
+	start := time.Now()
+	code := app.Run()
+	if code != ExitFail {
+		t.Fatalf("exit %d %s", code, errb.String())
+	}
+	if time.Since(start) > 2*time.Second {
+		t.Fatalf("refresh waited %s without a client timeout", time.Since(start))
+	}
+	if strings.Contains(errb.String(), "wtd_1") || strings.Contains(errb.String(), "Bearer") {
+		t.Fatalf("timeout log leaked a credential: %s", errb.String())
 	}
 }

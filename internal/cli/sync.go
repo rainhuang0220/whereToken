@@ -162,7 +162,7 @@ func (a *App) uploadPublicProjection(flags Flags, home adapter.Home, res scan.Re
 	if err != nil {
 		return err
 	}
-	put, err := a.putSanitizedProjection(context.Background(), token, raw)
+	put, err := a.putSanitizedProjectionDo(context.Background(), token, raw, a.doHTTP)
 	if err != nil {
 		return err
 	}
@@ -172,14 +172,17 @@ func (a *App) uploadPublicProjection(flags Flags, home adapter.Home, res scan.Re
 	return nil
 }
 
-func (a *App) putSanitizedProjection(ctx context.Context, token string, raw []byte) (publicprofile.PutResult, error) {
+func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []byte, do func(*http.Request) (*http.Response, error)) (publicprofile.PutResult, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, a.hostedBase()+"/api/v1/sync/public-profile", strings.NewReader(string(raw)))
 	if err != nil {
 		return publicprofile.PutResult{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := a.doHTTP(req)
+	if do == nil {
+		do = a.doHTTP
+	}
+	resp, err := do(req)
 	if err != nil {
 		return publicprofile.PutResult{}, err
 	}

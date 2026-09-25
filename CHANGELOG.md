@@ -4,7 +4,7 @@
 
 ## 0.7.6 — 2026-09-25 (Alpha)
 
-- `wheretoken profile refresh` keeps the hosted public snapshot current without a second publisher. It is off until `profile refresh on`. The bare command scans, decides, and maybe PUTs `/api/v1/sync/public-profile` once; `watch` repeats that in the foreground every 15 minutes. An enabled default report may PUT once after its scan and does not change the report exit code if the refresh fails. The gate is 10,000 raw tokens or a new local calendar date, and always at least one hour since the hosted envelope. A date change does not skip the hour. Missing totals stay unavailable.
+- `wheretoken profile refresh` keeps the hosted public snapshot current without a second publisher. The default report does not upload. The command is off until `profile refresh on`, which only arms `watch`. The bare command scans, decides, and maybe PUTs `/api/v1/sync/public-profile` once even while the switch is off; `watch` repeats that in the foreground every 15 minutes while the switch is on. The gate is 10,000 raw tokens, or a new local calendar date whose total is at least the last accepted total, and always at least one hour since the hosted envelope. A date change does not skip the hour. A smaller total is not published. Missing totals stay unavailable.
 - The GitHub README still coalesces same-day usage (30 minutes, then 100,000 tokens or 6 hours). A later local `as_of_date` materializes immediately after a confirmed palette publish. Intra-day projection uploads can move the hosted JSON without rewriting README bytes. The snapshot stays `manual_publish` and `live_sync: false`. `wheretoken serve`'s 15-minute full sync is unchanged.
 
 ## 0.7.5 — 2026-09-24 (Alpha)

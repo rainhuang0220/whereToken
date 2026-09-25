@@ -214,11 +214,17 @@ binds 127.0.0.1 for a self-hosted rank service.
 .TP
 .B profile refresh [status|on|off|watch]
 Sanitized public snapshot refresh. Default off.
+The default
+.B wheretoken
+report does not upload.
 .B on
-persists only an enabled flag beside community.json (Unix ~/.config/wheretoken/profile-refresh.json, Windows %APPDATA%\\whereToken\\profile-refresh.json).
+persists only an enabled flag beside community.json (Unix ~/.config/wheretoken/profile-refresh.json, Windows %APPDATA%\\whereToken\\profile-refresh.json) used by
+.B watch
+and by status and doctor.
 The bare command publishes once even when the switch is off.
 .B watch
-repeats that check in the foreground every 15 minutes and does not install a service.
+requires the switch to be on, repeats that check in the foreground every 15 minutes, and does not install a service.
+A smaller all-time total than the last accepted snapshot is not published, including when the local date changed.
 .BR --offline
 and
 .B WHERETOKEN_OFFLINE

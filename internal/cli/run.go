@@ -263,7 +263,6 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
 		}
-		a.maybeProfileRefresh(flags, home, res)
 		return ExitOK
 	}
 	ascii := table.UseASCII(flags.ASCII, a.GOOS, a.LookupEnv)
@@ -271,7 +270,6 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv, a.termWidth)})
 	fmt.Fprint(a.Stdout, out)
 	fmt.Fprintf(a.Stdout, "\nWeb: %s\n", HostedWebURL)
-	a.maybeProfileRefresh(flags, home, res)
 	return ExitOK
 }
 

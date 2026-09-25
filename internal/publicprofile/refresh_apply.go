@@ -87,11 +87,14 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
 	}
 	res, err := pub.Put(ctx, raw)
-	if err != nil || res.Status >= 500 {
+	if err != nil || res.Status == 429 || res.Status >= 500 {
 		if stored(ctx, pub, local.SnapshotID) {
 			return ApplyResult{Decision: d, Already: true}
 		}
 		return ApplyResult{Decision: FailedRefresh(), Transport: true}
+	}
+	if res.Status == 401 || res.Status == 403 {
+		return ApplyResult{Auth: true}
 	}
 	if res.Status >= 400 {
 		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
