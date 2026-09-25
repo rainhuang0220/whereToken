@@ -28,7 +28,8 @@ the existing scan and the existing device sync:
 
 1. `wheretoken sync` scans, uploads the daily batch, then uploads the sanitized public snapshot.
 2. `wheretoken scan` does the same upload when this device is already paired. The scan still succeeds if the upload fails.
-3. While `wheretoken serve` is running, a paired device repeats that sync every 15 minutes. There is no separate always-on daemon.
+3. While `wheretoken serve` is running, a paired device repeats that full sync every 15 minutes. There is no separate always-on daemon.
+4. `wheretoken profile refresh` is a separate, default-off loop. It does not upload the daily batch. `profile refresh on` records only an enabled flag in `profile-refresh.json` next to `community.json`. The bare command runs one decide-and-PUT even while the switch is off. `profile refresh watch` repeats it in the foreground every 15 minutes. When the switch is on, the default report may PUT once after its scan. The watermark is the hosted envelope (`as_of_date`, all-time total, `freshness.updated_at`), not the scan index.
 
 An offline scan does not replace the hosted projection. A snapshot whose public
 status is `unavailable` does not replace it either. The inner snapshot keeps
@@ -87,10 +88,14 @@ Usage rewrites start only after one confirmed palette publish has updated the
 README. Until that confirmation, sync refreshes the hosted projection and
 leaves the profile README on its existing images.
 
-After that, usage rewrites wait:
+After that, same-calendar-day usage rewrites wait:
 
 - at least 30 minutes since the last README materialization
 - then either a 100,000-token movement in the public all-time total, or six hours
+
+A later local `as_of_date` on the newly accepted snapshot bypasses that wait and materializes immediately. It does not bypass projection replacement, validation, or the sensitive-string check, and it does not run when `readme_materialized_at` is still unset.
+
+The hosted JSON and the README are intentionally split. `profile refresh` may PUT after 10,000 raw tokens and one hour, including several times in a day. Those uploads refresh the interactive snapshot and leave the README bytes alone until the coalesce rules or a local-date change. README git writes stay coarse.
 
 A palette confirmation ignores that wait. Publishing the palette that is
 already on the README returns `ALREADY_PUBLISHED` and does not create a commit.

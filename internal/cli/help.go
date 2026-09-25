@@ -7,7 +7,7 @@ USAGE
   wheretoken [flags] serve [--port 8787]
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
-  wheretoken [flags] doctor     sources plus Community Rank (no upload)
+  wheretoken [flags] doctor     sources plus Community Rank and profile refresh (no upload)
   wheretoken [flags] rebuild     wipe the local scan index and rescan
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
@@ -23,6 +23,7 @@ USAGE
   wheretoken profile palette [cobalt|magenta|newsprint]  save the public Profile default
   wheretoken profile publish [cobalt|magenta|newsprint]   dry-run the GitHub profile publish
   wheretoken profile publish --yes                       push only after the dry-run is accepted
+  wheretoken profile refresh [status|on|off|watch]       sanitized public snapshot (default off)
   wheretoken profile validate <path> --production   fail incomplete cloud token coverage
   wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
@@ -108,6 +109,11 @@ PRIVACY
   wheretoken community off opts out. See docs/community.md.
   card writes a static SVG from this machine's ledgers. It does not
   upload the usage ledger, and it never calls Community Rank.
+  profile refresh (off unless you run profile refresh on) PUTs only the
+  sanitized public snapshot. It does not upload events, prompts, paths,
+  or the daily batch. The GitHub README stays on the coarser materialize
+  gate; a new local date can rewrite it only after one confirmed palette
+  publish. Intra-day token updates refresh the hosted JSON first.
 
 EXAMPLES
   wheretoken
@@ -139,6 +145,8 @@ EXAMPLES
   wheretoken profile build ./public-profile
   wheretoken profile build ./public-profile --public-palette newsprint
   wheretoken profile palette cobalt
+  wheretoken profile refresh
+  wheretoken profile refresh on
   wheretoken profile validate ./public-profile --production
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787

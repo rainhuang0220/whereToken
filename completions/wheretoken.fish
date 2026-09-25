@@ -36,4 +36,5 @@ complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l product -r
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l profile-repo -r
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l pages -r
 complete -c wheretoken -n "__fish_seen_subcommand_from profile" -l checkout -r
-complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette publish cobalt magenta newsprint"
+complete -c wheretoken -n "__fish_seen_subcommand_from profile" -a "build validate palette publish refresh cobalt magenta newsprint"
+complete -c wheretoken -n "__fish_seen_subcommand_from refresh" -a "status on off watch"

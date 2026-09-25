@@ -32,6 +32,27 @@ func TestShouldMaterializeReadmeCoalescesUsageAndPublishesThemeImmediately(t *te
 	if !ShouldMaterializeReadme(MaterializeInput{SnapshotChanged: true, PrevTotal: 50, NextTotal: 60, LastMaterialized: quiet, Now: now}) {
 		t.Fatal("quiet window should flush a small change")
 	}
+	if !ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 1_000, NextTotal: 1_000,
+		PrevAsOfDate: "2026-09-24", NextAsOfDate: "2026-09-25",
+		LastMaterialized: now.Add(-time.Minute), Now: now,
+	}) {
+		t.Fatal("a later local as_of_date must materialize inside the coalesce window")
+	}
+	if ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 1_000, NextTotal: 1_010,
+		PrevAsOfDate: "2026-09-25", NextAsOfDate: "2026-09-25",
+		LastMaterialized: now.Add(-time.Minute), Now: now,
+	}) {
+		t.Fatal("same-day small delta must still coalesce")
+	}
+	if ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: false, PrevTotal: 1_000, NextTotal: 1_000,
+		PrevAsOfDate: "2026-09-24", NextAsOfDate: "2026-09-25",
+		LastMaterialized: now.Add(-time.Minute), Now: now,
+	}) {
+		t.Fatal("an unchanged snapshot must not materialize on a date field alone")
+	}
 }
 
 func readmeFactsPartial() ReadmeFacts {

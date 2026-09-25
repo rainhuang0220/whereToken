@@ -22,7 +22,7 @@ _wheretoken() {
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
-    profile) opts="build validate palette publish cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --dry-run --yes --product --profile-repo --pages --checkout --quiet -q --offline --home --help" ;;
+    profile) opts="build validate palette publish refresh status on off watch cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --dry-run --yes --product --profile-repo --pages --checkout --quiet -q --offline --home --help" ;;
     *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

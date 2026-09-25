@@ -66,6 +66,9 @@ wheretoken \- local coding-agent token usage as a character table
 .br
 .B wheretoken profile palette
 [\fIcobalt\fR|\fImagenta\fR|\fInewsprint\fR]
+.br
+.B wheretoken profile refresh
+[\fIstatus\fR|\fIon\fR|\fIoff\fR|\fIwatch\fR]
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
 OpenClaw, Codex, OpenCode, Cursor, Trae) and prints token totals, cache hit rate, streaks, request and turn counts,
@@ -208,6 +211,18 @@ Anonymous Community Rank participation. Default on when
 is set.
 .B serve
 binds 127.0.0.1 for a self-hosted rank service.
+.TP
+.B profile refresh [status|on|off|watch]
+Sanitized public snapshot refresh. Default off.
+.B on
+persists only an enabled flag beside community.json (Unix ~/.config/wheretoken/profile-refresh.json, Windows %APPDATA%\\whereToken\\profile-refresh.json).
+The bare command publishes once even when the switch is off.
+.B watch
+repeats that check in the foreground every 15 minutes and does not install a service.
+.BR --offline
+and
+.B WHERETOKEN_OFFLINE
+skip the publish.
 .TP
 .B login
 Pair this device with the hosted web app (device code + browser confirm).
@@ -392,6 +407,13 @@ Anonymous daily totals only; never prompts, sessions, paths, or
 credentials. Optional cost is an API-equivalent estimate; missing price
 is omitted, not $0. Unavailable rank is omitted, not #0.
 Not a global, worldwide, or all-AI-users rank.
+.B profile refresh
+PUTs only the sanitized public snapshot. It does not upload events, prompts, paths, or the daily batch.
+Same-day README git writes stay on the 30 minute / 100,000 token / 6 hour gate.
+A later local
+.B as_of_date
+rewrites the README immediately, and only after a confirmed palette publish has materialized it once.
+The hosted JSON follows the local 10,000-token / 1 hour policy.
 .SH SEE ALSO
 https://github.com/rainhuang0220/whereToken
 .PP

@@ -40,39 +40,40 @@ const (
 )
 
 type Flags struct {
-	Command         string
-	Help, Version   bool
-	JSON, Today     bool
-	ASCII           bool
-	NoColor         bool
-	Quiet           bool
-	Offline         bool
-	Usage           bool
-	Tool, Vendor    string
-	Model, Home     string
-	Since, From, To string
-	Port            int
-	Width           int
-	CompletionShell string
-	RankPeriod      string
-	NoCommunity     bool
-	CommunityAction string
-	NoSync          bool
-	CardPath        string
-	ProfileAction   string
-	ProfilePath     string
-	PublicPalette   string
-	PublishYes      bool
-	PublishDryRun   bool
-	ProductRepo     string
-	ProfileRepoFlag string
-	PublishPages    string
-	PublishCheckout string
-	IncludeModels   bool
-	IncludeCost     bool
-	Production      bool
-	AllowPartial    bool
-	seen            map[string]bool
+	Command              string
+	Help, Version        bool
+	JSON, Today          bool
+	ASCII                bool
+	NoColor              bool
+	Quiet                bool
+	Offline              bool
+	Usage                bool
+	Tool, Vendor         string
+	Model, Home          string
+	Since, From, To      string
+	Port                 int
+	Width                int
+	CompletionShell      string
+	RankPeriod           string
+	NoCommunity          bool
+	CommunityAction      string
+	NoSync               bool
+	CardPath             string
+	ProfileAction        string
+	ProfileRefreshAction string
+	ProfilePath          string
+	PublicPalette        string
+	PublishYes           bool
+	PublishDryRun        bool
+	ProductRepo          string
+	ProfileRepoFlag      string
+	PublishPages         string
+	PublishCheckout      string
+	IncludeModels        bool
+	IncludeCost          bool
+	Production           bool
+	AllowPartial         bool
+	seen                 map[string]bool
 }
 
 type usageError struct {
@@ -555,9 +556,19 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 			break
 		}
 		args = args[1:]
-		if f.ProfileAction == "" && (a == "build" || a == "validate" || a == "palette" || a == "publish") {
+		if f.ProfileAction == "" && (a == "build" || a == "validate" || a == "palette" || a == "publish" || a == "refresh") {
 			f.ProfileAction = a
 			continue
+		}
+		if f.ProfileAction == "refresh" && refreshAction(a) {
+			if f.ProfileRefreshAction != "" {
+				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", a)}
+			}
+			f.ProfileRefreshAction = a
+			continue
+		}
+		if f.ProfileAction == "refresh" {
+			return Flags{}, usageError{msg: fmt.Sprintf("unknown profile refresh action %q\ntry `wheretoken --help`", a)}
 		}
 		if f.ProfilePath == "" {
 			f.ProfilePath = a
@@ -571,7 +582,9 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 			return Flags{}, err
 		}
 		if leftover := fs2.Args(); len(leftover) > 0 {
-			if (f.ProfileAction == "publish" || f.ProfileAction == "palette") && f.ProfilePath == "" && len(leftover) == 1 && !strings.HasPrefix(leftover[0], "-") {
+			if f.ProfileAction == "refresh" && f.ProfileRefreshAction == "" && len(leftover) == 1 && refreshAction(leftover[0]) {
+				f.ProfileRefreshAction = leftover[0]
+			} else if (f.ProfileAction == "publish" || f.ProfileAction == "palette") && f.ProfilePath == "" && len(leftover) == 1 && !strings.HasPrefix(leftover[0], "-") {
 				f.ProfilePath = leftover[0]
 			} else {
 				return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
@@ -579,7 +592,10 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 		}
 	}
 	if f.ProfileAction == "" {
-		return Flags{}, usageError{msg: "profile requires build, validate, palette, or publish\ntry `wheretoken --help`"}
+		return Flags{}, usageError{msg: "profile requires build, validate, palette, publish, or refresh\ntry `wheretoken --help`"}
+	}
+	if f.ProfileAction == "refresh" {
+		return finishProfileRefresh(f)
 	}
 	if f.ProfileAction == "palette" {
 		return finishProfilePalette(f)
@@ -606,6 +622,22 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 	}
 	if f.AllowPartial && !f.Production {
 		return Flags{}, usageError{msg: "--allow-partial requires --production\ntry `wheretoken --help`"}
+	}
+	return *f, nil
+}
+
+func refreshAction(s string) bool {
+	switch s {
+	case "status", "on", "off", "watch":
+		return true
+	default:
+		return false
+	}
+}
+
+func finishProfileRefresh(f *Flags) (Flags, error) {
+	if f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Production || f.AllowPartial || f.IncludeModels || f.IncludeCost || f.PublishYes || f.PublishDryRun || f.PublicPalette != "" || f.ProfilePath != "" {
+		return Flags{}, usageError{msg: "profile refresh does not take a path, palette, or window\ntry `wheretoken --help`"}
 	}
 	return *f, nil
 }

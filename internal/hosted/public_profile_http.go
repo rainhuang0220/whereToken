@@ -87,9 +87,11 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	}
 	prevTotal := int64(0)
 	prevID := ""
+	prevAsOf := ""
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
 		var prevSnap publicprofile.Snapshot
-		if json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
+		if parsed && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok":          true,
@@ -101,12 +103,15 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		}
 		prevTotal = prev.TotalTokens
 		prevID = prev.SnapshotID
+		if parsed {
+			prevAsOf = prevSnap.AsOfDate
+		}
 	}
 	if err := s.opts.Store.SaveProjection(r.Context(), user.ID, canonical, snap); err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	readme := s.maybeMaterializeUsage(r.Context(), user, prevID, snap.SnapshotID, prevTotal, publicprofile.TotalTokens(snap))
+	readme := s.maybeMaterializeUsage(r.Context(), user, prevID, snap.SnapshotID, prevTotal, publicprofile.TotalTokens(snap), prevAsOf, snap.AsOfDate)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":          true,
@@ -115,7 +120,7 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, nextID string, prevTotal, nextTotal int64) string {
+func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, nextID string, prevTotal, nextTotal int64, prevAsOf, nextAsOf string) string {
 	pres, err := s.opts.Store.Presentation(ctx, user.ID)
 	if err != nil || !pres.ReadmeMaterializedAt.Valid {
 		return "coalesced"
@@ -132,6 +137,8 @@ func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, n
 		LastMaterialized: last,
 		Now:              s.opts.Now(),
 		ThemeChange:      false,
+		PrevAsOfDate:     prevAsOf,
+		NextAsOfDate:     nextAsOf,
 	}) {
 		return "coalesced"
 	}

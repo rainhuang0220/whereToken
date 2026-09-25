@@ -947,6 +947,46 @@ func TestPublishNewsprintAfterMagentaMatchesCommittedFiles(t *testing.T) {
 	}
 }
 
+func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	device, session, csrf := seedOwner(t)
+	day := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	first := mustProjection(t, publicprofile.Input{
+		Now: day, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000)},
+	})
+	if got := putProjection(t, h, device, first.raw); got["readme"] != "coalesced" {
+		t.Fatalf("before a palette publish readme=%v", got["readme"])
+	}
+	if rec := publishRequestTo(t, h, session, csrf, "cobalt", true, ""); rec.Code != http.StatusOK {
+		t.Fatalf("palette %d %s", rec.Code, rec.Body.String())
+	}
+	puts := git.puts
+	sameDay := mustProjection(t, publicprofile.Input{
+		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+	})
+	if publicprofile.TotalTokens(sameDay.snap)-publicprofile.TotalTokens(first.snap) >= publicprofile.ReadmeMinTokenDelta {
+		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	}
+	small := putProjection(t, h, device, sameDay.raw)
+	if small["readme"] != "coalesced" || git.puts != puts {
+		t.Fatalf("same-day small delta readme=%v puts %d -> %d", small["readme"], puts, git.puts)
+	}
+	nextDay := mustProjection(t, publicprofile.Input{
+		Now: day.Add(24 * time.Hour), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+	})
+	if nextDay.snap.AsOfDate != "2026-09-25" || publicprofile.TotalTokens(nextDay.snap) != publicprofile.TotalTokens(sameDay.snap) {
+		t.Fatalf("next as_of=%s totals %d %d", nextDay.snap.AsOfDate, publicprofile.TotalTokens(nextDay.snap), publicprofile.TotalTokens(sameDay.snap))
+	}
+	rolled := putProjection(t, h, device, nextDay.raw)
+	if rolled["readme"] != "materialized" || git.puts == puts {
+		t.Fatalf("date change readme=%v puts %d -> %d", rolled["readme"], puts, git.puts)
+	}
+}
+
 func authEvent(source, vendor string, at time.Time, miss int64) event.UsageEvent {
 	return event.UsageEvent{Source: source, Vendor: vendor, Timestamp: at, Miss: miss, Quality: event.QualityAuthoritative}
 }

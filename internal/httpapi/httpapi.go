@@ -19,6 +19,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"github.com/rainhuang0220/whereToken/internal/webembed"
@@ -172,6 +173,9 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.endScan()
+	if release, err := proclock.Lock(filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(s.home)), "scan.lock")); err == nil {
+		defer release()
+	}
 
 	stream := strings.Contains(r.Header.Get("Accept"), "text/event-stream")
 	var flush http.Flusher

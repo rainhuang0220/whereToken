@@ -21,7 +21,11 @@ This repository keeps three artifacts separate:
 - Any directory produced by `profile build` is a local real bundle. It remains private until its owner explicitly publishes it.
 - `public-profile/` is the maintainer's production source. Pages copies it to `/whereToken/profile/` only when `profile.json` and `manifest.json` both declare `local_sanitized_snapshot`; it never falls back to demo data.
 
-The production flow is therefore private ledger → local release binary → sanitized bundle → explicit Git commit. GitHub Actions never scans HOME.
+The production flow for the committed bundle is private ledger → local release binary → sanitized bundle → explicit Git commit. GitHub Actions never scans HOME. The hosted projection is separate: `wheretoken profile refresh` (and a paired `wheretoken sync`) PUT the sanitized snapshot. The switch defaults to off. `profile refresh on` stores only `schema_version` and `enabled` in `profile-refresh.json` beside `community.json`. It does not scan HOME inside GitHub Actions, and it does not commit the product repository.
+
+`profile refresh` and an enabled default report upload at most one sanitized snapshot when the local all-time total has moved by at least 10,000 raw tokens or the local calendar date has changed, and at least one hour has passed since the hosted envelope's `freshness.updated_at`. A date change does not skip that hour. Missing totals stay unavailable and are not treated as zero. The snapshot stays `manual_publish` with `live_sync: false`.
+
+That PUT updates the interactive hosted snapshot. It does not by itself rewrite the GitHub README. Same-day README materialization still waits 30 minutes, then 100,000 tokens or 6 hours. A newly accepted snapshot whose `as_of_date` is a later local date materializes immediately, and only after the owner has confirmed a palette publish once (`readme_materialized_at` set). Until that confirmation, refresh still updates the hosted JSON and leaves the README bytes alone.
 
 Default build omits model breakdown and cost. Opt in:
 

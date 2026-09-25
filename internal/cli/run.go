@@ -19,6 +19,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/report"
 	"github.com/rainhuang0220/whereToken/internal/scan"
@@ -163,6 +164,10 @@ func (a *App) resolveHome(override string) adapter.Home {
 }
 
 func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result {
+	return a.doScanOpt(home, quiet, offline, ascii, true)
+}
+
+func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) scan.Result {
 	if a.envOffline() {
 		offline = true
 	}
@@ -170,6 +175,11 @@ func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result 
 		res := a.Scan(home)
 		res.Offline = offline
 		return res
+	}
+	if lock {
+		if release, err := proclock.Lock(a.scanLockPath(home)); err == nil {
+			defer release()
+		}
 	}
 	ads := scan.Adapters(offline)
 	var res scan.Result
@@ -253,6 +263,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
 		}
+		a.maybeProfileRefresh(flags, home, res)
 		return ExitOK
 	}
 	ascii := table.UseASCII(flags.ASCII, a.GOOS, a.LookupEnv)
@@ -260,6 +271,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 	out := report.Render(snap, report.Options{ASCII: ascii, Color: color, Width: resolveWidth(flags.Width, a.LookupEnv, a.termWidth)})
 	fmt.Fprint(a.Stdout, out)
 	fmt.Fprintf(a.Stdout, "\nWeb: %s\n", HostedWebURL)
+	a.maybeProfileRefresh(flags, home, res)
 	return ExitOK
 }
 
@@ -294,6 +306,7 @@ func (a *App) runDoctor(home adapter.Home, quiet, offline bool) int {
 	res := a.doScan(home, quiet, offline, false)
 	fmt.Fprint(a.Stdout, FormatDoctor(scan.Diagnose(res)))
 	fmt.Fprint(a.Stdout, FormatCommunityDoctor(home, a.LookupEnv, offline))
+	fmt.Fprint(a.Stdout, FormatProfileRefreshDoctor(home))
 	return ExitOK
 }
 
