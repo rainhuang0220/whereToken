@@ -152,6 +152,10 @@ func seedOwner(t *testing.T) (string, string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// readyStore is one MySQL for the package and this login is always
+	// github id 4242. An earlier test's README stamp or as_of_date must
+	// not leak into the next PUT.
+	clearOwnerPublication(t, user.Login)
 	_, deviceToken, err := st.InsertDevice(ctx, user.ID, DeviceMeta{OS: "darwin", Arch: "arm64", ClientVersion: "test", Label: "test"})
 	if err != nil {
 		t.Fatal(err)
