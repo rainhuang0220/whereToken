@@ -6,6 +6,7 @@ package proclock
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -18,20 +19,36 @@ type Unlock func()
 
 // Lock blocks until the exclusive lock is acquired.
 func Lock(path string) (Unlock, error) {
-	return acquire(path, false)
+	_, rel, err := acquire(path, false)
+	return rel, err
 }
 
 // TryLock acquires the lock or reports that it is held. A held lock is
 // ok == false and a nil error.
 func TryLock(path string) (Unlock, bool, error) {
-	rel, err := acquire(path, true)
+	_, rel, ok, err := tryAcquire(path)
+	return rel, ok, err
+}
+
+// tryAcquire is TryLock plus the file handle that owns the lock. Windows
+// LockFileEx is mandatory, so a second os.ReadFile fails while the lock
+// is held. Callers that need the bytes read this handle.
+func tryAcquire(path string) (*os.File, Unlock, bool, error) {
+	f, rel, err := acquire(path, true)
 	if errors.Is(err, errBusy) {
-		return nil, false, nil
+		return nil, nil, false, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
-	return rel, true, nil
+	return f, rel, true, nil
+}
+
+func readLocked(f *os.File) ([]byte, error) {
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, err
+	}
+	return io.ReadAll(f)
 }
 
 func openLock(path string) (*os.File, error) {

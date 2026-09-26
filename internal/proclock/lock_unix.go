@@ -4,14 +4,15 @@ package proclock
 
 import (
 	"errors"
+	"os"
 
 	"golang.org/x/sys/unix"
 )
 
-func acquire(path string, nonblock bool) (Unlock, error) {
+func acquire(path string, nonblock bool) (*os.File, Unlock, error) {
 	f, err := openLock(path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	flags := unix.LOCK_EX
 	if nonblock {
@@ -20,11 +21,11 @@ func acquire(path string, nonblock bool) (Unlock, error) {
 	if err := unix.Flock(int(f.Fd()), flags); err != nil {
 		_ = f.Close()
 		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return nil, errBusy
+			return nil, nil, errBusy
 		}
-		return nil, err
+		return nil, nil, err
 	}
-	return func() {
+	return f, func() {
 		_ = unix.Flock(int(f.Fd()), unix.LOCK_UN)
 		_ = f.Close()
 	}, nil

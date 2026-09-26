@@ -1,14 +1,13 @@
 package proclock
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestTryLockIsExclusiveAndEmpty(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cfg", "scan.lock")
-	release, ok, err := TryLock(path)
+	held, release, ok, err := tryAcquire(path)
 	if err != nil || !ok {
 		t.Fatalf("first ok=%v err=%v", ok, err)
 	}
@@ -17,7 +16,7 @@ func TestTryLockIsExclusiveAndEmpty(t *testing.T) {
 		release()
 		t.Fatalf("second ok=%v err=%v", ok, err)
 	}
-	raw, err := os.ReadFile(path)
+	raw, err := readLocked(held)
 	if err != nil {
 		release()
 		t.Fatal(err)
