@@ -28,7 +28,10 @@ the existing scan and the existing device sync:
 
 1. `wheretoken sync` scans, uploads the daily batch, then uploads the sanitized public snapshot.
 2. `wheretoken scan` does the same upload when this device is already paired. The scan still succeeds if the upload fails.
-3. While `wheretoken serve` is running, a paired device repeats that sync every 15 minutes. There is no separate always-on daemon.
+3. While `wheretoken serve` is running, a paired device repeats that full sync every 15 minutes.
+4. `wheretoken profile refresh` is a separate sanitized PUT. It does not upload the daily batch. The default report and the default install do not run it. `profile refresh on` flushes the switch file with the agent enabled, and only then, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. A failed bootstrap leaves the switch on. `off` disables the switch and uninstalls the agent. Linux and Windows do not install a background agent. The bare command is one explicit PUT even while the switch is off; launchd does not run that bare command. `watch` is the only loop. It re-reads the switch every 15 minutes, including the first, and exits when the switch is off. A powered-off Mac does not publish. Catch-up is the next wake of that long-running watch, or RunAtLoad after a graphical login. SSH with no GUI session does not run the agent; `profile refresh status` can show `scheduler=dead`.
+
+The watermark for `profile refresh` is the hosted envelope (`as_of_date`, all-time total, `freshness.updated_at`), not the scan index. A missing `updated_at` is not an elapsed cooldown. Only a strictly later local calendar day is a date rollover. A smaller all-time total than the last accepted snapshot is not published, including when the local date changed. Missing totals stay nil.
 
 An offline scan does not replace the hosted projection. A snapshot whose public
 status is `unavailable` does not replace it either. The inner snapshot keeps
@@ -83,14 +86,23 @@ the image. `Cache-Control` is not treated as invalidation.
 The product repository is not written. `wheretoken profile publish` remains
 the local fallback for an offline or unrecovered owner.
 
-Usage rewrites start only after one confirmed palette publish has updated the
-README. Until that confirmation, sync refreshes the hosted projection and
-leaves the profile README on its existing images.
+The first README write does not wait for a theme publish. It uses the
+verified palette when one exists, and newsprint otherwise. Accepting a
+snapshot stores the projection even if the GitHub write fails. A failed
+README does not roll back that projection, and a rejected projection does
+not change a README that already applied. The hosted process retries a
+failed README without a new client PUT. `desired_snapshot_id` is stored
+when the projection is accepted. The applied snapshot id, cache key, and
+`applied_at` are stored only after GitHub read-back succeeds.
 
-After that, usage rewrites wait:
+After a README has been applied, same-calendar-day usage rewrites wait:
 
 - at least 30 minutes since the last README materialization
 - then either a 100,000-token movement in the public all-time total, or six hours
+
+A strictly later local `as_of_date` bypasses that wait. An earlier date, an empty date, and an invalid date do not. An unchanged snapshot does not materialize on the date field alone; a failed apply still retries when the desired snapshot differs from the applied one.
+
+The hosted JSON and the README are intentionally split. `profile refresh` may PUT after 10,000 raw tokens and one hour, including several times in a day. Those uploads refresh the interactive snapshot and leave the README bytes alone until the coalesce rules, a later local date, or a retry of a failed write. A coalesced upload does not clear `readme_status=failed` while the accepted snapshot is still ahead of the applied README; the retry publishes that newest snapshot. A remote conflict on the usage write leaves the projection in place, does not mark the README applied, and does not report the theme as published. README git writes stay coarse. Theme publish still promotes the palette only after GitHub verifies the files.
 
 A palette confirmation ignores that wait. Publishing the palette that is
 already on the README returns `ALREADY_PUBLISHED` and does not create a commit.

@@ -38,6 +38,7 @@ func (a *App) runUpdate(quiet bool) int {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
 		}
+		a.rebootstrapProfileRefresh()
 		return ExitOK
 	}
 	asset := releaseAssetName(a.GOOS, a.GOARCH)
@@ -69,10 +70,12 @@ func (a *App) runUpdate(quiet bool) int {
 		return ExitFail
 	}
 	fmt.Fprintln(a.Stderr, "wheretoken: updated "+exe)
+	a.rebootstrapProfileRefresh()
 	return ExitOK
 }
 
 func (a *App) runUninstall(quiet bool) int {
+	a.stopProfileRefreshAgent()
 	exe, err := a.exePath()
 	if err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())

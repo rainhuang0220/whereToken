@@ -97,11 +97,12 @@ whereToken reports token counts. When a public list price exists, it also shows 
 
 ### Public Profile
 
-Publish a sanitized snapshot of local usage: GitHub-light/dark preview SVGs plus a static interactive page. The page is live in the browser. The numbers are a locally generated public snapshot, not a live cloud sync.
+Publish a sanitized snapshot of local usage: GitHub-light/dark preview SVGs plus a static interactive page. The page is live in the browser. The numbers are a locally generated public snapshot, not a live cloud sync. `wheretoken` with no command is only the local report and does not upload that snapshot. The install scripts do not enable upload either. `wheretoken profile refresh` is one explicit PUT. `wheretoken profile refresh on` enables it and, on macOS, installs a user launchd agent; `off` disables the switch and uninstalls that agent. Linux and Windows do not install a background agent. Use `wheretoken profile refresh watch` for the foreground loop.
 
 ```bash
 wheretoken profile build ./public-profile
 wheretoken profile validate ./public-profile --production
+wheretoken profile refresh
 ```
 
 Build online. `--offline` is for tests and local-only fixtures; it skips Cursor/Trae account usage.

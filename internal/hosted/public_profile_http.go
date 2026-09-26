@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -87,9 +88,11 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	}
 	prevTotal := int64(0)
 	prevID := ""
+	prevAsOf := ""
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
 		var prevSnap publicprofile.Snapshot
-		if json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
+		if parsed && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok":          true,
@@ -101,12 +104,15 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		}
 		prevTotal = prev.TotalTokens
 		prevID = prev.SnapshotID
+		if parsed {
+			prevAsOf = prevSnap.AsOfDate
+		}
 	}
 	if err := s.opts.Store.SaveProjection(r.Context(), user.ID, canonical, snap); err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	readme := s.maybeMaterializeUsage(r.Context(), user, prevID, snap.SnapshotID, prevTotal, publicprofile.TotalTokens(snap))
+	readme := s.maybeMaterializeUsage(r.Context(), user, prevID, snap.SnapshotID, prevTotal, publicprofile.TotalTokens(snap), prevAsOf, snap.AsOfDate)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":          true,
@@ -115,33 +121,105 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, nextID string, prevTotal, nextTotal int64) string {
-	pres, err := s.opts.Store.Presentation(ctx, user.ID)
-	if err != nil || !pres.ReadmeMaterializedAt.Valid {
-		return "coalesced"
-	}
-	last := pres.ReadmeMaterializedAt.Time
+func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, nextID string, prevTotal, nextTotal int64, prevAsOf, nextAsOf string) string {
+	pres, presErr := s.opts.Store.Presentation(ctx, user.ID)
+	proj, _ := s.opts.Store.Projection(ctx, user.ID)
 	palette := publicprofile.DefaultPalette
-	if pres.Palette != "" {
-		palette = pres.Palette
+	var last time.Time
+	appliedID := ""
+	if presErr == nil {
+		appliedID = pres.ReadmeSnapshotID
+		if pres.ReadmeMaterializedAt.Valid {
+			last = pres.ReadmeMaterializedAt.Time
+		}
+		if pres.ReadmeMaterializedAt.Valid && publicprofile.KnownPalette(pres.Palette) && len(pres.PreviewLight) > 0 {
+			palette = pres.Palette
+		}
 	}
-	if !publicprofile.ShouldMaterializeReadme(publicprofile.MaterializeInput{
-		SnapshotChanged:  prevID != nextID,
+	desired := nextID
+	status := ""
+	if proj.SnapshotID != "" {
+		status = proj.ReadmeStatus
+		if proj.DesiredSnapshotID != "" {
+			desired = proj.DesiredSnapshotID
+		}
+	}
+	now := time.Now()
+	if s.opts.Now != nil {
+		now = s.opts.Now()
+	}
+	snapshotChanged := prevID != nextID
+	failedRetry := !snapshotChanged && status == "failed" && desired != "" && desired != appliedID
+	if !failedRetry && !publicprofile.ShouldMaterializeReadme(publicprofile.MaterializeInput{
+		SnapshotChanged:  snapshotChanged,
 		PrevTotal:        prevTotal,
 		NextTotal:        nextTotal,
 		LastMaterialized: last,
-		Now:              s.opts.Now(),
+		Now:              now,
 		ThemeChange:      false,
+		PrevAsOfDate:     prevAsOf,
+		NextAsOfDate:     nextAsOf,
 	}) {
+		// Coalesced means this request does not write GitHub. It does not
+		// abandon a README that is still behind the accepted snapshot.
+		// The maintenance retry publishes that desired snapshot.
+		if snapshotChanged && status == "failed" && desired == appliedID {
+			_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "", "")
+		}
 		return "coalesced"
 	}
 	if _, err := s.contentsClient(); err != nil {
+		_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "failed", "github_unconfigured")
 		return "deferred"
 	}
 	if _, err := s.publishPalette(ctx, user, palette, "usage", nil); err != nil {
+		_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "failed", readmeErrorCode(err))
 		return "deferred"
 	}
+	_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "applied", "")
 	return "materialized"
+}
+
+// retryFailedReadmes writes a README that was accepted into the projection
+// but not applied on GitHub. It does not require a new client PUT.
+func (s *server) retryFailedReadmes(ctx context.Context) {
+	if s.opts.Store == nil {
+		return
+	}
+	ids, err := s.opts.Store.FailedReadmeUserIDs(ctx)
+	if err != nil {
+		return
+	}
+	for _, id := range ids {
+		user, err := s.opts.Store.UserByID(ctx, id)
+		if err != nil {
+			continue
+		}
+		row, err := s.opts.Store.Projection(ctx, user.ID)
+		if err != nil {
+			continue
+		}
+		var snap publicprofile.Snapshot
+		_ = json.Unmarshal(row.SnapshotJSON, &snap)
+		s.maybeMaterializeUsage(ctx, user, row.SnapshotID, row.SnapshotID, row.TotalTokens, row.TotalTokens, snap.AsOfDate, snap.AsOfDate)
+	}
+}
+
+func readmeErrorCode(err error) string {
+	if err == nil {
+		return ""
+	}
+	if errors.Is(err, ErrGitConflict) {
+		return "conflict"
+	}
+	switch err.Error() {
+	case "remote content changed":
+		return "conflict"
+	case "readme verify", "readme cache key missing", "light preview mismatch", "dark preview mismatch":
+		return "github_verify"
+	default:
+		return "github_write"
+	}
 }
 
 func (s *server) getPublicProfile(w http.ResponseWriter, r *http.Request, login string) {

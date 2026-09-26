@@ -98,7 +98,8 @@ _wheretoken() {
         '--public-palette[public profile palette]:palette:(cobalt magenta newsprint)' \
         '--production[fail incomplete cloud token coverage]' \
         '--allow-partial[allow a production snapshot with partial coverage]' \
-        '1:action:(build validate palette publish)' \
+        '1:action:(build validate palette publish refresh)' \
+        '2:refresh:(status on off watch)' \
         '--dry-run[show the two-repository publish plan]' \
         '--yes[push the approved publish]' \
         '--product[product repository owner/name]' \

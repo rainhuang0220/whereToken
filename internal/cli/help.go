@@ -7,7 +7,7 @@ USAGE
   wheretoken [flags] serve [--port 8787]
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources
-  wheretoken [flags] doctor     sources plus Community Rank (no upload)
+  wheretoken [flags] doctor     sources plus Community Rank and profile refresh (no upload)
   wheretoken [flags] rebuild     wipe the local scan index and rescan
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
@@ -23,6 +23,7 @@ USAGE
   wheretoken profile palette [cobalt|magenta|newsprint]  save the public Profile default
   wheretoken profile publish [cobalt|magenta|newsprint]   dry-run the GitHub profile publish
   wheretoken profile publish --yes                       push only after the dry-run is accepted
+  wheretoken profile refresh [status|on|off|watch]       sanitized public snapshot (default off; macOS agent)
   wheretoken profile validate <path> --production   fail incomplete cloud token coverage
   wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
@@ -108,6 +109,23 @@ PRIVACY
   wheretoken community off opts out. See docs/community.md.
   card writes a static SVG from this machine's ledgers. It does not
   upload the usage ledger, and it never calls Community Rank.
+  The default report does not upload a public snapshot.
+  profile refresh PUTs only the sanitized public snapshot. It is not part
+  of wheretoken with no command, and the default install does not enable
+  it. profile refresh on enables the switch and, on macOS, installs a
+  user launchd agent that runs profile refresh watch. off disables the
+  switch and uninstalls that agent. Linux and Windows do not install a
+  background agent; use profile refresh watch in the foreground. The
+  bare profile refresh command is one explicit PUT even when the switch
+  is off, and it is not what launchd runs. It does not upload events,
+  prompts, paths, or the daily batch. A powered-off Mac does not publish.
+  Catch-up is the next wake of watch, or RunAtLoad after a graphical
+  login. An SSH session with no GUI login leaves status scheduler=dead.
+  The GitHub README can update with the default newsprint palette before
+  any theme publish. Same-day README writes still wait 30 minutes, then
+  100,000 tokens or 6 hours. A strictly later local date does not wait.
+  Intra-day token updates refresh the hosted JSON first.
+  A smaller all-time total is not published.
 
 EXAMPLES
   wheretoken
@@ -139,6 +157,8 @@ EXAMPLES
   wheretoken profile build ./public-profile
   wheretoken profile build ./public-profile --public-palette newsprint
   wheretoken profile palette cobalt
+  wheretoken profile refresh
+  wheretoken profile refresh on
   wheretoken profile validate ./public-profile --production
 
 Dashboard: wheretoken serve   →  http://127.0.0.1:8787

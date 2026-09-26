@@ -122,6 +122,9 @@ var migrations = []string{
   snapshot_id VARCHAR(80) NOT NULL,
   total_tokens BIGINT NOT NULL DEFAULT 0,
   updated_at DATETIME NOT NULL,
+  desired_snapshot_id VARCHAR(80) NOT NULL DEFAULT '',
+  readme_status VARCHAR(32) NOT NULL DEFAULT '',
+  readme_last_error VARCHAR(40) NOT NULL DEFAULT '',
   PRIMARY KEY (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	`CREATE TABLE IF NOT EXISTS public_presentations (
@@ -177,6 +180,30 @@ var migrations = []string{
 func (s *Store) Migrate(ctx context.Context) error {
 	for _, q := range migrations {
 		if _, err := s.db.ExecContext(ctx, q); err != nil {
+			return err
+		}
+	}
+	return s.ensureColumns(ctx)
+}
+
+// ensureColumns adds the README cursor to databases created before it.
+// CREATE TABLE IF NOT EXISTS does not alter an existing table.
+func (s *Store) ensureColumns(ctx context.Context) error {
+	cols := []struct{ table, name, def string }{
+		{"public_projections", "desired_snapshot_id", "VARCHAR(80) NOT NULL DEFAULT ''"},
+		{"public_projections", "readme_status", "VARCHAR(32) NOT NULL DEFAULT ''"},
+		{"public_projections", "readme_last_error", "VARCHAR(40) NOT NULL DEFAULT ''"},
+	}
+	for _, c := range cols {
+		var n int
+		err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`, c.table, c.name).Scan(&n)
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			continue
+		}
+		if _, err := s.db.ExecContext(ctx, "ALTER TABLE "+c.table+" ADD COLUMN "+c.name+" "+c.def); err != nil {
 			return err
 		}
 	}

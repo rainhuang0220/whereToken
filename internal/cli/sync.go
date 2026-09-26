@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -161,22 +162,45 @@ func (a *App) uploadPublicProjection(flags Flags, home adapter.Home, res scan.Re
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPut, a.hostedBase()+"/api/v1/sync/public-profile", strings.NewReader(string(raw)))
+	put, err := a.putSanitizedProjectionDo(context.Background(), token, raw, a.doHTTP)
 	if err != nil {
 		return err
+	}
+	if put.Status >= 400 {
+		return fmt.Errorf("HTTP %d", put.Status)
+	}
+	return nil
+}
+
+func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []byte, do func(*http.Request) (*http.Response, error)) (publicprofile.PutResult, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, a.hostedBase()+"/api/v1/sync/public-profile", strings.NewReader(string(raw)))
+	if err != nil {
+		return publicprofile.PutResult{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := a.doHTTP(req)
+	if do == nil {
+		do = a.doHTTP
+	}
+	resp, err := do(req)
 	if err != nil {
-		return err
+		return publicprofile.PutResult{}, err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if err != nil {
+		return publicprofile.PutResult{}, err
 	}
-	return nil
+	kept := false
+	if resp.StatusCode < 400 && len(body) > 0 {
+		var env struct {
+			Kept string `json:"kept"`
+		}
+		if json.Unmarshal(body, &env) == nil && env.Kept == "previous" {
+			kept = true
+		}
+	}
+	return publicprofile.PutResult{Status: resp.StatusCode, KeptPrevious: kept}, nil
 }
 
 func (a *App) accountIDs(home adapter.Home) map[string]string {

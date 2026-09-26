@@ -92,7 +92,7 @@ whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，
 
 ### 公开画像
 
-把本机用量发布成脱敏快照：GitHub 亮/暗预览 SVG，加上静态交互页。页面在浏览器里是可交互的。数字本身是本机生成的公开快照，不是云端实时同步。
+把本机用量发布成脱敏快照：GitHub 亮/暗预览 SVG，加上静态交互页。页面在浏览器里是可交互的。数字本身是本机生成的公开快照，不是云端实时同步。不带命令的 `wheretoken` 只打本地报告，不上传。安装脚本也不会打开上传。`wheretoken profile refresh` 是一次明确的 PUT。`wheretoken profile refresh on` 打开开关，并只在 macOS 上安装用户级 launchd agent；`off` 关掉开关并卸掉该 agent。Linux 和 Windows 不安装后台代理，前台循环是 `wheretoken profile refresh watch`。关机的机器不会发布；补上是 watch 下次醒来，或图形界面登录后的 RunAtLoad。没有图形会话的 SSH 不会跑这个 agent，`status` 可以显示 `scheduler=dead`。
 
 ```bash
 wheretoken profile build ./public-profile

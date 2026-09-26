@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -116,10 +117,8 @@ func (g *memGit) readme() string {
 	return string(g.files["rainhuang0220/rainhuang0220\nREADME.md"].Body)
 }
 
-func publishMux(t *testing.T, git ContentsClient) http.Handler {
-	t.Helper()
-	st := readyStore(t)
-	return NewMux(MuxOptions{
+func publishOptions(st *Store, git ContentsClient) MuxOptions {
+	return MuxOptions{
 		Version: "0.7.4",
 		Store:   st,
 		Config: Config{
@@ -140,8 +139,14 @@ func publishMux(t *testing.T, git ContentsClient) http.Handler {
 			},
 		},
 		Contents: git,
+		Now:      time.Now,
 		Log:      log.New(io.Discard, "", 0),
-	})
+	}
+}
+
+func publishMux(t *testing.T, git ContentsClient) http.Handler {
+	t.Helper()
+	return NewMux(publishOptions(readyStore(t), git))
 }
 
 func seedOwner(t *testing.T) (string, string, string) {
@@ -152,6 +157,10 @@ func seedOwner(t *testing.T) (string, string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// readyStore is one MySQL for the package and this login is always
+	// github id 4242. An earlier test's README stamp or as_of_date must
+	// not leak into the next PUT.
+	clearOwnerPublication(t, user.Login)
 	_, deviceToken, err := st.InsertDevice(ctx, user.ID, DeviceMeta{OS: "darwin", Arch: "arm64", ClientVersion: "test", Label: "test"})
 	if err != nil {
 		t.Fatal(err)
@@ -365,6 +374,8 @@ func TestPublishedSurfacesShareOneSnapshot(t *testing.T) {
 	})
 	putProjection(t, h, device, proj.raw)
 	beforeReadme := git.readme()
+	beforeLight := append([]byte(nil), git.file("wheretoken/preview-light.svg")...)
+	beforeDark := append([]byte(nil), git.file("wheretoken/preview-dark.svg")...)
 	puts := git.puts
 
 	git.failPath = "wheretoken/preview-light.svg"
@@ -382,8 +393,8 @@ func TestPublishedSurfacesShareOneSnapshot(t *testing.T) {
 	if git.readme() != beforeReadme {
 		t.Fatal("failed svg write updated the README")
 	}
-	if len(git.file("wheretoken/preview-light.svg")) != 0 || len(git.file("wheretoken/preview-dark.svg")) != 0 {
-		t.Fatal("a failed preview write left an svg committed")
+	if !bytes.Equal(git.file("wheretoken/preview-light.svg"), beforeLight) || !bytes.Equal(git.file("wheretoken/preview-dark.svg"), beforeDark) {
+		t.Fatal("failed svg write changed the committed previews")
 	}
 
 	retryReq := httptest.NewRequest(http.MethodPost, "/api/v1/public-profile/rainhuang0220/jobs/"+failedJob["id"].(string)+"/retry", strings.NewReader(`{"confirm":true}`))
@@ -664,7 +675,6 @@ func publishedPalette(t *testing.T, h http.Handler, login string) (string, strin
 
 func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	git := newMemGit(publishReadme)
-	git.conflict = 1
 	h := publishMux(t, git)
 	device, session, csrf := seedOwner(t)
 	raw := testProjection(t)
@@ -675,18 +685,104 @@ func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	if putRec.Code != http.StatusOK {
 		t.Fatalf("sync %d %s", putRec.Code, putRec.Body.String())
 	}
+	var synced map[string]any
+	if err := json.Unmarshal(putRec.Body.Bytes(), &synced); err != nil {
+		t.Fatal(err)
+	}
+	// The first accepted snapshot materializes the README. Arm the conflict
+	// on the later palette publish, which is the write that must not overwrite.
+	if synced["ok"] != true || synced["readme"] != "materialized" {
+		t.Fatalf("sync %+v", synced)
+	}
 	before := git.readme()
+	if before == publishReadme {
+		t.Fatal("sync left the README unmaterialized")
+	}
+	git.conflict = 1
 	rec := publishRequestTo(t, h, session, csrf, "magenta", true, "")
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("conflict %d %s", rec.Code, rec.Body.String())
 	}
 	var job map[string]any
-	_ = json.Unmarshal(rec.Body.Bytes(), &job)
-	if job["phase"] != phaseConflict {
+	if err := json.Unmarshal(rec.Body.Bytes(), &job); err != nil {
+		t.Fatal(err)
+	}
+	if job["phase"] != phaseConflict || job["retry_readme"] != true || job["error"] != "remote content changed" || job["result"] == "published" || job["phase"] == phasePublished {
 		t.Fatalf("phase %+v", job)
+	}
+	if git.conflict != 0 {
+		t.Fatal("publish did not hit the remote conflict")
 	}
 	if git.readme() != before {
 		t.Fatal("conflict overwrote the readme")
+	}
+	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != publicprofile.DefaultPalette {
+		t.Fatalf("conflict promoted %s", palette)
+	}
+}
+
+func TestUsageMaterializeConflictLeavesReadmeFailed(t *testing.T) {
+	git := newMemGit(publishReadme)
+	git.conflict = 1
+	st := readyStore(t)
+	h := NewMux(publishOptions(st, git))
+	device, _, _ := seedOwner(t)
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-time.Hour), 8_000),
+		},
+	})
+	got := putProjection(t, h, device, proj.raw)
+	if got["ok"] != true || got["snapshot_id"] != proj.snap.SnapshotID || got["readme"] != "deferred" {
+		t.Fatalf("sync %+v", got)
+	}
+	if git.conflict != 0 {
+		t.Fatal("usage materialize did not hit the remote conflict")
+	}
+	if git.readme() != publishReadme {
+		t.Fatal("conflict overwrote the README")
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("conflict rolled back the projection")
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != proj.snap.SnapshotID || row.DesiredSnapshotID != proj.snap.SnapshotID || row.ReadmeStatus != "failed" || row.ReadmeLastError != "conflict" {
+		t.Fatalf("cursor %+v %v", row, err)
+	}
+	if strings.Contains(row.ReadmeLastError, "/") || strings.Contains(row.ReadmeLastError, "wtd_") {
+		t.Fatalf("last_error %q", row.ReadmeLastError)
+	}
+	if _, err := st.Presentation(context.Background(), user.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("conflict stored a presentation: %v", err)
+	}
+	var phase, result, kind string
+	if err := st.db.QueryRowContext(context.Background(), `SELECT phase, result_code, kind FROM publish_jobs WHERE user_id=? ORDER BY updated_at DESC LIMIT 1`, user.ID).Scan(&phase, &result, &kind); err != nil {
+		t.Fatal(err)
+	}
+	if phase != phaseConflict || result == "published" || phase == phasePublished || kind != "usage" {
+		t.Fatalf("job phase=%s result=%s kind=%s", phase, result, kind)
+	}
+	ids, err := st.FailedReadmeUserIDs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := false
+	for _, id := range ids {
+		if id == user.ID {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Fatal("conflict was not left failed for retry")
+	}
+	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != publicprofile.DefaultPalette {
+		t.Fatalf("conflict reported palette %s", palette)
 	}
 }
 
@@ -945,6 +1041,315 @@ func TestPublishNewsprintAfterMagentaMatchesCommittedFiles(t *testing.T) {
 	if !bytes.Contains(git.file("wheretoken/preview-light.svg"), []byte("newsprint-ink-")) || !bytes.Contains(git.file("wheretoken/preview-dark.svg"), []byte("newsprint-ink-")) {
 		t.Fatal("repair left a non-newsprint preview committed")
 	}
+}
+
+func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	device, session, csrf := seedOwner(t)
+	day := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	first := mustProjection(t, publicprofile.Input{
+		Now: day, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000)},
+	})
+	got := putProjection(t, h, device, first.raw)
+	if got["readme"] != "materialized" || got["snapshot_id"] != first.snap.SnapshotID {
+		t.Fatalf("first snapshot must materialize without a palette publish: %+v", got)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != first.snap.SnapshotID {
+		t.Fatal("accepted snapshot was not stored")
+	}
+	if !strings.Contains(git.readme(), "raw.githubusercontent.com/rainhuang0220/rainhuang0220/main/wheretoken/preview-light.svg?v=") {
+		t.Fatalf("first README write did not happen\n%s", git.readme())
+	}
+	if rec := publishRequestTo(t, h, session, csrf, "cobalt", true, ""); rec.Code != http.StatusOK {
+		t.Fatalf("palette %d %s", rec.Code, rec.Body.String())
+	}
+	puts := git.puts
+	sameDay := mustProjection(t, publicprofile.Input{
+		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+	})
+	if publicprofile.TotalTokens(sameDay.snap)-publicprofile.TotalTokens(first.snap) >= publicprofile.ReadmeMinTokenDelta {
+		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	}
+	small := putProjection(t, h, device, sameDay.raw)
+	if small["readme"] != "coalesced" || git.puts != puts {
+		t.Fatalf("same-day small delta readme=%v puts %d -> %d", small["readme"], puts, git.puts)
+	}
+	nextDay := mustProjection(t, publicprofile.Input{
+		Now: day.Add(24 * time.Hour), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+	})
+	if nextDay.snap.AsOfDate != "2026-09-25" || publicprofile.TotalTokens(nextDay.snap) != publicprofile.TotalTokens(sameDay.snap) {
+		t.Fatalf("next as_of=%s totals %d %d", nextDay.snap.AsOfDate, publicprofile.TotalTokens(nextDay.snap), publicprofile.TotalTokens(sameDay.snap))
+	}
+	rolled := putProjection(t, h, device, nextDay.raw)
+	if rolled["readme"] != "materialized" || git.puts == puts {
+		t.Fatalf("date change readme=%v puts %d -> %d", rolled["readme"], puts, git.puts)
+	}
+}
+
+func TestReadmeRetryAppliesWithoutAnotherPut(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	opts := publishOptions(st, git)
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-time.Hour), 8_000),
+		},
+	})
+	git.failPath = "wheretoken/preview-light.svg"
+	got := putProjection(t, h, device, proj.raw)
+	if got["snapshot_id"] != proj.snap.SnapshotID || got["readme"] != "deferred" {
+		t.Fatalf("sync %+v", got)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("failed README rolled back the projection")
+	}
+	if git.readme() != publishReadme {
+		t.Fatal("failed README write changed README.md")
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != proj.snap.SnapshotID || row.DesiredSnapshotID != proj.snap.SnapshotID || row.ReadmeStatus != "failed" || row.ReadmeLastError != "github_write" {
+		t.Fatalf("cursor %+v %v", row, err)
+	}
+	if strings.Contains(row.ReadmeLastError, "/") || strings.Contains(row.ReadmeLastError, "wtd_") {
+		t.Fatalf("last_error %q", row.ReadmeLastError)
+	}
+	if pres, err := st.Presentation(context.Background(), user.ID); err == nil && pres.ReadmeMaterializedAt.Valid {
+		t.Fatal("README was marked applied")
+	}
+	bad := httptest.NewRequest(http.MethodPut, "/api/v1/sync/public-profile", strings.NewReader(`{"schema":"nope"}`))
+	bad.Header.Set("Authorization", "Bearer "+device)
+	badRec := httptest.NewRecorder()
+	h.ServeHTTP(badRec, bad)
+	if badRec.Code != http.StatusBadRequest || git.readme() != publishReadme {
+		t.Fatalf("rejected body %d changed readme", badRec.Code)
+	}
+	git.failPath = ""
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	s.retryFailedReadmes(context.Background())
+	row, err = st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != proj.snap.SnapshotID || row.ReadmeStatus != "applied" || row.ReadmeLastError != "" {
+		t.Fatalf("after retry %+v %v", row, err)
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || !pres.ReadmeMaterializedAt.Valid || pres.ReadmeSnapshotID != proj.snap.SnapshotID {
+		t.Fatalf("applied %+v %v", pres.ReadmeSnapshotID, err)
+	}
+	if !strings.Contains(git.readme(), "raw.githubusercontent.com/rainhuang0220/rainhuang0220/main/wheretoken/preview-light.svg?v=") {
+		t.Fatalf("retry did not apply the README\n%s", git.readme())
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("retry changed the projection")
+	}
+}
+
+func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	prevClock := st.now
+	t.Cleanup(func() { st.now = prevClock })
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	st.now = func() time.Time { return now }
+	opts := publishOptions(st, git)
+	opts.Now = func() time.Time { return now }
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	base := int64(8_000)
+	first := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base)},
+	})
+	if got := putProjection(t, h, device, first.raw); got["readme"] != "materialized" || got["snapshot_id"] != first.snap.SnapshotID {
+		t.Fatalf("first %+v", got)
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pres, err := st.Presentation(context.Background(), user.ID); err != nil || pres.ReadmeSnapshotID != first.snap.SnapshotID {
+		t.Fatalf("applied first %+v %v", pres.ReadmeSnapshotID, err)
+	}
+	firstHex := strings.TrimPrefix(first.snap.SnapshotID, "sha256:")
+	if !strings.Contains(git.readme(), firstHex) {
+		t.Fatal("first README did not record the accepted snapshot")
+	}
+
+	now = now.Add(publicprofile.ReadmeMinInterval + time.Minute)
+	git.failPath = "wheretoken/preview-light.svg"
+	failed := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta)},
+	})
+	if publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap) != publicprofile.ReadmeMinTokenDelta {
+		t.Fatalf("failed delta %d", publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap))
+	}
+	if got := putProjection(t, h, device, failed.raw); got["readme"] != "deferred" || got["snapshot_id"] != failed.snap.SnapshotID {
+		t.Fatalf("failed sync %+v", got)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != failed.snap.SnapshotID {
+		t.Fatal("failed README rolled back the projection")
+	}
+	row, err := st.Projection(context.Background(), user.ID)
+	if err != nil || row.ReadmeStatus != "failed" || row.DesiredSnapshotID != failed.snap.SnapshotID || row.ReadmeLastError != "github_write" {
+		t.Fatalf("after failure %+v %v", row, err)
+	}
+	if pres, err := st.Presentation(context.Background(), user.ID); err != nil || pres.ReadmeSnapshotID != first.snap.SnapshotID || !pres.ReadmeMaterializedAt.Valid {
+		t.Fatal("failure marked the newer README applied or dropped the previous one")
+	}
+	puts := git.puts
+	readmeAfterFailure := git.readme()
+
+	now = now.Add(time.Minute)
+	newest := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(failed.snap)+10_000)},
+	})
+	if newest.snap.AsOfDate != first.snap.AsOfDate || newest.snap.SnapshotID == failed.snap.SnapshotID {
+		t.Fatalf("newest date %s id %s", newest.snap.AsOfDate, newest.snap.SnapshotID)
+	}
+	if publicprofile.TotalTokens(newest.snap)-publicprofile.TotalTokens(failed.snap) >= publicprofile.ReadmeMinTokenDelta {
+		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	}
+	small := putProjection(t, h, device, newest.raw)
+	if small["readme"] != "coalesced" || small["snapshot_id"] != newest.snap.SnapshotID || git.puts != puts || git.readme() != readmeAfterFailure {
+		t.Fatalf("coalesced %+v puts %d -> %d", small, puts, git.puts)
+	}
+	row, err = st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != newest.snap.SnapshotID || row.DesiredSnapshotID != newest.snap.SnapshotID || row.ReadmeStatus != "failed" || row.ReadmeLastError == "" {
+		t.Fatalf("coalesced cleared the failure %+v %v", row, err)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != newest.snap.SnapshotID {
+		t.Fatal("coalesced PUT did not keep the newest projection")
+	}
+	ids, err := st.FailedReadmeUserIDs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := false
+	for _, id := range ids {
+		if id == user.ID {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Fatal("coalesced PUT dropped the user from the README retry set")
+	}
+
+	git.failPath = ""
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	s.retryFailedReadmes(context.Background())
+	row, err = st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != newest.snap.SnapshotID || row.ReadmeStatus != "applied" || row.ReadmeLastError != "" {
+		t.Fatalf("after retry %+v %v", row, err)
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || !pres.ReadmeMaterializedAt.Valid || pres.ReadmeSnapshotID != newest.snap.SnapshotID {
+		t.Fatalf("retry applied %s err=%v", pres.ReadmeSnapshotID, err)
+	}
+	newestHex := strings.TrimPrefix(newest.snap.SnapshotID, "sha256:")
+	if !strings.Contains(git.readme(), newestHex) || strings.Contains(git.readme(), firstHex) {
+		t.Fatal("retry did not publish the newest snapshot")
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != newest.snap.SnapshotID {
+		t.Fatal("retry changed the projection")
+	}
+}
+
+func TestHostedReadmeCoalescesTokenAndQuietBoundaries(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	prevClock := st.now
+	t.Cleanup(func() { st.now = prevClock })
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	st.now = func() time.Time { return now }
+	opts := publishOptions(st, git)
+	opts.Now = func() time.Time { return now }
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	base := int64(1_000)
+	first := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base)},
+	})
+	if got := putProjection(t, h, device, first.raw); got["readme"] != "materialized" {
+		t.Fatalf("first %+v", got)
+	}
+	puts := git.puts
+	now = now.Add(publicprofile.ReadmeMinInterval + time.Minute)
+	small := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta-1)},
+	})
+	if got := putProjection(t, h, device, small.raw); got["readme"] != "coalesced" || git.puts != puts {
+		t.Fatalf("+99999 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	}
+	big := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta-1+publicprofile.ReadmeMinTokenDelta)},
+	})
+	if publicprofile.TotalTokens(big.snap)-publicprofile.TotalTokens(small.snap) != publicprofile.ReadmeMinTokenDelta {
+		t.Fatalf("delta %d", publicprofile.TotalTokens(big.snap)-publicprofile.TotalTokens(small.snap))
+	}
+	if got := putProjection(t, h, device, big.raw); got["readme"] != "materialized" || git.puts == puts {
+		t.Fatalf("+100000 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	}
+	applied := now
+	puts = git.puts
+	now = applied.Add(publicprofile.ReadmeQuietWindow - time.Nanosecond)
+	quietSmall := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(big.snap)+10)},
+	})
+	if got := putProjection(t, h, device, quietSmall.raw); got["readme"] != "coalesced" || git.puts != puts {
+		t.Fatalf("inside 6h readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	}
+	now = applied.Add(publicprofile.ReadmeQuietWindow)
+	quiet := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(quietSmall.snap)+10)},
+	})
+	if got := putProjection(t, h, device, quiet.raw); got["readme"] != "materialized" || git.puts == puts {
+		t.Fatalf("at 6h readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	}
+}
+
+func TestHostedReadmeIgnoresAnEarlierLocalDate(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	h := publishMux(t, git)
+	device, _, _ := seedOwner(t)
+	day := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
+	first := mustProjection(t, publicprofile.Input{
+		Now: day, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 4_000)},
+	})
+	if got := putProjection(t, h, device, first.raw); got["readme"] != "materialized" {
+		t.Fatalf("first %+v", got)
+	}
+	puts := git.puts
+	earlier := mustProjection(t, publicprofile.Input{
+		Now: day.Add(-24 * time.Hour), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-25*time.Hour), 4_000)},
+	})
+	if earlier.snap.AsOfDate >= first.snap.AsOfDate {
+		t.Fatalf("fixture dates %s %s", earlier.snap.AsOfDate, first.snap.AsOfDate)
+	}
+	got := putProjection(t, h, device, earlier.raw)
+	if got["readme"] != "coalesced" || git.puts != puts {
+		t.Fatalf("earlier date readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	}
+	_ = st
 }
 
 func authEvent(source, vendor string, at time.Time, miss int64) event.UsageEvent {

@@ -19,6 +19,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/report"
 	"github.com/rainhuang0220/whereToken/internal/scan"
@@ -50,6 +51,19 @@ type App struct {
 	Sleep      func(time.Duration)
 	Creds      credstore.Store
 	RunCmd     func(name string, args ...string) error
+	// RunCmdOutput is the stdout-capable command seam. Profile refresh
+	// uses it for launchctl so unit tests never spawn a real launchctl.
+	// When it is nil and RunCmd is set, RunCmd runs and stdout is empty.
+	RunCmdOutput func(name string, args ...string) (string, error)
+	// UserHome overrides the home used for the launchd plist and logs.
+	UserHome func() (string, error)
+	// Euid overrides the effective uid check. Root must not bootstrap.
+	Euid func() int
+	// Uid overrides the gui/<uid> domain. Nil uses os.Getuid.
+	Uid func() int
+	// Reexec replaces the process when watch notices a new binary.
+	// Tests set it so the test process is not replaced.
+	Reexec func(argv []string)
 	// PortraitSeed resolves the anonymous install identity that seeds the
 	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
 	// pin a constant so runs stay hermetic.
@@ -163,6 +177,10 @@ func (a *App) resolveHome(override string) adapter.Home {
 }
 
 func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result {
+	return a.doScanOpt(home, quiet, offline, ascii, true)
+}
+
+func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) scan.Result {
 	if a.envOffline() {
 		offline = true
 	}
@@ -170,6 +188,13 @@ func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result 
 		res := a.Scan(home)
 		res.Offline = offline
 		return res
+	}
+	if lock {
+		release, err := proclock.Lock(a.scanLockPath(home))
+		if err != nil {
+			return scan.Result{Errors: []string{"scan lock unavailable"}}
+		}
+		defer release()
 	}
 	ads := scan.Adapters(offline)
 	var res scan.Result
@@ -294,6 +319,7 @@ func (a *App) runDoctor(home adapter.Home, quiet, offline bool) int {
 	res := a.doScan(home, quiet, offline, false)
 	fmt.Fprint(a.Stdout, FormatDoctor(scan.Diagnose(res)))
 	fmt.Fprint(a.Stdout, FormatCommunityDoctor(home, a.LookupEnv, offline))
+	fmt.Fprint(a.Stdout, FormatProfileRefreshDoctor(home))
 	return ExitOK
 }
 

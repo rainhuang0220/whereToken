@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.7.6 — 2026-09-25 (Alpha)
+
+- `wheretoken profile refresh on` enables the sanitized public snapshot and, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. The switch file is flushed with `enabled` true before that agent is bootstrapped, so the first `on` cannot start a watch that exits while the file is still missing. If bootstrap fails, the switch stays on and `status` can show `scheduler=dead`; a later `on` bootstraps again. `off` turns the switch off and uninstalls that agent. Linux and Windows do not install a background agent. The default install and a plain `wheretoken` report do not upload. The bare `profile refresh` command is still one explicit PUT when the switch is off, and launchd does not run that bare command. A powered-off Mac does not publish; catch-up is the next wake of `watch`, or RunAtLoad after a graphical login. SSH without a GUI session leaves `scheduler=dead`.
+- The refresh gate is 10,000 raw tokens, or a strictly later local calendar day whose total is at least the last accepted total, and always at least one hour since `freshness.updated_at`. A missing `updated_at` is not an elapsed hour. An earlier local date is not a rollover. A smaller total is not published. Missing totals stay unavailable.
+- The GitHub README no longer waits for a palette publish. The first write uses the verified palette or newsprint. Same-day updates still wait 30 minutes, then 100,000 tokens or 6 hours. A strictly later `as_of_date` does not wait. A failed README write leaves the projection in place and retries on the hosted process without another PUT. A later same-day PUT that coalesces does not clear that failure while the accepted snapshot is still ahead of the applied README; the retry publishes the newest accepted snapshot. A remote README conflict on that usage write does not mark the README applied or the theme published. `wheretoken serve`'s 15-minute full sync is unchanged. The hosted migration is not live on wheretoken.plainlist.space until that binary is deployed.
+
 ## 0.7.5 — 2026-09-24 (Alpha)
 
 - Public profile theme choices stay a preview (`预览中`). Publishing is the separate action `发布到 GitHub 主页`, confirmed once as `将 Cobalt 应用到 github.com/<login>`. Cobalt and Magenta heatmap cells use the same light and dark palette tokens as the README SVGs, including empty cells. Newsprint keeps its paper material.

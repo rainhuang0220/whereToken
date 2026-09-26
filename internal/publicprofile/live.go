@@ -30,7 +30,11 @@ const (
 )
 
 // MaterializeInput is the README coalesce decision. ThemeChange publishes
-// immediately. Usage changes wait for a real token movement or the quiet window.
+// immediately. A strictly later local as_of_date publishes immediately.
+// Same-calendar-day usage changes still wait for a real token movement or
+// the quiet window. An earlier date, an empty date, and an invalid date do
+// not. SnapshotChanged false does not materialize on the date field alone;
+// a failed apply retries through the caller when desired differs from applied.
 type MaterializeInput struct {
 	SnapshotChanged  bool
 	PrevTotal        int64
@@ -38,6 +42,12 @@ type MaterializeInput struct {
 	LastMaterialized time.Time
 	Now              time.Time
 	ThemeChange      bool
+	// PrevAsOfDate is the previous projection's as_of_date (the last
+	// materialized snapshot's date once a date change has been accepted).
+	// NextAsOfDate is the snapshot just accepted. Both are YYYY-MM-DD local
+	// dates. Empty values do not bypass the usage gates.
+	PrevAsOfDate string
+	NextAsOfDate string
 }
 
 // ShouldMaterializeReadme reports whether the static GitHub README should be
@@ -52,6 +62,9 @@ func ShouldMaterializeReadme(in MaterializeInput) bool {
 	if in.LastMaterialized.IsZero() {
 		return true
 	}
+	if laterLocalDate(in.NextAsOfDate, in.PrevAsOfDate) {
+		return true
+	}
 	if in.Now.Sub(in.LastMaterialized) < ReadmeMinInterval {
 		return false
 	}
@@ -63,6 +76,17 @@ func ShouldMaterializeReadme(in MaterializeInput) bool {
 		return true
 	}
 	return in.Now.Sub(in.LastMaterialized) >= ReadmeQuietWindow
+}
+
+// laterLocalDate reports whether next is a later YYYY-MM-DD local date than prev.
+// It does not interpret the dates as UTC instants beyond the calendar day.
+func laterLocalDate(next, prev string) bool {
+	n, errN := time.Parse("2006-01-02", strings.TrimSpace(next))
+	p, errP := time.Parse("2006-01-02", strings.TrimSpace(prev))
+	if errN != nil || errP != nil {
+		return false
+	}
+	return n.After(p)
 }
 
 // TotalTokens is the public all-time total, or 0 when that component is

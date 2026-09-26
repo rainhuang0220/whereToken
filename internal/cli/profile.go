@@ -40,8 +40,10 @@ func (a *App) runProfile(flags Flags, home adapter.Home) int {
 		return a.runProfilePalette(flags, home)
 	case "publish":
 		return a.runProfilePublish(flags, home)
+	case "refresh":
+		return a.runProfileRefreshCommand(flags, home)
 	default:
-		fmt.Fprintln(a.Stderr, "profile requires build, validate, palette, or publish")
+		fmt.Fprintln(a.Stderr, "profile requires build, validate, palette, publish, or refresh")
 		return ExitUsage
 	}
 }

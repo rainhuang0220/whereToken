@@ -66,6 +66,9 @@ wheretoken \- local coding-agent token usage as a character table
 .br
 .B wheretoken profile palette
 [\fIcobalt\fR|\fImagenta\fR|\fInewsprint\fR]
+.br
+.B wheretoken profile refresh
+[\fIstatus\fR|\fIon\fR|\fIoff\fR|\fIwatch\fR]
 .SH DESCRIPTION
 Reads coding-agent ledgers already on this machine (Claude Code, Kimi, Grok, MiniMax,
 OpenClaw, Codex, OpenCode, Cursor, Trae) and prints token totals, cache hit rate, streaks, request and turn counts,
@@ -208,6 +211,28 @@ Anonymous Community Rank participation. Default on when
 is set.
 .B serve
 binds 127.0.0.1 for a self-hosted rank service.
+.TP
+.B profile refresh [status|on|off|watch]
+Sanitized public snapshot refresh. Default off.
+The default
+.B wheretoken
+report does not upload, and the default install scripts do not enable refresh.
+.B on
+enables the switch beside community.json (Unix ~/.config/wheretoken/profile-refresh.json, Windows %APPDATA%\\whereToken\\profile-refresh.json).
+On macOS it also installs a user launchd agent, without sudo, whose program is
+.B profile refresh watch --quiet.
+.B off
+disables the switch and uninstalls that agent.
+Linux and Windows do not install a background agent; the foreground loop is
+.B profile refresh watch.
+The bare command publishes once even when the switch is off, and launchd does not run the bare command.
+A powered-off Mac does not publish. Catch-up is the next wake of the long-running watch, or RunAtLoad after a graphical login. SSH with no GUI session does not run the agent; status can show scheduler=dead.
+A smaller all-time total than the last accepted snapshot is not published, including when the local date changed.
+Only a strictly later local calendar day is a date rollover. A missing freshness timestamp does not count as an elapsed hour.
+.BR --offline
+and
+.B WHERETOKEN_OFFLINE
+skip the publish.
 .TP
 .B login
 Pair this device with the hosted web app (device code + browser confirm).
@@ -392,6 +417,17 @@ Anonymous daily totals only; never prompts, sessions, paths, or
 credentials. Optional cost is an API-equivalent estimate; missing price
 is omitted, not $0. Unavailable rank is omitted, not #0.
 Not a global, worldwide, or all-AI-users rank.
+.B profile refresh
+PUTs only the sanitized public snapshot. It does not upload events, prompts, paths, or the daily batch.
+.B profile refresh on
+enables that refresh and, on macOS only, installs the user agent.
+.B off
+disables it and removes the agent. Linux and Windows do not install one.
+Same-day README git writes stay on the 30 minute / 100,000 token / 6 hour gate.
+A strictly later local
+.B as_of_date
+rewrites the README immediately. The first README write can use the default newsprint palette; a theme publish is not required first. A failed README write retries on the hosted service without another snapshot PUT.
+The hosted JSON follows the local 10,000-token / 1 hour policy.
 .SH SEE ALSO
 https://github.com/rainhuang0220/whereToken
 .PP

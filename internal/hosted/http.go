@@ -1,6 +1,7 @@
 package hosted
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -20,6 +21,32 @@ type MuxOptions struct {
 }
 
 func NewMux(opts MuxOptions) http.Handler {
+	h, _ := newMux(opts)
+	return h
+}
+
+// HandlerWithMaintenance serves the API and retries a failed README write
+// without a new client PUT. Production wheretoken.plainlist.space does not
+// pick this up until the hosted binary is deployed.
+func HandlerWithMaintenance(opts MuxOptions, every time.Duration) http.Handler {
+	h, s := newMux(opts)
+	if every <= 0 {
+		every = 15 * time.Minute
+	}
+	go s.maintainReadmes(every)
+	return h
+}
+
+func (s *server) maintainReadmes(every time.Duration) {
+	s.retryFailedReadmes(context.Background())
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for range t.C {
+		s.retryFailedReadmes(context.Background())
+	}
+}
+
+func newMux(opts MuxOptions) (http.Handler, *server) {
 	if opts.Version == "" {
 		opts.Version = "dev"
 	}
@@ -48,7 +75,7 @@ func NewMux(opts MuxOptions) http.Handler {
 	mux.HandleFunc("/api/v1/dashboard/summary", s.getDashboard)
 	mux.HandleFunc("/api/v1/account/usage", s.deleteUsage)
 	mux.HandleFunc("/api/v1/account", s.deleteAccount)
-	return withSecurityHeaders(mux)
+	return withSecurityHeaders(mux), s
 }
 
 type server struct {
