@@ -129,6 +129,15 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 		return jsonRes(500, nil)
 	}
 	home, calls := useLaunchd(t, app, "")
+	switchPath := publicprofile.RefreshConfigPath(cfg)
+	record := app.RunCmdOutput
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		on, err := publicprofile.LoadRefreshSwitch(switchPath)
+		if err != nil || !on {
+			t.Fatalf("%s %v ran before the switch file contained enabled=true (err=%v on=%v)", name, args, err, on)
+		}
+		return record(name, args...)
+	}
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("on %d %s", code, errb.String())
 	}
@@ -137,6 +146,13 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "public profile refresh on (sanitized snapshot only — prompts and paths stay local)") {
 		t.Fatalf("on text %s", out.String())
+	}
+	if len(*calls) != 2 || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+		t.Fatalf("first on calls %v", *calls)
+	}
+	on, err := publicprofile.LoadRefreshSwitch(switchPath)
+	if err != nil || !on {
+		t.Fatalf("first on switch %v %v", on, err)
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "on"})
 	app.Home = cfg
@@ -193,6 +209,102 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 	}
 	if _, err := os.Stat(plist); !os.IsNotExist(err) {
 		t.Fatal("off left the plist")
+	}
+}
+
+func TestProfileRefreshOnWritesSwitchBeforeLaunchctl(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	app, _, errb := testApp([]string{"profile", "refresh", "on"})
+	app.Home = cfg
+	home, calls := useLaunchd(t, app, "")
+	switchPath := publicprofile.RefreshConfigPath(cfg)
+	record := app.RunCmdOutput
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		if name != "launchctl" {
+			t.Fatalf("unexpected command %s", name)
+		}
+		on, err := publicprofile.LoadRefreshSwitch(switchPath)
+		if err != nil || !on {
+			t.Fatalf("launchctl %v before enabled=true (err=%v on=%v)", args, err, on)
+		}
+		return record(name, args...)
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("on %d %s", code, errb.String())
+	}
+	if len(*calls) != 2 || (*calls)[0] == "" || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+		t.Fatalf("calls %v", *calls)
+	}
+	if strings.Contains(errb.String(), home) {
+		t.Fatalf("error included a home path: %s", errb.String())
+	}
+}
+
+func TestProfileRefreshOnKeepsSwitchWhenBootstrapFails(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	app, out, errb := testApp([]string{"profile", "refresh", "on"})
+	app.Home = cfg
+	home, _ := useLaunchd(t, app, "")
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		if name != "launchctl" || len(args) == 0 {
+			t.Fatalf("unexpected %s %v", name, args)
+		}
+		on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(cfg))
+		if err != nil || !on {
+			t.Fatalf("launchctl %v before enabled=true (err=%v on=%v)", args, err, on)
+		}
+		switch args[0] {
+		case "bootout":
+			return "", errors.New("not loaded")
+		case "bootstrap":
+			return "", errors.New("bootstrap failed")
+		default:
+			t.Fatalf("unexpected launchctl %v", args)
+		}
+		return "", nil
+	}
+	if code := app.Run(); code == ExitOK {
+		t.Fatal("bootstrap failure returned success")
+	}
+	if errb.String() != "public profile refresh failed; will retry\n" {
+		t.Fatalf("stderr %q", errb.String())
+	}
+	if strings.Contains(errb.String(), home) {
+		t.Fatalf("error included a home path: %s", errb.String())
+	}
+	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(cfg))
+	if err != nil || !on {
+		t.Fatal("failed bootstrap cleared the switch")
+	}
+
+	app, out, errb = testApp([]string{"profile", "refresh", "status"})
+	app.Home = cfg
+	useLaunchd(t, app, home)
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		if name == "launchctl" && len(args) > 0 && args[0] == "print" {
+			return "", errors.New("not loaded")
+		}
+		t.Fatalf("status ran %s %v", name, args)
+		return "", nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("status %d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "scheduler=dead\n") || !strings.HasPrefix(out.String(), "phase=idle 等待下一次\n") {
+		t.Fatalf("status %q", out.String())
+	}
+
+	app, out, errb = testApp([]string{"profile", "refresh", "on"})
+	app.Home = cfg
+	_, calls := useLaunchd(t, app, home)
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("later on %d %s", code, errb.String())
+	}
+	if len(*calls) != 2 || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+		t.Fatalf("later on calls %v", *calls)
+	}
+	if !strings.Contains(out.String(), "public profile refresh on (sanitized snapshot only — prompts and paths stay local)") {
+		t.Fatalf("later on text %s", out.String())
 	}
 }
 

@@ -120,11 +120,13 @@ func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}
-	if err := a.installProfileRefreshAgent(program); err != nil {
+	// watch treats a missing switch as off and exits 0. KeepAlive does not
+	// restart that exit, so the file has to be durable before bootstrap.
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}
-	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+	if err := a.installProfileRefreshAgent(program); err != nil {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}

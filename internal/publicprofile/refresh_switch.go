@@ -38,7 +38,9 @@ func LoadRefreshSwitch(path string) (bool, error) {
 }
 
 // SaveRefreshSwitch writes enabled and schema_version only, mode 0600,
-// directory 0700. It does not copy paths, tokens, totals, or snapshots.
+// directory 0700. The bytes are synced before the rename, so a process
+// started immediately afterward sees the new file. It does not copy paths,
+// tokens, totals, or snapshots.
 func SaveRefreshSwitch(path string, enabled bool) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -53,8 +55,22 @@ func SaveRefreshSwitch(path string, enabled bool) error {
 	}
 	raw = append(raw, '\n')
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
 		return err
+	}
+	_, werr := f.Write(raw)
+	if werr == nil {
+		werr = f.Sync()
+	}
+	cerr := f.Close()
+	if werr != nil {
+		_ = os.Remove(tmp)
+		return werr
+	}
+	if cerr != nil {
+		_ = os.Remove(tmp)
+		return cerr
 	}
 	if err := os.Chmod(tmp, 0o600); err != nil {
 		_ = os.Remove(tmp)
