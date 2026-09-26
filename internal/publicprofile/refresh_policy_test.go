@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
@@ -330,5 +331,102 @@ func TestBuildAsOfDateFollowsLocalZone(t *testing.T) {
 	}
 	if snap.AsOfDate != "2026-09-24" {
 		t.Fatalf("us as_of=%s", snap.AsOfDate)
+	}
+}
+
+func TestDecideRefreshMissingUpdatedAtDoesNotPublish(t *testing.T) {
+	remote := gateSnap("sha256:prev", StatusAvailable, "2026-09-25", intPtr(1_000_000))
+	now := time.Date(2026, 9, 26, 8, 0, 0, 0, time.UTC)
+	got := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000+50_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: time.Time{},
+		Now:             now,
+	})
+	if got.Publish || got.Code != CodeSkippedCooldown {
+		t.Fatalf("missing updated_at must not publish: %+v", got)
+	}
+}
+
+func TestDecideRefreshEarlierLocalDateIsNotRollover(t *testing.T) {
+	updated := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
+	remote := gateSnap("sha256:prev", StatusAvailable, "2026-09-26", intPtr(1_000_000))
+	earlier := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: updated,
+		Now:             updated.Add(2 * time.Hour),
+	})
+	if earlier.Publish || earlier.Code == CodeDateRollover {
+		t.Fatalf("earlier local date published: %+v", earlier)
+	}
+	equal := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: updated,
+		Now:             updated.Add(2 * time.Hour),
+	})
+	if equal.Publish || equal.Code == CodeDateRollover {
+		t.Fatalf("equal date is not a rollover: %+v", equal)
+	}
+	invalid := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "09/27/2026", intPtr(1_000_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: updated,
+		Now:             updated.Add(2 * time.Hour),
+	})
+	if invalid.Publish || invalid.Code == CodeDateRollover {
+		t.Fatalf("invalid date published: %+v", invalid)
+	}
+}
+
+func TestDecideRefreshDSTFallbackUsesAbsoluteHour(t *testing.T) {
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 2026-11-01 01:30 EDT, then one absolute hour later is 01:30 EST.
+	start := time.Date(2026, 11, 1, 5, 30, 0, 0, time.UTC)
+	early := start.Add(time.Hour - time.Nanosecond)
+	ready := start.Add(time.Hour)
+	if ready.Sub(start) != time.Hour || early.Sub(start) >= time.Hour {
+		t.Fatalf("absolute sub early=%s ready=%s", early.Sub(start), ready.Sub(start))
+	}
+	if _, off := start.In(loc).Zone(); off != -4*3600 {
+		t.Fatalf("start zone offset %d", off)
+	}
+	if _, off := ready.In(loc).Zone(); off != -5*3600 {
+		t.Fatalf("ready zone offset %d", off)
+	}
+	if start.In(loc).Format("15:04") != "01:30" || ready.In(loc).Format("15:04") != "01:30" {
+		t.Fatalf("civil clocks %s %s", start.In(loc), ready.In(loc))
+	}
+	remote := gateSnap("sha256:prev", StatusAvailable, "2026-11-01", intPtr(1_000_000))
+	cooldown := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+10_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: start,
+		Now:             early,
+	})
+	if cooldown.Publish || cooldown.Code != CodeSkippedCooldown {
+		t.Fatalf("1h-1ns during fallback published: %+v", cooldown)
+	}
+	small := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+9_999)),
+		Remote:          &remote,
+		RemoteUpdatedAt: start,
+		Now:             ready,
+	})
+	if small.Publish || small.Code != CodeSkippedDelta {
+		t.Fatalf("+9999 at 1h published: %+v", small)
+	}
+	got := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+10_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: start,
+		Now:             ready,
+	})
+	if !got.Publish || got.Code != CodePublished {
+		t.Fatalf("+10000 at absolute 1h: %+v", got)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
@@ -425,6 +426,40 @@ func readSSE(t *testing.T, r io.Reader) []sseEvent {
 		t.Fatal(err)
 	}
 	return events
+}
+
+func TestPostScanDoesNotRunWhenLockFails(t *testing.T) {
+	root := t.TempDir()
+	home := testhome.New(root)
+	grand := filepath.Dir(filepath.Dir(filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(home)), "scan.lock")))
+	if err := os.MkdirAll(filepath.Dir(grand), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(grand, []byte("not-a-directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(NewMux(home))
+	t.Cleanup(srv.Close)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/scan", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status %d %s", resp.StatusCode, body)
+	}
+	if strings.Contains(string(body), root) || strings.Contains(string(body), "scan.lock") {
+		t.Fatalf("lock error included a path: %s", body)
+	}
+	got := getSummaryJSON(t, srv)
+	if got.ScannedAt != "" {
+		t.Fatal("failed lock still stored a scan")
+	}
 }
 
 func writeKimiHome(t *testing.T) string {

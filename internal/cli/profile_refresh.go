@@ -18,7 +18,9 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
-const profileRefreshInterval = 15 * time.Minute
+// profileRefreshInterval is the foreground watch period. Launchd does not
+// use StartInterval; this timer stays inside watch. Tests shorten it.
+var profileRefreshInterval = 15 * time.Minute
 
 // profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
 // has no timeout; refresh does not use it.
@@ -57,10 +59,30 @@ func (a *App) profileRefreshStatus(home adapter.Home) int {
 	}
 	if err != nil || !on {
 		fmt.Fprintln(a.Stdout, "phase=idle 未开启")
-		return ExitOK
+	} else {
+		fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
 	}
-	fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
+	fmt.Fprintf(a.Stdout, "last=%s\n", a.lastRefreshCode(home))
 	return ExitOK
+}
+
+func (a *App) lastRefreshCode(home adapter.Home) string {
+	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	if err != nil || !publicprofile.AllowedRefreshCode(st.Code) {
+		return ""
+	}
+	return st.Code
+}
+
+func (a *App) noteRefresh(home adapter.Home, phase, code string) {
+	if a.Now == nil {
+		return
+	}
+	_ = publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
+		Phase:     phase,
+		Code:      code,
+		CheckedAt: a.Now(),
+	})
 }
 
 func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
@@ -77,20 +99,20 @@ func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
 }
 
 func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
-	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
-	if err != nil && !os.IsNotExist(err) {
-		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
-		return ExitFail
-	}
-	if err != nil || !on {
-		fmt.Fprintln(a.Stdout, "phase=idle 未开启")
-		return ExitOK
-	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	rejected := map[string]struct{}{}
 	for {
 		if ctx.Err() != nil {
+			return ExitOK
+		}
+		on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
+		if err != nil && !os.IsNotExist(err) {
+			fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+			return ExitFail
+		}
+		if err != nil || !on {
+			fmt.Fprintln(a.Stdout, "phase=idle 未开启")
 			return ExitOK
 		}
 		a.executeProfileRefresh(ctx, flags, home, rejected)
@@ -106,19 +128,23 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 
 func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, rejected map[string]struct{}) int {
 	if a.wantOffline(flags) {
+		a.noteRefresh(home, publicprofile.PhaseSkipped, publicprofile.CodeOffline)
 		fmt.Fprintln(a.Stdout, "phase=skipped 离线不覆盖已发布快照")
 		return ExitOK
 	}
 	token, login, err := a.profileRefreshCreds(home)
 	if err != nil {
+		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
 		return ExitOK
 	}
 	release, ok, lockErr := proclock.TryLock(a.scanLockPath(home))
 	if lockErr != nil {
+		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
 	}
 	if !ok {
+		a.noteRefresh(home, publicprofile.PhaseSkipped, publicprofile.CodeBusy)
 		fmt.Fprintln(a.Stdout, "phase=skipped 已有扫描，跳过本次")
 		return ExitOK
 	}
@@ -135,6 +161,7 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		Errors:       res.Errors,
 	})
 	if err != nil {
+		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
 	}
 	if snap.SnapshotID != "" && rejected != nil {
@@ -145,6 +172,7 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	}
 	applied := publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, projectionClient{app: a, token: token, login: login})
 	if applied.Auth {
+		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
 		return ExitOK
 	}
@@ -152,8 +180,10 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		rejected[snap.SnapshotID] = struct{}{}
 	}
 	if applied.Transport || applied.Rejected {
+		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
 	}
+	a.noteRefresh(home, applied.Decision.Phase, applied.Decision.Code)
 	a.writeRefresh(a.Stdout, applied.Decision, true)
 	return ExitOK
 }

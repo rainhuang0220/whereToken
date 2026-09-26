@@ -173,9 +173,12 @@ func (s *server) postScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.endScan()
-	if release, err := proclock.Lock(filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(s.home)), "scan.lock")); err == nil {
-		defer release()
+	release, err := proclock.Lock(filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(s.home)), "scan.lock"))
+	if err != nil {
+		http.Error(w, "scan unavailable", http.StatusServiceUnavailable)
+		return
 	}
+	defer release()
 
 	stream := strings.Contains(r.Header.Get("Accept"), "text/event-stream")
 	var flush http.Flusher

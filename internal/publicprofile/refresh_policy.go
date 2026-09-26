@@ -26,6 +26,9 @@ const (
 	CodeSkippedCooldown = "SKIPPED_COOLDOWN"
 	CodeSkippedDelta    = "SKIPPED_DELTA"
 	CodeWillRetry       = "WILL_RETRY"
+	CodeNotSignedIn     = "NOT_SIGNED_IN"
+	CodeOffline         = "OFFLINE"
+	CodeBusy            = "BUSY"
 )
 
 // Decision is the refresh gate. Publish is true only when a sanitized PUT
@@ -89,17 +92,31 @@ func DecideRefresh(in RefreshInput) Decision {
 	if prevTotal == nil || *localTotal < *prevTotal {
 		return skipped("增量未到 0.01 M", CodeSkippedDelta)
 	}
-	dateChange := in.Local.AsOfDate != "" && in.Remote.AsOfDate != "" && in.Local.AsOfDate != in.Remote.AsOfDate
-	if !dateChange && *localTotal-*prevTotal < RefreshMinDelta {
+	// Only a strictly later local calendar day is a date opportunity.
+	// An earlier day (a timezone move west) and an equal day are not.
+	dateRollover := laterLocalDate(in.Local.AsOfDate, in.Remote.AsOfDate)
+	if !dateRollover && *localTotal-*prevTotal < RefreshMinDelta {
 		return skipped("增量未到 0.01 M", CodeSkippedDelta)
 	}
-	if !in.RemoteUpdatedAt.IsZero() && in.Now.Sub(in.RemoteUpdatedAt) < RefreshCooldown {
+	// A missing freshness.updated_at is not "cooldown elapsed".
+	// time.Time.Sub is absolute, so a DST fall-back cannot shorten the hour.
+	if in.RemoteUpdatedAt.IsZero() || in.Now.Sub(in.RemoteUpdatedAt) < RefreshCooldown {
 		return skipped("间隔未满 1 小时", CodeSkippedCooldown)
 	}
-	if dateChange {
+	if dateRollover {
 		return Decision{Publish: true, Phase: PhasePublished, Label: "日期已更新", Code: CodeDateRollover}
 	}
 	return publishedUsage()
+}
+
+// AllowedRefreshCode is the only set persisted in profile-refresh-state.json.
+func AllowedRefreshCode(code string) bool {
+	switch code {
+	case "", CodePublished, CodeDateRollover, CodeSkippedCooldown, CodeSkippedDelta, CodeWillRetry, CodeNotSignedIn, CodeOffline, CodeBusy:
+		return true
+	default:
+		return false
+	}
 }
 
 func publishedUsage() Decision {

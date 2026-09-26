@@ -177,9 +177,11 @@ func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) sca
 		return res
 	}
 	if lock {
-		if release, err := proclock.Lock(a.scanLockPath(home)); err == nil {
-			defer release()
+		release, err := proclock.Lock(a.scanLockPath(home))
+		if err != nil {
+			return scan.Result{Errors: []string{"scan lock unavailable"}}
 		}
+		defer release()
 	}
 	ads := scan.Adapters(offline)
 	var res scan.Result

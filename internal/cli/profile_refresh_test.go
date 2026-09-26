@@ -15,6 +15,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
@@ -39,6 +40,15 @@ func TestParseProfileRefresh(t *testing.T) {
 	}
 	if _, err := Parse([]string{"profile", "refresh", "--today"}); err == nil {
 		t.Fatal("refresh accepted a window")
+	}
+	if _, err := Parse([]string{"profile", "refresh", "--json"}); err == nil {
+		t.Fatal("refresh accepted --json")
+	}
+	if _, err := Parse([]string{"--tool", "claude", "profile", "refresh"}); err == nil {
+		t.Fatal("refresh accepted a tool filter")
+	}
+	if _, err := Parse([]string{"profile", "refresh", "--claude"}); err == nil {
+		t.Fatal("refresh accepted a tool shorthand")
 	}
 }
 
@@ -87,7 +97,7 @@ func TestProfileRefreshSwitchFileStaysMinimal(t *testing.T) {
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "status"})
 	app.Home = home
-	if code := app.Run(); code != ExitOK || !strings.Contains(out.String(), "phase=idle 等待下一次") {
+	if code := app.Run(); code != ExitOK || !strings.Contains(out.String(), "phase=idle 等待下一次") || !strings.Contains(out.String(), "last=\n") {
 		t.Fatalf("status %d %s %s", code, out.String(), errb.String())
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "off"})
@@ -404,5 +414,162 @@ func TestProfileRefreshHTTPClientTimesOut(t *testing.T) {
 	}
 	if strings.Contains(errb.String(), "wtd_1") || strings.Contains(errb.String(), "Bearer") {
 		t.Fatalf("timeout log leaked a credential: %s", errb.String())
+	}
+}
+
+func TestProfileRefreshSecondLockSkipsWithoutPut(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	app, out, errb := testApp([]string{"profile", "refresh"})
+	app.Home = home
+	app.Creds = &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
+	app.Scan = func(adapter.Home) scan.Result {
+		t.Fatal("scanned while another refresh holds the lock")
+		return scan.Result{}
+	}
+	puts := 0
+	app.HTTPDo = func(*http.Request) (*http.Response, error) {
+		puts++
+		return jsonRes(500, nil)
+	}
+	release, ok, err := proclock.TryLock(app.scanLockPath(home))
+	if err != nil || !ok {
+		t.Fatalf("lock ok=%v err=%v", ok, err)
+	}
+	defer release()
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code %d %s", code, errb.String())
+	}
+	if puts != 0 || !strings.Contains(out.String(), "phase=skipped 已有扫描，跳过本次") {
+		t.Fatalf("puts=%d %s", puts, out.String())
+	}
+	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	if err != nil || st.Code != publicprofile.CodeBusy {
+		t.Fatalf("state %+v %v", st, err)
+	}
+	raw, err := os.ReadFile(publicprofile.RefreshStatePath(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "0.00 M") || strings.Contains(string(raw), "total") || strings.Contains(string(raw), home.XDGConfig("wheretoken")) {
+		t.Fatalf("state leaked %s", raw)
+	}
+}
+
+func TestProfileRefreshStateCheckedAtIsTheRunInstant(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	now := time.Date(2026, 9, 25, 8, 0, 0, 0, time.UTC)
+	app, out, errb := testApp([]string{"profile", "refresh", "--quiet"})
+	app.Home = home
+	app.Creds = &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
+	app.Now = func() time.Time { return now }
+	app.Loc = time.UTC
+	app.Scan = func(adapter.Home) scan.Result {
+		ev := event.UsageEvent{Source: "claude", Vendor: "anthropic", Timestamp: now.Add(-time.Hour), Miss: 12_000, Quality: event.QualityAuthoritative}
+		return scan.Result{Events: []event.UsageEvent{ev}}
+	}
+	app.HTTPDo = func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodGet {
+			return jsonRes(http.StatusNotFound, nil)
+		}
+		if req.Method == http.MethodPut {
+			return jsonRes(200, map[string]any{"ok": true})
+		}
+		return jsonRes(500, nil)
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code %d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "PUBLISHED") {
+		t.Fatalf("%s", out.String())
+	}
+	raw, err := os.ReadFile(publicprofile.RefreshStatePath(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	if strings.Contains(text, "T00:00:00") {
+		t.Fatalf("state claims a midnight publish: %s", text)
+	}
+	if !strings.Contains(text, "2026-09-25T08:00:00Z") || !strings.Contains(text, `"code": "PUBLISHED"`) {
+		t.Fatalf("state %s", text)
+	}
+	for _, bad := range []string{"total", "snapshot", "0.00 M", "$0", "#0"} {
+		if strings.Contains(text, bad) {
+			t.Fatalf("state contains %q: %s", bad, text)
+		}
+	}
+}
+
+func TestProfileRefreshWatchRereadsSwitch(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+		t.Fatal(err)
+	}
+	old := profileRefreshInterval
+	profileRefreshInterval = 20 * time.Millisecond
+	t.Cleanup(func() { profileRefreshInterval = old })
+	app, out, errb := testApp([]string{"profile", "refresh", "watch"})
+	app.Home = home
+	app.Creds = &memCreds{m: map[string]string{
+		credstore.KeyDeviceToken: "wtd_1.tok",
+		credstore.KeyLogin:       "rainhuang0220",
+	}}
+	app.Scan = func(adapter.Home) scan.Result { return scan.Result{} }
+	seen := make(chan struct{})
+	app.HTTPDo = func(*http.Request) (*http.Response, error) {
+		select {
+		case <-seen:
+		default:
+			close(seen)
+		}
+		return jsonRes(http.StatusNotFound, nil)
+	}
+	done := make(chan int, 1)
+	go func() { done <- app.Run() }()
+	select {
+	case <-seen:
+	case <-time.After(2 * time.Second):
+		t.Fatal("watch did not start")
+	}
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), false); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case code := <-done:
+		if code != ExitOK {
+			t.Fatalf("code %d %s %s", code, out.String(), errb.String())
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("watch did not notice the switch")
+	}
+	if !strings.Contains(out.String(), "phase=idle 未开启") {
+		t.Fatalf("%s", out.String())
+	}
+}
+
+func TestDoScanDoesNotContinueWhenLockFails(t *testing.T) {
+	root := t.TempDir()
+	app, _, _ := testApp(nil)
+	app.Scan = nil
+	home := testhome.New(root)
+	grand := filepath.Dir(filepath.Dir(app.scanLockPath(home)))
+	if err := os.MkdirAll(filepath.Dir(grand), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(grand, []byte("not-a-directory"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	res := app.doScan(home, true, true, false)
+	if len(res.Events) != 0 || len(res.Errors) != 1 || res.Errors[0] != "scan lock unavailable" {
+		t.Fatalf("%+v", res)
+	}
+	if strings.Contains(res.Errors[0], root) {
+		t.Fatal("lock error included a path")
 	}
 }
