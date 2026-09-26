@@ -57,11 +57,13 @@ func (a *App) profileRefreshStatus(home adapter.Home) int {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}
+	enabled := err == nil && on
 	if err != nil || !on {
 		fmt.Fprintln(a.Stdout, "phase=idle 未开启")
 	} else {
 		fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
 	}
+	fmt.Fprintf(a.Stdout, "scheduler=%s\n", a.schedulerStatus(enabled))
 	fmt.Fprintf(a.Stdout, "last=%s\n", a.lastRefreshCode(home))
 	return ExitOK
 }
@@ -86,15 +88,47 @@ func (a *App) noteRefresh(home adapter.Home, phase, code string) {
 }
 
 func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
-	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), on); err != nil {
+	if !on {
+		if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), false); err != nil {
+			fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+			return ExitFail
+		}
+		a.stopProfileRefreshAgent()
+		fmt.Fprintln(a.Stdout, "public profile refresh off (GitHub profile stays as last published)")
+		if a.GOOS == "darwin" {
+			fmt.Fprintln(a.Stdout, "scheduler=stopped")
+		} else {
+			fmt.Fprintln(a.Stdout, "scheduler=unsupported")
+		}
+		return ExitOK
+	}
+	if a.GOOS != "darwin" {
+		if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+			fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+			return ExitFail
+		}
+		fmt.Fprintln(a.Stdout, "public profile refresh on (sanitized snapshot only — prompts and paths stay local)")
+		fmt.Fprintf(a.Stdout, "scheduler=unsupported\nThis version does not install a background agent on %s. Public auto-refresh is macOS-only. Foreground loop: wheretoken profile refresh watch\n", a.GOOS)
+		return ExitOK
+	}
+	if a.euid() == 0 {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}
-	if on {
-		fmt.Fprintln(a.Stdout, "public profile refresh on (sanitized snapshot only — prompts and paths stay local)")
-		return ExitOK
+	program, err := a.refreshProgramPath()
+	if err != nil || program == "" {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
 	}
-	fmt.Fprintln(a.Stdout, "public profile refresh off (GitHub profile stays as last published)")
+	if err := a.installProfileRefreshAgent(program); err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	fmt.Fprintln(a.Stdout, "public profile refresh on (sanitized snapshot only — prompts and paths stay local)")
 	return ExitOK
 }
 
@@ -115,6 +149,7 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 			fmt.Fprintln(a.Stdout, "phase=idle 未开启")
 			return ExitOK
 		}
+		a.maybeReexecProfileWatch()
 		a.executeProfileRefresh(ctx, flags, home, rejected)
 		timer := time.NewTimer(profileRefreshInterval)
 		select {

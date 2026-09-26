@@ -51,6 +51,19 @@ type App struct {
 	Sleep      func(time.Duration)
 	Creds      credstore.Store
 	RunCmd     func(name string, args ...string) error
+	// RunCmdOutput is the stdout-capable command seam. Profile refresh
+	// uses it for launchctl so unit tests never spawn a real launchctl.
+	// When it is nil and RunCmd is set, RunCmd runs and stdout is empty.
+	RunCmdOutput func(name string, args ...string) (string, error)
+	// UserHome overrides the home used for the launchd plist and logs.
+	UserHome func() (string, error)
+	// Euid overrides the effective uid check. Root must not bootstrap.
+	Euid func() int
+	// Uid overrides the gui/<uid> domain. Nil uses os.Getuid.
+	Uid func() int
+	// Reexec replaces the process when watch notices a new binary.
+	// Tests set it so the test process is not replaced.
+	Reexec func(argv []string)
 	// PortraitSeed resolves the anonymous install identity that seeds the
 	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
 	// pin a constant so runs stay hermetic.

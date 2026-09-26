@@ -54,8 +54,10 @@ func TestParseProfileRefresh(t *testing.T) {
 
 func TestProfileRefreshSwitchFileStaysMinimal(t *testing.T) {
 	home := testhome.New(t.TempDir())
+	launchHome := t.TempDir()
 	app, out, errb := testApp([]string{"profile", "refresh", "on"})
 	app.Home = home
+	useLaunchd(t, app, launchHome)
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("on %d %s", code, errb.String())
 	}
@@ -97,11 +99,13 @@ func TestProfileRefreshSwitchFileStaysMinimal(t *testing.T) {
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "status"})
 	app.Home = home
+	useLaunchd(t, app, launchHome)
 	if code := app.Run(); code != ExitOK || !strings.Contains(out.String(), "phase=idle 等待下一次") || !strings.Contains(out.String(), "last=\n") {
 		t.Fatalf("status %d %s %s", code, out.String(), errb.String())
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "off"})
 	app.Home = home
+	useLaunchd(t, app, launchHome)
 	if code := app.Run(); code != ExitOK || !strings.Contains(out.String(), "public profile refresh off (GitHub profile stays as last published)") {
 		t.Fatalf("off %d %s", code, out.String())
 	}
@@ -262,13 +266,16 @@ func TestProfileRefreshOffIsDurableAndOneShotStillPublishes(t *testing.T) {
 		credstore.KeyDeviceToken: "wtd_1.tok",
 		credstore.KeyLogin:       "rainhuang0220",
 	}}
+	launchHome := t.TempDir()
 	app, _, errb := testApp([]string{"profile", "refresh", "on"})
 	app.Home = home
+	useLaunchd(t, app, launchHome)
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("on %d %s", code, errb.String())
 	}
 	app, _, errb = testApp([]string{"profile", "refresh", "off"})
 	app.Home = home
+	useLaunchd(t, app, launchHome)
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("off %d %s", code, errb.String())
 	}
