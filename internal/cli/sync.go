@@ -192,15 +192,18 @@ func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []
 		return publicprofile.PutResult{}, err
 	}
 	kept := false
+	readme := ""
 	if resp.StatusCode < 400 && len(body) > 0 {
 		var env struct {
-			Kept string `json:"kept"`
+			Kept   string `json:"kept"`
+			Readme string `json:"readme"`
 		}
-		if json.Unmarshal(body, &env) == nil && env.Kept == "previous" {
-			kept = true
+		if json.Unmarshal(body, &env) == nil {
+			kept = env.Kept == "previous"
+			readme = env.Readme
 		}
 	}
-	return publicprofile.PutResult{Status: resp.StatusCode, KeptPrevious: kept}, nil
+	return publicprofile.PutResult{Status: resp.StatusCode, KeptPrevious: kept, Readme: readme}, nil
 }
 
 func (a *App) accountIDs(home adapter.Home) map[string]string {

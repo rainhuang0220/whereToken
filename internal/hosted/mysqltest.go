@@ -20,6 +20,7 @@ var (
 	sharedStoreErr  error
 	sharedStoreOnce sync.Once
 	sharedCleanup   func()
+	sharedTestDSN   string
 )
 
 func TestMain(m *testing.M) {
@@ -61,6 +62,7 @@ func openTestStore() (*Store, func(), error) {
 			return nil, nil, err
 		}
 	}
+	sharedTestDSN = dsn
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		cleanup()

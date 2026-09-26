@@ -98,7 +98,7 @@ func SaveRefreshState(path string, st RefreshState) error {
 
 func cleanPhase(phase string) string {
 	switch phase {
-	case PhaseIdle, PhasePublished, PhaseSkipped, PhaseFailed:
+	case PhaseIdle, PhasePublished, PhaseSkipped, PhaseFailed, PhaseWaiting:
 		return phase
 	default:
 		return PhaseSkipped
