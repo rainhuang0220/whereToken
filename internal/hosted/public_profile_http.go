@@ -152,7 +152,11 @@ func (s *server) considerPublication(ctx context.Context, user User, snap public
 		return "pending"
 	case publicprofile.ActionRetryPending:
 		row, _ := s.opts.Store.Projection(ctx, user.ID)
-		_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "failed", publicprofile.ReasonRetry, row.ReadmeLastError, row.PendingDueAt, row.PublishRetryCount)
+		reason := publicprofile.ReasonRetry
+		if strings.HasPrefix(row.PendingReason, "theme:") {
+			reason = row.PendingReason
+		}
+		_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "failed", reason, row.ReadmeLastError, row.PendingDueAt, row.PublishRetryCount)
 		return "coalesced"
 	case publicprofile.ActionPublishNow:
 		return s.publishUsageNow(ctx, user, snap, theme)
@@ -299,6 +303,16 @@ func (s *server) retryFailedReadmes(ctx context.Context) {
 		}
 		var snap publicprofile.Snapshot
 		if json.Unmarshal(row.SnapshotJSON, &snap) != nil || snap.SnapshotID == "" {
+			continue
+		}
+		if row.ReadmeStatus == "failed" && strings.HasPrefix(row.PendingReason, "theme:") {
+			palette := strings.TrimPrefix(row.PendingReason, "theme:")
+			if publicprofile.ValidatePalette(palette) != nil {
+				continue
+			}
+			if _, err := s.publishPalette(ctx, user, palette, "theme", nil); err != nil {
+				s.notePublishFailure(ctx, user.ID, snap.SnapshotID, "theme:"+palette, err)
+			}
 			continue
 		}
 		s.considerPublication(ctx, user, snap, false, true)
@@ -512,7 +526,7 @@ func (s *server) postPublicPublish(w http.ResponseWriter, r *http.Request, login
 	job, err := s.publishPalette(r.Context(), user, palette, "theme", nil)
 	if err != nil {
 		if row, rerr := s.opts.Store.Projection(r.Context(), user.ID); rerr == nil {
-			s.notePublishFailure(r.Context(), user.ID, row.SnapshotID, "theme", err)
+			s.notePublishFailure(r.Context(), user.ID, row.SnapshotID, "theme:"+palette, err)
 		}
 	}
 	s.writeJob(w, job, err)

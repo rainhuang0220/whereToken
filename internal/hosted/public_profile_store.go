@@ -98,9 +98,11 @@ func (s *Store) DuePublicationUserIDs(ctx context.Context, now time.Time) ([]int
 SELECT p.user_id
 FROM public_projections p
 LEFT JOIN public_presentations pr ON pr.user_id = p.user_id
-WHERE p.desired_snapshot_id <> ''
-  AND p.desired_snapshot_id <> COALESCE(pr.readme_snapshot_id, '')
-  AND p.readme_status IN ('failed', 'pending', 'blocked_auth')
+WHERE (
+    (p.desired_snapshot_id <> '' AND p.desired_snapshot_id <> COALESCE(pr.readme_snapshot_id, '')
+      AND p.readme_status IN ('failed', 'pending', 'blocked_auth'))
+    OR (p.readme_status = 'failed' AND p.pending_reason LIKE 'theme:%')
+  )
   AND (p.pending_due_at IS NULL OR p.pending_due_at <= ?)
   AND (p.publish_lease_until IS NULL OR p.publish_lease_until < ?)`, now, now)
 	if err != nil {
