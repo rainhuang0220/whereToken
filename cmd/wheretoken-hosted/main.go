@@ -44,8 +44,10 @@ func run(getenv func(string) string) int {
 		return 1
 	}
 	srv := &http.Server{
-		Addr:              cfg.Listen,
-		Handler:           hosted.NewMux(hosted.MuxOptions{Version: cfg.Version, Store: store, Config: cfg}),
+		Addr: cfg.Listen,
+		Handler: hosted.HandlerWithMaintenance(hosted.MuxOptions{
+			Version: cfg.Version, Store: store, Config: cfg,
+		}, 15*time.Minute),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	fmt.Fprintf(os.Stderr, "wheretoken-hosted %s %s\n", cfg.Version, ln.Addr())

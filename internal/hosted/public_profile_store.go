@@ -12,10 +12,13 @@ import (
 const profileSessionTTL = 2 * time.Hour
 
 type projectionRow struct {
-	SnapshotJSON []byte
-	SnapshotID   string
-	TotalTokens  int64
-	UpdatedAt    time.Time
+	SnapshotJSON      []byte
+	SnapshotID        string
+	TotalTokens       int64
+	UpdatedAt         time.Time
+	DesiredSnapshotID string
+	ReadmeStatus      string
+	ReadmeLastError   string
 }
 
 type presentationRow struct {
@@ -48,17 +51,17 @@ type publishJob struct {
 func (s *Store) SaveProjection(ctx context.Context, userID int64, canonical []byte, snap publicprofile.Snapshot) error {
 	now := s.clock()
 	_, err := s.db.ExecContext(ctx, `
-INSERT INTO public_projections (user_id, snapshot_json, snapshot_id, total_tokens, updated_at)
-VALUES (?,?,?,?,?)
-ON DUPLICATE KEY UPDATE snapshot_json=VALUES(snapshot_json), snapshot_id=VALUES(snapshot_id), total_tokens=VALUES(total_tokens), updated_at=VALUES(updated_at)`,
-		userID, canonical, snap.SnapshotID, publicprofile.TotalTokens(snap), now)
+INSERT INTO public_projections (user_id, snapshot_json, snapshot_id, total_tokens, updated_at, desired_snapshot_id)
+VALUES (?,?,?,?,?,?)
+ON DUPLICATE KEY UPDATE snapshot_json=VALUES(snapshot_json), snapshot_id=VALUES(snapshot_id), total_tokens=VALUES(total_tokens), updated_at=VALUES(updated_at), desired_snapshot_id=VALUES(desired_snapshot_id)`,
+		userID, canonical, snap.SnapshotID, publicprofile.TotalTokens(snap), now, snap.SnapshotID)
 	return err
 }
 
 func (s *Store) Projection(ctx context.Context, userID int64) (projectionRow, error) {
 	var row projectionRow
-	err := s.db.QueryRowContext(ctx, `SELECT snapshot_json, snapshot_id, total_tokens, updated_at FROM public_projections WHERE user_id=?`, userID).Scan(
-		&row.SnapshotJSON, &row.SnapshotID, &row.TotalTokens, &row.UpdatedAt)
+	err := s.db.QueryRowContext(ctx, `SELECT snapshot_json, snapshot_id, total_tokens, updated_at, desired_snapshot_id, readme_status, readme_last_error FROM public_projections WHERE user_id=?`, userID).Scan(
+		&row.SnapshotJSON, &row.SnapshotID, &row.TotalTokens, &row.UpdatedAt, &row.DesiredSnapshotID, &row.ReadmeStatus, &row.ReadmeLastError)
 	if err == sql.ErrNoRows {
 		return projectionRow{}, ErrNotFound
 	}
@@ -73,6 +76,37 @@ VALUES (?,?,?,?,?,?,?)
 ON DUPLICATE KEY UPDATE palette=VALUES(palette), revision=VALUES(revision), asset_revision=VALUES(asset_revision), preview_light=VALUES(preview_light), preview_dark=VALUES(preview_dark), updated_at=VALUES(updated_at)`,
 		userID, palette, revision, assetRevision, light, dark, now)
 	return err
+}
+
+func (s *Store) SetReadmeStatus(ctx context.Context, userID int64, status, code string) error {
+	if len(code) > 40 {
+		code = code[:40]
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE public_projections SET readme_status=?, readme_last_error=? WHERE user_id=?`, status, code, userID)
+	return err
+}
+
+func (s *Store) FailedReadmeUserIDs(ctx context.Context) ([]int64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT p.user_id
+FROM public_projections p
+LEFT JOIN public_presentations pr ON pr.user_id = p.user_id
+WHERE p.readme_status = 'failed'
+  AND p.desired_snapshot_id <> ''
+  AND p.desired_snapshot_id <> COALESCE(pr.readme_snapshot_id, '')`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (s *Store) MarkReadmeMaterialized(ctx context.Context, userID int64, cacheKey, snapshotID string) error {

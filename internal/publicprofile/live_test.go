@@ -53,6 +53,47 @@ func TestShouldMaterializeReadmeCoalescesUsageAndPublishesThemeImmediately(t *te
 	}) {
 		t.Fatal("an unchanged snapshot must not materialize on a date field alone")
 	}
+	if ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 1_000, NextTotal: 1_000,
+		PrevAsOfDate: "2026-09-25", NextAsOfDate: "2026-09-24",
+		LastMaterialized: now.Add(-time.Minute), Now: now,
+	}) {
+		t.Fatal("an earlier local date must not materialize")
+	}
+	for _, next := range []string{"", "2026/09/25", "yesterday"} {
+		if ShouldMaterializeReadme(MaterializeInput{
+			SnapshotChanged: true, PrevTotal: 1_000, NextTotal: 1_000,
+			PrevAsOfDate: "2026-09-24", NextAsOfDate: next,
+			LastMaterialized: now.Add(-time.Minute), Now: now,
+		}) {
+			t.Fatalf("date %q materialized", next)
+		}
+	}
+	almost := now.Add(-ReadmeMinInterval)
+	if ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 0, NextTotal: ReadmeMinTokenDelta - 1,
+		LastMaterialized: almost.Add(-time.Nanosecond), Now: now,
+	}) {
+		t.Fatal("99_999 tokens must still coalesce")
+	}
+	if !ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 0, NextTotal: ReadmeMinTokenDelta,
+		LastMaterialized: now.Add(-ReadmeMinInterval), Now: now,
+	}) {
+		t.Fatal("exactly 100_000 after exactly 30 minutes must materialize")
+	}
+	if ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 50, NextTotal: 60,
+		LastMaterialized: now.Add(-ReadmeQuietWindow + time.Nanosecond), Now: now,
+	}) {
+		t.Fatal("one nanosecond inside six hours must still coalesce")
+	}
+	if !ShouldMaterializeReadme(MaterializeInput{
+		SnapshotChanged: true, PrevTotal: 50, NextTotal: 60,
+		LastMaterialized: now.Add(-ReadmeQuietWindow), Now: now,
+	}) {
+		t.Fatal("exactly six hours must materialize a small change")
+	}
 }
 
 func readmeFactsPartial() ReadmeFacts {

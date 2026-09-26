@@ -30,9 +30,11 @@ const (
 )
 
 // MaterializeInput is the README coalesce decision. ThemeChange publishes
-// immediately. A later local as_of_date publishes immediately once a palette
-// publish has confirmed the README. Same-calendar-day usage changes still
-// wait for a real token movement or the quiet window.
+// immediately. A strictly later local as_of_date publishes immediately.
+// Same-calendar-day usage changes still wait for a real token movement or
+// the quiet window. An earlier date, an empty date, and an invalid date do
+// not. SnapshotChanged false does not materialize on the date field alone;
+// a failed apply retries through the caller when desired differs from applied.
 type MaterializeInput struct {
 	SnapshotChanged  bool
 	PrevTotal        int64
