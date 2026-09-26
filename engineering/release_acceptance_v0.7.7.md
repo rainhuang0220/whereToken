@@ -1,69 +1,86 @@
 # Release acceptance v0.7.7
 
-Prepared 2026-09-26. This is not a published release and not a production verification.
+Observed 2026-09-26 17:41–17:50 UTC. Version choice, merge, and production activation were re-checked in this session.
 
-Branch: `cursor/release-v077-3e3c`
+## Version
 
-PR #9 (`https://github.com/rainhuang0220/whereToken/pull/9`) was still open, draft, `MERGEABLE` / `CLEAN`, head `695bde29c77422d68db744e8992783ce97f5e121`, base `b4c9f81252656c0524208db019771344dfda2658`. CI on that head was green: `test (ubuntu-latest)`, `test (macos-latest)`, and `test (windows-latest)` in run `36227486418`, all `SUCCESS`. The diff against `origin/main` is 24 files, 1545 insertions, 397 deletions. It does not change the 10,000-token or 1-hour thresholds.
+0.7.7 stays the patch. The publication watermark moved from "hosted accept" to "README and SVG pair that were read back and matched." That is a behavior change. `AGENTS.md` and `docs/releasing.md` still say ship 0.7.x patches and do not bump minor or major unless asked. The release skill says the same. Those rules agree, so 0.8.0 was not tagged and no minor-bump conflict is open.
 
-`origin/main` is `b4c9f81252656c0524208db019771344dfda2658`. `v0.7.6` still peels to `42f22dcdf85502937e063a8595846d78e35d691d`. The tag object was not moved.
+Already prepared on this branch, and left as-is except the changelog sentence that states that choice:
 
-## Completed
+- `CHANGELOG.md` heading `## 0.7.7 — 2026-09-26 (Alpha)`.
+- `npm/package.json` version `0.7.7`. The package is not a published npm install. `releases/download/v0.7.7` does not exist.
+- `cmd/wheretoken/main.go` and `cmd/wheretoken-hosted/main.go` still use `version = "dev"`; goreleaser stamps the tag.
+- `Formula/wheretoken.rb` still points at the v0.7.6 source tarball, sha256 `384780534bf6051ca546519ac74182d6f6bfb6331677c04299030a18399417bf`. No v0.7.7 tarball exists, so no checksum was invented.
 
-- merge SHA: MERGE BLOCKED. `gh` cannot merge, create releases, or push tags. ManagePullRequest (`create_pr` / `update_pr` / `get_ci_status`) is not in this environment. No merge commit was created and none was invented.
-- release tag: not published. `v0.7.7` was not created or pushed. `gh release view v0.7.7` returned `release not found`. Latest GitHub Release remains `v0.7.6` (`2026-09-26T05:14:28Z`).
-- deployed SHA: not deployed.
-- migration result: local disposable tests PASS. Production migration BLOCKED.
-- Homebrew result: BLOCKED. The tap was not written and `brew upgrade` was not run.
+Thresholds in the changelog remain 10,000 raw tokens and one hour. No scheduler was added.
 
-Version files on this branch:
+## Deployment
 
-- `CHANGELOG.md` top release heading is `## 0.7.7 — 2026-09-26 (Alpha)`. Explanation recorded there: unified verified GitHub wall publication state and automatic refresh scheduling.
-- `npm/package.json` `version` is `0.7.7`. This is repository metadata. The package is not on the npm registry, and `releases/download/v0.7.7` does not exist, so this must not be treated as a published npm install.
-- `Formula/wheretoken.rb` is unchanged at the `v0.7.6` source tarball. A v0.7.7 sha256 cannot be computed until the tag exists. The consistency test allows that one-release lag.
-- `cmd/wheretoken/main.go` and `cmd/wheretoken-hosted/main.go` still default `version` to `dev`. Goreleaser stamps the release binary from the tag. No tag was pushed.
-- `site/index.html` download label was left version-free.
+- old commit (running host, from the health version): `9af013644f5caf52d3eb056886ad7b1e1894266c`. Health string `v0.7.5-0.20260923181126-9af013644f5c`. `git describe` is `v0.7.4-7-g9af0136`. This is not the v0.7.6 release.
+- new commit: not deployed. Intended landing branch is `cursor/release-v077-3e3c`. Policy commit `695bde29c77422d68db744e8992783ce97f5e121` is an ancestor of that branch. `origin/main` is still `b4c9f81252656c0524208db019771344dfda2658`.
+- migration result: NOT RUN on production. No backup was taken. SSH to `ubuntu@175.24.134.228` and `root@175.24.134.228` returned `Permission denied (publickey)`. No private key, no agent identities, no production DSN.
+- rollback point: the running binary identified by that health string and commit. The binary file, process id, startup command, and database dump were not captured. `v0.7.6` was not moved and is not that running binary. Details: `engineering/PRODUCTION_BASELINE.md`.
 
-`go test ./...` PASS and `go vet ./...` PASS on `6224cde71726a7843baf8d985a947e48058bb202`, with `WHERETOKEN_REQUIRE_MYSQL=1` pointed at disposable MariaDB `10.11.14-MariaDB-0ubuntu0.24.04.1` on `127.0.0.1`, database `wheretoken_localtest`. That database and its test user were removed after the run. `cd web && npm test` PASS (172). `bash scripts/verify-cli.sh` PASS. `profile-e2e` was NOT TESTED (`profile-e2e/node_modules` is absent; browsers were not installed). CI does not run on this branch until a pull request exists (`push` is `main` only).
+MERGE BLOCKED. Pull request #10 (`https://github.com/rainhuang0220/whereToken/pull/10`) is an unmerged superset of pull request #9 (`https://github.com/rainhuang0220/whereToken/pull/9`). #9 head `695bde29c77422d68db744e8992783ce97f5e121` is an ancestor of #10. #10 adds only the v0.7.7 prep and engineering notes. Merging both would land the policy twice or conflict. The single landing is merging #10. #9 stays open until that merge exists.
 
-## Local migration
+No merge tool was available. `gh` is read-only here. `gh api repos/rainhuang0220/whereToken` reports `push: false` (also `admin`, `maintain`, `pull`, and `triage` false). `gh api user` returned HTTP 403 `Resource not accessible by integration`. Pushing `main` to imitate a merge was not done. No merge SHA.
 
-`TestWallPublicationMigrationCases` and `TestBackfillVerifiedIdentityDoesNotInventATotal` PASS. Each case used its own database on the local server (`wt_case_fresh`, `wt_case_v076`, `wt_case_newer`, `wt_case_missing`, `wt_case_failed`). Those databases were dropped by the test. Nothing used a production DSN.
+CI on #10 head `5d74b2ab5794cc7c94447e49f8833e8b4ec5e04f`, run `36254948563`: `test (ubuntu-latest)`, `test (macos-latest)`, and `test (windows-latest)` all `SUCCESS` (completed 16:19–16:22 UTC). That success does not prove the MySQL migration cases executed; the suite skips them when Docker MySQL is absent. A docs commit after that SHA needs a new CI run before merge.
 
-| Case | Result |
-| --- | --- |
-| Fresh database | Migrate creates nullable `verified_total_tokens` (not default 0), zero presentation rows, no `schema_migrations` table. A second Migrate still has zero rows. |
-| Existing v0.7.6-shaped database | Old tables have no verified columns. After Migrate, a README snapshot id that equals the accepted snapshot id and has a JSON total backfills `42000` and date `2026-09-25`. A second Migrate does not change that. Dropping the new columns leaves `snapshot_id` and `total_tokens`. Migrate again restores the same verified identity. |
-| Accepted snapshot newer than verified GitHub state | After the proven backfill, replacing the accepted snapshot with a later id and total `80000` does not change verified. Pointing `readme_snapshot_id` at that newer id and migrating again still does not overwrite verified. |
-| Missing historical verified watermark | Empty README id, README id that disagrees with the accepted id, and a matching id whose JSON total is null all stay SQL NULL. The null-total row's `total_tokens` column was `0` and was not copied. |
-| Pending failed publication | `readme_status=failed` and `readme_last_error=conflict` survive. The migration does not invent `pending_due_at` or a verified total. A later pending due time, reason `usage`, and retry count `2` survive a second Migrate, and verified stays NULL. |
+Code review of `Migrate`, `ensureColumns`, and `backfillVerifiedIdentity`: additive columns, nullable verified identity, backfill only when `readme_snapshot_id` equals the accepted `snapshot_id`, the verified columns are still NULL, the JSON snapshot id matches, the all-period total is non-nil, and the date parses. A newer accepted snapshot is not copied into the verified columns. Unknown totals stay NULL. There is no `schema_migrations` table. `CREATE TABLE IF NOT EXISTS` does not alter an existing table; `ensureColumns` adds the missing columns.
 
-The product has no down migration. Rollback was the explicit `DROP COLUMN` of the eight new columns, then Migrate again. The change is additive. Unknown totals stayed NULL. Accepted was not copied onto an existing verified row.
+Local disposable cases, this session, MariaDB 10.11.14 on `127.0.0.1`, database `wt_probe_077` (created for the run and dropped afterward; the pre-existing local `wheretoken` database was not migrated):
 
-Production migration: BLOCKED. No production database credentials and no SSH. No backup was taken. No production `Migrate` ran.
+```text
+go test ./internal/hosted/ -count=1 -run TestWallPublicationMigrationCases
+ok
+```
 
-This VM already had a MariaDB database named `wheretoken` with the new verified and pending columns present. It was not the test target and not the production server. Its rows were not read and it was not modified.
+Cases covered by that test: fresh; v0.7.6-shaped; accepted newer than applied; missing historical verified total; pending failed publication. This is not production MySQL 5.7 and not a production backup dry run.
 
-## Publication verification
+## Publication
 
-CODE TESTED: the publication policy and migration tests in this repo passed locally, including the cases above. PR #9 CI on `695bde2` was green. That is simulation and MariaDB fixture coverage.
+CODE VERIFIED, this session, no database:
 
-REAL PRODUCTION VERIFIED: not observed. No README commit, SVG commit, snapshot id write, or publication timestamp was produced by this release. The public profile read in `engineering/production_before_upgrade.md` is the current live response, not a write. It has no `wall` object. The owner's profile README was not modified. No disposable GitHub repository or publish token was configured.
+```text
+go test ./internal/publicprofile/ -count=1 -run 'TestDecidePublicationMidnightBypassesCooldown|TestDecideRefreshMidnightBypassesCooldown|TestNextRefreshWakePrefersMidnight|TestApplyRefreshMidnightRolloverUpdatesAsOfDate|TestApplyRefreshMorningCatchUpIsNotAMidnightPublish'
+ok
+```
+
+Those tests use a deterministic clock. They are not a production midnight publish.
+
+PRODUCTION VERIFIED: no. The hosted binary is still the pre-v0.7.7 health string. No controlled publish was sent. The profile repository was not written.
+
+Current public wall, read only, before any v0.7.7 publish. Repository `rainhuang0220/rainhuang0220`:
+
+| File | Blob SHA | Commit | When |
+| --- | --- | --- | --- |
+| `README.md` | `c8d1c90778aa600c223d597c2df057a7ac01983c` | `d65f965d9ad6a8a55f269ef0a0be7ffd3d0903e6` | 2026-09-24T02:38:25Z |
+| `wheretoken/preview-light.svg` | `9d28c07f5ac9aa66038bd07b6e04c5362dcf17fd` | `d7f0c5833f2e5ec4b0cb5d6cb5fd9dff4d9fa046` | 2026-09-24T02:38:21Z |
+| `wheretoken/preview-dark.svg` | `d13cd3eaaf557be0dead9c4568797438c90a1660` | `9cf5e31dd592474698a2cc20554501b9a1886490` | 2026-09-24T02:38:24Z |
+
+README image query `v=b8c90696a49ce62cdbeb620e2d2d4df99eca7cdb3b6f2d03c38cdb5b463d563d-6720ba3e714ed5a521e3cfcad145b740610024eeaed52208c033cd2657b6d0cf`. Alt text says partial coverage, updated September 24, 2026. Both SVG files contain the date `2026-09-24` and the snapshot hash `b8c90696a49ce62cdbeb620e2d2d4df99eca7cdb3b6f2d03c38cdb5b463d563d`. That snapshot hash and the asset hash `6720ba3e714ed5a521e3cfcad145b740610024eeaed52208c033cd2657b6d0cf` match the live hosted profile read in the same window. The three git commits are not one commit. The SVG blobs do not contain the asset hash. `verified_snapshot_id`, `verified_token_total`, and `verified_time` were not present on the public JSON and were not read from the production database.
+
+No after-state. Token-threshold refresh was not run.
 
 ## Remaining limitations
 
-| Item | Status |
+| Item | Result |
 | --- | --- |
-| PR #9 merged | BLOCKED. Read-only `gh`. No ManagePullRequest tool. |
-| Draft pull request for `cursor/release-v077-3e3c` | BLOCKED. Same missing tool. Branch is pushed. |
-| Git tag `v0.7.7` and GitHub Release | BLOCKED. Tag push and release creation are not allowed here, and checksums do not exist yet. |
-| In-repo Homebrew formula sha256 bump | BLOCKED until the tag tarball exists. Formula left at v0.7.6. |
-| `profile-e2e` Playwright | NOT TESTED. |
-| Production SSH / PM2 / env / PID | BLOCKED. Publickey denied for `ubuntu` and `root` at `175.24.134.228`. |
-| Production database backup and migration | BLOCKED. No production DSN. |
-| Hosted deploy of this commit | BLOCKED. No server write access. `scripts/build-hosted.sh` was not run. |
-| Real GitHub wall publication | BLOCKED / NOT TESTED. No disposable repo and no production publish credential. Owner README was not written. |
-| Homebrew tap `rainhuang0220/homebrew-wheretoken` | BLOCKED. API permissions `push: false`. Formula on the tap is still `version "0.7.5"`. `brew upgrade` was not run. |
-| Local `go test ./...`, `go vet ./...`, web `npm test`, `scripts/verify-cli.sh` | PASS |
-| Local wall migration cases on MariaDB 10.11 | PASS |
-| Production ready | not ready. Deploy, production migration, and a real wall read-back did not happen. |
+| PR #10 is a superset of PR #9; land #10 once | PASS (branch comparison) |
+| CI on `5d74b2a` | PASS. A later docs commit is a new run. |
+| Migration cases A–E on disposable MariaDB | PASS. Not production. |
+| Midnight clock tests | CODE VERIFIED. Not a production midnight. |
+| Merge of #10 | BLOCKED. No merge tool. Repository `push: false` on the `gh` token. No merge SHA. |
+| Close #9 | NOT DONE. Close it only after #10 is merged. |
+| Git tag `v0.7.7` and GitHub Release | BLOCKED. Not created. `v0.7.6` was not moved. |
+| In-repo formula sha256 for v0.7.7 | BLOCKED. No tag tarball. |
+| Production backup | BLOCKED. SSH `Permission denied (publickey)`. |
+| Production migration | BLOCKED. Same SSH denial. Not run. |
+| Hosted deploy of a `VITE_HOSTED=1` build | BLOCKED. Same SSH denial. Health is still the old pseudo-version. |
+| Public health of the current host | PASS for anonymous checks listed in the baseline. Authenticated login NOT TESTED. |
+| Real GitHub wall on the new binary | NOT TESTED. Profile files were read only. |
+| Homebrew tap | BLOCKED. Formula still `version "0.7.5"`, blob `0b124e415080eb4e3d1f627d888cdb8389de4343`. Tap permissions `push: false`. `brew` is not installed. No v0.7.7 `checksums.txt`. |
+
+Final status: BLOCKED.
