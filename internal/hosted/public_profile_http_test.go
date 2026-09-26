@@ -674,7 +674,6 @@ func publishedPalette(t *testing.T, h http.Handler, login string) (string, strin
 
 func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	git := newMemGit(publishReadme)
-	git.conflict = 1
 	h := publishMux(t, git)
 	device, session, csrf := seedOwner(t)
 	raw := testProjection(t)
@@ -685,18 +684,39 @@ func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	if putRec.Code != http.StatusOK {
 		t.Fatalf("sync %d %s", putRec.Code, putRec.Body.String())
 	}
+	var synced map[string]any
+	if err := json.Unmarshal(putRec.Body.Bytes(), &synced); err != nil {
+		t.Fatal(err)
+	}
+	// The first accepted snapshot materializes the README. Arm the conflict
+	// on the later palette publish, which is the write that must not overwrite.
+	if synced["ok"] != true || synced["readme"] != "materialized" {
+		t.Fatalf("sync %+v", synced)
+	}
 	before := git.readme()
+	if before == publishReadme {
+		t.Fatal("sync left the README unmaterialized")
+	}
+	git.conflict = 1
 	rec := publishRequestTo(t, h, session, csrf, "magenta", true, "")
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("conflict %d %s", rec.Code, rec.Body.String())
 	}
 	var job map[string]any
-	_ = json.Unmarshal(rec.Body.Bytes(), &job)
-	if job["phase"] != phaseConflict {
+	if err := json.Unmarshal(rec.Body.Bytes(), &job); err != nil {
+		t.Fatal(err)
+	}
+	if job["phase"] != phaseConflict || job["retry_readme"] != true || job["error"] != "remote content changed" {
 		t.Fatalf("phase %+v", job)
+	}
+	if git.conflict != 0 {
+		t.Fatal("publish did not hit the remote conflict")
 	}
 	if git.readme() != before {
 		t.Fatal("conflict overwrote the readme")
+	}
+	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != publicprofile.DefaultPalette {
+		t.Fatalf("conflict promoted %s", palette)
 	}
 }
 
