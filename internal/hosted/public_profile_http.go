@@ -160,7 +160,10 @@ func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, n
 		PrevAsOfDate:     prevAsOf,
 		NextAsOfDate:     nextAsOf,
 	}) {
-		if snapshotChanged && status == "failed" {
+		// Coalesced means this request does not write GitHub. It does not
+		// abandon a README that is still behind the accepted snapshot.
+		// The maintenance retry publishes that desired snapshot.
+		if snapshotChanged && status == "failed" && desired == appliedID {
 			_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "", "")
 		}
 		return "coalesced"

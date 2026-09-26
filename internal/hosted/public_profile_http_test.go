@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -706,7 +707,7 @@ func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &job); err != nil {
 		t.Fatal(err)
 	}
-	if job["phase"] != phaseConflict || job["retry_readme"] != true || job["error"] != "remote content changed" {
+	if job["phase"] != phaseConflict || job["retry_readme"] != true || job["error"] != "remote content changed" || job["result"] == "published" || job["phase"] == phasePublished {
 		t.Fatalf("phase %+v", job)
 	}
 	if git.conflict != 0 {
@@ -717,6 +718,71 @@ func TestPublicProfileRemoteConflictDoesNotOverwrite(t *testing.T) {
 	}
 	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != publicprofile.DefaultPalette {
 		t.Fatalf("conflict promoted %s", palette)
+	}
+}
+
+func TestUsageMaterializeConflictLeavesReadmeFailed(t *testing.T) {
+	git := newMemGit(publishReadme)
+	git.conflict = 1
+	st := readyStore(t)
+	h := NewMux(publishOptions(st, git))
+	device, _, _ := seedOwner(t)
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	proj := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{
+			authEvent("claude", "anthropic", now.Add(-time.Hour), 8_000),
+		},
+	})
+	got := putProjection(t, h, device, proj.raw)
+	if got["ok"] != true || got["snapshot_id"] != proj.snap.SnapshotID || got["readme"] != "deferred" {
+		t.Fatalf("sync %+v", got)
+	}
+	if git.conflict != 0 {
+		t.Fatal("usage materialize did not hit the remote conflict")
+	}
+	if git.readme() != publishReadme {
+		t.Fatal("conflict overwrote the README")
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("conflict rolled back the projection")
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != proj.snap.SnapshotID || row.DesiredSnapshotID != proj.snap.SnapshotID || row.ReadmeStatus != "failed" || row.ReadmeLastError != "conflict" {
+		t.Fatalf("cursor %+v %v", row, err)
+	}
+	if strings.Contains(row.ReadmeLastError, "/") || strings.Contains(row.ReadmeLastError, "wtd_") {
+		t.Fatalf("last_error %q", row.ReadmeLastError)
+	}
+	if _, err := st.Presentation(context.Background(), user.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("conflict stored a presentation: %v", err)
+	}
+	var phase, result, kind string
+	if err := st.db.QueryRowContext(context.Background(), `SELECT phase, result_code, kind FROM publish_jobs WHERE user_id=? ORDER BY updated_at DESC LIMIT 1`, user.ID).Scan(&phase, &result, &kind); err != nil {
+		t.Fatal(err)
+	}
+	if phase != phaseConflict || result == "published" || phase == phasePublished || kind != "usage" {
+		t.Fatalf("job phase=%s result=%s kind=%s", phase, result, kind)
+	}
+	ids, err := st.FailedReadmeUserIDs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := false
+	for _, id := range ids {
+		if id == user.ID {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Fatal("conflict was not left failed for retry")
+	}
+	if palette, _ := publishedPalette(t, h, "rainhuang0220"); palette != publicprofile.DefaultPalette {
+		t.Fatalf("conflict reported palette %s", palette)
 	}
 }
 
@@ -1084,6 +1150,118 @@ func TestReadmeRetryAppliesWithoutAnotherPut(t *testing.T) {
 		t.Fatalf("retry did not apply the README\n%s", git.readme())
 	}
 	if publicSnapshotID(t, h, "rainhuang0220") != proj.snap.SnapshotID {
+		t.Fatal("retry changed the projection")
+	}
+}
+
+func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	prevClock := st.now
+	t.Cleanup(func() { st.now = prevClock })
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	st.now = func() time.Time { return now }
+	opts := publishOptions(st, git)
+	opts.Now = func() time.Time { return now }
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	base := int64(8_000)
+	first := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base)},
+	})
+	if got := putProjection(t, h, device, first.raw); got["readme"] != "materialized" || got["snapshot_id"] != first.snap.SnapshotID {
+		t.Fatalf("first %+v", got)
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pres, err := st.Presentation(context.Background(), user.ID); err != nil || pres.ReadmeSnapshotID != first.snap.SnapshotID {
+		t.Fatalf("applied first %+v %v", pres.ReadmeSnapshotID, err)
+	}
+	firstHex := strings.TrimPrefix(first.snap.SnapshotID, "sha256:")
+	if !strings.Contains(git.readme(), firstHex) {
+		t.Fatal("first README did not record the accepted snapshot")
+	}
+
+	now = now.Add(publicprofile.ReadmeMinInterval + time.Minute)
+	git.failPath = "wheretoken/preview-light.svg"
+	failed := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta)},
+	})
+	if publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap) != publicprofile.ReadmeMinTokenDelta {
+		t.Fatalf("failed delta %d", publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap))
+	}
+	if got := putProjection(t, h, device, failed.raw); got["readme"] != "deferred" || got["snapshot_id"] != failed.snap.SnapshotID {
+		t.Fatalf("failed sync %+v", got)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != failed.snap.SnapshotID {
+		t.Fatal("failed README rolled back the projection")
+	}
+	row, err := st.Projection(context.Background(), user.ID)
+	if err != nil || row.ReadmeStatus != "failed" || row.DesiredSnapshotID != failed.snap.SnapshotID || row.ReadmeLastError != "github_write" {
+		t.Fatalf("after failure %+v %v", row, err)
+	}
+	if pres, err := st.Presentation(context.Background(), user.ID); err != nil || pres.ReadmeSnapshotID != first.snap.SnapshotID || !pres.ReadmeMaterializedAt.Valid {
+		t.Fatal("failure marked the newer README applied or dropped the previous one")
+	}
+	puts := git.puts
+	readmeAfterFailure := git.readme()
+
+	now = now.Add(time.Minute)
+	newest := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(failed.snap)+10_000)},
+	})
+	if newest.snap.AsOfDate != first.snap.AsOfDate || newest.snap.SnapshotID == failed.snap.SnapshotID {
+		t.Fatalf("newest date %s id %s", newest.snap.AsOfDate, newest.snap.SnapshotID)
+	}
+	if publicprofile.TotalTokens(newest.snap)-publicprofile.TotalTokens(failed.snap) >= publicprofile.ReadmeMinTokenDelta {
+		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	}
+	small := putProjection(t, h, device, newest.raw)
+	if small["readme"] != "coalesced" || small["snapshot_id"] != newest.snap.SnapshotID || git.puts != puts || git.readme() != readmeAfterFailure {
+		t.Fatalf("coalesced %+v puts %d -> %d", small, puts, git.puts)
+	}
+	row, err = st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != newest.snap.SnapshotID || row.DesiredSnapshotID != newest.snap.SnapshotID || row.ReadmeStatus != "failed" || row.ReadmeLastError == "" {
+		t.Fatalf("coalesced cleared the failure %+v %v", row, err)
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != newest.snap.SnapshotID {
+		t.Fatal("coalesced PUT did not keep the newest projection")
+	}
+	ids, err := st.FailedReadmeUserIDs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := false
+	for _, id := range ids {
+		if id == user.ID {
+			seen = true
+		}
+	}
+	if !seen {
+		t.Fatal("coalesced PUT dropped the user from the README retry set")
+	}
+
+	git.failPath = ""
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	s.retryFailedReadmes(context.Background())
+	row, err = st.Projection(context.Background(), user.ID)
+	if err != nil || row.SnapshotID != newest.snap.SnapshotID || row.ReadmeStatus != "applied" || row.ReadmeLastError != "" {
+		t.Fatalf("after retry %+v %v", row, err)
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || !pres.ReadmeMaterializedAt.Valid || pres.ReadmeSnapshotID != newest.snap.SnapshotID {
+		t.Fatalf("retry applied %s err=%v", pres.ReadmeSnapshotID, err)
+	}
+	newestHex := strings.TrimPrefix(newest.snap.SnapshotID, "sha256:")
+	if !strings.Contains(git.readme(), newestHex) || strings.Contains(git.readme(), firstHex) {
+		t.Fatal("retry did not publish the newest snapshot")
+	}
+	if publicSnapshotID(t, h, "rainhuang0220") != newest.snap.SnapshotID {
 		t.Fatal("retry changed the projection")
 	}
 }

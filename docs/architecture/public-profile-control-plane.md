@@ -102,7 +102,7 @@ After a README has been applied, same-calendar-day usage rewrites wait:
 
 A strictly later local `as_of_date` bypasses that wait. An earlier date, an empty date, and an invalid date do not. An unchanged snapshot does not materialize on the date field alone; a failed apply still retries when the desired snapshot differs from the applied one.
 
-The hosted JSON and the README are intentionally split. `profile refresh` may PUT after 10,000 raw tokens and one hour, including several times in a day. Those uploads refresh the interactive snapshot and leave the README bytes alone until the coalesce rules, a later local date, or a retry of a failed write. README git writes stay coarse. Theme publish still promotes the palette only after GitHub verifies the files.
+The hosted JSON and the README are intentionally split. `profile refresh` may PUT after 10,000 raw tokens and one hour, including several times in a day. Those uploads refresh the interactive snapshot and leave the README bytes alone until the coalesce rules, a later local date, or a retry of a failed write. A coalesced upload does not clear `readme_status=failed` while the accepted snapshot is still ahead of the applied README; the retry publishes that newest snapshot. A remote conflict on the usage write leaves the projection in place, does not mark the README applied, and does not report the theme as published. README git writes stay coarse. Theme publish still promotes the palette only after GitHub verifies the files.
 
 A palette confirmation ignores that wait. Publishing the palette that is
 already on the README returns `ALREADY_PUBLISHED` and does not create a commit.
