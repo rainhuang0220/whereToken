@@ -29,9 +29,9 @@ the existing scan and the existing device sync:
 1. `wheretoken sync` scans, uploads the daily batch, then uploads the sanitized public snapshot.
 2. `wheretoken scan` does the same upload when this device is already paired. The scan still succeeds if the upload fails.
 3. While `wheretoken serve` is running, a paired device repeats that full sync every 15 minutes.
-4. `wheretoken profile refresh` is a separate sanitized PUT. It does not upload the daily batch. The default report and the default install do not run it. `profile refresh on` flushes the switch file with the agent enabled, and only then, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. A failed bootstrap leaves the switch on. `off` disables the switch and uninstalls the agent. Linux and Windows do not install a background agent. The bare command is one explicit PUT even while the switch is off; launchd does not run that bare command. `watch` is the only loop. It re-reads the switch every 15 minutes, including the first, and exits when the switch is off. A powered-off Mac does not publish. Catch-up is the next wake of that long-running watch, or RunAtLoad after a graphical login. SSH with no GUI session does not run the agent; `profile refresh status` can show `scheduler=dead`.
+4. `wheretoken profile refresh` is a separate sanitized PUT. It does not upload the daily batch. The default report and the default install do not run it. `profile refresh on` flushes the switch file with the agent enabled, and only then, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. A failed bootstrap leaves the switch on. `off` disables the switch and uninstalls the agent. Linux and Windows do not install a background agent. The bare command is one explicit PUT even while the switch is off; launchd does not run that bare command. `watch` is the only loop. It re-reads the switch on every wake, including the first, and exits when the switch is off. Wakes are the sooner of 15 minutes and the next owner-local midnight. A powered-off Mac does not publish. Catch-up is the next wake of that long-running watch, or RunAtLoad after a graphical login. SSH with no GUI session does not run the agent; `profile refresh status` can show `scheduler=dead`.
 
-The watermark for `profile refresh` is the hosted envelope (`as_of_date`, all-time total, `freshness.updated_at`), not the scan index. A missing `updated_at` is not an elapsed cooldown. Only a strictly later local calendar day is a date rollover. A smaller all-time total than the last accepted snapshot is not published, including when the local date changed. Missing totals stay nil.
+The GitHub wall watermark is the last publication whose README and both preview SVGs were read back and matched. That verified snapshot id, raw total, owner-local date, and publication instant are not the same thing as the latest accepted hosted projection. A missing verified total stays unknown and is not treated as zero. Only a strictly later owner-local calendar day is a daily publication, and that day does not wait for the one-hour usage cooldown. Usage growth publishes after 10,000 raw tokens and one absolute hour since that verified publication. A smaller total is not published. The watch still checks about every 15 minutes and also wakes at the next owner-local midnight.
 
 An offline scan does not replace the hosted projection. A snapshot whose public
 status is `unavailable` does not replace it either. The inner snapshot keeps
@@ -95,14 +95,14 @@ failed README without a new client PUT. `desired_snapshot_id` is stored
 when the projection is accepted. The applied snapshot id, cache key, and
 `applied_at` are stored only after GitHub read-back succeeds.
 
-After a README has been applied, same-calendar-day usage rewrites wait:
+Automatic GitHub publication uses one rule, `DecidePublication`, on every entry point:
 
-- at least 30 minutes since the last README materialization
-- then either a 100,000-token movement in the public all-time total, or six hours
+- a strictly later owner-local date publishes immediately, including zero token growth
+- otherwise the raw all-time total must be at least 10,000 above the verified total and one absolute hour must have passed since that verified publication
+- an explicit palette publish still writes immediately and, once verified, becomes the new cooldown anchor
+- a crossing that happens during the hour is stored once and published by the hosted maintenance loop without another client PUT
 
-A strictly later local `as_of_date` bypasses that wait. An earlier date, an empty date, and an invalid date do not. An unchanged snapshot does not materialize on the date field alone; a failed apply still retries when the desired snapshot differs from the applied one.
-
-The hosted JSON and the README are intentionally split. `profile refresh` may PUT after 10,000 raw tokens and one hour, including several times in a day. Those uploads refresh the interactive snapshot and leave the README bytes alone until the coalesce rules, a later local date, or a retry of a failed write. A coalesced upload does not clear `readme_status=failed` while the accepted snapshot is still ahead of the applied README; the retry publishes that newest snapshot. A remote conflict on the usage write leaves the projection in place, does not mark the README applied, and does not report the theme as published. README git writes stay coarse. Theme publish still promotes the palette only after GitHub verifies the files.
+An earlier date, an empty date, and an invalid date do not publish. A missing verified total is not zero. A failed apply keeps the newest desired snapshot and retries that one snapshot, not every intermediate PUT. A remote conflict leaves the projection in place, does not mark the README verified, and does not report the theme as published. Theme publish still promotes the palette only after GitHub verifies the files.
 
 A palette confirmation ignores that wait. Publishing the palette that is
 already on the README returns `ALREADY_PUBLISHED` and does not create a commit.

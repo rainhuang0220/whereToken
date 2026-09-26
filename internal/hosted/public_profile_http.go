@@ -3,6 +3,7 @@ package hosted
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -86,13 +87,10 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid profile", http.StatusBadRequest)
 		return
 	}
-	prevTotal := int64(0)
-	prevID := ""
-	prevAsOf := ""
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
 		var prevSnap publicprofile.Snapshot
 		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
-		if parsed && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+		if parsed && (!publicprofile.ShouldReplaceProjection(prevSnap, snap) || tokenRegressed(prevSnap, snap)) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok":          true,
@@ -102,17 +100,12 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		prevTotal = prev.TotalTokens
-		prevID = prev.SnapshotID
-		if parsed {
-			prevAsOf = prevSnap.AsOfDate
-		}
 	}
 	if err := s.opts.Store.SaveProjection(r.Context(), user.ID, canonical, snap); err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	readme := s.maybeMaterializeUsage(r.Context(), user, prevID, snap.SnapshotID, prevTotal, publicprofile.TotalTokens(snap), prevAsOf, snap.AsOfDate)
+	readme := s.considerPublication(r.Context(), user, snap, false, false)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":          true,
@@ -121,72 +114,181 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *server) maybeMaterializeUsage(ctx context.Context, user User, prevID, nextID string, prevTotal, nextTotal int64, prevAsOf, nextAsOf string) string {
-	pres, presErr := s.opts.Store.Presentation(ctx, user.ID)
-	proj, _ := s.opts.Store.Projection(ctx, user.ID)
-	palette := publicprofile.DefaultPalette
-	var last time.Time
-	appliedID := ""
-	if presErr == nil {
-		appliedID = pres.ReadmeSnapshotID
-		if pres.ReadmeMaterializedAt.Valid {
-			last = pres.ReadmeMaterializedAt.Time
-		}
-		if pres.ReadmeMaterializedAt.Valid && publicprofile.KnownPalette(pres.Palette) && len(pres.PreviewLight) > 0 {
-			palette = pres.Palette
-		}
+func tokenRegressed(prev, next publicprofile.Snapshot) bool {
+	a := prev.Periods.All.Totals.Total.Value
+	b := next.Periods.All.Totals.Total.Value
+	if a != nil && b == nil {
+		return true
 	}
-	desired := nextID
-	status := ""
-	if proj.SnapshotID != "" {
-		status = proj.ReadmeStatus
-		if proj.DesiredSnapshotID != "" {
-			desired = proj.DesiredSnapshotID
-		}
-	}
-	now := time.Now()
-	if s.opts.Now != nil {
-		now = s.opts.Now()
-	}
-	snapshotChanged := prevID != nextID
-	failedRetry := !snapshotChanged && status == "failed" && desired != "" && desired != appliedID
-	if !failedRetry && !publicprofile.ShouldMaterializeReadme(publicprofile.MaterializeInput{
-		SnapshotChanged:  snapshotChanged,
-		PrevTotal:        prevTotal,
-		NextTotal:        nextTotal,
-		LastMaterialized: last,
-		Now:              now,
-		ThemeChange:      false,
-		PrevAsOfDate:     prevAsOf,
-		NextAsOfDate:     nextAsOf,
-	}) {
-		// Coalesced means this request does not write GitHub. It does not
-		// abandon a README that is still behind the accepted snapshot.
-		// The maintenance retry publishes that desired snapshot.
-		if snapshotChanged && status == "failed" && desired == appliedID {
-			_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "", "")
+	return a != nil && b != nil && *b < *a
+}
+
+func (s *server) considerPublication(ctx context.Context, user User, snap publicprofile.Snapshot, theme, fromWorker bool) string {
+	verified := s.verifiedWall(ctx, user.ID)
+	pending := s.pendingIntent(ctx, user.ID)
+	accepted := snap
+	decision := publicprofile.DecidePublication(publicprofile.PublicationInput{
+		Candidate:   snap,
+		Accepted:    &accepted,
+		Verified:    verified,
+		Pending:     pending,
+		Now:         s.now(),
+		ThemeChange: theme,
+		FromWorker:  fromWorker,
+	})
+	switch decision.Action {
+	case publicprofile.ActionNoChange:
+		if snap.SnapshotID != "" && snap.SnapshotID == verified.SnapshotID {
+			_ = s.opts.Store.SetReadmeApplied(ctx, user.ID, snap.SnapshotID)
 		}
 		return "coalesced"
+	case publicprofile.ActionBlocked:
+		if decision.Reason != publicprofile.ReasonUnknownVerified {
+			_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "blocked_data", decision.Reason, publicprofile.CodeBlockedData, sql.NullTime{}, 0)
+		}
+		return "blocked"
+	case publicprofile.ActionWaitUntil:
+		_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "pending", decision.Reason, "", sql.NullTime{Time: decision.DueAt, Valid: !decision.DueAt.IsZero()}, 0)
+		return "pending"
+	case publicprofile.ActionRetryPending:
+		row, _ := s.opts.Store.Projection(ctx, user.ID)
+		reason := publicprofile.ReasonRetry
+		if strings.HasPrefix(row.PendingReason, "theme:") {
+			reason = row.PendingReason
+		}
+		_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "failed", reason, row.ReadmeLastError, row.PendingDueAt, row.PublishRetryCount)
+		return "coalesced"
+	case publicprofile.ActionPublishNow:
+		return s.publishUsageNow(ctx, user, snap, theme)
+	default:
+		return "coalesced"
 	}
+}
+
+func (s *server) publishUsageNow(ctx context.Context, user User, snap publicprofile.Snapshot, theme bool) string {
+	kind := "usage"
+	if theme {
+		kind = "theme"
+	}
+	palette := s.usagePalette(ctx, user.ID)
+	row, _ := s.opts.Store.Projection(ctx, user.ID)
+	_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "pending", kind, "", sql.NullTime{Time: s.now(), Valid: true}, row.PublishRetryCount)
 	if _, err := s.contentsClient(); err != nil {
-		_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "failed", "github_unconfigured")
+		_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "failed", kind, "github_unconfigured", sql.NullTime{}, row.PublishRetryCount)
 		return "deferred"
 	}
-	if _, err := s.publishPalette(ctx, user, palette, "usage", nil); err != nil {
-		_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "failed", readmeErrorCode(err))
+	if _, err := s.publishPalette(ctx, user, palette, kind, nil); err != nil {
+		s.notePublishFailure(ctx, user.ID, snap.SnapshotID, kind, err)
 		return "deferred"
 	}
-	_ = s.opts.Store.SetReadmeStatus(ctx, user.ID, "applied", "")
 	return "materialized"
 }
 
-// retryFailedReadmes writes a README that was accepted into the projection
-// but not applied on GitHub. It does not require a new client PUT.
+func (s *server) notePublishFailure(ctx context.Context, userID int64, snapshotID, kind string, err error) {
+	row, _ := s.opts.Store.Projection(ctx, userID)
+	retry := row.PublishRetryCount + 1
+	status := "failed"
+	code := readmeErrorCode(err)
+	var due sql.NullTime
+	switch {
+	case errors.Is(err, ErrGitAuth):
+		status = "blocked_auth"
+		code = "blocked_auth"
+		due = sql.NullTime{Time: s.now().Add(6 * time.Hour), Valid: true}
+	case errors.Is(err, errPublishBusy):
+		status = "pending"
+		code = "publish_busy"
+		due = sql.NullTime{Time: s.now().Add(30 * time.Second), Valid: true}
+	default:
+		var rate *GitRateLimitError
+		if errors.As(err, &rate) {
+			code = "rate_limit"
+			wait := rate.Wait
+			if wait <= 0 {
+				wait = 30 * time.Second
+			}
+			due = sql.NullTime{Time: s.now().Add(wait), Valid: true}
+			break
+		}
+		if errors.Is(err, ErrGitTransient) || code == "github_write" {
+			wait := publishBackoff(retry)
+			if wait > 0 {
+				due = sql.NullTime{Time: s.now().Add(wait), Valid: true}
+			}
+		}
+	}
+	_ = s.opts.Store.SetPublicationIntent(ctx, userID, snapshotID, status, kind, code, due, retry)
+}
+
+func publishBackoff(retry int) time.Duration {
+	if retry <= 1 {
+		return 0
+	}
+	wait := 30 * time.Second
+	for i := 1; i < retry && wait < 15*time.Minute; i++ {
+		wait *= 2
+	}
+	if wait > 15*time.Minute {
+		return 15 * time.Minute
+	}
+	return wait
+}
+
+func (s *server) usagePalette(ctx context.Context, userID int64) string {
+	palette := publicprofile.DefaultPalette
+	pres, err := s.opts.Store.Presentation(ctx, userID)
+	if err == nil && publicprofile.KnownPalette(pres.Palette) && len(pres.PreviewLight) > 0 {
+		palette = pres.Palette
+	}
+	return palette
+}
+
+func (s *server) verifiedWall(ctx context.Context, userID int64) publicprofile.VerifiedWall {
+	pres, err := s.opts.Store.Presentation(ctx, userID)
+	if err != nil || pres.ReadmeSnapshotID == "" {
+		return publicprofile.VerifiedWall{}
+	}
+	wall := publicprofile.VerifiedWall{
+		Proven:        true,
+		SnapshotID:    pres.ReadmeSnapshotID,
+		CacheKey:      pres.ReadmeCacheKey,
+		AssetRevision: pres.AssetRevision,
+	}
+	if pres.ReadmeMaterializedAt.Valid {
+		wall.PublishedAt = pres.ReadmeMaterializedAt.Time
+	}
+	if pres.VerifiedSnapshotID.Valid && pres.VerifiedSnapshotID.String == pres.ReadmeSnapshotID {
+		if pres.VerifiedTotal.Valid {
+			n := pres.VerifiedTotal.Int64
+			wall.Total = &n
+		}
+		if pres.VerifiedAsOf.Valid {
+			wall.AsOfDate = pres.VerifiedAsOf.String
+		}
+	}
+	return wall
+}
+
+func (s *server) pendingIntent(ctx context.Context, userID int64) publicprofile.PendingIntent {
+	row, err := s.opts.Store.Projection(ctx, userID)
+	if err != nil {
+		return publicprofile.PendingIntent{}
+	}
+	intent := publicprofile.PendingIntent{SnapshotID: row.DesiredSnapshotID, Reason: row.PendingReason, Failed: row.ReadmeStatus == "failed" || row.ReadmeStatus == "blocked_auth"}
+	if row.PendingDueAt.Valid {
+		intent.DueAt = row.PendingDueAt.Time
+	}
+	return intent
+}
+
+// retryFailedReadmes publishes a wall that was accepted but not verified,
+// including a usage change that was waiting for the cooldown. It does not
+// require a new client PUT.
 func (s *server) retryFailedReadmes(ctx context.Context) {
 	if s.opts.Store == nil {
 		return
 	}
-	ids, err := s.opts.Store.FailedReadmeUserIDs(ctx)
+	ids, err := s.opts.Store.DuePublicationUserIDs(ctx, s.now())
 	if err != nil {
 		return
 	}
@@ -200,8 +302,20 @@ func (s *server) retryFailedReadmes(ctx context.Context) {
 			continue
 		}
 		var snap publicprofile.Snapshot
-		_ = json.Unmarshal(row.SnapshotJSON, &snap)
-		s.maybeMaterializeUsage(ctx, user, row.SnapshotID, row.SnapshotID, row.TotalTokens, row.TotalTokens, snap.AsOfDate, snap.AsOfDate)
+		if json.Unmarshal(row.SnapshotJSON, &snap) != nil || snap.SnapshotID == "" {
+			continue
+		}
+		if row.ReadmeStatus == "failed" && strings.HasPrefix(row.PendingReason, "theme:") {
+			palette := strings.TrimPrefix(row.PendingReason, "theme:")
+			if publicprofile.ValidatePalette(palette) != nil {
+				continue
+			}
+			if _, err := s.publishPalette(ctx, user, palette, "theme", nil); err != nil {
+				s.notePublishFailure(ctx, user.ID, snap.SnapshotID, "theme:"+palette, err)
+			}
+			continue
+		}
+		s.considerPublication(ctx, user, snap, false, true)
 	}
 }
 
@@ -211,6 +325,16 @@ func readmeErrorCode(err error) string {
 	}
 	if errors.Is(err, ErrGitConflict) {
 		return "conflict"
+	}
+	if errors.Is(err, ErrGitAuth) {
+		return "blocked_auth"
+	}
+	var rate *GitRateLimitError
+	if errors.As(err, &rate) {
+		return "rate_limit"
+	}
+	if errors.Is(err, ErrGitTransient) {
+		return "github_write"
 	}
 	switch err.Error() {
 	case "remote content changed":
@@ -266,8 +390,54 @@ func (s *server) getPublicProfile(w http.ResponseWriter, r *http.Request, login 
 			Revision:      revision,
 		},
 		"snapshot": json.RawMessage(row.SnapshotJSON),
+		"wall":     s.wallJSON(r.Context(), user.ID, row),
 	}
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func (s *server) wallJSON(ctx context.Context, userID int64, row projectionRow) map[string]any {
+	wall := s.verifiedWall(ctx, userID)
+	out := map[string]any{"phase": wallPhase(row, wall)}
+	if wall.SnapshotID != "" {
+		out["verified_snapshot_id"] = wall.SnapshotID
+	}
+	if wall.AsOfDate != "" {
+		out["verified_as_of_date"] = wall.AsOfDate
+	}
+	if !wall.PublishedAt.IsZero() {
+		out["verified_at"] = wall.PublishedAt.UTC().Format(time.RFC3339)
+	}
+	if wall.Total != nil {
+		out["verified_total"] = *wall.Total
+	}
+	if row.DesiredSnapshotID != "" && row.DesiredSnapshotID != wall.SnapshotID && (row.ReadmeStatus == "pending" || row.ReadmeStatus == "failed" || row.ReadmeStatus == "blocked_auth") {
+		out["pending_snapshot_id"] = row.DesiredSnapshotID
+		out["pending_failed"] = row.ReadmeStatus == "failed" || row.ReadmeStatus == "blocked_auth"
+		if row.PendingDueAt.Valid {
+			out["pending_due_at"] = row.PendingDueAt.Time.UTC().Format(time.RFC3339)
+		}
+	}
+	return out
+}
+
+func wallPhase(row projectionRow, wall publicprofile.VerifiedWall) string {
+	switch row.ReadmeStatus {
+	case "pending":
+		return "pending"
+	case "failed":
+		return "failed"
+	case "blocked_auth":
+		return "blocked_auth"
+	case "blocked_data":
+		return "blocked"
+	}
+	if wall.Proven && wall.SnapshotID != "" && (row.DesiredSnapshotID == "" || row.DesiredSnapshotID == wall.SnapshotID || row.ReadmeStatus == "applied") {
+		return "verified"
+	}
+	if wall.Proven {
+		return "pending"
+	}
+	return "none"
 }
 
 func (s *server) getPublicPreview(w http.ResponseWriter, r *http.Request, login, name string) {
@@ -303,13 +473,23 @@ func (s *server) getPublicOwner(w http.ResponseWriter, r *http.Request, login st
 	if pres, err := s.opts.Store.Presentation(r.Context(), user.ID); err == nil && publicprofile.KnownPalette(pres.Palette) {
 		palette = pres.Palette
 	}
+	row, rowErr := s.opts.Store.Projection(r.Context(), user.ID)
+	phase := "idle"
+	var wall map[string]any
+	if rowErr == nil {
+		wall = s.wallJSON(r.Context(), user.ID, row)
+		if p, ok := wall["phase"].(string); ok && p != "" {
+			phase = p
+		}
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"owner":             true,
 		"login":             user.Login,
 		"published_palette": palette,
 		"profile_url":       "https://github.com/" + user.Login,
-		"phase":             "idle",
+		"phase":             phase,
+		"wall":              wall,
 	})
 }
 
@@ -326,7 +506,29 @@ func (s *server) postPublicPublish(w http.ResponseWriter, r *http.Request, login
 	if !ok {
 		return
 	}
+	if row, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
+		var snap publicprofile.Snapshot
+		if json.Unmarshal(row.SnapshotJSON, &snap) == nil {
+			decision := publicprofile.DecidePublication(publicprofile.PublicationInput{
+				Candidate:   snap,
+				Accepted:    &snap,
+				Verified:    s.verifiedWall(r.Context(), user.ID),
+				Pending:     s.pendingIntent(r.Context(), user.ID),
+				Now:         s.now(),
+				ThemeChange: true,
+			})
+			if decision.Action != publicprofile.ActionPublishNow {
+				http.Error(w, "snapshot is not publishable", http.StatusConflict)
+				return
+			}
+		}
+	}
 	job, err := s.publishPalette(r.Context(), user, palette, "theme", nil)
+	if err != nil {
+		if row, rerr := s.opts.Store.Projection(r.Context(), user.ID); rerr == nil {
+			s.notePublishFailure(r.Context(), user.ID, row.SnapshotID, "theme:"+palette, err)
+		}
+	}
 	s.writeJob(w, job, err)
 }
 

@@ -12,71 +12,15 @@ import (
 	"time"
 )
 
+// GitHub wall publication is DecidePublication. The hosted projection and
+// the verified README no longer use a separate token or quiet-window gate.
+
 const (
 	LiveSchema        = "wheretoken.public-profile-live"
 	LiveSchemaVersion = 1
 	FreshnessMode     = "near_real_time"
 	FreshnessHosted   = "hosted"
-
-	// ReadmeMinInterval is the fastest ordinary usage materialization.
-	// A palette change does not wait for it.
-	ReadmeMinInterval = 30 * time.Minute
-	// ReadmeQuietWindow publishes a smaller usage change that has been
-	// waiting, so a quiet day still refreshes the static README.
-	ReadmeQuietWindow = 6 * time.Hour
-	// ReadmeMinTokenDelta is the smallest all-time token movement that
-	// may refresh the README once the minimum interval has passed.
-	ReadmeMinTokenDelta int64 = 100_000
 )
-
-// MaterializeInput is the README coalesce decision. ThemeChange publishes
-// immediately. A strictly later local as_of_date publishes immediately.
-// Same-calendar-day usage changes still wait for a real token movement or
-// the quiet window. An earlier date, an empty date, and an invalid date do
-// not. SnapshotChanged false does not materialize on the date field alone;
-// a failed apply retries through the caller when desired differs from applied.
-type MaterializeInput struct {
-	SnapshotChanged  bool
-	PrevTotal        int64
-	NextTotal        int64
-	LastMaterialized time.Time
-	Now              time.Time
-	ThemeChange      bool
-	// PrevAsOfDate is the previous projection's as_of_date (the last
-	// materialized snapshot's date once a date change has been accepted).
-	// NextAsOfDate is the snapshot just accepted. Both are YYYY-MM-DD local
-	// dates. Empty values do not bypass the usage gates.
-	PrevAsOfDate string
-	NextAsOfDate string
-}
-
-// ShouldMaterializeReadme reports whether the static GitHub README should be
-// rewritten. The hosted projection itself updates on every accepted sync.
-func ShouldMaterializeReadme(in MaterializeInput) bool {
-	if in.ThemeChange {
-		return true
-	}
-	if !in.SnapshotChanged {
-		return false
-	}
-	if in.LastMaterialized.IsZero() {
-		return true
-	}
-	if laterLocalDate(in.NextAsOfDate, in.PrevAsOfDate) {
-		return true
-	}
-	if in.Now.Sub(in.LastMaterialized) < ReadmeMinInterval {
-		return false
-	}
-	delta := in.NextTotal - in.PrevTotal
-	if delta < 0 {
-		delta = -delta
-	}
-	if delta >= ReadmeMinTokenDelta {
-		return true
-	}
-	return in.Now.Sub(in.LastMaterialized) >= ReadmeQuietWindow
-}
 
 // laterLocalDate reports whether next is a later YYYY-MM-DD local date than prev.
 // It does not interpret the dates as UTC instants beyond the calendar day.

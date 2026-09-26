@@ -174,7 +174,11 @@ func seedOwner(t *testing.T) (string, string, string) {
 
 func testProjection(t *testing.T) []byte {
 	t.Helper()
-	snap, err := publicprofile.Build(publicprofile.Input{Now: time.Date(2026, 9, 15, 9, 33, 58, 0, time.UTC), Loc: time.UTC, Version: "test"})
+	now := time.Date(2026, 9, 15, 9, 33, 58, 0, time.UTC)
+	snap, err := publicprofile.Build(publicprofile.Input{
+		Now: now, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), 2_500_000)},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -768,7 +772,7 @@ func TestUsageMaterializeConflictLeavesReadmeFailed(t *testing.T) {
 	if phase != phaseConflict || result == "published" || phase == phasePublished || kind != "usage" {
 		t.Fatalf("job phase=%s result=%s kind=%s", phase, result, kind)
 	}
-	ids, err := st.FailedReadmeUserIDs(context.Background())
+	ids, err := st.DuePublicationUserIDs(context.Background(), time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1070,7 +1074,7 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
 		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
 	})
-	if publicprofile.TotalTokens(sameDay.snap)-publicprofile.TotalTokens(first.snap) >= publicprofile.ReadmeMinTokenDelta {
+	if publicprofile.TotalTokens(sameDay.snap)-publicprofile.TotalTokens(first.snap) >= publicprofile.RefreshMinDelta {
 		t.Fatal("fixture delta is large enough to pass the same-day gate")
 	}
 	small := putProjection(t, h, device, sameDay.raw)
@@ -1185,13 +1189,13 @@ func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
 		t.Fatal("first README did not record the accepted snapshot")
 	}
 
-	now = now.Add(publicprofile.ReadmeMinInterval + time.Minute)
+	now = now.Add(time.Hour + time.Minute)
 	git.failPath = "wheretoken/preview-light.svg"
 	failed := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta)},
 	})
-	if publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap) != publicprofile.ReadmeMinTokenDelta {
+	if publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap) < publicprofile.RefreshMinDelta {
 		t.Fatalf("failed delta %d", publicprofile.TotalTokens(failed.snap)-publicprofile.TotalTokens(first.snap))
 	}
 	if got := putProjection(t, h, device, failed.raw); got["readme"] != "deferred" || got["snapshot_id"] != failed.snap.SnapshotID {
@@ -1218,8 +1222,8 @@ func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
 	if newest.snap.AsOfDate != first.snap.AsOfDate || newest.snap.SnapshotID == failed.snap.SnapshotID {
 		t.Fatalf("newest date %s id %s", newest.snap.AsOfDate, newest.snap.SnapshotID)
 	}
-	if publicprofile.TotalTokens(newest.snap)-publicprofile.TotalTokens(failed.snap) >= publicprofile.ReadmeMinTokenDelta {
-		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	if publicprofile.TotalTokens(newest.snap) <= publicprofile.TotalTokens(failed.snap) {
+		t.Fatal("newest snapshot did not move forward")
 	}
 	small := putProjection(t, h, device, newest.raw)
 	if small["readme"] != "coalesced" || small["snapshot_id"] != newest.snap.SnapshotID || git.puts != puts || git.readme() != readmeAfterFailure {
@@ -1232,7 +1236,7 @@ func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
 	if publicSnapshotID(t, h, "rainhuang0220") != newest.snap.SnapshotID {
 		t.Fatal("coalesced PUT did not keep the newest projection")
 	}
-	ids, err := st.FailedReadmeUserIDs(context.Background())
+	ids, err := st.DuePublicationUserIDs(context.Background(), time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1266,7 +1270,7 @@ func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
 	}
 }
 
-func TestHostedReadmeCoalescesTokenAndQuietBoundaries(t *testing.T) {
+func TestHostedUsageWaitsForVerifiedHourThenPublishesWithoutAnotherPut(t *testing.T) {
 	git := newMemGit(publishReadme)
 	st := readyStore(t)
 	prevClock := st.now
@@ -1286,41 +1290,42 @@ func TestHostedReadmeCoalescesTokenAndQuietBoundaries(t *testing.T) {
 		t.Fatalf("first %+v", got)
 	}
 	puts := git.puts
-	now = now.Add(publicprofile.ReadmeMinInterval + time.Minute)
+	early := now.Add(time.Hour - time.Nanosecond)
+	now = early
 	small := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta-1)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta-1)},
 	})
 	if got := putProjection(t, h, device, small.raw); got["readme"] != "coalesced" || git.puts != puts {
-		t.Fatalf("+99999 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+		t.Fatalf("+9999 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
 	}
-	big := mustProjection(t, publicprofile.Input{
+	waiting := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.ReadmeMinTokenDelta-1+publicprofile.ReadmeMinTokenDelta)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta)},
 	})
-	if publicprofile.TotalTokens(big.snap)-publicprofile.TotalTokens(small.snap) != publicprofile.ReadmeMinTokenDelta {
-		t.Fatalf("delta %d", publicprofile.TotalTokens(big.snap)-publicprofile.TotalTokens(small.snap))
+	if publicprofile.TotalTokens(waiting.snap)-publicprofile.TotalTokens(first.snap) != publicprofile.RefreshMinDelta {
+		t.Fatalf("delta %d", publicprofile.TotalTokens(waiting.snap)-publicprofile.TotalTokens(first.snap))
 	}
-	if got := putProjection(t, h, device, big.raw); got["readme"] != "materialized" || git.puts == puts {
-		t.Fatalf("+100000 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	if got := putProjection(t, h, device, waiting.raw); got["readme"] != "pending" || git.puts != puts {
+		t.Fatalf("during cooldown readme=%v puts %d -> %d", got["readme"], puts, git.puts)
 	}
-	applied := now
-	puts = git.puts
-	now = applied.Add(publicprofile.ReadmeQuietWindow - time.Nanosecond)
-	quietSmall := mustProjection(t, publicprofile.Input{
-		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(big.snap)+10)},
-	})
-	if got := putProjection(t, h, device, quietSmall.raw); got["readme"] != "coalesced" || git.puts != puts {
-		t.Fatalf("inside 6h readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	s.retryFailedReadmes(context.Background())
+	if git.puts != puts {
+		t.Fatal("maintenance published before the hour")
 	}
-	now = applied.Add(publicprofile.ReadmeQuietWindow)
-	quiet := mustProjection(t, publicprofile.Input{
-		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), publicprofile.TotalTokens(quietSmall.snap)+10)},
-	})
-	if got := putProjection(t, h, device, quiet.raw); got["readme"] != "materialized" || git.puts == puts {
-		t.Fatalf("at 6h readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+	now = early.Add(time.Nanosecond)
+	s.retryFailedReadmes(context.Background())
+	if git.puts == puts {
+		t.Fatal("maintenance did not publish when the hour elapsed")
+	}
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || pres.ReadmeSnapshotID != waiting.snap.SnapshotID || !pres.VerifiedTotal.Valid || pres.VerifiedTotal.Int64 != publicprofile.TotalTokens(waiting.snap) {
+		t.Fatalf("verified %+v %v", pres.VerifiedTotal, err)
 	}
 }
 

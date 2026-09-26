@@ -83,7 +83,7 @@ func TestDecideRefreshTable(t *testing.T) {
 				Now:             later,
 			},
 			publish: false,
-			code:    CodeSkippedDelta,
+			code:    CodeBlockedData,
 		},
 		{
 			name: "delta 9999 after an hour",
@@ -97,15 +97,15 @@ func TestDecideRefreshTable(t *testing.T) {
 			code:    CodeSkippedDelta,
 		},
 		{
-			name: "delta 10000 before an hour",
+			name: "delta 10000 before an hour uploads once and waits",
 			in: RefreshInput{
 				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+10_000)),
 				Remote:          &remote,
 				RemoteUpdatedAt: updated,
 				Now:             updated.Add(time.Hour - time.Nanosecond),
 			},
-			publish: false,
-			code:    CodeSkippedCooldown,
+			publish: true,
+			code:    CodeWaitingCooldown,
 		},
 		{
 			name: "delta 10000 at exactly one hour",
@@ -267,16 +267,12 @@ func TestDecideRefreshLocalDateNotUTC(t *testing.T) {
 	}
 }
 
-func TestDecideRefreshMidnightDoesNotBypassCooldown(t *testing.T) {
+func TestDecideRefreshMidnightBypassesCooldown(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	last := time.Date(2026, 9, 24, 23, 10, 0, 0, loc)
-	early := time.Date(2026, 9, 25, 0, 5, 0, 0, loc)
-	ready := time.Date(2026, 9, 25, 0, 10, 0, 0, loc)
+	early := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
 	if early.Sub(last) >= time.Hour {
-		t.Fatal("00:05 is inside the hour")
-	}
-	if ready.Sub(last) != time.Hour {
-		t.Fatalf("00:10 sub=%s", ready.Sub(last))
+		t.Fatal("00:00 is inside the hour")
 	}
 	remote := gateSnap("sha256:prev", StatusAvailable, "2026-09-24", intPtr(42_000))
 	same := intPtr(42_000)
@@ -286,20 +282,21 @@ func TestDecideRefreshMidnightDoesNotBypassCooldown(t *testing.T) {
 		RemoteUpdatedAt: last,
 		Now:             early,
 	})
-	if earlyGot.Publish || earlyGot.Code != CodeSkippedCooldown {
-		t.Fatalf("midnight must not bypass cooldown: %+v", earlyGot)
+	if !earlyGot.Publish || earlyGot.Code != CodeDateRollover {
+		t.Fatalf("midnight must bypass the usage cooldown: %+v", earlyGot)
 	}
-	readyGot := DecideRefresh(RefreshInput{
-		Local:           gateSnap("sha256:next", StatusAvailable, ready.Format("2006-01-02"), same),
+	again := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, early.Format("2006-01-02"), same),
 		Remote:          &remote,
 		RemoteUpdatedAt: last,
-		Now:             ready,
+		Now:             early.Add(time.Minute),
+		Pending:         PendingIntent{SnapshotID: "sha256:next", DueAt: early},
 	})
-	if !readyGot.Publish || readyGot.Code != CodeDateRollover {
-		t.Fatalf("00:10 should publish the new local day: %+v", readyGot)
+	if !again.Publish || again.Code != CodeDateRollover {
+		t.Fatalf("same new date stays eligible until verified: %+v", again)
 	}
 	built, err := Build(Input{
-		Now:     ready,
+		Now:     early,
 		Loc:     loc,
 		Version: "test",
 		Events: []event.UsageEvent{{
@@ -334,17 +331,26 @@ func TestBuildAsOfDateFollowsLocalZone(t *testing.T) {
 	}
 }
 
-func TestDecideRefreshMissingUpdatedAtDoesNotPublish(t *testing.T) {
+func TestDecideRefreshMissingUpdatedAtDoesNotPublishUsage(t *testing.T) {
 	remote := gateSnap("sha256:prev", StatusAvailable, "2026-09-25", intPtr(1_000_000))
-	now := time.Date(2026, 9, 26, 8, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 9, 25, 18, 0, 0, 0, time.UTC)
 	got := DecideRefresh(RefreshInput{
-		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000+50_000)),
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+50_000)),
 		Remote:          &remote,
 		RemoteUpdatedAt: time.Time{},
 		Now:             now,
 	})
 	if got.Publish || got.Code != CodeSkippedCooldown {
-		t.Fatalf("missing updated_at must not publish: %+v", got)
+		t.Fatalf("missing updated_at must not publish usage: %+v", got)
+	}
+	rolled := DecideRefresh(RefreshInput{
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000)),
+		Remote:          &remote,
+		RemoteUpdatedAt: time.Time{},
+		Now:             time.Date(2026, 9, 26, 0, 5, 0, 0, time.UTC),
+	})
+	if !rolled.Publish || rolled.Code != CodeDateRollover {
+		t.Fatalf("a known later date does not need the publication instant: %+v", rolled)
 	}
 }
 
@@ -408,8 +414,8 @@ func TestDecideRefreshDSTFallbackUsesAbsoluteHour(t *testing.T) {
 		RemoteUpdatedAt: start,
 		Now:             early,
 	})
-	if cooldown.Publish || cooldown.Code != CodeSkippedCooldown {
-		t.Fatalf("1h-1ns during fallback published: %+v", cooldown)
+	if !cooldown.Publish || cooldown.Code != CodeWaitingCooldown {
+		t.Fatalf("1h-1ns during fallback should wait, not skip the upload: %+v", cooldown)
 	}
 	small := DecideRefresh(RefreshInput{
 		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+9_999)),

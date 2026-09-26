@@ -185,7 +185,7 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 			if strings.Contains(string(body), `"live_sync": true`) {
 				t.Fatal("refresh set live_sync")
 			}
-			return jsonRes(200, map[string]any{"ok": true, "readme": "coalesced"})
+			return jsonRes(200, map[string]any{"ok": true, "readme": "materialized"})
 		}
 		t.Errorf("unexpected %s %s", req.Method, req.URL.Path)
 		return jsonRes(500, nil)
@@ -196,7 +196,7 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 	if puts != 1 || sawBatch {
 		t.Fatalf("puts=%d batch=%v", puts, sawBatch)
 	}
-	if !strings.Contains(out.String(), "phase=published 用量已更新") || !strings.Contains(out.String(), "PUBLISHED") {
+	if !strings.Contains(out.String(), "phase=published 用量已更新") || !strings.Contains(out.String(), "VERIFIED") {
 		t.Fatalf("stdout %s", out.String())
 	}
 	if _, err := os.Stat(publicprofile.RefreshConfigPath(home)); !os.IsNotExist(err) {

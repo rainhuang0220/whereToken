@@ -8,9 +8,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -122,4 +124,30 @@ func TestInstallationTokenIsCachedAndPutHonorsExpectedSHA(t *testing.T) {
 
 func errorsIsConflict(err error) bool {
 	return err == ErrGitConflict
+}
+
+func TestClassifyGitStatusSeparatesAuthRateAndTransient(t *testing.T) {
+	now := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
+	if err := classifyGitStatus(http.StatusUnauthorized, nil, nil, now); err != ErrGitAuth {
+		t.Fatalf("401 %v", err)
+	}
+	if err := classifyGitStatus(http.StatusForbidden, http.Header{}, []byte("nope"), now); err != ErrGitAuth {
+		t.Fatalf("403 %v", err)
+	}
+	header := http.Header{}
+	header.Set("Retry-After", "120")
+	err := classifyGitStatus(http.StatusTooManyRequests, header, []byte("rate limit"), now)
+	var rate *GitRateLimitError
+	if !errors.As(err, &rate) || rate.Wait != 2*time.Minute {
+		t.Fatalf("429 %+v", err)
+	}
+	header = http.Header{}
+	header.Set("X-RateLimit-Reset", strconv.FormatInt(now.Add(30*time.Minute).Unix(), 10))
+	err = classifyGitStatus(http.StatusForbidden, header, []byte("secondary rate limit"), now)
+	if !errors.As(err, &rate) || rate.Wait != 30*time.Minute {
+		t.Fatalf("403 rate %+v", err)
+	}
+	if err := classifyGitStatus(http.StatusBadGateway, nil, nil, now); err != ErrGitTransient {
+		t.Fatalf("502 %v", err)
+	}
 }
