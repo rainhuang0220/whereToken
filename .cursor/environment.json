@@ -1,0 +1,4 @@
+{
+  "name": "whereToken",
+  "install": "go mod download && cd web && npm ci && npm run build"
+}
