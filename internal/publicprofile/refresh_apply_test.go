@@ -103,13 +103,18 @@ func TestApplyRefreshDeltaWaitsForOneHour(t *testing.T) {
 	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: start}}
 	earlyLocal := mustBuild(t, usageInput(start.Add(time.Hour-time.Nanosecond), time.UTC, 1_000+10_000))
 	early := ApplyRefresh(context.Background(), earlyLocal, start.Add(time.Hour-time.Nanosecond), false, pub)
-	if pub.puts != 0 || early.Decision.Publish || early.Decision.Code != CodeSkippedCooldown {
+	if pub.puts != 1 || !early.Decision.Publish || early.Decision.Code != CodeWaitingCooldown {
 		t.Fatalf("before 1h puts=%d %+v", pub.puts, early.Decision)
+	}
+	pub.view = RemoteView{Found: true, Snapshot: earlyLocal, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(remote, start), Pending: PendingIntent{SnapshotID: earlyLocal.SnapshotID, DueAt: start.Add(time.Hour)}}
+	held := ApplyRefresh(context.Background(), earlyLocal, start.Add(time.Hour-time.Nanosecond), false, pub)
+	if pub.puts != 1 || held.Decision.Publish {
+		t.Fatalf("stored pending must not put again puts=%d %+v", pub.puts, held.Decision)
 	}
 	local := mustBuild(t, usageInput(start.Add(time.Hour), time.UTC, 1_000+10_000))
 	got := ApplyRefresh(context.Background(), local, start.Add(time.Hour), false, pub)
-	if pub.puts != 1 || !got.Decision.Publish || got.Decision.Code != CodePublished {
-		t.Fatalf("at 1h puts=%d %+v", pub.puts, got.Decision)
+	if pub.puts != 1 || got.Decision.Publish || got.Decision.Code != CodePendingGitHub {
+		t.Fatalf("at 1h the stored snapshot must not be uploaded again puts=%d %+v", pub.puts, got.Decision)
 	}
 }
 
@@ -120,21 +125,17 @@ func TestApplyRefreshOnePutPerHour(t *testing.T) {
 	if got := ApplyRefresh(context.Background(), first, start, false, pub); !got.Decision.Publish || pub.puts != 1 {
 		t.Fatalf("first puts=%d %+v", pub.puts, got.Decision)
 	}
-	pub.view = RemoteView{Found: true, Snapshot: first, UpdatedAt: start}
-	for _, step := range []struct {
-		d    time.Duration
-		miss int64
-	}{
-		{10 * time.Minute, 20_000},
-		{20 * time.Minute, 40_000},
-		{50 * time.Minute, 80_000},
-	} {
-		now := start.Add(step.d)
-		local := mustBuild(t, usageInput(now, time.UTC, step.miss))
-		got := ApplyRefresh(context.Background(), local, now, false, pub)
-		if pub.puts != 1 || got.Decision.Publish {
-			t.Fatalf("inside the hour puts=%d %+v", pub.puts, got.Decision)
-		}
+	pub.view = RemoteView{Found: true, Snapshot: first, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(first, start)}
+	now := start.Add(10 * time.Minute)
+	local := mustBuild(t, usageInput(now, time.UTC, 20_000))
+	got := ApplyRefresh(context.Background(), local, now, false, pub)
+	if pub.puts != 2 || got.Decision.Code != CodeWaitingCooldown {
+		t.Fatalf("growth inside the hour puts=%d %+v", pub.puts, got.Decision)
+	}
+	pub.view = RemoteView{Found: true, Snapshot: local, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(first, start), Pending: PendingIntent{SnapshotID: local.SnapshotID, DueAt: start.Add(time.Hour)}}
+	again := ApplyRefresh(context.Background(), local, now.Add(time.Minute), false, pub)
+	if pub.puts != 2 || again.Decision.Publish || again.Decision.Code != CodeWaitingCooldown {
+		t.Fatalf("same pending snapshot puts=%d %+v", pub.puts, again.Decision)
 	}
 }
 
@@ -146,19 +147,14 @@ func TestApplyRefreshMidnightRolloverUpdatesAsOfDate(t *testing.T) {
 		t.Fatalf("remote as_of %s", remote.AsOfDate)
 	}
 	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: last}}
-	earlyNow := time.Date(2026, 9, 25, 0, 5, 0, 0, loc)
+	earlyNow := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
 	early := mustBuild(t, usageInput(earlyNow, loc, 42_000))
-	if got := ApplyRefresh(context.Background(), early, earlyNow, false, pub); got.Decision.Publish || pub.puts != 0 {
-		t.Fatalf("00:05 puts=%d %+v", pub.puts, got.Decision)
+	if early.AsOfDate != "2026-09-25" {
+		t.Fatalf("local as_of %s", early.AsOfDate)
 	}
-	readyNow := time.Date(2026, 9, 25, 0, 10, 0, 0, loc)
-	local := mustBuild(t, usageInput(readyNow, loc, 42_000))
-	if local.AsOfDate != "2026-09-25" {
-		t.Fatalf("local as_of %s", local.AsOfDate)
-	}
-	got := ApplyRefresh(context.Background(), local, readyNow, false, pub)
+	got := ApplyRefresh(context.Background(), early, earlyNow, false, pub)
 	if pub.puts != 1 || got.Decision.Code != CodeDateRollover {
-		t.Fatalf("00:10 puts=%d %+v", pub.puts, got.Decision)
+		t.Fatalf("00:00 puts=%d %+v", pub.puts, got.Decision)
 	}
 	var uploaded Snapshot
 	if err := json.Unmarshal(pub.bodies[0], &uploaded); err != nil {

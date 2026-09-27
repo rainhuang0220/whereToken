@@ -125,6 +125,11 @@ var migrations = []string{
   desired_snapshot_id VARCHAR(80) NOT NULL DEFAULT '',
   readme_status VARCHAR(32) NOT NULL DEFAULT '',
   readme_last_error VARCHAR(40) NOT NULL DEFAULT '',
+  pending_due_at DATETIME NULL,
+  pending_reason VARCHAR(32) NOT NULL DEFAULT '',
+  publish_lease_until DATETIME NULL,
+  publish_lease_token CHAR(36) NULL,
+  publish_retry_count INT NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	`CREATE TABLE IF NOT EXISTS public_presentations (
@@ -137,6 +142,9 @@ var migrations = []string{
   readme_cache_key VARCHAR(160) NOT NULL DEFAULT '',
   readme_snapshot_id VARCHAR(80) NOT NULL DEFAULT '',
   readme_materialized_at DATETIME NULL,
+  verified_snapshot_id VARCHAR(80) NULL,
+  verified_total_tokens BIGINT NULL,
+  verified_as_of_date VARCHAR(10) NULL,
   updated_at DATETIME NOT NULL,
   PRIMARY KEY (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
@@ -183,7 +191,10 @@ func (s *Store) Migrate(ctx context.Context) error {
 			return err
 		}
 	}
-	return s.ensureColumns(ctx)
+	if err := s.ensureColumns(ctx); err != nil {
+		return err
+	}
+	return s.backfillVerifiedIdentity(ctx)
 }
 
 // ensureColumns adds the README cursor to databases created before it.
@@ -193,6 +204,14 @@ func (s *Store) ensureColumns(ctx context.Context) error {
 		{"public_projections", "desired_snapshot_id", "VARCHAR(80) NOT NULL DEFAULT ''"},
 		{"public_projections", "readme_status", "VARCHAR(32) NOT NULL DEFAULT ''"},
 		{"public_projections", "readme_last_error", "VARCHAR(40) NOT NULL DEFAULT ''"},
+		{"public_projections", "pending_due_at", "DATETIME NULL"},
+		{"public_projections", "pending_reason", "VARCHAR(32) NOT NULL DEFAULT ''"},
+		{"public_projections", "publish_lease_until", "DATETIME NULL"},
+		{"public_projections", "publish_lease_token", "CHAR(36) NULL"},
+		{"public_projections", "publish_retry_count", "INT NOT NULL DEFAULT 0"},
+		{"public_presentations", "verified_snapshot_id", "VARCHAR(80) NULL"},
+		{"public_presentations", "verified_total_tokens", "BIGINT NULL"},
+		{"public_presentations", "verified_as_of_date", "VARCHAR(10) NULL"},
 	}
 	for _, c := range cols {
 		var n int

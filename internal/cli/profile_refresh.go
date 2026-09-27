@@ -153,7 +153,11 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 		}
 		a.maybeReexecProfileWatch()
 		a.executeProfileRefresh(ctx, flags, home, rejected)
-		timer := time.NewTimer(profileRefreshInterval)
+		wait := publicprofile.NextRefreshWake(a.Now(), a.Loc, profileRefreshInterval).Sub(a.Now())
+		if wait < 0 {
+			wait = 0
+		}
+		timer := time.NewTimer(wait)
 		select {
 		case <-ctx.Done():
 			timer.Stop()

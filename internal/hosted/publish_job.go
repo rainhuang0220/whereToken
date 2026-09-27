@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
@@ -125,6 +126,19 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if err != nil {
 		return s.failPublish(ctx, user, palette, kind, retry, "no public snapshot"), err
 	}
+	lease, err := newUUID4()
+	if err != nil {
+		return s.failPublish(ctx, user, palette, kind, retry, "publish busy"), err
+	}
+	jobStart := s.now()
+	held, err := s.opts.Store.AcquirePublishLease(ctx, user.ID, lease, jobStart.Add(2*time.Minute))
+	if err != nil {
+		return s.failPublish(ctx, user, palette, kind, retry, "publish busy"), err
+	}
+	if !held {
+		return publishJob{}, errPublishBusy
+	}
+	defer func() { _ = s.opts.Store.ReleasePublishLease(ctx, user.ID, lease) }()
 	var snap publicprofile.Snapshot
 	if err := json.Unmarshal(row.SnapshotJSON, &snap); err != nil {
 		return s.failPublish(ctx, user, palette, kind, retry, "stored snapshot"), err
@@ -179,6 +193,13 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 		job.AssetRevision = assetRev
 		job.CacheKey = cacheKey
 		job.ErrorText = ""
+		if err := s.opts.Store.SavePresentation(ctx, user.ID, palette, revisionOf(assetRev), assetRev, light, dark); err != nil {
+			return s.finish(ctx, job, phasePartialFailure, "could not store presentation")
+		}
+		if err := s.stampVerified(ctx, user.ID, snap, cacheKey, beforeID, lease, jobStart); err != nil {
+			return s.finish(ctx, job, phasePartialFailure, "materialize stamp")
+		}
+		_ = s.opts.Store.SetReadmeApplied(ctx, user.ID, beforeID)
 		_ = s.opts.Store.UpdateJob(ctx, job)
 		return job, nil
 	}
@@ -227,16 +248,13 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if err != nil || !bytes.Equal(darkFile.Content, dark) {
 		return s.finish(ctx, job, phasePartialFailure, "dark preview mismatch")
 	}
-	revision := strings.TrimPrefix(assetRev, "sha256:")
-	if len(revision) > 80 {
-		revision = revision[:80]
-	}
-	if err := s.opts.Store.SavePresentation(ctx, user.ID, palette, revision, assetRev, light, dark); err != nil {
+	if err := s.opts.Store.SavePresentation(ctx, user.ID, palette, revisionOf(assetRev), assetRev, light, dark); err != nil {
 		return s.finish(ctx, job, phasePartialFailure, "could not store presentation")
 	}
-	if err := s.opts.Store.MarkReadmeMaterialized(ctx, user.ID, cacheKey, beforeID); err != nil {
+	if err := s.stampVerified(ctx, user.ID, snap, cacheKey, beforeID, lease, jobStart); err != nil {
 		return s.finish(ctx, job, phasePartialFailure, "materialize stamp")
 	}
+	_ = s.opts.Store.SetReadmeApplied(ctx, user.ID, beforeID)
 	job.Phase = phasePublished
 	job.ResultCode = "published"
 	job.ErrorText = ""
@@ -309,6 +327,25 @@ func (s *server) failPublish(ctx context.Context, user User, palette, kind strin
 	job.ErrorText = publicprofile.Redact(message)
 	_ = s.opts.Store.UpdateJob(ctx, job)
 	return job
+}
+
+func (s *server) now() time.Time {
+	if s.opts.Now != nil {
+		return s.opts.Now()
+	}
+	return time.Now()
+}
+
+func (s *server) stampVerified(ctx context.Context, userID int64, snap publicprofile.Snapshot, cacheKey, snapshotID, lease string, jobStart time.Time) error {
+	return s.opts.Store.MarkReadmeVerified(ctx, userID, cacheKey, snapshotID, snap.AsOfDate, snap.Periods.All.Totals.Total.Value, lease, jobStart)
+}
+
+func revisionOf(assetRev string) string {
+	revision := strings.TrimPrefix(assetRev, "sha256:")
+	if len(revision) > 80 {
+		revision = revision[:80]
+	}
+	return revision
 }
 
 func readmeHasCacheKey(content []byte, key string) bool {

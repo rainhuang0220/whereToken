@@ -17,6 +17,8 @@ import (
 
 var (
 	ErrNotFound      = errors.New("not found")
+	errVerifiedMoved = errors.New("verified publication moved")
+	errPublishBusy   = errors.New("publish busy")
 	ErrStaleRevision = errors.New("stale revision")
 	ErrRevisionClash = errors.New("revision conflict")
 	ErrIdempotency   = errors.New("idempotency key reused with different body")

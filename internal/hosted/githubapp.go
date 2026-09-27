@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +24,17 @@ var (
 	ErrGitConflict     = errors.New("remote content changed")
 	ErrGitMissing      = errors.New("remote file missing")
 	ErrGitUnconfigured = errors.New("github app unconfigured")
+	ErrGitAuth         = errors.New("github auth")
+	ErrGitTransient    = errors.New("github transient")
 )
+
+// GitRateLimitError is a GitHub primary or secondary rate limit.
+// Wait is taken from Retry-After or X-RateLimit-Reset and is capped.
+type GitRateLimitError struct {
+	Wait time.Duration
+}
+
+func (e *GitRateLimitError) Error() string { return "github rate limit" }
 
 // ContentFile is one allowlisted repository file.
 type ContentFile struct {
@@ -174,7 +185,7 @@ func (c *appContents) GetFile(ctx context.Context, repo, path, ref string) (Cont
 		return ContentFile{}, ErrGitMissing
 	}
 	if res.StatusCode >= 300 {
-		return ContentFile{}, fmt.Errorf("github get: http %d", res.StatusCode)
+		return ContentFile{}, classifyGitStatus(res.StatusCode, res.Header, body, c.now())
 	}
 	var out struct {
 		SHA      string `json:"sha"`
@@ -232,7 +243,7 @@ func (c *appContents) PutFile(ctx context.Context, repo, path, branch, message s
 		return "", ErrGitConflict
 	}
 	if res.StatusCode >= 300 {
-		return "", fmt.Errorf("github put: http %d", res.StatusCode)
+		return "", classifyGitStatus(res.StatusCode, res.Header, body, c.now())
 	}
 	var out struct {
 		Content struct {
@@ -243,4 +254,57 @@ func (c *appContents) PutFile(ctx context.Context, repo, path, branch, message s
 		return "", errors.New("github put")
 	}
 	return out.Content.SHA, nil
+}
+
+func classifyGitStatus(code int, header http.Header, body []byte, now time.Time) error {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	text := strings.ToLower(string(body))
+	switch code {
+	case http.StatusUnauthorized:
+		return ErrGitAuth
+	case http.StatusForbidden:
+		if gitRateLimited(header, text) {
+			return &GitRateLimitError{Wait: gitRetryWait(header, now)}
+		}
+		return ErrGitAuth
+	case http.StatusTooManyRequests:
+		return &GitRateLimitError{Wait: gitRetryWait(header, now)}
+	default:
+		if code >= 500 {
+			return ErrGitTransient
+		}
+		return fmt.Errorf("github http %d", code)
+	}
+}
+
+func gitRateLimited(header http.Header, body string) bool {
+	if header.Get("Retry-After") != "" || header.Get("X-RateLimit-Remaining") == "0" {
+		return true
+	}
+	return strings.Contains(body, "rate limit") || strings.Contains(body, "secondary rate")
+}
+
+func gitRetryWait(header http.Header, now time.Time) time.Duration {
+	const capWait = 6 * time.Hour
+	wait := 30 * time.Second
+	if v := strings.TrimSpace(header.Get("Retry-After")); v != "" {
+		if secs, err := strconv.Atoi(v); err == nil && secs >= 0 {
+			wait = time.Duration(secs) * time.Second
+		} else if when, err := http.ParseTime(v); err == nil {
+			wait = when.Sub(now)
+		}
+	} else if v := strings.TrimSpace(header.Get("X-RateLimit-Reset")); v != "" {
+		if sec, err := strconv.ParseInt(v, 10, 64); err == nil {
+			wait = time.Unix(sec, 0).Sub(now)
+		}
+	}
+	if wait < 0 {
+		wait = 0
+	}
+	if wait > capWait {
+		wait = capWait
+	}
+	return wait
 }

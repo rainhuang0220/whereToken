@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.7 — 2026-09-26 (Alpha)
+
+- Unified verified GitHub wall publication state and automatic refresh scheduling. The watermark is the last README and SVG pair that was read back and matched. A hosted PUT accepts a snapshot and does not by itself publish. Usage growth still publishes at 10,000 raw tokens and one hour since that verified publication. A strictly later owner-local calendar date publishes without waiting out that usage cooldown, including when the total did not grow. `profile refresh watch` still checks about every 15 minutes and also wakes at the next owner-local midnight. A failed theme publish of the same usage snapshot is retried with the requested palette. Automatic publication stays opt-in. This stays 0.7.7. The watermark change is a publication-behavior change on the existing 0.7.x line: an accepted hosted snapshot is not a verified wall. The release checklist ships 0.7.x patches until a minor bump is requested.
+- The hosted migration adds nullable verified identity and one pending publication. It copies the raw total and local date only when the applied README snapshot is still the accepted projection and the JSON total is present. Unknown totals stay NULL. A newer accepted snapshot is not copied into the verified columns. The statements are additive and can be run again.
+
 ## 0.7.6 — 2026-09-25 (Alpha)
 
 - `wheretoken profile refresh on` enables the sanitized public snapshot and, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. The switch file is flushed with `enabled` true before that agent is bootstrapped, so the first `on` cannot start a watch that exits while the file is still missing. If bootstrap fails, the switch stays on and `status` can show `scheduler=dead`; a later `on` bootstraps again. `off` turns the switch off and uninstalls that agent. Linux and Windows do not install a background agent. The default install and a plain `wheretoken` report do not upload. The bare `profile refresh` command is still one explicit PUT when the switch is off, and launchd does not run that bare command. A powered-off Mac does not publish; catch-up is the next wake of `watch`, or RunAtLoad after a graphical login. SSH without a GUI session leaves `scheduler=dead`.

@@ -3,14 +3,13 @@ package publicprofile
 import "time"
 
 const (
-	// RefreshMinDelta is the smallest all-time token movement that may
-	// upload a new hosted projection on the same local calendar day.
-	// It is the 0.01 M display step below 1e9, compared as raw tokens.
-	// Larger totals display more coarsely; the gate stays 10_000.
+	// RefreshMinDelta is the smallest all-time raw token movement since the
+	// last verified GitHub wall that may publish on the same local day.
+	// It is the 0.01 M display step below 1e9. Comparison uses integers.
 	RefreshMinDelta int64 = 10_000
-	// RefreshCooldown is the minimum gap between accepted hosted uploads.
-	// A local-date change does not skip it. Compare instants with
-	// time.Time.Sub so a DST fall-back cannot shorten the wait.
+	// RefreshCooldown is the minimum absolute gap since the last verified
+	// GitHub wall publication. A strictly later owner-local date does not
+	// wait for it. time.Time.Sub keeps a DST fall-back from shortening it.
 	RefreshCooldown = time.Hour
 )
 
@@ -18,6 +17,7 @@ const (
 	PhaseIdle      = "idle"
 	PhasePublished = "published"
 	PhaseSkipped   = "skipped"
+	PhaseWaiting   = "waiting"
 )
 
 const (
@@ -29,90 +29,132 @@ const (
 	CodeNotSignedIn     = "NOT_SIGNED_IN"
 	CodeOffline         = "OFFLINE"
 	CodeBusy            = "BUSY"
+	CodeWaitingCooldown = "WAITING_COOLDOWN"
+	CodePendingGitHub   = "PENDING_GITHUB"
+	CodeBlockedData     = "BLOCKED_DATA"
+	CodeBlockedAuth     = "BLOCKED_AUTH"
+	CodeVerified        = "VERIFIED"
 )
 
-// Decision is the refresh gate. Publish is true only when a sanitized PUT
-// should be attempted. Labels are the fixed bilingual phase text.
+// Decision is the client upload gate. Publish is true when a sanitized PUT
+// should be attempted. It is not a claim that GitHub has verified the wall.
+// Action is the shared publication result. Labels are fixed phase text.
 type Decision struct {
 	Publish bool
 	Phase   string
 	Label   string
 	Code    string
+	Action  string
+	DueAt   time.Time
 }
 
-// RefreshInput is the pure refresh gate. Remote is nil when the hosted
-// envelope has no accepted snapshot. Totals are integer pointers: nil is
-// unavailable and is never treated as zero. Offline refuses a publish
-// without reading or inventing a total.
+// RefreshInput is the client view of the shared wall gate. Remote is the
+// accepted hosted snapshot. Verified is the GitHub wall. When WallKnown is
+// false, an old envelope has no wall object: the accepted snapshot is the
+// only watermark the client can see, and the hosted process remains the
+// authority once it sends wall. Totals are integer pointers. Nil is
+// unavailable and is never treated as zero.
 type RefreshInput struct {
 	Local           Snapshot
 	Remote          *Snapshot
 	RemoteUpdatedAt time.Time
+	Verified        VerifiedWall
+	Pending         PendingIntent
+	WallKnown       bool
 	Now             time.Time
 	Offline         bool
 }
 
-// DecideRefresh chooses whether a sanitized snapshot may be PUT.
-// The hosted envelope is the watermark. This function does not read a clock
-// except the instants the caller passes in.
+// DecideRefresh chooses whether the client should PUT a sanitized snapshot.
+// GitHub publication is DecidePublication. A growth that is still inside the
+// verified cooldown is uploaded once so the host can publish it later
+// without another PUT. A strictly later owner-local date does not wait.
 func DecideRefresh(in RefreshInput) Decision {
 	if in.Offline {
 		if in.Remote != nil && in.Remote.SnapshotID != "" {
-			return skipped("离线不覆盖已发布快照", "")
+			return skipped("离线不覆盖已发布快照", CodeOffline)
 		}
-		return skipped("离线不发布", "")
+		return skipped("离线不发布", CodeOffline)
 	}
-	localTotal := in.Local.Periods.All.Totals.Total.Value
-	noRemote := in.Remote == nil || in.Remote.SnapshotID == ""
-	if noRemote {
-		if in.Local.DataStatus == StatusUnavailable || localTotal == nil {
-			return skipped("用量不可用", "")
+	verified := in.Verified
+	if !in.WallKnown && in.Remote != nil && in.Remote.SnapshotID != "" {
+		verified = WallFromSnapshot(*in.Remote, in.RemoteUpdatedAt)
+	}
+	pub := DecidePublication(PublicationInput{
+		Candidate: in.Local,
+		Accepted:  in.Remote,
+		Verified:  verified,
+		Pending:   in.Pending,
+		Now:       in.Now,
+		Offline:   false,
+	})
+	return refreshFromPublication(pub, in)
+}
+
+func refreshFromPublication(pub PublicationDecision, in RefreshInput) Decision {
+	switch pub.Action {
+	case ActionPublishNow:
+		if pub.Reason == ReasonDate {
+			return Decision{Publish: true, Phase: PhasePublished, Label: "日期已更新", Code: CodeDateRollover, Action: pub.Action}
 		}
-		// First accepted snapshot, including a small available total.
-		// Partial coverage with a real total is still a first publish;
-		// unavailable and a nil total are not.
-		if in.Local.DataStatus == StatusAvailable || in.Local.DataStatus == StatusPartial {
-			return publishedUsage()
+		d := publishedUsage()
+		d.Action = pub.Action
+		return d
+	case ActionWaitUntil:
+		already := in.Remote != nil && in.Remote.SnapshotID != "" && in.Remote.SnapshotID == in.Local.SnapshotID
+		return Decision{
+			Publish: !already,
+			Phase:   PhaseWaiting,
+			Label:   "间隔未满 1 小时",
+			Code:    CodeWaitingCooldown,
+			Action:  pub.Action,
+			DueAt:   pub.DueAt,
 		}
-		return skipped("用量不可用", "")
+	case ActionRetryPending:
+		return Decision{Publish: false, Phase: PhaseWaiting, Label: "主页更新将重试", Code: CodePendingGitHub, Action: pub.Action}
+	case ActionBlocked:
+		return blockedDecision(pub, in)
+	default:
+		return noChangeDecision(pub, in)
 	}
-	if in.Local.DataStatus == StatusUnavailable || localTotal == nil {
-		if in.Remote != nil {
-			return skipped("用量不可用，保留上次", "")
+}
+
+func blockedDecision(pub PublicationDecision, in RefreshInput) Decision {
+	switch pub.Reason {
+	case ReasonUnavailable:
+		if in.Remote != nil && in.Remote.SnapshotID != "" {
+			return skipped("用量不可用，保留上次", CodeBlockedData)
 		}
-		return skipped("用量不可用", "")
-	}
-	if !ShouldReplaceProjection(*in.Remote, in.Local) {
-		return skipped("覆盖变弱，保留上次", "")
-	}
-	prevTotal := in.Remote.Periods.All.Totals.Total.Value
-	// A nil remote total is not zero, so it cannot prove the new total is
-	// at least as large. A smaller total never publishes, including when
-	// the local calendar date changed or the scan recorded errors.
-	if prevTotal == nil || *localTotal < *prevTotal {
+		return skipped("用量不可用", CodeBlockedData)
+	case ReasonCoverage:
+		return skipped("覆盖变弱，保留上次", CodeBlockedData)
+	case ReasonNegative:
 		return skipped("增量未到 0.01 M", CodeSkippedDelta)
-	}
-	// Only a strictly later local calendar day is a date opportunity.
-	// An earlier day (a timezone move west) and an equal day are not.
-	dateRollover := laterLocalDate(in.Local.AsOfDate, in.Remote.AsOfDate)
-	if !dateRollover && *localTotal-*prevTotal < RefreshMinDelta {
-		return skipped("增量未到 0.01 M", CodeSkippedDelta)
-	}
-	// A missing freshness.updated_at is not "cooldown elapsed".
-	// time.Time.Sub is absolute, so a DST fall-back cannot shorten the hour.
-	if in.RemoteUpdatedAt.IsZero() || in.Now.Sub(in.RemoteUpdatedAt) < RefreshCooldown {
+	case ReasonUnknownVerified:
+		return skipped("已发布用量未知，保留上次", CodeBlockedData)
+	case ReasonCooldown:
 		return skipped("间隔未满 1 小时", CodeSkippedCooldown)
+	default:
+		return skipped("用量不可用，保留上次", CodeBlockedData)
 	}
-	if dateRollover {
-		return Decision{Publish: true, Phase: PhasePublished, Label: "日期已更新", Code: CodeDateRollover}
+}
+
+func noChangeDecision(pub PublicationDecision, in RefreshInput) Decision {
+	switch pub.Reason {
+	case ReasonEarlierDate, ReasonDelta, ReasonSame:
+		return skipped("增量未到 0.01 M", CodeSkippedDelta)
+	default:
+		if in.Remote != nil {
+			return skipped("增量未到 0.01 M", CodeSkippedDelta)
+		}
+		return skipped("用量不可用", "")
 	}
-	return publishedUsage()
 }
 
 // AllowedRefreshCode is the only set persisted in profile-refresh-state.json.
 func AllowedRefreshCode(code string) bool {
 	switch code {
-	case "", CodePublished, CodeDateRollover, CodeSkippedCooldown, CodeSkippedDelta, CodeWillRetry, CodeNotSignedIn, CodeOffline, CodeBusy:
+	case "", CodePublished, CodeDateRollover, CodeSkippedCooldown, CodeSkippedDelta, CodeWillRetry, CodeNotSignedIn, CodeOffline, CodeBusy, CodeWaitingCooldown, CodePendingGitHub, CodeBlockedData, CodeBlockedAuth, CodeVerified:
 		return true
 	default:
 		return false

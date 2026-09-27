@@ -7,20 +7,27 @@ import (
 	"time"
 )
 
-// RemoteView is the hosted live envelope the refresh gate needs:
-// the accepted snapshot, its as_of_date and all-time total, and
-// freshness.updated_at. The scan index is not a watermark.
+// RemoteView is the hosted live envelope the refresh gate needs.
+// Snapshot is the accepted projection. Wall is the verified GitHub
+// publication when the server sends one. The scan index is not a watermark.
 type RemoteView struct {
 	Found     bool
 	Snapshot  Snapshot
 	UpdatedAt time.Time
+	WallKnown bool
+	Wall      VerifiedWall
+	Pending   PendingIntent
 }
 
 // PutResult is one projection upload. KeptPrevious means the server
 // left the last good snapshot in place. Status is the HTTP status.
+// Readme is the server's wall result: materialized, pending, deferred,
+// blocked, or coalesced. An empty value is an old server. HTTP 200 is
+// not by itself a verified GitHub publication.
 type PutResult struct {
 	Status       int
 	KeptPrevious bool
+	Readme       string
 }
 
 // RefreshPublisher uploads one sanitized snapshot. Fetch is the public live
@@ -67,7 +74,14 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 	if err != nil {
 		return ApplyResult{Decision: FailedRefresh(), Transport: true}
 	}
-	in := RefreshInput{Local: local, Now: now, RemoteUpdatedAt: view.UpdatedAt}
+	in := RefreshInput{
+		Local:           local,
+		Now:             now,
+		RemoteUpdatedAt: view.UpdatedAt,
+		WallKnown:       view.WallKnown,
+		Verified:        view.Wall,
+		Pending:         view.Pending,
+	}
 	if view.Found && view.Snapshot.SnapshotID != "" {
 		remote := view.Snapshot
 		in.Remote = &remote
@@ -77,6 +91,13 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		return ApplyResult{Decision: d}
 	}
 	if view.Found && view.Snapshot.SnapshotID != "" && view.Snapshot.SnapshotID == local.SnapshotID {
+		if d.Action == ActionPublishNow && (!in.WallKnown || in.Verified.SnapshotID != local.SnapshotID) {
+			d.Publish = false
+			d.Phase = PhaseWaiting
+			d.Label = "主页更新将重试"
+			d.Code = CodePendingGitHub
+			d.Action = ActionRetryPending
+		}
 		return ApplyResult{Decision: d, Already: true}
 	}
 	if err := Validate(local); err != nil {
@@ -100,9 +121,47 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
 	}
 	if res.KeptPrevious {
-		return ApplyResult{Decision: skipped("覆盖变弱，保留上次", "")}
+		return ApplyResult{Decision: skipped("覆盖变弱，保留上次", CodeBlockedData)}
 	}
-	return ApplyResult{Decision: d}
+	return ApplyResult{Decision: decisionAfterPut(d, res.Readme)}
+}
+
+// decisionAfterPut refuses to call a wall published when the server only
+// accepted the snapshot or asked the client to wait. An empty readme is an
+// old hosted response: the client decision stands, and the new server is
+// still the publication authority.
+func decisionAfterPut(d Decision, readme string) Decision {
+	switch readme {
+	case "materialized":
+		if d.Code == CodeDateRollover {
+			d.Code = CodeVerified
+			return d
+		}
+		out := publishedUsage()
+		out.Action = ActionPublishNow
+		out.Code = CodeVerified
+		return out
+	case "pending":
+		d.Publish = true
+		d.Phase = PhaseWaiting
+		d.Label = "间隔未满 1 小时"
+		d.Code = CodeWaitingCooldown
+		d.Action = ActionWaitUntil
+		return d
+	case "deferred":
+		return Decision{Phase: PhaseWaiting, Label: "主页更新将重试", Code: CodePendingGitHub, Action: ActionRetryPending}
+	case "blocked", "coalesced", "unchanged":
+		if d.Action == ActionPublishNow {
+			return skipped("已发布用量未知，保留上次", CodeBlockedData)
+		}
+		d.Publish = false
+		if d.Phase == PhasePublished {
+			d.Phase = PhaseSkipped
+		}
+		return d
+	default:
+		return d
+	}
 }
 
 func stored(ctx context.Context, pub RefreshPublisher, id string) bool {
@@ -122,6 +181,16 @@ func ParseLiveEnvelope(raw []byte) (RemoteView, error) {
 		} `json:"freshness"`
 		DataRevision string          `json:"data_revision"`
 		Snapshot     json.RawMessage `json:"snapshot"`
+		Wall         *struct {
+			VerifiedSnapshotID string `json:"verified_snapshot_id"`
+			VerifiedAsOfDate   string `json:"verified_as_of_date"`
+			VerifiedAt         string `json:"verified_at"`
+			VerifiedTotal      *int64 `json:"verified_total"`
+			PendingSnapshotID  string `json:"pending_snapshot_id"`
+			PendingDueAt       string `json:"pending_due_at"`
+			PendingFailed      bool   `json:"pending_failed"`
+			Phase              string `json:"phase"`
+		} `json:"wall"`
 	}
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return RemoteView{}, err
@@ -142,6 +211,37 @@ func ParseLiveEnvelope(raw []byte) (RemoteView, error) {
 			return RemoteView{}, err
 		}
 		view.UpdatedAt = t
+	}
+	if env.Wall != nil {
+		view.WallKnown = true
+		published := time.Time{}
+		if env.Wall.VerifiedAt != "" {
+			t, err := time.Parse(time.RFC3339, env.Wall.VerifiedAt)
+			if err != nil {
+				return RemoteView{}, err
+			}
+			published = t
+		}
+		view.Wall = VerifiedWall{
+			Proven:      env.Wall.VerifiedSnapshotID != "",
+			SnapshotID:  env.Wall.VerifiedSnapshotID,
+			Total:       env.Wall.VerifiedTotal,
+			AsOfDate:    env.Wall.VerifiedAsOfDate,
+			PublishedAt: published,
+		}
+		due := time.Time{}
+		if env.Wall.PendingDueAt != "" {
+			t, err := time.Parse(time.RFC3339, env.Wall.PendingDueAt)
+			if err != nil {
+				return RemoteView{}, err
+			}
+			due = t
+		}
+		view.Pending = PendingIntent{
+			SnapshotID: env.Wall.PendingSnapshotID,
+			DueAt:      due,
+			Failed:     env.Wall.PendingFailed || env.Wall.Phase == "failed",
+		}
 	}
 	return view, nil
 }
