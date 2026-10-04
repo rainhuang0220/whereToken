@@ -188,7 +188,7 @@ wheretoken serve    <span class="c"># dashboard at http://127.0.0.1:8787</span><
       <li class="ok"><b>Community Rank</b> runs only when <span style="font-family:var(--mono)">WHERETOKEN_COMMUNITY_URL</span> is set. There is deliberately <b>no public rank server</b> — see
         <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/community.md">docs/community.md</a>.
         The upload is a daily aggregate: participant id, local day, UTC offset, token count, optional cost and cost status, and client version. It does not include prompts, paths, or the SQLite index.</li>
-      <li class="ok"><b>Hosted sync and public profile</b> upload only after you log in, sync, scan, or serve with a paired account, or run <span style="font-family:var(--mono)">wheretoken profile refresh</span>. Install does not enable them. A plain <span style="font-family:var(--mono)">wheretoken</span> report does not upload the public snapshot.</li>
+      <li class="ok"><b>Hosted sync</b> uploads only when a paired account runs login, sync, scan, or serve. <b>Public profile</b> upload is a separate explicit <span style="font-family:var(--mono)">wheretoken profile refresh</span>. Install enables neither. A plain <span style="font-family:var(--mono)">wheretoken</span> report does not upload the public snapshot.</li>
     </ul>
   </section>
 
