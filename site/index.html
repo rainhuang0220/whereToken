@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>whereToken — local-first token accounting for AI coding agents</title>
-<meta name="description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. The default report does not upload; Cursor and Trae may call their own account APIs.">
+<meta name="description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. A plain report does not upload the public snapshot. Cursor and Trae may call their own account APIs.">
 <link rel="canonical" href="https://rainhuang0220.github.io/whereToken/">
 <meta property="og:title" content="whereToken — local-first token accounting for AI coding agents">
-<meta property="og:description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. The default report does not upload; Cursor and Trae may call their own account APIs.">
+<meta property="og:description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. A plain report does not upload the public snapshot. Cursor and Trae may call their own account APIs.">
 <meta property="og:url" content="https://rainhuang0220.github.io/whereToken/">
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="./assets/logo.svg">
@@ -181,14 +181,14 @@ wheretoken serve    <span class="c"># dashboard at http://127.0.0.1:8787</span><
   <section>
     <h2>Privacy model</h2>
     <ul class="privacy">
-      <li><b>The default report stays on this machine.</b> It does not upload events, prompts, sessions, or the SQLite index.</li>
+      <li><b>A plain report does not upload</b> events, prompts, sessions, or the SQLite index.</li>
       <li>Prompts, conversations, auth tokens, cookies, and keychain items are not written into the report. <span style="font-family:var(--mono)">wheretoken sources</span> and <span style="font-family:var(--mono)">wheretoken doctor</span> print local ledger paths.</li>
       <li>The dashboard binds <b>127.0.0.1 only</b>; this public site cannot see your ledger.</li>
       <li class="ok"><b>Cursor and Trae</b> may call those applications' account APIs. <span style="font-family:var(--mono)">wheretoken --offline</span> skips those calls.</li>
       <li class="ok"><b>Community Rank</b> runs only when <span style="font-family:var(--mono)">WHERETOKEN_COMMUNITY_URL</span> is set. There is deliberately <b>no public rank server</b> — see
         <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/community.md">docs/community.md</a>.
         The upload is a daily aggregate: participant id, local day, UTC offset, token count, optional cost and cost status, and client version. It does not include prompts, paths, or the SQLite index.</li>
-      <li class="ok"><b>Hosted sync</b> uploads only when a paired account runs login, sync, scan, or serve. <b>Public profile</b> upload is a separate explicit <span style="font-family:var(--mono)">wheretoken profile refresh</span>. Install enables neither. A plain <span style="font-family:var(--mono)">wheretoken</span> report does not upload the public snapshot.</li>
+      <li class="ok"><b>Hosted sync</b>, for a paired account, uploads aggregated usage and the sanitized public profile on <span style="font-family:var(--mono)">sync</span>, <span style="font-family:var(--mono)">scan</span>, a running <span style="font-family:var(--mono)">serve</span>, and <span style="font-family:var(--mono)">login</span> unless <span style="font-family:var(--mono)">--no-sync</span>. <span style="font-family:var(--mono)">wheretoken profile refresh</span> is a separate explicit PUT of that snapshot. Install enables neither. A plain <span style="font-family:var(--mono)">wheretoken</span> report does not upload the public snapshot.</li>
     </ul>
   </section>
 
