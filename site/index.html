@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>whereToken — local-first token accounting for AI coding agents</title>
-<meta name="description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. Nothing uploads unless you opt in.">
+<meta name="description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. A plain report does not upload the public snapshot. Cursor and Trae may call their own account APIs.">
 <link rel="canonical" href="https://rainhuang0220.github.io/whereToken/">
 <meta property="og:title" content="whereToken — local-first token accounting for AI coding agents">
-<meta property="og:description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. Nothing uploads unless you opt in.">
+<meta property="og:description" content="whereToken reads the ledgers your AI coding agents already keep on your machine and turns them into one honest kiln of tokens, cache hits and public-list cost. Local-first. A plain report does not upload the public snapshot. Cursor and Trae may call their own account APIs.">
 <meta property="og:url" content="https://rainhuang0220.github.io/whereToken/">
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="./assets/logo.svg">
@@ -166,13 +166,13 @@ wheretoken serve    <span class="c"># dashboard at http://127.0.0.1:8787</span><
     <h2>Supported ledgers</h2>
     <div class="chips">
       <span class="chip">Claude Code</span><span class="chip">Kimi Code</span><span class="chip">Codex</span>
-      <span class="chip cloud">Cursor · account API</span><span class="chip">Trae</span><span class="chip">OpenCode</span>
+      <span class="chip cloud">Cursor · account API</span><span class="chip cloud">Trae · account API</span><span class="chip">OpenCode</span>
       <span class="chip">Kilo Code</span><span class="chip">Gemini CLI</span><span class="chip">Qwen Code</span>
       <span class="chip">Grok</span><span class="chip">MiniMax Agent</span><span class="chip">OpenClaw</span>
       <span class="chip">Cline</span><span class="chip">Roo Code</span><span class="chip">ZCode</span>
     </div>
     <p style="color:var(--muted);font-size:.9rem;margin-top:1rem">
-      Local JSONL / SQLite ledgers are read read-only; Cursor usage comes from its account API with your local login.
+      Local JSONL / SQLite ledgers are read read-only. Cursor and Trae can read token columns from those apps' account APIs with the login already on this machine.
       The full capability matrix lives in
       <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/provider-matrix.md">docs/provider-matrix.md</a>.
     </p>
@@ -181,12 +181,14 @@ wheretoken serve    <span class="c"># dashboard at http://127.0.0.1:8787</span><
   <section>
     <h2>Privacy model</h2>
     <ul class="privacy">
-      <li><b>Everything stays on your machine</b> — events, paths, prompts, sessions, the SQLite index.</li>
-      <li>No prompts, conversations, file paths, auth tokens, cookies or keychain items are ever read into output.</li>
+      <li><b>A plain report does not upload</b> events, prompts, sessions, or the SQLite index.</li>
+      <li>Prompts, conversations, auth tokens, cookies, and keychain items are not written into the report. <span style="font-family:var(--mono)">wheretoken sources</span> and <span style="font-family:var(--mono)">wheretoken doctor</span> print local ledger paths.</li>
       <li>The dashboard binds <b>127.0.0.1 only</b>; this public site cannot see your ledger.</li>
-      <li class="ok"><b>Community Rank is opt-in and self-hosted</b>: nothing crosses the network unless you set <span style="font-family:var(--mono)">WHERETOKEN_COMMUNITY_URL</span>, and then only a daily aggregate {UUID, day, tokens, optional cost}.</li>
-      <li class="ok">There is deliberately <b>no public rank server</b> — see
-        <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/community.md">docs/community.md</a>.</li>
+      <li class="ok"><b>Cursor and Trae</b> may call those applications' account APIs. <span style="font-family:var(--mono)">wheretoken --offline</span> skips those calls.</li>
+      <li class="ok"><b>Community Rank</b> runs only when <span style="font-family:var(--mono)">WHERETOKEN_COMMUNITY_URL</span> is set. There is deliberately <b>no public rank server</b> — see
+        <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/community.md">docs/community.md</a>.
+        The upload is a daily aggregate: participant id, local day, UTC offset, token count, optional cost and cost status, and client version. It does not include prompts, paths, or the SQLite index.</li>
+      <li class="ok"><b>Hosted sync</b>, for a paired account, uploads aggregated usage and the sanitized public profile on <span style="font-family:var(--mono)">sync</span>, <span style="font-family:var(--mono)">scan</span>, a running <span style="font-family:var(--mono)">serve</span>, and <span style="font-family:var(--mono)">login</span> unless <span style="font-family:var(--mono)">--no-sync</span>. <span style="font-family:var(--mono)">wheretoken profile refresh</span> is a separate explicit PUT of that snapshot. Install enables neither. A plain <span style="font-family:var(--mono)">wheretoken</span> report does not upload the public snapshot.</li>
     </ul>
   </section>
 
