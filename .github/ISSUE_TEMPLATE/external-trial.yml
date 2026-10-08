@@ -1,0 +1,83 @@
+name: External trial
+description: Report whether whereToken was understandable and useful. A star is not required.
+title: "[trial] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this if you tried whereToken or its browser demo.
+        Do not paste prompts, API keys, session transcripts, cookies, or local file paths.
+        A star is not part of this trial.
+  - type: checkboxes
+    id: agents
+    attributes:
+      label: Coding agents you already use
+      options:
+        - label: Claude Code
+        - label: Codex
+        - label: Cursor
+        - label: Kimi
+        - label: Trae
+        - label: Another agent
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+  - type: dropdown
+    id: understood
+    attributes:
+      label: Before installing, did you understand what whereToken does?
+      options:
+        - "Yes"
+        - Partly
+        - "No"
+    validations:
+      required: true
+  - type: dropdown
+    id: installed
+    attributes:
+      label: Did installation succeed?
+      options:
+        - I only used the browser demo
+        - "Yes, the curl, PowerShell, or Command Prompt installer"
+        - "Yes, Homebrew tap"
+        - "Yes, go install"
+        - "Yes, a release binary"
+        - "No"
+    validations:
+      required: true
+  - type: dropdown
+    id: data
+    attributes:
+      label: What usage did you see?
+      options:
+        - My own usage
+        - Empty, no ledger found
+        - Partial, some agents unavailable
+        - Only the synthetic demo
+        - I did not get that far
+    validations:
+      required: true
+  - type: dropdown
+    id: expected
+    attributes:
+      label: Did that result match what you expected?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: continue
+    attributes:
+      label: Would you keep using it, and what is missing next to the tool you use now?
+      description: No prompts, keys, session logs, or local paths.
+    validations:
+      required: true
