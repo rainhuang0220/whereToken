@@ -14,6 +14,14 @@
 </p>
 
 <p align="center">
+  <a href="https://rainhuang0220.github.io/whereToken/demo/"><b>Try Demo</b></a>
+  ·
+  <a href="#install"><b>Install</b></a>
+  ·
+  <a href="./docs/token-accounting.md"><b>How data is counted</b></a>
+</p>
+
+<p align="center">
   <a href="./README.md"><b>English</b></a> ·
   <a href="./README.zh-CN.md">简体中文</a>
 </p>
@@ -27,11 +35,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/dash-newspaper.jpg" alt="whereToken dashboard" width="900">
+  <img src="docs/media/dash-newspaper.jpg" alt="whereToken dashboard rendered from a synthetic sample ledger" width="900">
 </p>
 
 <p align="center">
-  <sub><b>墨</b> is the monochrome, newspaper-style theme.</sub>
+  <sub>Synthetic sample, not a live account. <b>墨</b> is the monochrome, newspaper-style theme. The no-install demo is the same kind of fabricated ledger.</sub>
 </p>
 
 Modern developers often use several coding agents at once. Each tool stores usage differently, so there is no single place to see where tokens went. whereToken discovers the data those agents already keep, normalizes it, and presents one view in the CLI, a local dashboard, and JSON.
