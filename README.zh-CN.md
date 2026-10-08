@@ -14,6 +14,14 @@
 </p>
 
 <p align="center">
+  <a href="https://rainhuang0220.github.io/whereToken/demo/"><b>看演示</b></a>
+  ·
+  <a href="#安装"><b>安装</b></a>
+  ·
+  <a href="./docs/token-accounting.md"><b>用量怎么算</b></a>
+</p>
+
+<p align="center">
   <a href="./README.md">English</a> ·
   <a href="./README.zh-CN.md"><b>简体中文</b></a>
 </p>
@@ -27,11 +35,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/dash-newspaper.jpg" alt="whereToken 仪表盘" width="900">
+  <img src="docs/media/dash-newspaper.jpg" alt="whereToken 仪表盘，来自合成样例账本" width="900">
 </p>
 
 <p align="center">
-  <sub><b>墨</b> 是黑白报纸风格的主题。</sub>
+  <sub>合成样例，不是真实账号。<b>墨</b> 是黑白报纸风格的主题。免安装演示用的也是这种虚构账本。用量口径的英文定义在 <a href="./docs/token-accounting.md">docs/token-accounting.md</a>。</sub>
 </p>
 
 现在开发者往往会同时使用多个 coding agent。各工具把用量存在不同的地方，很难一眼看到 token 花在哪里。whereToken 发现这些已有数据，归一化之后，用命令行、本机仪表盘和 JSON 给出同一份结果。
