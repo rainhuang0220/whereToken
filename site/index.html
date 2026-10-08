@@ -36,15 +36,15 @@
   .wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.25rem; }
 
   header.nav {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
     padding: 1.1rem 0; border-bottom: 1px solid var(--line);
   }
-  .brand { display: flex; align-items: center; gap: .6rem; font-family: var(--mono); font-weight: 700; }
+  .brand { display: flex; align-items: center; gap: .6rem; font-family: var(--mono); font-weight: 700; flex: 0 0 auto; }
   .brand img { width: 28px; height: 28px; }
   .brand span { color: var(--ink); }
-  nav.links { display: flex; gap: 1.4rem; font-family: var(--mono); font-size: .85rem; }
+  nav.links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem 1.15rem; font-family: var(--mono); font-size: .85rem; }
 
-  .hero { padding: 4.5rem 0 3rem; }
+  .hero { padding: 2.4rem 0 2rem; }
   .hero h1 {
     font-family: var(--mono);
     font-size: clamp(2.4rem, 6vw, 4.2rem);
@@ -54,6 +54,7 @@
   .hero h1 em { color: var(--ember); font-style: normal; }
   .hero p.lede { font-size: 1.15rem; color: var(--muted); max-width: 44rem; margin: 0 0 1.8rem; }
   .hero p.lede b { color: var(--ink); font-weight: 600; }
+  .hero p.note { color: var(--muted); font-size: .9rem; max-width: 44rem; margin: -1.2rem 0 1.4rem; }
   .cta { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 2.2rem; }
   .btn {
     font-family: var(--mono); font-size: .95rem;
@@ -116,10 +117,10 @@
   <header class="nav">
     <div class="brand"><img src="./assets/logo.svg" alt=""><span>whereToken</span></div>
     <nav class="links">
-      <a href="./demo/">Demo</a>
+      <a href="./demo/">Try Demo</a>
+      <a href="https://github.com/rainhuang0220/whereToken#install">Install</a>
+      <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">How data is counted</a>
       <a href="https://github.com/rainhuang0220/whereToken">GitHub</a>
-      <a href="https://github.com/rainhuang0220/whereToken/releases">Releases</a>
-      <a href="https://github.com/rainhuang0220/whereToken#readme">Docs</a>
     </nav>
   </header>
 
@@ -133,14 +134,15 @@
       never as a fake zero.
     </p>
     <div class="cta">
-      <a class="btn primary" href="https://wheretoken.plainlist.space">Open Web App</a>
-      <a class="btn" href="./demo/">Demo</a>
+      <a class="btn primary" href="./demo/">Try Demo</a>
       <a class="btn" href="https://github.com/rainhuang0220/whereToken/releases/latest">Download CLI</a>
+      <a class="btn" href="https://wheretoken.plainlist.space">Open Web App</a>
     </div>
-    <pre class="install"><span class="c"># macOS / Linux</span>
+    <p class="note">Try Demo is a synthetic ledger and needs no account. Open Web App asks for GitHub login and a paired CLI. It is not the no-install demo.</p>
+    <pre class="install"><span class="c"># macOS / Linux — release binary, includes the local dashboard</span>
 brew tap rainhuang0220/wheretoken && brew install wheretoken
 
-<span class="c"># or with Go</span>
+<span class="c"># or with Go — CLI table only; no dashboard bundle</span>
 go install github.com/rainhuang0220/whereToken/cmd/wheretoken@latest
 
 wheretoken          <span class="c"># the kiln table</span>
