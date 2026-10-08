@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Browser demo
+    url: https://rainhuang0220.github.io/whereToken/demo/
+    about: Synthetic ledger. No install and no account.
