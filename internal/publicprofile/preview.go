@@ -218,6 +218,10 @@ func writeWall(b *strings.Builder, s Snapshot, th Theme, x, y float64) {
 	ser := tokenSeries(s)
 	scale := newMagnitudeScale(ser.Values, ser.States)
 	for i := 0; i < len(s.Activity.Dates) && i < WallDays; i++ {
+		// Keep the 53-week data grid intact, but never draw dates after this snapshot.
+		if s.Activity.Dates[i] > s.Activity.To {
+			continue
+		}
 		col := i / 7
 		row := i % 7
 		cx := x + float64(col)*(wallCell+wallGap)
