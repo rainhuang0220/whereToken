@@ -389,7 +389,7 @@ test("shows explicit invalid, empty, and partial states", async ({ page }) => {
   }
   await page.reload();
   await expect(page.locator("#status")).toContainText("No public activity");
-  await expect(page.locator("#wall .cell.unknown")).toHaveCount(371);
+  await expect(page.locator("#wall .cell.unknown")).toHaveCount(snapshot.activity.dates.filter((date) => date <= snapshot.activity.to).length);
 
   snapshot = structuredClone(baseline);
   snapshot.data_status = "partial";
@@ -401,7 +401,7 @@ test("shows explicit invalid, empty, and partial states", async ({ page }) => {
 test("keeps the page fixed at 390px and starts the wall at recent weeks", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(baseURL);
-  await expect(page.locator("#wall .cell")).toHaveCount(371);
+  await expect(page.locator("#wall .cell")).toHaveCount(snapshot.activity.dates.filter((date) => date <= snapshot.activity.to).length);
   await expect.poll(() => page.locator("#heat-scroll").evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
   const dimensions = await page.evaluate(() => ({
     page: document.documentElement.scrollWidth,
@@ -413,6 +413,32 @@ test("keeps the page fixed at 390px and starts the wall at recent weeks", async 
   expect(dimensions.wallWidth).toBeGreaterThan(dimensions.viewport);
   expect(dimensions.wallLeft).toBeGreaterThan(0);
   await expect(page.locator("#wall-hint")).toContainText("scroll");
+});
+
+test("the final wall column ends at the snapshot day without future buttons", async ({ page }) => {
+  for (const [offset, expected] of [[0, 365], [2, 367], [6, 371]]) {
+    snapshot.activity.to = snapshot.activity.dates[364 + offset];
+    snapshot.as_of_date = snapshot.activity.to;
+    // Keep the simulated series consistent with the moved publication date.
+    for (const series of snapshot.activity.series) {
+      for (let i = 0; i < snapshot.activity.dates.length; i++) {
+        if (i <= 364 + offset && series.states[i] === "future") {
+          series.states[i] = "empty";
+        }
+        if (i > 364 + offset) {
+          series.states[i] = "future";
+          series.values[i] = 0;
+          series.levels[i] = 0;
+        }
+      }
+    }
+    await page.goto(baseURL);
+    const cells = page.locator("#wall .cell");
+    await expect(cells).toHaveCount(expected);
+    await expect(cells.last()).toHaveAttribute("data-date", snapshot.activity.to);
+    await expect(page.locator("#wall .cell.future")).toHaveCount(0);
+    await expect(page.locator("#months span")).toHaveCount(53);
+  }
 });
 
 test("keeps mobile month labels and wrapped metadata rules clean", async ({ page }) => {
@@ -518,7 +544,7 @@ test("does not fall back to All when selected token series is missing", async ({
   await expect(page.locator("#wall .cell")).toHaveCount(0);
   await page.getByRole("button", { name: "View request activity" }).click();
   await expect(page).toHaveURL(/metric=requests/);
-  await expect(page.locator("#wall .cell")).toHaveCount(371);
+  await expect(page.locator("#wall .cell")).toHaveCount(snapshot.activity.dates.filter((date) => date <= snapshot.activity.to).length);
   await expect(page.locator("#tip")).toBeHidden();
   const active = page.locator("#wall .cell.active").first();
   if (await active.count()) {

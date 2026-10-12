@@ -532,6 +532,8 @@
     });
 
     dates.forEach((date, i) => {
+      // The schema includes the rest of this week; those days are not rendered.
+      if (date > snap.activity.to) return;
       const st = (ser.states[i]) || "empty";
       const val = ser.values[i] || 0;
       const lv = ser.levels[i] || 0;

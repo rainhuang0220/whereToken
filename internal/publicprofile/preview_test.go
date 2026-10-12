@@ -134,6 +134,49 @@ func TestPreviewIsTransparentDenseAndUncropped(t *testing.T) {
 	}
 }
 
+func TestPreviewStopsAtSnapshotDate(t *testing.T) {
+	loc := shanghai()
+	cases := []struct {
+		name  string
+		day   int
+		cells int
+		lastY string
+	}{
+		{name: "monday", day: 12, cells: 365, lastY: "88.0"},
+		{name: "wednesday", day: 14, cells: 367, lastY: "117.0"},
+		{name: "sunday", day: 18, cells: 371, lastY: "175.0"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			now := time.Date(2026, 10, tc.day, 12, 0, 0, 0, loc)
+			snap, err := Build(Input{
+				Events: []event.UsageEvent{ev("claude", "anthropic", now.Add(-time.Hour), 1000, 0, 10)},
+				Now:    now, Loc: loc, Version: "test",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := len(snap.Activity.Dates); got != WallDays {
+				t.Fatalf("data contract dates=%d want=%d", got, WallDays)
+			}
+			var out bytes.Buffer
+			if err := RenderPreview(&out, snap, ThemeLightCobalt); err != nil {
+				t.Fatal(err)
+			}
+			svg := out.String()
+			if got := strings.Count(svg, `class="day"`); got != tc.cells {
+				t.Fatalf("rendered days=%d want=%d", got, tc.cells)
+			}
+			if !strings.Contains(svg, `class="day" x="782.0" y="`+tc.lastY+`"`) {
+				t.Fatalf("last day missing or placed incorrectly: %s", tc.name)
+			}
+			if tc.cells < WallDays && strings.Contains(svg, `class="day" x="782.0" y="175.0"`) {
+				t.Fatal("preview drew a future Sunday")
+			}
+		})
+	}
+}
+
 func TestPreviewMonthTicksDoNotOverlap(t *testing.T) {
 	snap := previewFixture(t)
 	ticks := monthTicks(snap.Activity.Dates)
