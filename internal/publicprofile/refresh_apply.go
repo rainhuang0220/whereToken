@@ -28,6 +28,10 @@ type PutResult struct {
 	Status       int
 	KeptPrevious bool
 	Readme       string
+	// Reason is set when the server kept the previous projection.
+	// "regression" is a lower total. "coverage" is a weaker ledger.
+	// An empty reason is an older server and stays a coverage block.
+	Reason string
 }
 
 // RefreshPublisher uploads one sanitized snapshot. Fetch is the public live
@@ -121,6 +125,9 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
 	}
 	if res.KeptPrevious {
+		if res.Reason == "regression" {
+			return ApplyResult{Decision: skipped("用量回退，保留上次", CodeBlockedRegression)}
+		}
 		return ApplyResult{Decision: skipped("覆盖变弱，保留上次", CodeBlockedData)}
 	}
 	return ApplyResult{Decision: decisionAfterPut(d, res.Readme)}

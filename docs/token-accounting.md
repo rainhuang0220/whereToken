@@ -93,7 +93,7 @@ guarantee for every row.
 | OpenClaw | `message.usage.output` | Output | raw | authoritative | `usage.cost` is ignored. |
 | OpenClaw | `data.usage.input` (trajectory) | Miss | raw | authoritative | Only when that session has no transcript. Prompts are discarded. |
 | OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. Trajectory uses `runId`. |
-| Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
+| Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). A rollout this machine already parsed, which Codex later deletes, stays in the normalized scan cache so a published total is not forgotten. |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
 | Codex | Δ `cache_write_input_tokens` | Cache Create | derived | authoritative | CLI 0.145+; often 0 on older logs. |
 | Codex | Δ `output_tokens` + Δ `reasoning_output_tokens` | Output | derived | authoritative | Reasoning is folded into Output. |
@@ -169,7 +169,10 @@ If source files only append, a later successful scan must not drop tokens.
 A `/reset` that renames `session.jsonl` to `session.jsonl.reset.<ts>` is
 still visible data. Truncation, deletion of the archive, a rolling cloud
 window (Cursor ~53 weeks), or Trae `empty_result` can lower the number
-and must be explainable.
+and must be explainable. One exception: a Codex rollout jsonl this machine
+already parsed, which Codex later deletes, stays in the normalized scan
+cache so the published total is not forgotten. `wheretoken rebuild` drops
+that cache, and the total can then fall. The refresh report says so.
 
 ## Local scan index
 
@@ -177,7 +180,8 @@ The SQLite file under `~/.cache/wheretoken/` is a performance cache. File
 identity is path + size + mtime + inode, not a content hash. `wheretoken rebuild`
 deletes it. Incremental JSONL stores the last **consumed** byte offset, which
 stays behind EOF while the last line is still being written. A parse error
-on the new tail keeps the cached events for that file.
+on the new tail keeps the cached events for that file. Codex also replays a
+cached rollout after the jsonl is gone; rebuild forgets those rows.
 
 ## Cost
 

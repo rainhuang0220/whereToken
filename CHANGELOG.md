@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Codex rollout this machine already parsed stays in the scan after Codex deletes the jsonl, so a published total is not forgotten. `wheretoken rebuild` still drops that cache. A lower total is `BLOCKED_REGRESSION` and does not publish on a new date. Same-day publication follows the visible two-decimal total, then one hour since the verified wall. `profile refresh watch` wakes hourly and at local midnight. A failed GitHub publish retries about hourly and is not cancelled by the same-day gate. `profile refresh doctor` and `repair` check the launchd job; `status` exits non-zero when that job is dead or the last result is blocked. An hourly health agent reloads a missing job and does not scan.
+
 ## 0.7.7 — 2026-09-26 (Alpha)
 
 - Unified verified GitHub wall publication state and automatic refresh scheduling. The watermark is the last README and SVG pair that was read back and matched. A hosted PUT accepts a snapshot and does not by itself publish. Usage growth still publishes at 10,000 raw tokens and one hour since that verified publication. A strictly later owner-local calendar date publishes without waiting out that usage cooldown, including when the total did not grow. `profile refresh watch` still checks about every 15 minutes and also wakes at the next owner-local midnight. A failed theme publish of the same usage snapshot is retried with the requested palette. Automatic publication stays opt-in. This stays 0.7.7. The watermark change is a publication-behavior change on the existing 0.7.x line: an accepted hosted snapshot is not a verified wall. The release checklist ships 0.7.x patches until a minor bump is requested.

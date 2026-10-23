@@ -91,12 +91,17 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		var prevSnap publicprofile.Snapshot
 		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
 		if parsed && (!publicprofile.ShouldReplaceProjection(prevSnap, snap) || tokenRegressed(prevSnap, snap)) {
+			reason := "coverage"
+			if publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+				reason = "regression"
+			}
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok":          true,
 				"snapshot_id": prevSnap.SnapshotID,
 				"kept":        "previous",
 				"readme":      "kept",
+				"reason":      reason,
 			})
 			return
 		}
@@ -144,7 +149,7 @@ func (s *server) considerPublication(ctx context.Context, user User, snap public
 		return "coalesced"
 	case publicprofile.ActionBlocked:
 		if decision.Reason != publicprofile.ReasonUnknownVerified {
-			_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "blocked_data", decision.Reason, publicprofile.CodeBlockedData, sql.NullTime{}, 0)
+			_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "blocked_data", decision.Reason, decision.Code, sql.NullTime{}, 0)
 		}
 		return "blocked"
 	case publicprofile.ActionWaitUntil:
@@ -220,18 +225,15 @@ func (s *server) notePublishFailure(ctx context.Context, userID int64, snapshotI
 	_ = s.opts.Store.SetPublicationIntent(ctx, userID, snapshotID, status, kind, code, due, retry)
 }
 
+// publishBackoff is the gap before another GitHub attempt of a snapshot the
+// server already accepted. The first miss retries immediately. Later misses
+// wait an hour, with no attempt cap that drops the intent. Rate-limit waits
+// are decided separately from Retry-After or X-RateLimit-Reset.
 func publishBackoff(retry int) time.Duration {
 	if retry <= 1 {
 		return 0
 	}
-	wait := 30 * time.Second
-	for i := 1; i < retry && wait < 15*time.Minute; i++ {
-		wait *= 2
-	}
-	if wait > 15*time.Minute {
-		return 15 * time.Minute
-	}
-	return wait
+	return time.Hour
 }
 
 func (s *server) usagePalette(ctx context.Context, userID int64) string {

@@ -55,6 +55,15 @@ func satAdd(a, b int64) int64 {
 	return a + b
 }
 
+// DisplayChanged reports whether the two-decimal compact figure changed.
+// Same-day publication uses this visible tick. A fixed raw delta is not the gate.
+func DisplayChanged(before, after int64) bool {
+	if before < 0 || after < 0 {
+		return false
+	}
+	return FormatCompact(before) != FormatCompact(after)
+}
+
 // FormatCompact renders n as a K/M/B/T figure. Negatives become "—".
 func FormatCompact(n int64) string {
 	if n < 0 {

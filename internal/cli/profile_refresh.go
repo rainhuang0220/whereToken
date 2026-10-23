@@ -19,8 +19,10 @@ import (
 )
 
 // profileRefreshInterval is the foreground watch period. Launchd does not
-// use StartInterval; this timer stays inside watch. Tests shorten it.
-var profileRefreshInterval = 15 * time.Minute
+// use StartInterval on the watch job; this timer stays inside watch.
+// A failed attempt is retried on the next wake. Midnight still wakes sooner.
+// Tests shorten it.
+var profileRefreshInterval = time.Hour
 
 // profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
 // has no timeout; refresh does not use it.
@@ -43,6 +45,10 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 		return a.profileRefreshSet(home, false)
 	case "watch":
 		return a.profileRefreshWatch(flags, home)
+	case "doctor":
+		return a.profileRefreshDoctor(home)
+	case "repair":
+		return a.profileRefreshRepair(home)
 	case "":
 		return a.executeProfileRefresh(context.Background(), flags, home, nil)
 	default:
@@ -52,6 +58,14 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 }
 
 func (a *App) profileRefreshStatus(home adapter.Home) int {
+	return a.writeRefreshHealth(home, false)
+}
+
+func (a *App) profileRefreshDoctor(home adapter.Home) int {
+	return a.writeRefreshHealth(home, true)
+}
+
+func (a *App) writeRefreshHealth(home adapter.Home, doctor bool) int {
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
@@ -63,9 +77,39 @@ func (a *App) profileRefreshStatus(home adapter.Home) int {
 	} else {
 		fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
 	}
-	fmt.Fprintf(a.Stdout, "scheduler=%s\n", a.schedulerStatus(enabled))
-	fmt.Fprintf(a.Stdout, "last=%s\n", a.lastRefreshCode(home))
-	return ExitOK
+	scheduler := a.schedulerStatus(enabled)
+	code := a.lastRefreshCode(home)
+	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
+	fmt.Fprintf(a.Stdout, "last=%s\n", code)
+	program, _ := a.refreshProgramPath()
+	plist := a.refreshPlistState(enabled, program)
+	if doctor {
+		fmt.Fprintf(a.Stdout, "plist=%s\n", plist)
+	}
+	healthy := !refreshUnhealthy(enabled, scheduler, code, plist, doctor)
+	if healthy {
+		fmt.Fprintln(a.Stdout, "healthy=yes")
+		return ExitOK
+	}
+	fmt.Fprintln(a.Stdout, "healthy=no")
+	return ExitFail
+}
+
+func refreshUnhealthy(enabled bool, scheduler, code, plist string, doctor bool) bool {
+	if !enabled {
+		return false
+	}
+	if scheduler == "dead" {
+		return true
+	}
+	switch code {
+	case publicprofile.CodeBlockedData, publicprofile.CodeBlockedRegression, publicprofile.CodeBlockedAuth, publicprofile.CodeNotSignedIn, publicprofile.CodeWillRetry:
+		return true
+	}
+	if doctor && (plist == "missing" || plist == "stale") {
+		return true
+	}
+	return false
 }
 
 func (a *App) lastRefreshCode(home adapter.Home) string {
@@ -241,6 +285,21 @@ func (a *App) writeRefresh(w io.Writer, d publicprofile.Decision, withCode bool)
 	if withCode && d.Code != "" {
 		fmt.Fprintln(w, d.Code)
 	}
+	if refreshDetailSafe(d.Detail) {
+		fmt.Fprintf(w, "detail=%s\n", d.Detail)
+	}
+}
+
+func refreshDetailSafe(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r != ',' && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func (a *App) profileRefreshCreds(home adapter.Home) (token, login string, err error) {

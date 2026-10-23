@@ -80,12 +80,17 @@ type PublicationDecision struct {
 	DueAt  time.Time
 	Reason string
 	Code   string
+	// Detail names catalog agent ids when coverage blocks the candidate.
+	Detail string
 }
 
 // DecidePublication chooses whether the candidate may update the GitHub
-// activity wall. Daily rollover wins over the usage cooldown. Usage growth
-// is a raw integer delta from the verified total. Theme publication is
-// explicit and immediate. Missing totals stay missing.
+// activity wall. A lower total is blocked before a date rollover, so a new
+// local day cannot publish a regression. Daily rollover of an equal or
+// higher total wins over the usage cooldown. Same-day growth is a visible
+// FormatCompact change, then one hour since the verified publication.
+// A failed pending intent is retried without that same-day gate. Theme
+// publication is explicit and immediate. Missing totals stay missing.
 func DecidePublication(in PublicationInput) PublicationDecision {
 	if in.Offline {
 		return PublicationDecision{Action: ActionBlocked, Reason: ReasonOffline, Code: CodeOffline}
@@ -96,11 +101,11 @@ func DecidePublication(in PublicationInput) PublicationDecision {
 	}
 	if in.Accepted != nil && in.Accepted.SnapshotID != "" && in.Accepted.SnapshotID != in.Candidate.SnapshotID {
 		if !ShouldReplaceProjection(*in.Accepted, in.Candidate) {
-			return PublicationDecision{Action: ActionBlocked, Reason: ReasonCoverage, Code: CodeBlockedData}
+			return PublicationDecision{Action: ActionBlocked, Reason: ReasonCoverage, Code: CodeBlockedData, Detail: lostProviderIDs(*in.Accepted, in.Candidate)}
 		}
 	}
 	if in.Verified.Proven && in.Verified.Total != nil && *total < *in.Verified.Total {
-		return PublicationDecision{Action: ActionBlocked, Reason: ReasonNegative, Code: CodeSkippedDelta}
+		return PublicationDecision{Action: ActionBlocked, Reason: ReasonNegative, Code: CodeBlockedRegression}
 	}
 	if in.Verified.Proven && validLocalDate(in.Verified.AsOfDate) && validLocalDate(in.Candidate.AsOfDate) && earlierLocalDate(in.Candidate.AsOfDate, in.Verified.AsOfDate) {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonEarlierDate, Code: CodeSkippedDelta}
@@ -129,8 +134,7 @@ func DecidePublication(in PublicationInput) PublicationDecision {
 	if in.Verified.Total == nil {
 		return PublicationDecision{Action: ActionBlocked, Reason: ReasonUnknownVerified, Code: CodeBlockedData}
 	}
-	delta := *total - *in.Verified.Total
-	if delta < RefreshMinDelta {
+	if !DisplayChanged(*in.Verified.Total, *total) {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonDelta, Code: CodeSkippedDelta}
 	}
 	if in.Verified.PublishedAt.IsZero() {

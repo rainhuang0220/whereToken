@@ -15,6 +15,16 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
+func twoAgentLaunch(calls *[]string) bool {
+	if calls == nil || len(*calls) != 4 {
+		return false
+	}
+	return strings.HasPrefix((*calls)[0], "launchctl bootout ") &&
+		strings.HasPrefix((*calls)[1], "launchctl bootstrap ") &&
+		strings.HasPrefix((*calls)[2], "launchctl bootout ") &&
+		strings.HasPrefix((*calls)[3], "launchctl bootstrap ")
+}
+
 func useLaunchd(t *testing.T, app *App, home string) (string, *[]string) {
 	t.Helper()
 	if home == "" {
@@ -94,6 +104,14 @@ func writePlist(t *testing.T, body []byte) string {
 	return path
 }
 
+func TestUserHomeRefusesTheRealHomeFromATest(t *testing.T) {
+	app := &App{}
+	home, err := app.userHome()
+	if err == nil || home != "" {
+		t.Fatalf("home %q err %v", home, err)
+	}
+}
+
 func TestChooseRefreshProgramSkipsCellarInode(t *testing.T) {
 	home := t.TempDir()
 	link := filepath.Join(home, ".local", "bin", "wheretoken")
@@ -108,7 +126,8 @@ func TestChooseRefreshProgramSkipsCellarInode(t *testing.T) {
 	if err != nil || got != link {
 		t.Fatalf("got %q %v", got, err)
 	}
-	if _, err := chooseRefreshProgram(cellar, []string{"/opt/homebrew/bin/wheretoken"}); err == nil || strings.Contains(err.Error(), "Cellar") {
+	missing := filepath.Join(t.TempDir(), "no-such-wheretoken")
+	if _, err := chooseRefreshProgram(cellar, []string{missing}); err == nil || strings.Contains(err.Error(), "Cellar") {
 		t.Fatalf("err %v", err)
 	}
 	plain := "/usr/local/bin/wheretoken"
@@ -147,7 +166,7 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 	if !strings.Contains(out.String(), "public profile refresh on (sanitized snapshot only — prompts and paths stay local)") {
 		t.Fatalf("on text %s", out.String())
 	}
-	if len(*calls) != 2 || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+	if !twoAgentLaunch(calls) {
 		t.Fatalf("first on calls %v", *calls)
 	}
 	on, err := publicprofile.LoadRefreshSwitch(switchPath)
@@ -164,7 +183,7 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("second on %d %s", code, errb.String())
 	}
-	if len(*calls) != 2 || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+	if !twoAgentLaunch(calls) {
 		t.Fatalf("calls %v", *calls)
 	}
 	boot := strings.TrimPrefix((*calls)[1], "launchctl bootstrap ")
@@ -184,7 +203,7 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 		t.Fatalf("plist %s", body)
 	}
 	matches, err := filepath.Glob(filepath.Join(home, "Library", "LaunchAgents", "*.plist"))
-	if err != nil || len(matches) != 1 {
+	if err != nil || len(matches) != 2 {
 		t.Fatalf("plists %v %v", matches, err)
 	}
 
@@ -210,6 +229,10 @@ func TestProfileRefreshOnBootstrapsOnceAndOffStops(t *testing.T) {
 	if _, err := os.Stat(plist); !os.IsNotExist(err) {
 		t.Fatal("off left the plist")
 	}
+	health := filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
+	if _, err := os.Stat(health); !os.IsNotExist(err) {
+		t.Fatal("off left the health plist")
+	}
 }
 
 func TestProfileRefreshOnWritesSwitchBeforeLaunchctl(t *testing.T) {
@@ -232,7 +255,7 @@ func TestProfileRefreshOnWritesSwitchBeforeLaunchctl(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("on %d %s", code, errb.String())
 	}
-	if len(*calls) != 2 || (*calls)[0] == "" || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+	if !twoAgentLaunch(calls) {
 		t.Fatalf("calls %v", *calls)
 	}
 	if strings.Contains(errb.String(), home) {
@@ -287,10 +310,10 @@ func TestProfileRefreshOnKeepsSwitchWhenBootstrapFails(t *testing.T) {
 		t.Fatalf("status ran %s %v", name, args)
 		return "", nil
 	}
-	if code := app.Run(); code != ExitOK {
+	if code := app.Run(); code != ExitFail {
 		t.Fatalf("status %d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "scheduler=dead\n") || !strings.HasPrefix(out.String(), "phase=idle 等待下一次\n") {
+	if !strings.Contains(out.String(), "scheduler=dead\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.HasPrefix(out.String(), "phase=idle 等待下一次\n") {
 		t.Fatalf("status %q", out.String())
 	}
 
@@ -300,7 +323,7 @@ func TestProfileRefreshOnKeepsSwitchWhenBootstrapFails(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("later on %d %s", code, errb.String())
 	}
-	if len(*calls) != 2 || !strings.HasPrefix((*calls)[0], "launchctl bootout ") || !strings.HasPrefix((*calls)[1], "launchctl bootstrap ") {
+	if !twoAgentLaunch(calls) {
 		t.Fatalf("later on calls %v", *calls)
 	}
 	if !strings.Contains(out.String(), "public profile refresh on (sanitized snapshot only — prompts and paths stay local)") {
@@ -389,10 +412,10 @@ func TestProfileRefreshStatusDeadWhenPrintHasNoPID(t *testing.T) {
 		t.Fatalf("status ran %s %v", name, args)
 		return "", nil
 	}
-	if code := app.Run(); code != ExitOK {
+	if code := app.Run(); code != ExitFail {
 		t.Fatalf("status %d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "scheduler=dead\n") {
+	if !strings.Contains(out.String(), "scheduler=dead\n") || !strings.Contains(out.String(), "healthy=no\n") {
 		t.Fatalf("%q", out.String())
 	}
 	app, out, errb = testApp([]string{"profile", "refresh", "status"})
@@ -499,7 +522,7 @@ func TestUpdateRebootstrapsProfileRefreshWhenEnabled(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("update %d %s", code, errb.String())
 	}
-	if len(calls) != 2 || !strings.HasPrefix(calls[0], "launchctl bootout ") || !strings.HasPrefix(calls[1], "launchctl bootstrap ") {
+	if !twoAgentLaunch(&calls) {
 		t.Fatalf("calls %v", calls)
 	}
 	if strings.Contains(strings.Join(calls, "\n"), "Cellar") {
@@ -522,5 +545,188 @@ func TestInstallScriptsDoNotEnableProfileRefresh(t *testing.T) {
 		if strings.Contains(text, "profile refresh") || strings.Contains(text, "launchctl") {
 			t.Fatalf("%s enables public refresh", rel)
 		}
+	}
+}
+
+func TestProfileRefreshHealthPlistIsPeriodicAndNotKeptAlive(t *testing.T) {
+	body, err := profileRefreshHealthPlist("/Users/ada/.local/bin/wheretoken", "/Users/ada/Library/Logs/wheretoken/profile-refresh-health.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, want := range []string{
+		"<string>" + profileRefreshHealthLabel + "</string>",
+		"<string>repair</string>",
+		"<key>StartInterval</key>",
+		"<integer>3600</integer>",
+		"<key>RunAtLoad</key>",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q\n%s", want, text)
+		}
+	}
+	for _, bad := range []string{"KeepAlive", "SuccessfulExit", "EnvironmentVariables", "watch", "--home", "wtd_", "Bearer"} {
+		if strings.Contains(text, bad) {
+			t.Fatalf("health plist contains %q\n%s", bad, text)
+		}
+	}
+}
+
+func TestProfileRefreshRepairLeavesHealthyWatch(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "repair"})
+	app.Home = cfg
+	home, calls := useLaunchd(t, app, "")
+	program := filepath.Join(home, "wheretoken")
+	body, err := profileRefreshPlist(program, home, filepath.Join(home, "profile-refresh.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("repair %d %s", code, errb.String())
+	}
+	for _, c := range *calls {
+		fields := strings.Fields(c)
+		if len(fields) >= 3 && fields[1] == "bootout" && strings.HasSuffix(fields[len(fields)-1], profileRefreshLabel+".plist") {
+			t.Fatalf("bootout a healthy watch: %v", *calls)
+		}
+	}
+	if !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "healthy=yes\n") {
+		t.Fatalf("repair %q", out.String())
+	}
+	health := filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
+	if _, err := os.Stat(health); err != nil {
+		t.Fatal("repair did not install the health agent")
+	}
+}
+
+func TestProfileRefreshRepairBootstrapsUnloadedJob(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "repair"})
+	app.Home = cfg
+	home, _ := useLaunchd(t, app, "")
+	bootstrapped := false
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		if name != "launchctl" || len(args) == 0 {
+			t.Fatalf("unexpected %s %v", name, args)
+		}
+		switch args[0] {
+		case "bootstrap":
+			bootstrapped = true
+			return "", nil
+		case "bootout":
+			return "", errors.New("not loaded")
+		case "print":
+			if !bootstrapped {
+				return "", errors.New("not loaded")
+			}
+			return "pid = 9\nstate = running\n", nil
+		default:
+			t.Fatalf("launchctl %v", args)
+		}
+		return "", nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("repair %d %s %s", code, out.String(), errb.String())
+	}
+	if !bootstrapped || !strings.Contains(out.String(), "scheduler=running\n") {
+		t.Fatalf("bootstrapped=%v %q", bootstrapped, out.String())
+	}
+	if _, err := os.Stat(filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProfileRefreshDoctorFailsWhenPlistMissing(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "doctor"})
+	app.Home = cfg
+	useLaunchd(t, app, "")
+	if code := app.Run(); code != ExitFail {
+		t.Fatalf("doctor %d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "plist=missing\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.Contains(out.String(), "scheduler=running\n") {
+		t.Fatalf("doctor %q", out.String())
+	}
+}
+
+func TestProfileRefreshStatusFailsOnBlockedRegression(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(cfg), publicprofile.RefreshState{
+		Phase: publicprofile.PhaseSkipped,
+		Code:  publicprofile.CodeBlockedRegression,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "status"})
+	app.Home = cfg
+	useLaunchd(t, app, "")
+	if code := app.Run(); code != ExitFail {
+		t.Fatalf("status %d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "last=BLOCKED_REGRESSION\n") || !strings.Contains(out.String(), "healthy=no\n") {
+		t.Fatalf("status %q", out.String())
+	}
+}
+
+func TestProfileRefreshWatchReexecsWhenSamePathIsReplaced(t *testing.T) {
+	dir := t.TempDir()
+	self := filepath.Join(dir, "wheretoken")
+	if err := os.WriteFile(self, []byte("v1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	body, err := profileRefreshPlist(self, home, filepath.Join(home, "profile-refresh.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var argv []string
+	app := &App{
+		GOOS: "darwin",
+		Args: []string{"profile", "refresh", "watch", "--quiet"},
+		UserHome: func() (string, error) {
+			return home, nil
+		},
+		Executable: func() (string, error) { return self, nil },
+		Reexec: func(got []string) {
+			argv = append([]string(nil), got...)
+		},
+	}
+	app.maybeReexecProfileWatch()
+	if argv != nil {
+		t.Fatalf("first look reexeced %v", argv)
+	}
+	if err := os.WriteFile(self, []byte("v2-longer"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app.maybeReexecProfileWatch()
+	if len(argv) != 5 || argv[0] != self || argv[4] != "--quiet" {
+		t.Fatalf("argv %v", argv)
 	}
 }

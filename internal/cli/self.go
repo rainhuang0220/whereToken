@@ -38,7 +38,10 @@ func (a *App) runUpdate(quiet bool) int {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
 		}
-		a.rebootstrapProfileRefresh()
+		if err := a.rebootstrapProfileRefresh(); err != nil {
+			fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+			return ExitFail
+		}
 		return ExitOK
 	}
 	asset := releaseAssetName(a.GOOS, a.GOARCH)
@@ -70,7 +73,10 @@ func (a *App) runUpdate(quiet bool) int {
 		return ExitFail
 	}
 	fmt.Fprintln(a.Stderr, "wheretoken: updated "+exe)
-	a.rebootstrapProfileRefresh()
+	if err := a.rebootstrapProfileRefresh(); err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
 	return ExitOK
 }
 
