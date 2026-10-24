@@ -59,8 +59,10 @@ func TestGetSummaryReturnsLastScanUntilPost(t *testing.T) {
 	}
 
 	refired := postScanJSON(t, srv)
-	if refired.All.Total != 0 {
-		t.Fatalf("POST must rescan, total=%d", refired.All.Total)
+	// The source directory is gone. POST scans again. Confirmed facts stay
+	// in the durable ledger, so the total does not fall to zero.
+	if refired.All.Total != 1185 || refired.ScannedAt == "" {
+		t.Fatalf("POST dropped confirmed usage: total=%d scanned_at=%q", refired.All.Total, refired.ScannedAt)
 	}
 }
 

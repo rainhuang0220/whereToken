@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
+	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
@@ -85,6 +87,10 @@ func (a *App) writeRefreshHealth(home adapter.Home, doctor bool) int {
 	plist := a.refreshPlistState(enabled, program)
 	if doctor {
 		fmt.Fprintf(a.Stdout, "plist=%s\n", plist)
+		facts, tokens, gaps := ledgerFigures(home)
+		fmt.Fprintf(a.Stdout, "ledger_facts=%s\n", facts)
+		fmt.Fprintf(a.Stdout, "ledger_tokens=%s\n", tokens)
+		fmt.Fprintf(a.Stdout, "ledger_import_gaps=%s\n", gaps)
 	}
 	healthy := !refreshUnhealthy(enabled, scheduler, code, plist, doctor)
 	if healthy {
@@ -110,6 +116,29 @@ func refreshUnhealthy(enabled bool, scheduler, code, plist string, doctor bool) 
 		return true
 	}
 	return false
+}
+
+func ledgerFigures(home adapter.Home) (facts, tokens, gaps string) {
+	unavailable := func() (string, string, string) {
+		return "unavailable", "unavailable", "unavailable"
+	}
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return unavailable()
+	}
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return unavailable()
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		return unavailable()
+	}
+	defer lg.Close()
+	st, err := lg.Status()
+	if err != nil {
+		return unavailable()
+	}
+	return strconv.Itoa(st.Facts), strconv.FormatInt(st.Tokens, 10), strconv.Itoa(st.ImportGaps)
 }
 
 func (a *App) lastRefreshCode(home adapter.Home) string {

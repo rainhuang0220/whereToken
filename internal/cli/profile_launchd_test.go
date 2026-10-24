@@ -661,7 +661,7 @@ func TestProfileRefreshDoctorFailsWhenPlistMissing(t *testing.T) {
 	if code := app.Run(); code != ExitFail {
 		t.Fatalf("doctor %d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "plist=missing\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.Contains(out.String(), "scheduler=running\n") {
+	if !strings.Contains(out.String(), "plist=missing\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "ledger_facts=0\n") || !strings.Contains(out.String(), "ledger_tokens=0\n") || !strings.Contains(out.String(), "ledger_import_gaps=0\n") {
 		t.Fatalf("doctor %q", out.String())
 	}
 }

@@ -27,6 +27,31 @@ Reasoning is **not** a sixth addend. If an adapter already included reasoning
 inside `Output` (Codex, OpenCode, Kilo CLI, ZCode), adding `Reasoning` again
 would double-count.
 
+## Durable ledger
+
+Confirmed per-request facts are stored in `ledger.v1.db`, outside the scan
+cache. On macOS that file is under Application Support. On Windows it is under
+`%APPDATA%`. Elsewhere it is under `$XDG_DATA_HOME`. `wheretoken rebuild`
+deletes the scan index only.
+
+A deleted source log does not delete a fact. A repeated scan inserts a new
+identity or raises a component the new observation already covers. It does
+not lower a stored count. A lower figure is a versioned correction: a newer
+parser version, a reason, and the replacement event. Applying that same
+correction again does not write a second revision.
+
+Account API rows (`provider_api`) are not facts. When a scan emits that API
+for a source, stored local facts for the source are not added on top.
+Overlapping API responses are recorded as observations and are not summed
+into the ledger.
+
+The ledger stores counts, time, model, vendor, quality, derivation, and the
+stable identity. It does not store prompts, transcripts, paths, or credentials.
+A path-scoped request id is reduced to the source session id plus the suffix
+after the filename, so the same Codex session under `archived_sessions` is
+the same fact. Two different request ids with the same token counts stay two
+facts. Events with no source-stable id are not given one.
+
 Cache hit rate (when defined):
 
 ```text

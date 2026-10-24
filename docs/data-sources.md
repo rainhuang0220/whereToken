@@ -14,8 +14,16 @@ Home (os.UserHomeDir / XDG / Application Support / %APPDATA%)
         ↓
    Adapter.Parse   →  UsageEvent + TurnEvent
         ↓
+   durable ledger (confirmed facts; not provider_api rows)
+        ↓
    metric.Aggregate (merge by Source+RequestID, max per field)
 ```
+
+The scan index (`index.v1.db`) is a cache of offsets and parsed blobs.
+`wheretoken rebuild` deletes that cache. Confirmed facts live in the ledger
+described in [`token-accounting.md`](token-accounting.md). Importing the cache
+into the ledger takes a SQLite `VACUUM INTO` snapshot first. A blob that
+cannot be decoded is counted as a gap and is not replaced with a zero.
 
 Rules that apply to every adapter:
 

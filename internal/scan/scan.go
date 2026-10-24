@@ -2,8 +2,10 @@ package scan
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/index"
 	"github.com/rainhuang0220/whereToken/internal/insight"
+	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/profile"
 	"github.com/rainhuang0220/whereToken/internal/report"
@@ -160,13 +163,20 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 
 func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(Progress)) Result {
 	index.ResetDeltas()
+	var st *index.Store
 	if os.Getenv("WHERETOKEN_NO_INDEX") != "1" {
-		if st, err := index.Open(index.PathFor(home)); err == nil {
+		if opened, err := index.Open(index.PathFor(home)); err == nil {
+			st = opened
 			defer st.Close()
 			defer index.Use(st)()
 		}
 	}
+	lg := attachLedger(home, st)
+	if lg != nil {
+		defer lg.Close()
+	}
 	var events []event.UsageEvent
+	var complete []event.UsageEvent
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
 	var errs []string
@@ -206,14 +216,18 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 				}
 				seenPath[root.Path] = struct{}{}
 				roots = append(roots, root)
+				var rootEvents []event.UsageEvent
 				err := a.Parse(root, func(e event.UsageEvent) {
 					events = append(events, e)
+					rootEvents = append(rootEvents, e)
 				}, func(te event.TurnEvent) {
 					turns = append(turns, te)
 				})
 				if err != nil {
 					hadErr = true
 					errs = append(errs, a.ID()+": "+err.Error())
+				} else {
+					complete = append(complete, rootEvents...)
 				}
 			}
 		}
@@ -234,6 +248,20 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	if errs == nil {
 		errs = []string{}
 	}
+	if lg != nil {
+		// Commit after the adapters return so a parser that does not use the
+		// scan index still persists. Commit is idempotent with the per-file
+		// commit inside index.put. Unseen then adds facts whose source file
+		// was not in this scan. Provider API authority suppresses that source.
+		_ = lg.CommitUsage(events)
+		_ = lg.NoteAPI(events)
+		// complete is the successful rereads only. A parse error must not
+		// omit facts that this scan did not see.
+		_ = lg.NoteComplete(complete)
+		if extra, err := lg.Unseen(events); err == nil && len(extra) > 0 {
+			events = append(events, extra...)
+		}
+	}
 	sum := metric.Aggregate(events, turns)
 	fillMissingSources(&sum, roots, errs, events)
 	return Result{
@@ -246,6 +274,45 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		Deltas:    index.Deltas(),
 		home:      home,
 	}
+}
+
+func attachLedger(home adapter.Home, st *index.Store) *ledger.Ledger {
+	if home == nil || os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return nil
+	}
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return nil
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		return nil
+	}
+	if st != nil && !lg.Imported() {
+		// A failed import leaves the ledger unmarked. The next scan retries.
+		// The scan cache is not deleted.
+		_ = importIndexIntoLedger(st, lg)
+	}
+	if st != nil {
+		st.SetFacts(lg)
+	}
+	return lg
+}
+
+func importIndexIntoLedger(st *index.Store, lg *ledger.Ledger) error {
+	dir := filepath.Join(filepath.Dir(lg.Path()), "backups")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	dest := filepath.Join(dir, fmt.Sprintf("index-pre-import-%d.db", time.Now().UnixNano()))
+	if err := st.BackupTo(dest); err != nil {
+		return err
+	}
+	evs, gaps, err := st.ExportUsage()
+	if err != nil {
+		return err
+	}
+	return lg.Import(evs, gaps)
 }
 
 func fillMissingSources(sum *metric.Summary, roots []adapter.SourceRoot, errs []string, events []event.UsageEvent) {
