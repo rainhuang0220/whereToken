@@ -1,12 +1,14 @@
 {
   "as_of_date": "2026-09-09",
-  "asset_revision": "sha256:b0d44a75cc4d91aaacaa99149740b8dc31707c09cd63fc08aead4c7f912a78b5",
+  "asset_revision": "sha256:a88a31b7abcc58aa7ebd27bba835c9060985c407efbba1671d44188940374488",
   "generated": [
     "profile.json",
     "preview-light.svg",
     "preview-dark.svg",
     "index.html",
     "assets/profile.css",
+    "assets/lang.js",
+    "assets/messages.js",
     "assets/profile.js",
     "assets/paper.js",
     "assets/newsprint-surface.jpg",

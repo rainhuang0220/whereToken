@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The public profile page defaults to English. `?lang=en` or `?lang=zh-CN` selects the page language, and an explicit switch is remembered in the browser. The GitHub README SVG stays English. A color choice on that page is a browser preview. Opening the local dashboard is a separate confirmation and does not publish.
 - A Codex rollout this machine already parsed stays in the scan after Codex deletes the jsonl, so a published total is not forgotten. `wheretoken rebuild` still drops that cache. A lower total is `BLOCKED_REGRESSION` and does not publish on a new date. Same-day publication follows the visible two-decimal total, then one hour since the verified wall. `profile refresh watch` wakes hourly and at local midnight. A failed GitHub publish retries about hourly and is not cancelled by the same-day gate. `profile refresh doctor` and `repair` check the launchd job; `status` exits non-zero when that job is dead or the last result is blocked. An hourly health agent reloads a missing job and does not scan.
 
 ## 0.7.7 — 2026-09-26 (Alpha)

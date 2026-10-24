@@ -1,6 +1,14 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const LOCAL_DASHBOARD = "http://127.0.0.1:8787/";
+  function t(key, vars) {
+    if (window.WT_I18N && typeof window.WT_I18N.t === "function") return window.WT_I18N.t(key, vars);
+    return key;
+  }
+  function localeTag() {
+    return document.documentElement.lang === "zh-CN" ? "zh-CN" : "en";
+  }
   const params = new URLSearchParams(location.search);
   const ABSOLUTE_TOKEN_CAP = 1_000_000_000;
   const HEAT_MID_POSITION = 0.25;
@@ -109,31 +117,38 @@
     }
   }
 
-  function ownerHref(id) {
-    return "http://127.0.0.1:8787/themes?public_palette=" + encodeURIComponent(id) + "&intent=publish#public-profile";
-  }
-
-  function syncOwnerLink() {
-    const link = $("owner-set-link");
-    if (!link) return;
-    link.href = ownerHref(state.palette || "newsprint");
-  }
-
-  function bindOwnerLink() {
-    const link = $("owner-set-link");
-    const note = $("owner-set-note");
-    if (!link || link.dataset.bound === "1") return;
-    link.dataset.bound = "1";
-    if (!window.matchMedia("(pointer: coarse)").matches) return;
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      const href = link.href;
-      const done = "已复制。请在运行 wheretoken serve 的电脑上打开。手机上的 127.0.0.1 不是那台电脑。";
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(href).then(() => { note.textContent = done; }, () => { note.textContent = href; });
-      } else {
-        note.textContent = href;
+  function bindLocalDashboard() {
+    const open = $("local-dash");
+    const dialog = $("local-dialog");
+    const go = $("local-open");
+    const cancel = $("local-cancel");
+    if (!open || !dialog || open.dataset.bound === "1") return;
+    open.dataset.bound = "1";
+    open.addEventListener("click", () => {
+      dialog.hidden = false;
+      const phone = $("local-phone");
+      if (phone) phone.hidden = true;
+      if (go) go.setAttribute("data-local-href", LOCAL_DASHBOARD);
+      if (go) go.focus();
+    });
+    if (cancel) cancel.addEventListener("click", () => {
+      dialog.hidden = true;
+      open.focus();
+    });
+    if (go) go.addEventListener("click", () => {
+      const href = go.getAttribute("data-local-href") || LOCAL_DASHBOARD;
+      if (window.matchMedia("(pointer: coarse)").matches) {
+        const phone = $("local-phone");
+        if (phone) {
+          phone.hidden = false;
+          phone.textContent = t("local.phone");
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(href).catch(() => {});
+        }
+        return;
       }
+      location.assign(href);
     });
   }
 
@@ -141,7 +156,6 @@
     if (!WALL_PALETTES[id]) return;
     state.palette = id;
     document.documentElement.setAttribute("data-activity-palette", id);
-    syncOwnerLink();
     if (!persist) return;
     state.explicit = true;
     try { localStorage.setItem("wt-visitor-palette", id); } catch (_) {}
@@ -281,14 +295,17 @@
   }
 
   function writeURL() {
+    const prev = new URLSearchParams(location.search);
     const q = new URLSearchParams();
+    const lang = prev.get("lang");
+    if (lang === "en" || lang === "zh-CN") q.set("lang", lang);
     if (state.range !== "all") q.set("range", state.range);
     if (state.tab !== "agents") q.set("tab", state.tab);
     if (state.filter) q.set("filter", state.filter);
     if (state.metric !== "tokens") q.set("metric", state.metric);
     if (state.palette && state.palette !== state.published) q.set("palette", state.palette);
     const s = q.toString();
-    history.replaceState(null, "", s ? "?" + s : location.pathname);
+    history.replaceState(null, "", (s ? "?" + s : location.pathname) + (location.hash || ""));
   }
 
   function seriesFor(snap) {
@@ -329,18 +346,20 @@
 
   function formatDay(iso) {
     if (!iso) return "";
-    const d = new Date(iso + "T00:00:00");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+    const d = new Date(iso + "T00:00:00Z");
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return new Intl.DateTimeFormat(localeTag(), { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(d);
   }
 
   function monthName(iso) {
-    const d = new Date(iso + "T00:00:00");
-    return d.toLocaleDateString("en-US", { month: "short" });
+    const d = new Date(iso + "T00:00:00Z");
+    if (Number.isNaN(d.getTime())) return "";
+    return new Intl.DateTimeFormat(localeTag(), { month: "short", timeZone: "UTC" }).format(d);
   }
 
   function unitLabel() {
-    return state.metric === "requests" ? "requests" : "tokens";
+    return state.metric === "requests" ? t("unit.requests") : t("unit.tokens");
   }
 
   function selectedRow(snap) {
@@ -363,15 +382,8 @@
     const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
     const when = state.hostedUpdatedAt || snap.generated_at || snap.as_of_date || "";
     const pretty = relativeAge(when);
-    if (demo) {
-      $("freshness").textContent = "DEMO DATA · " + (pretty ? "updated " + pretty : "");
-    } else if (state.freshnessSource === "hosted") {
-      $("freshness").textContent = "updated " + pretty + " · hosted";
-    } else if (state.freshnessSource === "offline") {
-      $("freshness").textContent = "updated " + pretty + " · hosted unavailable · committed snapshot";
-    } else {
-      $("freshness").textContent = "updated " + pretty + " · committed snapshot";
-    }
+    const freshKey = demo ? "freshness.demo" : state.freshnessSource === "hosted" ? "freshness.hosted" : state.freshnessSource === "offline" ? "freshness.offline" : "freshness.snapshot";
+    $("freshness").textContent = pretty ? t(freshKey, { when: pretty }) : (demo ? t("freshness.demoBare") : "");
     updateOwnerChrome();
     const owner = snap.owner || {};
     const identityNode = $("identity");
@@ -382,19 +394,19 @@
 
     const total = state.metric === "requests" ? p.requests : p.totals.total;
     $("hero-value").textContent = total.display || "—";
-    $("hero-label").textContent = state.metric === "requests" ? "requests" : "tokens";
+    $("hero-label").textContent = state.metric === "requests" ? t("hero.requests") : t("hero.tokens");
     const heroCoverage = $("hero-coverage");
     const coverageIssue = hasMixedCoverage(snap) || snap.data_status !== "available";
     heroCoverage.hidden = !coverageIssue;
     const coverageText = heroCoverage.querySelector("span");
     if (coverageText) {
-      coverageText.textContent = snap.data_status === "unavailable" ? "Token coverage unavailable." :
-        snap.data_status === "partial" ? "Partial coverage." : "Coverage varies by source.";
+      coverageText.textContent = snap.data_status === "unavailable" ? t("coverage.issueUnavailable") :
+        snap.data_status === "partial" ? t("coverage.issuePartial") : t("coverage.issueVaries");
     }
     const items = [
-      [p.requests.display || "—", "requests"],
-      [p.active_days.display || "—", "active days"],
-      [p.current_streak.display || "—", "day current streak"],
+      [p.requests.display || "—", t("meta.requests")],
+      [p.active_days.display || "—", t("meta.activeDays")],
+      [p.current_streak.display || "—", t("meta.streak")],
     ];
     $("hero-meta").replaceChildren();
     items.forEach(([value, note]) => {
@@ -407,13 +419,13 @@
 
     $("status").hidden = snap.data_status !== "unavailable";
     if (snap.data_status === "unavailable") {
-      $("status").textContent = "No public activity in this snapshot.";
+      $("status").textContent = t("status.empty");
     }
 
-    const rangeLabels = { today: "Today", "7d": "7d", "30d": "30d", "53w": "53w", all: "All" };
+    const rangeLabels = { today: t("range.today"), "7d": t("range.7d"), "30d": t("range.30d"), "53w": t("range.53w"), all: t("range.all") };
     renderSeg($("metrics"), [
-      { id: "tokens", label: "Tokens" },
-      { id: "requests", label: "Requests" },
+      { id: "tokens", label: t("hero.tokens") },
+      { id: "requests", label: t("hero.requests") },
     ], state.metric, (id) => { state.metric = id; writeURL(); render(); });
     renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
       state.range = id; writeURL(); render();
@@ -423,11 +435,11 @@
       writeURL();
       render();
     });
-    $("range-readout").textContent = (p.active_days.display || "—") + " active days";
+    $("range-readout").textContent = t("range.readout", { n: p.active_days.display || "—" });
 
     const ser = seriesFor(snap);
     const row = selectedRow(snap);
-    $("series-heading").textContent = row ? row.label : "All agents";
+    $("series-heading").textContent = row ? row.label : t("series.all");
     const paletteNow = wallPalette();
     const rampNow = activeRamp(paletteNow);
     if (!paletteNow.texture) {
@@ -481,15 +493,15 @@
       empty.hidden = false;
       empty.replaceChildren();
       const title = document.createElement("p");
-      const kind = state.metric === "requests" ? "Request" : "Token";
-      title.textContent = kind + " activity unavailable" + (row ? " for " + row.label : "");
+      const emptyKey = state.metric === "requests" ? (row ? "empty.requestFor" : "empty.request") : (row ? "empty.tokenFor" : "empty.token");
+      title.textContent = t(emptyKey, row ? { label: row.label } : undefined);
       empty.append(title);
       if (state.metric === "tokens") {
         const alt = (snap.activity.series || []).find((s) => s.dimension === (state.filter ? (state.tab === "providers" ? "vendor" : "agent") : "all") && s.id === (state.filter || "all") && metricOf(s) === "requests");
         if (alt) {
           const b = document.createElement("button");
           b.type = "button";
-          b.textContent = "View request activity";
+          b.textContent = t("empty.viewRequests");
           b.addEventListener("click", () => { state.metric = "requests"; writeURL(); render(); });
           empty.append(b);
         }
@@ -501,9 +513,9 @@
     const weekdays = document.createElement("span");
     weekdays.style.height = "18px";
     $("weekdays").append(weekdays);
-    ["Mon", "", "Wed", "", "Fri", "", ""].forEach((label) => {
+    ["weekday.mon", "", "weekday.wed", "", "weekday.fri", "", ""].forEach((key) => {
       const s = document.createElement("span");
-      s.textContent = label;
+      s.textContent = key ? t(key) : "";
       $("weekdays").append(s);
     });
 
@@ -570,24 +582,31 @@
     }
 
     const legend = $("legend");
+    legend.setAttribute("aria-label", t("legend.aria"));
     const less = document.createElement("span");
-    less.textContent = "Less";
-    legend.append(less);
+    less.className = "legend-label";
+    less.id = "legend-less";
+    less.textContent = t("legend.less");
+    const ramp = document.createElement("span");
+    ramp.className = "legend-ramp";
+    ramp.setAttribute("aria-hidden", "true");
     const legendRamp = palette.texture ? palette.light : activeRamp(palette);
     const legendSteps = [null, 0, HEAT_MID_POSITION, HEAT_HIGH_POSITION, 1];
     legendSteps.forEach((intensity) => {
       const i = document.createElement("i");
-      i.className = "cell" + (palette.texture ? " newsprint" : "");
+      i.className = palette.texture ? "newsprint" : "";
       if (intensity == null) {
         if (!palette.texture) i.style.background = legendRamp.empty;
       } else {
         i.style.background = heatColor(legendRamp, intensity);
       }
-      legend.append(i);
+      ramp.append(i);
     });
     const more = document.createElement("span");
-    more.textContent = "More";
-    legend.append(more);
+    more.className = "legend-label";
+    more.id = "legend-more";
+    more.textContent = t("legend.more");
+    legend.append(less, ramp, more);
   }
 
   function updateMonthLabelVisibility() {
@@ -613,7 +632,7 @@
     if (end < 0) end = dates.length;
     const windowDays = { today: 1, "7d": 7, "30d": 30, "53w": 371, all: 371 }[state.range] || 30;
     const start = Math.max(0, end - windowDays);
-    const trendLabels = { today: "Today", "7d": "Last 7 days", "30d": "Last 30 days", "53w": "Last 53 weeks", all: "Available 53-week activity" };
+    const trendLabels = { today: t("trend.today"), "7d": t("trend.7d"), "30d": t("trend.30d"), "53w": t("trend.53w"), all: t("trend.all") };
     $("trend-label").textContent = trendLabels[state.range];
     host.setAttribute("aria-label", trendLabels[state.range]);
     const pts = [];
@@ -669,8 +688,8 @@
   }
 
   function renderBreakdown(snap, p) {
-    const tabs = [{ id: "agents", label: "Agents" }, { id: "providers", label: "Providers" }];
-    if ((p.by_model || []).length) tabs.push({ id: "models", label: "Models" });
+    const tabs = [{ id: "agents", label: t("tab.agents") }, { id: "providers", label: t("tab.providers") }];
+    if ((p.by_model || []).length) tabs.push({ id: "models", label: t("tab.models") });
     if (state.tab === "models" && tabs.length < 3) state.tab = "agents";
     renderSeg($("tabs"), tabs, state.tab, (id) => { state.tab = id; state.filter = ""; writeURL(); render(); });
     const rows = state.tab === "providers" ? p.by_vendor : state.tab === "models" ? (p.by_model || []) : p.by_agent;
@@ -709,15 +728,15 @@
       meta.className = "rank-meta";
       const req = compact(row.requests && row.requests.value);
       if (cov.tokens === "unavailable") {
-        meta.textContent = req + " requests";
+        meta.textContent = t("rank.requests", { n: req });
       } else {
-        meta.textContent = (row.share || "—") + " · " + req + " requests";
+        meta.textContent = t("rank.share", { share: row.share || "—", n: req });
       }
       body.append(top, bar, meta);
       if (cov.tokens === "unavailable") {
         const note = document.createElement("span");
         note.className = "rank-note";
-        note.textContent = "Token usage unavailable";
+        note.textContent = t("rank.unavailable");
         body.append(note);
       } else if (cov.token_source === "account_api" && cov.token_window) {
         const note = document.createElement("span");
@@ -741,7 +760,7 @@
     const table = document.createElement("table");
     table.className = "coverage-table";
     const head = document.createElement("tr");
-    ["Source", "Tokens", "Requests", "Notes"].forEach((label) => {
+    [t("coverage.col.source"), t("coverage.col.tokens"), t("coverage.col.requests"), t("coverage.col.notes")].forEach((label) => {
       const th = document.createElement("th");
       th.textContent = label;
       head.append(th);
@@ -750,16 +769,19 @@
     (snap.periods.all.by_agent || []).forEach((row) => {
       const cov = coverageOf(row);
       const tr = document.createElement("tr");
+      const tokenState = cov.tokens === "available" ? "available" : cov.tokens === "partial" ? "partial" : "missing";
+      const requestState = cov.requests === "available" ? "available" : "missing";
       const cells = [
         row.label,
-        cov.tokens === "available" ? "Available" : cov.tokens === "partial" ? "Partial" : "Unavailable",
-        cov.requests === "available" ? "Available" : "Unavailable",
+        t("coverage." + tokenState),
+        t("coverage." + requestState),
         coverageNote(cov),
       ];
+      const states = ["", tokenState, requestState, ""];
       cells.forEach((text, i) => {
         const td = document.createElement("td");
         td.textContent = text;
-        if (i === 1 || i === 2) td.className = text === "Unavailable" ? "miss" : "ok";
+        if (i === 1 || i === 2) td.className = states[i] === "missing" ? "miss" : "ok";
         tr.append(td);
       });
       table.append(tr);
@@ -769,23 +791,23 @@
 
   function coverageNote(cov) {
     switch (cov.reason) {
-      case "account_api_skipped": return "Account usage skipped";
-      case "auth_missing": return "Sign-in missing";
-      case "api_failed": return "Account usage failed";
-      case "local_tokens_missing": return "Token ledger missing";
+      case "account_api_skipped": return t("coverage.accountSkipped");
+      case "auth_missing": return t("coverage.authMissing");
+      case "api_failed": return t("coverage.apiFailed");
+      case "local_tokens_missing": return t("coverage.ledgerMissing");
       default:
         if (cov.token_source === "account_api" && cov.token_window) {
-          const from = cov.token_window.from ? formatDay(cov.token_window.from) : "Start unavailable";
+          const from = cov.token_window.from ? formatDay(cov.token_window.from) : t("coverage.startUnavailable");
           return from + " – " + formatDay(cov.token_window.to);
         }
-        if (cov.token_source === "account_api") return "Account usage";
+        if (cov.token_source === "account_api") return t("coverage.account");
         return "";
     }
   }
 
   function tipValue(val, st) {
-    if (st === "future") return "Future";
-    if (st === "unknown") return "Unknown";
+    if (st === "future") return t("tip.future");
+    if (st === "unknown") return t("tip.unknown");
     return compact(val) + " " + unitLabel();
   }
 
@@ -860,9 +882,17 @@
   document.querySelectorAll("[data-theme-set]").forEach((b) => {
     b.addEventListener("click", () => applyTheme(b.getAttribute("data-theme-set")));
   });
-  bindOwnerLink();
+  bindLocalDashboard();
   bindApply();
-  syncOwnerLink();
+  document.querySelectorAll("[data-lang-set]").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (window.WT_I18N) window.WT_I18N.setLang(b.getAttribute("data-lang-set"), true);
+    });
+  });
+  window.__WT_RERENDER = function () {
+    if (window.WT_I18N) window.WT_I18N.applyStatic();
+    if (state.snap) render();
+  };
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("scroll", dismissTip, { passive: true, capture: true });
@@ -885,16 +915,16 @@
 
   function relativeAge(iso) {
     if (!iso) return "";
-    const t = Date.parse(iso);
-    if (Number.isNaN(t)) return "";
-    const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
-    if (mins < 1) return "just now";
-    if (mins < 60) return mins + " min ago";
-    const hours = Math.round(mins / 60);
-    if (hours < 36) return hours + " hr ago";
-    const days = Math.round(hours / 24);
-    if (days < 14) return days + " day ago";
-    return formatDay(String(iso).slice(0, 10));
+    const at = Date.parse(iso);
+    if (Number.isNaN(at)) return "";
+    const deltaSec = Math.round((at - Date.now()) / 1000);
+    const abs = Math.abs(deltaSec);
+    if (abs >= 14 * 86400) return formatDay(String(iso).slice(0, 10));
+    const rtf = new Intl.RelativeTimeFormat(localeTag(), { numeric: "auto" });
+    if (abs < 45) return rtf.format(deltaSec, "second");
+    if (abs < 3600) return rtf.format(Math.round(deltaSec / 60), "minute");
+    if (abs < 36 * 3600) return rtf.format(Math.round(deltaSec / 3600), "hour");
+    return rtf.format(Math.round(deltaSec / 86400), "day");
   }
 
   function liveOrigin() {
@@ -971,22 +1001,22 @@
     const label = (WALL_PALETTES[state.published] || WALL_PALETTES.newsprint).label;
     if (profileDemo() || !liveOrigin() || !owner) {
       button.hidden = true;
-      mode.textContent = "仅预览";
+      mode.textContent = t("publish.previewOnly");
       return;
     }
     if (session && session.login !== owner) {
       button.hidden = true;
-      mode.textContent = "仅预览";
+      mode.textContent = t("publish.previewOnly");
       return;
     }
     button.hidden = false;
     if (session && session.login === owner) {
-      button.textContent = "发布到 GitHub 主页";
-      mode.textContent = state.palette === state.published ? "已发布 · " + label : "预览中";
+      button.textContent = t("publish.publish");
+      mode.textContent = state.palette === state.published ? t("publish.modePublished", { label: label }) : t("publish.modePreview");
       return;
     }
-    button.textContent = "登录并发布到 GitHub 主页";
-    mode.textContent = "预览中";
+    button.textContent = t("publish.signIn");
+    mode.textContent = t("publish.modePreview");
   }
 
   function openPublish() {
@@ -994,10 +1024,12 @@
     if (!dialog) return;
     const to = (WALL_PALETTES[state.palette] || WALL_PALETTES.newsprint).label;
     const owner = liveOwner(state.snap);
-    $("publish-title").textContent = "发布到 GitHub 主页";
-    $("publish-summary").textContent = owner ? "将 " + to + " 应用到 github.com/" + owner : "将 " + to + " 应用到 GitHub 主页";
+    $("publish-title").textContent = t("publish.title");
+    $("publish-summary").textContent = owner ? t("publish.summary", { palette: to, owner: owner }) : t("publish.summaryGeneric", { palette: to });
     $("publish-target").textContent = owner ? "https://github.com/" + owner : "";
-    $("publish-progress").textContent = "确认后才会写入 GitHub。";
+    $("publish-progress").textContent = t("publish.pending");
+    $("publish-confirm").textContent = t("publish.confirm");
+    $("publish-cancel").textContent = t("publish.cancel");
     $("publish-confirm").hidden = false;
     $("publish-confirm").disabled = false;
     $("publish-retry").hidden = true;
@@ -1014,20 +1046,25 @@
     const progress = $("publish-progress");
     const phase = job && job.phase;
     if (phase === "published" || phase === "already_published") {
-      progress.textContent = "已发布 ✓";
+      progress.textContent = t("publish.done");
       state.published = state.palette;
       $("publish-confirm").hidden = true;
       $("publish-retry").hidden = true;
       updateOwnerChrome();
       return;
     }
+    if (phase === "failed") {
+      progress.textContent = t("publish.failed");
+      $("publish-confirm").disabled = false;
+      return;
+    }
     if (phase === "partial_failure" || phase === "conflict") {
-      progress.textContent = (job.phase_label || "发布未完成") + (job.retry_readme ? "。可以只重试 README。" : "");
+      progress.textContent = t("publish.incomplete") + (job.retry_readme ? " " + t("publish.retryHint") : "");
       $("publish-confirm").hidden = true;
       $("publish-retry").hidden = !job.retry_readme;
       return;
     }
-    progress.textContent = (job && job.phase_label) || "正在发布";
+    progress.textContent = t("publish.working");
   }
 
   function authHeaders() {
@@ -1056,7 +1093,7 @@
     const session = readSession();
     const owner = liveOwner(state.snap);
     if (!session || session.login !== owner) return;
-    $("publish-progress").textContent = "正在发布…";
+    $("publish-progress").textContent = t("publish.working");
     $("publish-confirm").disabled = true;
     fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/publish", {
       method: "POST",
@@ -1069,7 +1106,7 @@
       }
       return job;
     }).catch(() => {
-      $("publish-progress").textContent = "发布失败";
+      $("publish-progress").textContent = t("publish.failed");
       $("publish-confirm").disabled = false;
     });
   }
@@ -1077,13 +1114,13 @@
   function retryPublish() {
     const owner = liveOwner(state.snap);
     if (!state.jobID || !readSession()) return;
-    $("publish-progress").textContent = "正在重试 README";
+    $("publish-progress").textContent = t("publish.retrying");
     fetch(liveOrigin() + LIVE_PROFILE + encodeURIComponent(owner) + "/jobs/" + encodeURIComponent(state.jobID) + "/retry", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({ confirm: true }),
     }).then((r) => r.json()).then((job) => showJob(job)).catch(() => {
-      $("publish-progress").textContent = "发布失败";
+      $("publish-progress").textContent = t("publish.failed");
     });
   }
 
@@ -1169,6 +1206,6 @@
     })
     .catch((err) => {
       $("status").hidden = false;
-      $("status").textContent = "Could not load public snapshot: " + err.message;
+      $("status").textContent = t("status.loadFailed", { message: err.message });
     });
 })();

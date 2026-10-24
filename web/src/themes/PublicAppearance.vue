@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { persistLang, resolveLang, t, type Lang } from '../i18n'
 import { isHosted } from '../mode'
 import {
   PALETTE_LABEL,
@@ -27,6 +28,8 @@ import {
 
 const hosted = isHosted()
 const route = useRoute()
+const router = useRouter()
+const lang = ref<Lang>('en')
 const view = ref<PublicationView>(emptyPublication())
 const selected = ref<PublicPaletteId>('newsprint')
 const frame = ref<'desktop' | 'mobile'>('desktop')
@@ -47,12 +50,29 @@ const paper = computed(() =>
 )
 const shipped = computed(() => bundlePalette(view.value))
 const pending = computed(() => publicationPending(selected.value, view.value))
-const copy = computed(() => (loadError.value ? loadError.value : statusCopy(view.value)))
-const phaseLabel = computed(() => job.value?.phase_label || preflight.value?.phase_label || '')
+const copy = computed(() => (loadError.value ? loadError.value : statusCopy(view.value, lang.value)))
+const phaseLabel = computed(() => {
+  const phase = job.value?.phase || preflight.value?.phase || ''
+  const fallback = job.value?.phase_label || preflight.value?.phase_label || ''
+  if (!phase) return ''
+  const text = t(lang.value, 'phase.' + phase)
+  return text === 'phase.' + phase ? fallback : text
+})
 const running = computed(() => publishRunning(job.value?.phase))
 const desktopLink = computed(() => handoffURL(selected.value))
 
+function tr(key: string, vars?: Record<string, string>) {
+  return t(lang.value, key, vars)
+}
+
+function chooseLang(next: Lang) {
+  lang.value = next
+  persistLang(next)
+  void router.replace({ query: { ...route.query, lang: next }, hash: route.hash })
+}
+
 onMounted(() => {
+  lang.value = resolveLang(window.location.search)
   void boot()
 })
 
@@ -100,7 +120,7 @@ async function refresh() {
     await nextTick()
     scrollWall()
   } catch {
-    loadError.value = '读不到本机公开 Profile 配置。'
+    loadError.value = tr('appearance.readFailed')
     view.value = { ...view.value, status: 'failed', error: loadError.value }
   }
 }
@@ -112,9 +132,9 @@ async function apply() {
   view.value = { ...view.value, status: 'loading' }
   try {
     view.value = await applyPublication(selected.value)
-    if (view.value.status === 'failed') loadError.value = view.value.error || '写入失败。'
+    if (view.value.status === 'failed') loadError.value = view.value.error || tr('appearance.writeFailed')
   } catch {
-    loadError.value = '写入失败。'
+    loadError.value = tr('appearance.writeFailed')
     view.value = { ...view.value, status: 'failed', error: loadError.value }
   } finally {
     busy.value = false
@@ -128,7 +148,7 @@ async function openPreflight() {
   try {
     preflight.value = await loadPreflight(selected.value)
   } catch {
-    publishError.value = '预检失败。确认本机 wheretoken 正在运行。'
+    publishError.value = tr('appearance.preflightFailed')
   }
 }
 
@@ -140,7 +160,7 @@ async function confirmPublish() {
     job.value = await postPublish(current, 'approve')
     startPoll()
   } catch {
-    publishError.value = '发布请求被拒绝。'
+    publishError.value = tr('appearance.publishRefused')
   }
 }
 
@@ -152,7 +172,7 @@ async function retryReadme() {
     job.value = await postPublish(current, 'retry_readme')
     startPoll()
   } catch {
-    publishError.value = '重试被拒绝。请重新预检。'
+    publishError.value = tr('appearance.retryRefused')
   }
 }
 
@@ -176,7 +196,7 @@ function startPoll() {
 
 function preview() {
   if (!view.value.preview_path) {
-    loadError.value = '还没有本地公开包。上面是外观预览。'
+    loadError.value = tr('appearance.noBundle')
     return
   }
   const url = new URL(view.value.preview_path, window.location.origin)
@@ -211,18 +231,22 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
   <section class="public-face" aria-labelledby="public-face-h">
     <header class="public-face-head">
       <div>
-        <h2 id="public-face-h">公开 Profile 外观</h2>
-        <p>选 Cobalt、Magenta 或 Newsprint。仅保存本机不会上线。发布到 GitHub 主页需要再确认一次。</p>
+        <h2 id="public-face-h">{{ tr('appearance.h') }}</h2>
+        <p>{{ tr('appearance.lead') }}</p>
+      </div>
+      <div class="public-stage-tools" role="group" :aria-label="tr('lang.group')">
+        <button type="button" :aria-pressed="lang === 'en'" @click="chooseLang('en')">EN</button>
+        <button type="button" :aria-pressed="lang === 'zh-CN'" @click="chooseLang('zh-CN')">中文</button>
       </div>
       <p class="public-face-state" role="status">
-        <span>公开包 {{ shipped ? PALETTE_LABEL[shipped] : '未生成' }}</span>
-        <span>编辑 {{ PALETTE_LABEL[selected] }}</span>
+        <span>{{ tr('appearance.bundle', { name: shipped ? PALETTE_LABEL[shipped] : tr('appearance.bundleMissing') }) }}</span>
+        <span>{{ tr('appearance.editing', { name: PALETTE_LABEL[selected] }) }}</span>
         <span v-if="phaseLabel">{{ phaseLabel }}</span>
-        <span v-else-if="pending">未保存</span>
+        <span v-else-if="pending">{{ tr('appearance.unsaved') }}</span>
       </p>
     </header>
 
-    <div class="public-choices" role="radiogroup" aria-label="公开 Profile 外观">
+    <div class="public-choices" role="radiogroup" :aria-label="tr('appearance.group')">
       <button
         v-for="(id, index) in PUBLIC_PALETTES"
         :key="id"
@@ -241,9 +265,9 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
       </button>
     </div>
 
-    <div class="public-stage-tools" role="group" aria-label="预览尺寸">
-      <button type="button" :aria-pressed="frame === 'desktop'" @click="frame = 'desktop'">桌面</button>
-      <button type="button" :aria-pressed="frame === 'mobile'" @click="frame = 'mobile'">手机</button>
+    <div class="public-stage-tools" role="group" :aria-label="tr('appearance.frame')">
+      <button type="button" :aria-pressed="frame === 'desktop'" @click="frame = 'desktop'">{{ tr('appearance.desktop') }}</button>
+      <button type="button" :aria-pressed="frame === 'mobile'" @click="frame = 'mobile'">{{ tr('appearance.mobile') }}</button>
     </div>
 
     <div
@@ -258,7 +282,7 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
     >
       <div class="public-stage-top">
         <strong>whereToken</strong>
-        <span>外观预览</span>
+        <span>{{ tr('appearance.previewLabel') }}</span>
       </div>
       <p class="public-stage-total">—</p>
       <div ref="wall" class="public-wall-scroll">
@@ -270,20 +294,20 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
 
     <div class="public-actions">
       <button type="button" class="lever" :disabled="hosted || busy" @click="apply">
-        {{ busy ? '正在写入' : '仅保存本机' }}
+        {{ busy ? tr('appearance.saving') : tr('appearance.save') }}
       </button>
-      <button type="button" class="lever primary" :disabled="hosted || running" @click="openPreflight">发布到我的 GitHub 主页</button>
-      <button type="button" class="lever" @click="preview">预览公开 Profile</button>
+      <button type="button" class="lever primary" :disabled="hosted || running" @click="openPreflight">{{ tr('appearance.publish') }}</button>
+      <button type="button" class="lever" @click="preview">{{ tr('appearance.preview') }}</button>
     </div>
     <section v-if="preflight && !hosted" class="public-preflight" aria-live="polite">
       <p>{{ phaseLabel }}</p>
-      <p>选择 {{ preflight.palette }}。线上现在是 {{ preflight.live_palette || '还没读到' }}。</p>
+      <p>{{ tr('appearance.selected', { palette: preflight.palette, live: preflight.live_palette || tr('appearance.liveUnknown') }) }}</p>
       <p>{{ preflight.product_repo }} {{ preflight.product_branch }} · public-profile/</p>
       <p>{{ preflight.profile_repo }} {{ preflight.profile_branch }} · {{ preflight.readme_path }}</p>
       <p v-if="preflight.github_login">GitHub {{ preflight.github_login }}</p>
-      <p v-if="preflight.validation">校验 {{ preflight.validation }} · {{ preflight.provenance }}</p>
+      <p v-if="preflight.validation">{{ tr('appearance.check', { validation: preflight.validation, provenance: preflight.provenance || '' }) }}</p>
       <p v-if="preflight.snapshot_id">snapshot {{ preflight.snapshot_id }}</p>
-      <p v-if="preflight.cache_key">缓存 {{ preflight.cache_key }}</p>
+      <p v-if="preflight.cache_key">{{ tr('appearance.cache', { key: preflight.cache_key }) }}</p>
       <ul v-if="preflight.files?.length">
         <li v-for="file in preflight.files" :key="file.path">{{ file.action }} {{ file.path }}</li>
       </ul>
@@ -294,20 +318,20 @@ function paint(id: PublicPaletteId, intensity: number): Record<string, string> {
           <code>{{ edit.after }}</code>
         </li>
       </ul>
-      <p v-for="item in preflight.ahead || []" :key="item">将一并推送 {{ item }}</p>
+      <p v-for="item in preflight.ahead || []" :key="item">{{ tr('appearance.alsoPush', { item }) }}</p>
       <p v-for="block in preflight.blockers || []" :key="block">{{ block }}</p>
-      <p v-if="preflight.static_svg">GitHub 主页上的图是静态 SVG。实时纸面只在打开的公开页里。</p>
+      <p v-if="preflight.static_svg">{{ tr('appearance.staticSvg') }}</p>
       <p>{{ preflight.release_note }}</p>
-      <button v-if="preflight.ready && !running" type="button" class="lever primary" @click="confirmPublish">确认发布到这两个仓库</button>
-      <button v-if="job?.retry_readme" type="button" class="lever" @click="retryReadme">重试更新 GitHub 主页</button>
-      <p v-if="job?.product_url"><a :href="job.product_url">whereToken 提交</a></p>
-      <p v-if="job?.pages_run_url"><a :href="job.pages_run_url">Pages</a></p>
-      <p v-if="job?.profile_url"><a :href="job.profile_url">个人 README 提交</a></p>
-      <p v-if="job?.live_page && job.phase === 'verified'"><a :href="job.live_page">公开页</a></p>
+      <button v-if="preflight.ready && !running" type="button" class="lever primary" @click="confirmPublish">{{ tr('appearance.confirm') }}</button>
+      <button v-if="job?.retry_readme" type="button" class="lever" @click="retryReadme">{{ tr('appearance.retry') }}</button>
+      <p v-if="job?.product_url"><a :href="job.product_url">{{ tr('appearance.productCommit') }}</a></p>
+      <p v-if="job?.pages_run_url"><a :href="job.pages_run_url">{{ tr('appearance.pages') }}</a></p>
+      <p v-if="job?.profile_url"><a :href="job.profile_url">{{ tr('appearance.readmeCommit') }}</a></p>
+      <p v-if="job?.live_page && job.phase === 'verified'"><a :href="job.live_page">{{ tr('appearance.livePage') }}</a></p>
       <p v-if="job?.error">{{ job.error }}</p>
       <p v-if="publishError">{{ publishError }}</p>
     </section>
-    <p v-if="hosted" class="public-copy">这个演示站不能发布。在已经运行 wheretoken serve 的电脑上打开下面的链接。手机上的 127.0.0.1 不是那台电脑。</p>
+    <p v-if="hosted" class="public-copy">{{ tr('appearance.hosted') }}</p>
     <p v-if="hosted" class="public-command"><code>{{ desktopLink }}</code></p>
     <p class="public-copy" role="status">{{ copy }}</p>
     <p class="public-command"><code>{{ view.export_command }}</code></p>
