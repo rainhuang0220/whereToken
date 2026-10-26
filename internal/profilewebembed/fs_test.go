@@ -16,7 +16,7 @@ func TestShellAssetsAreContentAddressed(t *testing.T) {
 		t.Fatal(err)
 	}
 	page := strings.ReplaceAll(string(html), "\r\n", "\n")
-	for _, name := range []string{"assets/profile.css", "assets/profile.js", "assets/paper.js"} {
+	for _, name := range []string{"assets/profile.css", "assets/lang.js", "assets/messages.js", "assets/profile.js", "assets/paper.js"} {
 		body, err := Read(name)
 		if err != nil {
 			t.Fatal(err)

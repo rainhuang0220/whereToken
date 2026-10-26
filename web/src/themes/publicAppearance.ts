@@ -1,3 +1,5 @@
+import { t, type Lang } from '../i18n'
+
 export const PUBLIC_PALETTES = ['cobalt', 'magenta', 'newsprint'] as const
 
 export type PublicPaletteId = (typeof PUBLIC_PALETTES)[number]
@@ -198,23 +200,12 @@ export function handoffURL(palette: PublicPaletteId): string {
   return 'http://127.0.0.1:8787/themes?public_palette=' + encodeURIComponent(palette) + '&intent=publish#public-profile'
 }
 
-export function statusCopy(view: PublicationView): string {
-  switch (view.status) {
-    case 'loading':
-      return '正在读取公开 Profile。'
-    case 'hosted':
-      return '公开 Profile 由本机 wheretoken profile build 生成。'
-    case 'failed':
-      return view.error || '写入失败。'
-    case 'ready_to_publish':
-      return '本地公开包已生成。线上页面要等这些文件被提交并推送后才会变。'
-    case 'saved_locally':
-      return '已记在本机。还没有写入本地公开包。'
-    case 'pending':
-      return '本机选择已保存。本地公开包仍是上一份。'
-    default:
-      return '公开 Profile 默认是 Newsprint。'
-  }
+export function statusCopy(view: PublicationView, lang: Lang = 'en'): string {
+  if (view.status === 'failed' && view.error) return view.error
+  const key = view.status === 'loading' || view.status === 'hosted' || view.status === 'failed' || view.status === 'ready_to_publish' || view.status === 'saved_locally' || view.status === 'pending'
+    ? 'status.' + view.status
+    : 'status.unconfigured'
+  return t(lang, key)
 }
 
 export function previewIntensity(index: number): number {

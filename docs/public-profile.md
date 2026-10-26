@@ -43,6 +43,10 @@ Schema: [`docs/public-profile.schema.json`](./public-profile.schema.json) (versi
 
 `all` means all history available to this scan, not a promise of identical all-time history across providers. The page labels it “Available history” and shows source-specific account windows next to account-derived rows. The hero total is the sum of tracked values; `data_status=partial` and the coverage panel disclose any incomplete source.
 
+## Language
+
+The public page starts in English. The browser's language, `Accept-Language`, and the operating system do not change that. `?lang=en` or `?lang=zh-CN` selects the page, and an explicit language switch is the only choice stored in this browser. An unknown code is ignored. The GitHub README SVG stays English. Palette names stay Cobalt, Magenta, and Newsprint.
+
 ## Preview freshness
 
 Every snapshot contains a deterministic `sha256:…` `snapshot_id`. The hash excludes only `generated_at`, so rebuilding unchanged data at a later minute keeps the same ID; changing public data changes it. `manifest.json`, `profile.json`, and both previews carry the same ID.

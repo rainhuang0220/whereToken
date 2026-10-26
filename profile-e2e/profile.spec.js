@@ -477,6 +477,8 @@ test("makes no external runtime request", async ({ page }) => {
   const paths = requests.map((url) => url.split("?")[0]);
   expect(paths.sort()).toEqual([
     "/whereToken/profile/",
+    "/whereToken/profile/assets/lang.js",
+    "/whereToken/profile/assets/messages.js",
     "/whereToken/profile/assets/paper.js",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
@@ -485,7 +487,7 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/profile.json",
     "/whereToken/profile/presentation.json",
   ].sort());
-  for (const name of ["profile.css", "profile.js", "paper.js"]) {
+  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js"]) {
     expect(requests.find((url) => url.includes("/assets/" + name))).toMatch(/\?v=[0-9a-f]{64}$/);
   }
   expect(requests.find((url) => url.includes("profile.json"))).not.toContain("?v=");
@@ -558,7 +560,7 @@ test("switches Tokens and Requests without treating counts as tokens", async ({ 
   await expect(page.getByRole("tab", { name: "Tokens", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Requests", exact: true }).click();
   await expect(page).toHaveURL(/metric=requests/);
-  await expect(page.locator("#hero-label")).toHaveText("requests");
+  await expect(page.locator("#hero-label")).toHaveText("Requests");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.requests.display);
   const active = page.locator("#wall .cell.active").first();
   await active.hover();
@@ -596,7 +598,7 @@ test("replaces the fallback when a newer hosted snapshot is valid", async ({ pag
   await page.goto(baseURL);
   await expect(page.locator("#hero-value")).toHaveText("42.00M");
   await expect(page.locator("#freshness")).toContainText("hosted");
-  await expect(page.locator("#freshness")).toContainText("min ago");
+  await expect(page.locator("#freshness")).toContainText("minutes ago");
 });
 
 test("keeps the committed snapshot when the hosted profile is unavailable or invalid", async ({ page }) => {
@@ -681,10 +683,10 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);
-  await expect(page.locator("#palette-mode")).toHaveText("预览中");
+  await expect(page.locator("#palette-mode")).toHaveText("Previewing");
   const apply = page.locator("#apply-github");
   await expect(apply).toBeVisible();
-  await expect(apply).toHaveText("登录并发布到 GitHub 主页");
+  await expect(apply).toHaveText("Sign in to publish");
   const paletteBox = await page.locator("#palettes").boundingBox();
   const applyBox = await apply.boundingBox();
   expect(applyBox.y).toBeGreaterThan(paletteBox.y);
@@ -700,7 +702,7 @@ test("a visitor palette does not publish and an owner confirms on the same page"
   })));
   await page.reload();
   await expect(page.locator("#apply-github")).toBeHidden();
-  await expect(page.locator("#palette-mode")).toHaveText("仅预览");
+  await expect(page.locator("#palette-mode")).toHaveText("Preview only");
   await page.evaluate(() => sessionStorage.setItem("wt-profile-session", JSON.stringify({
     token: "wtp_1.owner",
     csrf: "csrf-owner",
@@ -708,22 +710,22 @@ test("a visitor palette does not publish and an owner confirms on the same page"
     expires_at: "2099-01-01T00:00:00.000Z",
   })));
   await page.reload();
-  await expect(page.locator("#palette-mode")).toHaveText("预览中");
+  await expect(page.locator("#palette-mode")).toHaveText("Previewing");
   await page.getByRole("tab", { name: "Newsprint", exact: true }).click();
-  await expect(page.locator("#palette-mode")).toHaveText("已发布 · Newsprint");
+  await expect(page.locator("#palette-mode")).toHaveText("Published · Newsprint");
   await page.getByRole("tab", { name: "Magenta", exact: true }).click();
-  await expect(page.locator("#palette-mode")).toHaveText("预览中");
+  await expect(page.locator("#palette-mode")).toHaveText("Previewing");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("button", { name: "发布到 GitHub 主页" })).toBeVisible();
-  await page.getByRole("button", { name: "发布到 GitHub 主页" }).click();
+  await expect(page.getByRole("button", { name: "Publish to GitHub profile" })).toBeVisible();
+  await page.getByRole("button", { name: "Publish to GitHub profile" }).click();
   await expect(page.locator("#publish-dialog")).toBeVisible();
-  await expect(page.locator("#publish-title")).toHaveText("发布到 GitHub 主页");
-  await expect(page.locator("#publish-summary")).toHaveText("将 Magenta 应用到 github.com/rainhuang0220");
+  await expect(page.locator("#publish-title")).toHaveText("Publish to GitHub profile");
+  await expect(page.locator("#publish-summary")).toHaveText("Apply Magenta to github.com/rainhuang0220");
   await expect(page.locator("#publish-target")).toHaveText("https://github.com/rainhuang0220");
-  await expect(page.getByRole("button", { name: "确认发布" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
   expect(calls.filter((line) => line.includes("/publish"))).toHaveLength(0);
-  await page.getByRole("button", { name: "确认发布" }).click();
-  await expect(page.locator("#publish-progress")).toHaveText("已发布 ✓");
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await expect(page.locator("#publish-progress")).toHaveText("Published");
   expect(calls.some((line) => line.startsWith("POST") && line.includes("/publish"))).toBe(true);
 });
 
@@ -776,26 +778,99 @@ test("paints cobalt and magenta from the same tokens as the preview SVG", async 
   await expect.poll(() => bg(0)).toBe(rgb("#E6E2D8"));
 });
 
-test("hands the selected palette to local My Token without publishing", async ({ page }) => {
+test("opens the local dashboard only after an explicit choice and never as a publish link", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);
-  const link = page.locator("#owner-set-link");
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("href", /public_palette=newsprint/);
-  await expect(link).toHaveAttribute("href", /intent=publish/);
-  await expect(link).toHaveAttribute("href", /127\.0\.0\.1:8787\/themes/);
-  await expect(page.locator("#owner-set-note")).toContainText("does not change your GitHub profile");
-  await page.getByRole("tab", { name: "Magenta", exact: true }).click();
-  await expect(link).toHaveAttribute("href", /public_palette=magenta/);
+  await expect(page.locator("#owner-set-link")).toHaveCount(0);
+  await expect(page.locator("#owner-set-note")).toContainText("does not change the GitHub profile");
+  const open = page.locator("#local-dash");
+  await expect(open).toBeVisible();
+  await expect(page.locator("#local-dialog")).toBeHidden();
+  await open.click();
+  await expect(page.locator("#local-dialog")).toBeVisible();
+  await expect(page.locator("#local-open")).toHaveAttribute("data-local-href", "http://127.0.0.1:8787/");
+  await expect(page.locator("#local-open")).not.toHaveAttribute("data-local-href", /intent=publish/);
   expect(requests.some((url) => url.includes(":8787"))).toBe(false);
+  await page.locator("#local-cancel").click();
+  await expect(page.locator("#local-dialog")).toBeHidden();
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(link).toBeVisible();
+  await expect(open).toBeVisible();
+});
+
+test("starts in English even when the browser locale is Chinese", async ({ browser }) => {
+  const context = await browser.newContext({ locale: "zh-CN" });
+  const page = await context.newPage();
+  try {
+    await page.goto(baseURL);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.locator("#legend-less")).toHaveText("Less");
+    await expect(page.locator("#legend-more")).toHaveText("More");
+    await expect(page.locator("#hero-label")).toHaveText("Tokens");
+  } finally {
+    await context.close();
+  }
+});
+
+test("keeps an explicit language across refresh, theme, and range changes", async ({ page }) => {
+  await page.goto(baseURL + "?lang=nope");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#legend-less")).toHaveText("Less");
+
+  await page.getByRole("button", { name: "中文" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("#legend-less")).toHaveText("更少");
+  await expect(page.locator("#legend-more")).toHaveText("更多");
+  await expect(page.locator("#hero-label")).toHaveText("Token");
+  await expect(page).toHaveURL(/lang=zh-CN/);
+
+  await page.getByRole("button", { name: "深色" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("tab", { name: "7天", exact: true }).click();
+  await expect(page).toHaveURL(/lang=zh-CN/);
+  await expect(page).toHaveURL(/range=7d/);
+  await expect(page.locator("#legend-less")).toHaveText("更少");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("#legend-more")).toHaveText("更多");
+
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#legend-less")).toHaveText("Less");
+  await expect(page.locator("#hero-label")).toHaveText("Tokens");
+  await expect(page).toHaveURL(/range=7d/);
+});
+
+test("remembers a manual language and lets the URL override it", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("wt-lang", "zh-CN"));
+  await page.goto(baseURL);
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await page.goto(baseURL + "?lang=en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#legend-less")).toHaveText("Less");
+});
+
+test("keeps the legend apart and inside the viewport", async ({ page }) => {
+  for (const width of [375, 390, 768, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseURL + "?lang=zh-CN");
+    const less = await page.locator("#legend-less").boundingBox();
+    const more = await page.locator("#legend-more").boundingBox();
+    const ramp = await page.locator(".legend-ramp").boundingBox();
+    expect(less.x + less.width).toBeLessThan(ramp.x - 4);
+    expect(ramp.x + ramp.width).toBeLessThan(more.x - 4);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+    expect(overflow).toBe(true);
+    await expect(page.locator("#legend-less")).toHaveText("更少");
+  }
 });
 
 function formatExpectedDay(iso) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
+    timeZone: "UTC",
+  }).format(new Date(iso + "T00:00:00Z"));
 }
