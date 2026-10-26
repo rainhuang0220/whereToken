@@ -9,18 +9,25 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
+	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
+	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
 // profileRefreshInterval is the foreground watch period. Launchd does not
-// use StartInterval; this timer stays inside watch. Tests shorten it.
-var profileRefreshInterval = 15 * time.Minute
+// use StartInterval on the watch job; this timer stays inside watch.
+// A failed attempt is retried on the next wake. Midnight still wakes sooner.
+// Tests shorten it.
+var profileRefreshInterval = time.Hour
 
 // profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
 // has no timeout; refresh does not use it.
@@ -43,6 +50,10 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 		return a.profileRefreshSet(home, false)
 	case "watch":
 		return a.profileRefreshWatch(flags, home)
+	case "doctor":
+		return a.profileRefreshDoctor(home)
+	case "repair":
+		return a.profileRefreshRepair(home)
 	case "":
 		return a.executeProfileRefresh(context.Background(), flags, home, nil)
 	default:
@@ -52,6 +63,14 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 }
 
 func (a *App) profileRefreshStatus(home adapter.Home) int {
+	return a.writeRefreshHealth(home, false)
+}
+
+func (a *App) profileRefreshDoctor(home adapter.Home) int {
+	return a.writeRefreshHealth(home, true)
+}
+
+func (a *App) writeRefreshHealth(home adapter.Home, doctor bool) int {
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
@@ -63,9 +82,66 @@ func (a *App) profileRefreshStatus(home adapter.Home) int {
 	} else {
 		fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
 	}
-	fmt.Fprintf(a.Stdout, "scheduler=%s\n", a.schedulerStatus(enabled))
-	fmt.Fprintf(a.Stdout, "last=%s\n", a.lastRefreshCode(home))
-	return ExitOK
+	scheduler := a.schedulerStatus(enabled)
+	code := a.lastRefreshCode(home)
+	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
+	fmt.Fprintf(a.Stdout, "last=%s\n", code)
+	program, _ := a.refreshProgramPath()
+	plist := a.refreshPlistState(enabled, program)
+	if doctor {
+		fmt.Fprintf(a.Stdout, "plist=%s\n", plist)
+		facts, tokens, gaps := ledgerFigures(home)
+		fmt.Fprintf(a.Stdout, "ledger_facts=%s\n", facts)
+		fmt.Fprintf(a.Stdout, "ledger_tokens=%s\n", tokens)
+		fmt.Fprintf(a.Stdout, "ledger_import_gaps=%s\n", gaps)
+	}
+	healthy := !refreshUnhealthy(enabled, scheduler, code, plist, doctor)
+	if healthy {
+		fmt.Fprintln(a.Stdout, "healthy=yes")
+		return ExitOK
+	}
+	fmt.Fprintln(a.Stdout, "healthy=no")
+	return ExitFail
+}
+
+func refreshUnhealthy(enabled bool, scheduler, code, plist string, doctor bool) bool {
+	if !enabled {
+		return false
+	}
+	if scheduler == "dead" {
+		return true
+	}
+	switch code {
+	case publicprofile.CodeBlockedData, publicprofile.CodeBlockedRegression, publicprofile.CodeBlockedAuth, publicprofile.CodeNotSignedIn, publicprofile.CodeWillRetry:
+		return true
+	}
+	if doctor && (plist == "missing" || plist == "stale") {
+		return true
+	}
+	return false
+}
+
+func ledgerFigures(home adapter.Home) (facts, tokens, gaps string) {
+	unavailable := func() (string, string, string) {
+		return "unavailable", "unavailable", "unavailable"
+	}
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return unavailable()
+	}
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return unavailable()
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		return unavailable()
+	}
+	defer lg.Close()
+	st, err := lg.Status()
+	if err != nil {
+		return unavailable()
+	}
+	return strconv.Itoa(st.Facts), strconv.FormatInt(st.Tokens, 10), strconv.Itoa(st.ImportGaps)
 }
 
 func (a *App) lastRefreshCode(home adapter.Home) string {
@@ -191,16 +267,8 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	}
 	defer release()
 	res := a.doScanOpt(home, flags.Quiet, flags.Offline, flags.ASCII, false)
-	snap, err := publicprofile.Build(publicprofile.Input{
-		Events:       res.Events,
-		Turns:        res.Turns,
-		Now:          a.Now(),
-		Loc:          a.Loc,
-		Version:      a.Version,
-		PortraitSeed: a.PortraitSeed(home),
-		Offline:      res.Offline,
-		Errors:       res.Errors,
-	})
+	events, restored := a.retainAccountObservations(home, res.Events, res.Errors, nil)
+	snap, err := a.refreshSnapshot(home, res, events)
 	if err != nil {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
@@ -211,7 +279,20 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 			return ExitOK
 		}
 	}
-	applied := publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, projectionClient{app: a, token: token, login: login})
+	ctx = a.withCorrectionPermit(ctx, home)
+	publisher := projectionClient{app: a, token: token, login: login}
+	applied := publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, publisher)
+	if !restored && applied.Decision.Code == publicprofile.CodeBlockedData && applied.Remote != nil {
+		seeded, ok := a.retainAccountObservations(home, res.Events, res.Errors, applied.Remote)
+		if ok {
+			snap, err = a.refreshSnapshot(home, res, seeded)
+			if err != nil {
+				a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+				return a.refreshFailed()
+			}
+			applied = publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, publisher)
+		}
+	}
 	if applied.Auth {
 		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
@@ -224,9 +305,141 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
 	}
+	a.clearPermitIfPublished(home, applied)
 	a.noteRefresh(home, applied.Decision.Phase, applied.Decision.Code)
 	a.writeRefresh(a.Stdout, applied.Decision, true)
 	return ExitOK
+}
+
+func (a *App) refreshSnapshot(home adapter.Home, res scan.Result, events []event.UsageEvent) (publicprofile.Snapshot, error) {
+	return publicprofile.Build(publicprofile.Input{
+		Events:       events,
+		Turns:        res.Turns,
+		Now:          a.Now(),
+		Loc:          a.Loc,
+		Version:      a.Version,
+		PortraitSeed: a.PortraitSeed(home),
+		Offline:      res.Offline,
+		Errors:       res.Errors,
+	})
+}
+
+// retainAccountObservations reuses a confirmed account-API observation when
+// the fresh fetch failed. remote, when set, can seed that observation from
+// the accepted public snapshot. Local token rows for that source are cleared
+// so the observation is not added on top of them.
+func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageEvent, errs []string, remote *publicprofile.Snapshot) ([]event.UsageEvent, bool) {
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return events, false
+	}
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return events, false
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		return events, false
+	}
+	defer lg.Close()
+	changed := false
+	if next, err := lg.SupplementNarrowWindow(events); err == nil && len(next) != len(events) {
+		events = next
+		changed = true
+	}
+	for _, source := range failedAccountSources(errs) {
+		if !publicprofile.AccountFetchFailed(events, errs, source) {
+			continue
+		}
+		got, ok, err := lg.LatestRetainedEvents(source)
+		if err == nil && ok {
+			events = publicprofile.ApplyRetainedEvents(events, got)
+			changed = true
+			continue
+		}
+		if remote == nil {
+			continue
+		}
+		days, ok := publicprofile.DaysFromSnapshot(*remote, source)
+		if !ok {
+			continue
+		}
+		observed, err := time.Parse(time.RFC3339, remote.GeneratedAt)
+		if err != nil {
+			continue
+		}
+		if err := lg.SaveObservation(source, "verified_snapshot", "retained", observed, publicprofile.EventsFromDays(source, days)); err != nil {
+			continue
+		}
+		got, ok, err = lg.LatestRetainedEvents(source)
+		if err != nil || !ok {
+			continue
+		}
+		events = publicprofile.ApplyRetainedEvents(events, got)
+		changed = true
+	}
+	return events, changed
+}
+
+func (a *App) withCorrectionPermit(ctx context.Context, home adapter.Home) context.Context {
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return ctx
+	}
+	lg, err := a.openRefreshLedger(home)
+	if err != nil {
+		return ctx
+	}
+	defer lg.Close()
+	reason, delta, ok, err := lg.CorrectionPermit()
+	if err != nil || !ok {
+		return ctx
+	}
+	return publicprofile.ContextWithCorrection(ctx, publicprofile.Correction{Reason: reason, Delta: delta})
+}
+
+func (a *App) clearPermitIfPublished(home adapter.Home, applied publicprofile.ApplyResult) {
+	if applied.Transport || applied.Rejected || applied.Auth {
+		return
+	}
+	switch applied.Decision.Code {
+	case publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover, publicprofile.CodeWaitingCooldown, publicprofile.CodePendingGitHub:
+	default:
+		return
+	}
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return
+	}
+	lg, err := a.openRefreshLedger(home)
+	if err != nil {
+		return
+	}
+	defer lg.Close()
+	_ = lg.ClearCorrectionPermit()
+}
+
+func (a *App) openRefreshLedger(home adapter.Home) (*ledger.Ledger, error) {
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return nil, err
+	}
+	return ledger.Open(p)
+}
+
+func failedAccountSources(errs []string) []string {
+	var out []string
+	seen := map[string]struct{}{}
+	for _, msg := range errs {
+		i := strings.IndexByte(msg, ':')
+		if i <= 0 {
+			continue
+		}
+		id := msg[:i]
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }
 
 func (a *App) refreshFailed() int {
@@ -241,6 +454,21 @@ func (a *App) writeRefresh(w io.Writer, d publicprofile.Decision, withCode bool)
 	if withCode && d.Code != "" {
 		fmt.Fprintln(w, d.Code)
 	}
+	if refreshDetailSafe(d.Detail) {
+		fmt.Fprintf(w, "detail=%s\n", d.Detail)
+	}
+}
+
+func refreshDetailSafe(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r != ',' && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func (a *App) profileRefreshCreds(home adapter.Home) (token, login string, err error) {

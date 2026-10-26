@@ -523,6 +523,8 @@ func TestProfileRefreshWatchRereadsSwitch(t *testing.T) {
 	t.Cleanup(func() { profileRefreshInterval = old })
 	app, out, errb := testApp([]string{"profile", "refresh", "watch"})
 	app.Home = home
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
+	app.Reexec = func([]string) {}
 	app.Creds = &memCreds{m: map[string]string{
 		credstore.KeyDeviceToken: "wtd_1.tok",
 		credstore.KeyLogin:       "rainhuang0220",

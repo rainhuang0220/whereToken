@@ -8,28 +8,42 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self' https://wheretoken.plainlist.space; base-uri 'none'; form-action 'none'">
   <link rel="icon" href="data:,">
   <title>whereToken · coding activity</title>
-  <link rel="stylesheet" href="./assets/profile.css?v=2bcfbcae2e612e03e4536443700ee5b18e3768b593dc9303383b4e2b0b99d5ec">
+  <link rel="stylesheet" href="./assets/profile.css?v=0bf4aec6e350bcd23321c5199aa9b4387a75273836998c1b8c0dc8aa89317f3b">
+  <script src="./assets/lang.js?v=f9791e870946099c08ec428e27435982c931a179d16a44b6fca929b454912096"></script>
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#main" data-i18n="meta.skip">Skip to content</a>
   <header class="top">
     <div class="top-inner">
       <div class="brand">
         <strong>whereToken</strong>
-        <span>my coding-agent token usage</span>
+        <span data-i18n="brand.tagline">my coding-agent token usage</span>
       </div>
       <div class="header-actions">
         <p class="freshness" id="freshness"></p>
-        <div class="theme" role="group" aria-label="Theme">
-          <button type="button" data-theme-set="system">System</button>
-          <button type="button" data-theme-set="light">Light</button>
-          <button type="button" data-theme-set="dark">Dark</button>
+        <div class="theme" role="group" aria-label="Theme" data-i18n-aria="theme.group">
+          <button type="button" data-theme-set="system" data-i18n="theme.system">System</button>
+          <button type="button" data-theme-set="light" data-i18n="theme.light">Light</button>
+          <button type="button" data-theme-set="dark" data-i18n="theme.dark">Dark</button>
         </div>
-        <a class="my-token" href="http://127.0.0.1:8787/themes#public-profile">My Token</a>
-        <a class="gh" id="github" href="https://github.com/rainhuang0220/whereToken" rel="noopener">GitHub</a>
+        <div class="lang" role="group" aria-label="Language" data-i18n-aria="lang.group">
+          <button type="button" data-lang-set="en" data-i18n="lang.en">EN</button>
+          <button type="button" data-lang-set="zh-CN" data-i18n="lang.zh">中文</button>
+        </div>
+        <button type="button" id="local-dash" class="my-token" data-i18n="local.open">Open local dashboard</button>
+        <a class="gh" id="github" href="https://github.com/rainhuang0220/whereToken" rel="noopener" data-i18n="nav.github">GitHub</a>
       </div>
     </div>
   </header>
+  <div id="local-dialog" class="local-dialog" role="dialog" aria-labelledby="local-title" hidden>
+    <h3 id="local-title" data-i18n="local.title">Open local dashboard</h3>
+    <p id="local-body" data-i18n="local.body">This opens whereToken on this device at 127.0.0.1. It does not change the published GitHub profile. A phone's 127.0.0.1 is the phone, not the computer that publishes.</p>
+    <p id="local-phone" hidden></p>
+    <div class="publish-actions">
+      <button type="button" id="local-cancel" data-i18n="local.cancel">Cancel</button>
+      <button type="button" id="local-open" data-i18n="local.go">Open</button>
+    </div>
+  </div>
   <p id="status" class="banner" role="status" aria-live="polite" hidden></p>
 
   <main id="main">
@@ -38,11 +52,11 @@
     <section class="overview" aria-labelledby="hero-label">
       <div class="hero">
         <p class="hero-value" id="hero-value">—</p>
-        <h1 class="hero-label" id="hero-label">Tokens</h1>
+        <h1 class="hero-label" id="hero-label" data-i18n="hero.tokens">Tokens</h1>
       </div>
       <div class="coverage-note" id="hero-coverage" hidden>
-        <span>Coverage varies by source.</span>
-        <button type="button" class="coverage-link" id="coverage-chip">View details</button>
+        <span data-i18n="coverage.issueVaries">Coverage varies by source.</span>
+        <button type="button" class="coverage-link" id="coverage-chip" data-i18n="coverage.view">View details</button>
       </div>
       <ul class="hero-meta" id="hero-meta"></ul>
     </section>
@@ -50,28 +64,28 @@
     <section class="activity" aria-labelledby="activity-h">
       <div class="section-head activity-head">
         <div>
-          <h2 id="activity-h">Activity</h2>
-          <p class="series-heading" id="series-heading">All agents</p>
+          <h2 id="activity-h" data-i18n="activity.h">Activity</h2>
+          <p class="series-heading" id="series-heading" data-i18n="series.all">All agents</p>
         </div>
         <p class="range-readout" id="range-readout"></p>
       </div>
       <div class="activity-controls">
-        <div class="seg" role="tablist" aria-label="Metric" id="metrics"></div>
-        <div class="seg" role="tablist" aria-label="Time range" id="ranges"></div>
-        <div class="seg palette-seg" role="tablist" aria-label="Activity color" id="palettes"></div>
+        <div class="seg" role="tablist" aria-label="Metric" id="metrics" data-i18n-aria="metric.group"></div>
+        <div class="seg" role="tablist" aria-label="Time range" id="ranges" data-i18n-aria="range.group"></div>
+        <div class="seg palette-seg" role="tablist" aria-label="Activity color" id="palettes" data-i18n-aria="palette.group"></div>
       </div>
       <div class="publish-row" id="publish-row">
-        <p id="palette-mode" class="publish-mode">预览中</p>
-        <button type="button" id="apply-github">登录并发布到 GitHub 主页</button>
+        <p id="palette-mode" class="publish-mode" data-i18n="publish.modePreview">Previewing</p>
+        <button type="button" id="apply-github" data-i18n="publish.signIn">Sign in to publish</button>
         <div id="publish-dialog" class="publish-dialog" hidden>
-          <h3 id="publish-title">发布到 GitHub 主页</h3>
+          <h3 id="publish-title" data-i18n="publish.title">Publish to GitHub profile</h3>
           <p id="publish-summary"></p>
           <p id="publish-target"></p>
-          <p id="publish-progress" role="status"></p>
+          <p id="publish-progress" role="status" data-i18n="publish.pending">Nothing is written to GitHub until you confirm.</p>
           <div class="publish-actions">
-            <button type="button" id="publish-cancel">取消</button>
-            <button type="button" id="publish-confirm">确认发布</button>
-            <button type="button" id="publish-retry" hidden>重试 README</button>
+            <button type="button" id="publish-cancel" data-i18n="publish.cancel">Cancel</button>
+            <button type="button" id="publish-confirm" data-i18n="publish.confirm">Publish</button>
+            <button type="button" id="publish-retry" data-i18n="publish.retry" hidden>Retry README</button>
           </div>
         </div>
       </div>
@@ -81,15 +95,17 @@
           <div class="weekdays" id="weekdays" aria-hidden="true"></div>
           <div class="heat-scroll" id="heat-scroll">
             <div class="months" id="months"></div>
-            <div id="wall" class="wall" role="grid" aria-label="Activity wall"></div>
+            <div id="wall" class="wall" role="grid" aria-label="Activity wall" data-i18n-aria="wall.aria"></div>
           </div>
         </div>
         <div class="heat-foot">
-          <p id="wall-hint" class="wall-hint">53 weeks · <span class="mobile-only">scroll sideways · </span>latest on the right</p>
-          <div class="legend" id="legend" aria-label="Activity scale"></div>
+          <p id="wall-hint" class="wall-hint">
+            <span class="hint-desktop" data-i18n="wall.hint">53 weeks · latest on the right</span>
+            <span class="hint-mobile" data-i18n="wall.hintMobile">53 weeks · scroll sideways · latest on the right</span>
+          </p>
+          <div class="legend" id="legend" aria-label="Activity scale" data-i18n-aria="legend.aria"></div>
           <p class="owner-set" id="owner-set">
-            <a id="owner-set-link" href="http://127.0.0.1:8787/themes?public_palette=newsprint&amp;intent=publish#public-profile">本机发布</a>
-            <span id="owner-set-note">Choosing a color previews it in this browser. It does not change your GitHub profile until you publish it.</span>
+            <span id="owner-set-note" data-i18n="preview.note">Choosing a color previews it in this browser. It does not change the GitHub profile until the owner publishes it.</span>
           </p>
         </div>
         <div id="wall-empty" class="wall-empty" hidden></div>
@@ -107,30 +123,31 @@
 
     <section class="break" aria-labelledby="break-h">
       <div class="section-head">
-        <h2 id="break-h">Breakdown</h2>
-        <div class="seg" role="tablist" id="tabs"></div>
+        <h2 id="break-h" data-i18n="breakdown.h">Breakdown</h2>
+        <div class="seg" role="tablist" id="tabs" aria-label="Breakdown" data-i18n-aria="breakdown.tabs"></div>
       </div>
       <div id="rows" class="rows"></div>
     </section>
 
     <details class="technical" id="coverage">
-      <summary>Technical details <span>Data coverage and methodology</span></summary>
+      <summary><span data-i18n="coverage.summary">Technical details</span> <span data-i18n="coverage.summaryDetail">Data coverage and methodology</span></summary>
       <div class="technical-body">
         <section aria-labelledby="coverage-h">
-          <h2 id="coverage-h">Data coverage</h2>
+          <h2 id="coverage-h" data-i18n="coverage.h">Data coverage</h2>
           <div id="coverage-table" class="coverage-table"></div>
         </section>
         <section class="about" aria-labelledby="about-h">
-          <h2 id="about-h">About this data</h2>
-          <p>Manually published from a sanitized local snapshot. This page does not sync with the owner’s machine. Prompts, paths, transcripts, and raw events are excluded.</p>
-          <p>Total = miss + cache read + cache create + output; reasoning is not added twice. Missing usage stays unavailable (—), never zero.</p>
-          <p><a id="download" href="./profile.json" download>Download JSON</a>
-             · <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md">How totals work</a></p>
+          <h2 id="about-h" data-i18n="about.h">About this data</h2>
+          <p data-i18n="about.p1">Manually published from a sanitized local snapshot. This page does not sync with the owner’s machine. Prompts, paths, transcripts, and raw events are excluded.</p>
+          <p data-i18n="about.p2">Total = miss + cache read + cache create + output; reasoning is not added twice. Missing usage stays unavailable (—), never zero.</p>
+          <p><a id="download" href="./profile.json" download data-i18n="about.download">Download JSON</a>
+             · <a href="https://github.com/rainhuang0220/whereToken/blob/main/docs/token-accounting.md" data-i18n="about.how">How totals work</a></p>
         </section>
       </div>
     </details>
   </main>
-  <script src="./assets/profile.js?v=98858e99221bb0005c66207ed33a2ce75bd82178751577208c4ae84666deafa1"></script>
+  <script src="./assets/messages.js?v=f1c51ed08a4bf42bbd86ab8438e0bcc1bc418484f61907cf106684fa8e0d4cae"></script>
+  <script src="./assets/profile.js?v=7df70346e12ed686a94827fee0e1152a3d5387f7249709341c77842c951f2e32"></script>
   <script src="./assets/paper.js?v=81761384fe72a1f36d7d022f945bd9e642c361854a081551a92a6c6432abe683"></script>
 </body>
 </html>

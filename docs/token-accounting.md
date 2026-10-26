@@ -27,6 +27,47 @@ Reasoning is **not** a sixth addend. If an adapter already included reasoning
 inside `Output` (Codex, OpenCode, Kilo CLI, ZCode), adding `Reasoning` again
 would double-count.
 
+## Durable ledger
+
+Confirmed per-request facts are stored in `ledger.v1.db`, outside the scan
+cache. On macOS that file is under Application Support. On Windows it is under
+`%APPDATA%`. Elsewhere it is under `$XDG_DATA_HOME`. `wheretoken rebuild`
+deletes the scan index only.
+
+A deleted source log does not delete a fact. A repeated scan inserts a new
+identity or raises a component the new observation already covers. It does
+not lower a stored count. A lower figure is a versioned correction: a newer
+parser version, a reason, and the replacement event. Applying that same
+correction again does not write a second revision. The revisions keep the
+before and after payloads. Their net drop is one publication permit. An
+ordinary scan does not grant that permit. Revert removes the drop that
+revision undid. A later wall may move down only when its drop equals the
+permit. A per-field maximum on ordinary facts is not applied across two
+API observation versions; the newest positive observation is kept whole.
+
+Account API rows (`provider_api`) are not facts. When a scan emits that API
+for a source, stored local facts for the source are not added on top.
+Each confirmed API response is one observation, identified by its payload.
+The same payload twice is one row. A later payload is a second row. Reuse
+picks the newest positive observation. It does not max-merge components
+from two versions, and a missing observation is not stored or published
+as zero.
+
+When a later fetch fails, that newest observation is reused as retained
+partial coverage. Its token window is the observation's own dates. Local
+token rows for that source are cleared first, so the observation is not
+added on top of them. A newer response whose window starts later keeps
+the previous observation's earlier days and uses the new response inside
+the new window. A successful empty response is not a license to delete
+the previous positive observation during an outage.
+
+The ledger stores counts, time, model, vendor, quality, derivation, and the
+stable identity. It does not store prompts, transcripts, paths, or credentials.
+A path-scoped request id is reduced to the source session id plus the suffix
+after the filename, so the same Codex session under `archived_sessions` is
+the same fact. Two different request ids with the same token counts stay two
+facts. Events with no source-stable id are not given one.
+
 Cache hit rate (when defined):
 
 ```text
@@ -93,7 +134,7 @@ guarantee for every row.
 | OpenClaw | `message.usage.output` | Output | raw | authoritative | `usage.cost` is ignored. |
 | OpenClaw | `data.usage.input` (trajectory) | Miss | raw | authoritative | Only when that session has no transcript. Prompts are discarded. |
 | OpenClaw | `message.responseId` | Request id | raw | — | Per-line `id` is **not** a request id. Trajectory uses `runId`. |
-| Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). |
+| Codex | Δ `input_tokens` − Δ `cached_input_tokens` | Miss | derived | authoritative | Deltas of `total_token_usage` (or `last_token_usage` if no running total). A rollout this machine already parsed, which Codex later deletes, stays in the normalized scan cache so a published total is not forgotten. |
 | Codex | Δ `cached_input_tokens` | Cache Read | derived | authoritative | |
 | Codex | Δ `cache_write_input_tokens` | Cache Create | derived | authoritative | CLI 0.145+; often 0 on older logs. |
 | Codex | Δ `output_tokens` + Δ `reasoning_output_tokens` | Output | derived | authoritative | Reasoning is folded into Output. |
@@ -169,7 +210,10 @@ If source files only append, a later successful scan must not drop tokens.
 A `/reset` that renames `session.jsonl` to `session.jsonl.reset.<ts>` is
 still visible data. Truncation, deletion of the archive, a rolling cloud
 window (Cursor ~53 weeks), or Trae `empty_result` can lower the number
-and must be explainable.
+and must be explainable. One exception: a Codex rollout jsonl this machine
+already parsed, which Codex later deletes, stays in the normalized scan
+cache so the published total is not forgotten. `wheretoken rebuild` drops
+that cache, and the total can then fall. The refresh report says so.
 
 ## Local scan index
 
@@ -177,7 +221,8 @@ The SQLite file under `~/.cache/wheretoken/` is a performance cache. File
 identity is path + size + mtime + inode, not a content hash. `wheretoken rebuild`
 deletes it. Incremental JSONL stores the last **consumed** byte offset, which
 stays behind EOF while the last line is still being written. A parse error
-on the new tail keeps the cached events for that file.
+on the new tail keeps the cached events for that file. Codex also replays a
+cached rollout after the jsonl is gone; rebuild forgets those rows.
 
 ## Cost
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"html"
 	"os"
@@ -13,10 +14,16 @@ import (
 )
 
 const profileRefreshLabel = "io.github.rainhuang0220.wheretoken.profile-refresh"
+const profileRefreshHealthLabel = "io.github.rainhuang0220.wheretoken.profile-refresh-health"
 
 func (a *App) userHome() (string, error) {
 	if a.UserHome != nil {
 		return a.UserHome()
+	}
+	// A test that forgets UserHome must not read or delete the real
+	// LaunchAgents directory. Production binaries do not register test.v.
+	if flag.Lookup("test.v") != nil {
+		return "", errors.New("profile refresh agent is incomplete")
 	}
 	return os.UserHomeDir()
 }
@@ -126,22 +133,74 @@ func writePlistString(b *strings.Builder, key, value string) {
 }
 
 func (a *App) installProfileRefreshAgent(program string) error {
-	plistPath, logPath, err := a.profileRefreshPaths()
-	if err != nil {
-		return err
-	}
 	home, err := a.userHome()
 	if err != nil || home == "" {
 		return errors.New("profile refresh agent is incomplete")
 	}
-	if err := os.MkdirAll(filepath.Dir(plistPath), 0o755); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
-		return err
-	}
-	body, err := profileRefreshPlist(program, home, logPath)
+	watchPlist, watchLog, err := a.profileRefreshPaths()
 	if err != nil {
+		return err
+	}
+	healthPlist, healthLog, err := a.profileRefreshHealthPaths()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(watchLog), 0o755); err != nil {
+		return err
+	}
+	watchBody, err := profileRefreshPlist(program, home, watchLog)
+	if err != nil {
+		return err
+	}
+	healthBody, err := profileRefreshHealthPlist(program, healthLog)
+	if err != nil {
+		return err
+	}
+	errWatch := a.bootstrapPlist(watchPlist, watchBody)
+	errHealth := a.bootstrapPlist(healthPlist, healthBody)
+	if errWatch != nil {
+		return errWatch
+	}
+	return errHealth
+}
+
+func (a *App) profileRefreshHealthPaths() (plistPath, logPath string, err error) {
+	home, err := a.userHome()
+	if err != nil || home == "" {
+		return "", "", errors.New("profile refresh agent is incomplete")
+	}
+	plistPath = filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
+	logPath = filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
+	return plistPath, logPath, nil
+}
+
+// profileRefreshHealthPlist is a one-shot hourly check. It has no KeepAlive:
+// a periodic job that also restarts on exit would loop. It does not scan.
+func profileRefreshHealthPlist(program, logPath string) ([]byte, error) {
+	if program == "" || logPath == "" {
+		return nil, errors.New("profile refresh agent is incomplete")
+	}
+	esc := html.EscapeString
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	b.WriteString(`<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">` + "\n")
+	b.WriteString(`<plist version="1.0">` + "\n<dict>\n")
+	writePlistString(&b, "Label", profileRefreshHealthLabel)
+	b.WriteString("\t<key>ProgramArguments</key>\n\t<array>\n")
+	for _, arg := range []string{program, "profile", "refresh", "repair"} {
+		fmt.Fprintf(&b, "\t\t<string>%s</string>\n", esc(arg))
+	}
+	b.WriteString("\t</array>\n")
+	b.WriteString("\t<key>RunAtLoad</key>\n\t<true/>\n")
+	b.WriteString("\t<key>StartInterval</key>\n\t<integer>3600</integer>\n")
+	writePlistString(&b, "StandardOutPath", logPath)
+	writePlistString(&b, "StandardErrorPath", logPath)
+	b.WriteString("</dict>\n</plist>\n")
+	return []byte(b.String()), nil
+}
+
+func (a *App) bootstrapPlist(plistPath string, body []byte) error {
+	if err := os.MkdirAll(filepath.Dir(plistPath), 0o755); err != nil {
 		return err
 	}
 	if err := writeAtomicFile(plistPath, body, 0o644); err != nil {
@@ -159,7 +218,12 @@ func (a *App) stopProfileRefreshAgent() {
 	if a.GOOS != "darwin" {
 		return
 	}
-	plistPath, _, err := a.profileRefreshPaths()
+	a.bootoutAndRemove(a.profileRefreshPaths)
+	a.bootoutAndRemove(a.profileRefreshHealthPaths)
+}
+
+func (a *App) bootoutAndRemove(paths func() (string, string, error)) {
+	plistPath, _, err := paths()
 	if err != nil {
 		return
 	}
@@ -171,20 +235,20 @@ func (a *App) stopProfileRefreshAgent() {
 	_ = os.Remove(plistPath)
 }
 
-func (a *App) rebootstrapProfileRefresh() {
+func (a *App) rebootstrapProfileRefresh() error {
 	if a.GOOS != "darwin" {
-		return
+		return nil
 	}
 	home := a.resolveHome("")
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
 	if err != nil || !on {
-		return
+		return nil
 	}
 	program, err := a.refreshProgramPath()
 	if err != nil || program == "" {
-		return
+		return err
 	}
-	_ = a.installProfileRefreshAgent(program)
+	return a.installProfileRefreshAgent(program)
 }
 
 func (a *App) schedulerStatus(enabled bool) string {
@@ -233,11 +297,47 @@ func (a *App) maybeReexecProfileWatch() {
 		return
 	}
 	same, err := sameExecutable(program, self)
-	if err != nil || same {
+	if err != nil {
 		return
 	}
-	argv := append([]string{program}, a.Args...)
-	a.reexec(program, argv)
+	if !same {
+		a.reexec(program, append([]string{program}, a.Args...))
+		return
+	}
+	if a.binaryReplaced() {
+		a.reexec(self, append([]string{self}, a.Args...))
+		return
+	}
+	a.noteBinaryStamp()
+}
+
+func (a *App) noteBinaryStamp() {
+	self, err := a.exePath()
+	if err != nil || self == "" {
+		return
+	}
+	st, err := os.Stat(self)
+	if err != nil {
+		return
+	}
+	a.binSeen.size = st.Size()
+	a.binSeen.mtime = st.ModTime().UnixNano()
+	a.binSeen.ok = true
+}
+
+func (a *App) binaryReplaced() bool {
+	if !a.binSeen.ok {
+		return false
+	}
+	self, err := a.exePath()
+	if err != nil || self == "" {
+		return false
+	}
+	st, err := os.Stat(self)
+	if err != nil {
+		return false
+	}
+	return st.Size() != a.binSeen.size || st.ModTime().UnixNano() != a.binSeen.mtime
 }
 
 func plistProgram(path string) (string, error) {

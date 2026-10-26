@@ -24,6 +24,12 @@ func TestProfileRefreshLaunchdRoundTrip(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("refusing to bootstrap a user agent as root")
 	}
+	if userHome, err := os.UserHomeDir(); err == nil {
+		installed := filepath.Join(userHome, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+		if _, err := os.Stat(installed); err == nil {
+			t.Skip("production profile-refresh plist is installed")
+		}
+	}
 	home := t.TempDir()
 	bin := filepath.Join(t.TempDir(), "fixture")
 	script := "#!/bin/sh\nexec /bin/sleep 600\n"
@@ -61,7 +67,7 @@ func TestProfileRefreshLaunchdRoundTrip(t *testing.T) {
 		t.Fatalf("plist was not the production agent:\n%s", body)
 	}
 	matches, err := filepath.Glob(filepath.Join(home, "Library", "LaunchAgents", "*.plist"))
-	if err != nil || len(matches) != 1 {
+	if err != nil || len(matches) != 2 {
 		t.Fatalf("jobs %v %v", matches, err)
 	}
 	app.stopProfileRefreshAgent()

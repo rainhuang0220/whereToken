@@ -36,6 +36,20 @@ func (Adapter) Discover(home adapter.Home) []adapter.SourceRoot {
 
 func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
 	var first error
+	visited := map[string]struct{}{}
+	liveSessions := map[string]struct{}{}
+	emitLive := func(e event.UsageEvent) {
+		if e.SessionID != "" {
+			liveSessions[e.SessionID] = struct{}{}
+		}
+		emit(e)
+	}
+	emitLiveTurn := func(t event.TurnEvent) {
+		if t.SessionID != "" {
+			liveSessions[t.SessionID] = struct{}{}
+		}
+		emitTurn(t)
+	}
 	err := filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -49,7 +63,8 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 		if !isRollout(path) {
 			return nil
 		}
-		if e := parseRollout(path, root, emit, emitTurn); e != nil && first == nil {
+		visited[path] = struct{}{}
+		if e := parseRollout(path, root, emitLive, emitLiveTurn); e != nil && first == nil {
 			first = e
 		}
 		return nil
@@ -57,7 +72,45 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 	if err != nil {
 		return err
 	}
+	replayDeletedRollouts(root.Path, visited, liveSessions, emit, emitTurn)
 	return first
+}
+
+// replayDeletedRollouts emits normalized events for rollout files this machine
+// already parsed and Codex later deleted. A live file is authoritative and is
+// not added twice. A session id that is still on disk is not replayed. No
+// index means nothing is invented.
+func replayDeletedRollouts(root string, visited map[string]struct{}, liveSessions map[string]struct{}, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) {
+	for _, blob := range index.AbsentUnder(root) {
+		if _, ok := visited[blob.Path]; ok {
+			continue
+		}
+		if !isRollout(blob.Path) {
+			continue
+		}
+		if _, err := os.Stat(blob.Path); !os.IsNotExist(err) {
+			continue
+		}
+		for _, e := range blob.Events {
+			if e.SessionID != "" {
+				if _, ok := liveSessions[e.SessionID]; ok {
+					continue
+				}
+			}
+			emit(e)
+		}
+		if emitTurn == nil {
+			continue
+		}
+		for _, t := range blob.Turns {
+			if t.SessionID != "" {
+				if _, ok := liveSessions[t.SessionID]; ok {
+					continue
+				}
+			}
+			emitTurn(t)
+		}
+	}
 }
 
 func isRollout(path string) bool {

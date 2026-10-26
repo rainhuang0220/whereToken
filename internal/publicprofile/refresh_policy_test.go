@@ -86,9 +86,9 @@ func TestDecideRefreshTable(t *testing.T) {
 			code:    CodeBlockedData,
 		},
 		{
-			name: "delta 9999 after an hour",
+			name: "delta 4999 after an hour stays 1M",
 			in: RefreshInput{
-				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+9_999)),
+				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+4_999)),
 				Remote:          &remote,
 				RemoteUpdatedAt: updated,
 				Now:             updated.Add(time.Hour),
@@ -130,7 +130,7 @@ func TestDecideRefreshTable(t *testing.T) {
 				Now:             later,
 			},
 			publish: false,
-			code:    CodeSkippedDelta,
+			code:    CodeBlockedRegression,
 		},
 		{
 			name: "date changed and total held",
@@ -152,7 +152,7 @@ func TestDecideRefreshTable(t *testing.T) {
 				Now:             later,
 			},
 			publish: false,
-			code:    CodeSkippedDelta,
+			code:    CodeBlockedRegression,
 		},
 		{
 			name: "weaker coverage does not publish on a new date",
@@ -418,7 +418,7 @@ func TestDecideRefreshDSTFallbackUsesAbsoluteHour(t *testing.T) {
 		t.Fatalf("1h-1ns during fallback should wait, not skip the upload: %+v", cooldown)
 	}
 	small := DecideRefresh(RefreshInput{
-		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+9_999)),
+		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+4_999)),
 		Remote:          &remote,
 		RemoteUpdatedAt: start,
 		Now:             ready,

@@ -76,7 +76,7 @@ func tokenSourceOf(id string, events []event.UsageEvent) string {
 			continue
 		}
 		switch e.Derivation {
-		case event.DeriveProviderAPI:
+		case event.DeriveProviderAPI, event.DeriveRetained:
 			hasAPI = true
 		case event.DeriveDerived:
 			hasDerived = true
@@ -106,7 +106,7 @@ func publicID(raw string, asSource bool) string {
 }
 
 func tokenWindowOf(id string, in Input, loc *time.Location) *DateRange {
-	if id == "cursor" {
+	if id == "cursor" && hasFreshAccountAPI(id, in.Events) && !hasRetainedAccount(id, in.Events) {
 		now := in.Now
 		if now.IsZero() {
 			now = time.Now()
@@ -119,7 +119,10 @@ func tokenWindowOf(id string, in Input, loc *time.Location) *DateRange {
 	}
 	var from, to string
 	for _, e := range in.Events {
-		if publicID(e.Source, true) != id || e.Derivation != event.DeriveProviderAPI || e.Timestamp.IsZero() {
+		if publicID(e.Source, true) != id || e.Timestamp.IsZero() {
+			continue
+		}
+		if e.Derivation != event.DeriveProviderAPI && e.Derivation != event.DeriveRetained {
 			continue
 		}
 		if loc == nil {
@@ -137,10 +140,35 @@ func tokenWindowOf(id string, in Input, loc *time.Location) *DateRange {
 		return nil
 	}
 	fromCopy := from
-	return &DateRange{From: &fromCopy, To: to, Label: "account usage"}
+	label := "account usage"
+	return &DateRange{From: &fromCopy, To: to, Label: label}
+}
+
+func hasFreshAccountAPI(id string, events []event.UsageEvent) bool {
+	for _, e := range events {
+		if publicID(e.Source, true) == id && e.Derivation == event.DeriveProviderAPI {
+			return true
+		}
+	}
+	return false
+}
+
+func hasRetainedAccount(id string, events []event.UsageEvent) bool {
+	for _, e := range events {
+		if publicID(e.Source, true) == id && e.Derivation == event.DeriveRetained {
+			return true
+		}
+	}
+	return false
 }
 
 func tokenReason(id string, in Input) string {
+	// A reused observation stays partial because its quality is degraded.
+	// The fresh-fetch error must not relabel that reuse as api_failed:
+	// api_failed is an unmeasured provider and would hide every other agent.
+	if hasRetainedAccount(id, in.Events) && !hasFreshAccountAPI(id, in.Events) {
+		return ""
+	}
 	if in.Offline && cloudSource(id) {
 		return ReasonAccountAPISkipped
 	}

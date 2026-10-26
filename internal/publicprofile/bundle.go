@@ -15,6 +15,8 @@ var GeneratedFiles = []string{
 	"preview-dark.svg",
 	"index.html",
 	"assets/profile.css",
+	"assets/lang.js",
+	"assets/messages.js",
 	"assets/profile.js",
 	"assets/paper.js",
 	"assets/newsprint-surface.jpg",
@@ -30,6 +32,8 @@ var AssetRevisionInputs = []string{
 	"preview-dark.svg",
 	"index.html",
 	"assets/profile.css",
+	"assets/lang.js",
+	"assets/messages.js",
 	"assets/profile.js",
 	"assets/paper.js",
 	"assets/newsprint-surface.jpg",
@@ -93,6 +97,16 @@ func BundleWith(snap Snapshot, presentation Presentation) (map[string][]byte, er
 	out["index.html"] = html
 	out["assets/profile.css"] = css
 	out["assets/profile.js"] = script
+	langJS, err := profilewebembed.Read("assets/lang.js")
+	if err != nil {
+		return nil, err
+	}
+	messagesJS, err := profilewebembed.Read("assets/messages.js")
+	if err != nil {
+		return nil, err
+	}
+	out["assets/lang.js"] = langJS
+	out["assets/messages.js"] = messagesJS
 	surface, err := profilewebembed.Read("assets/newsprint-surface.jpg")
 	if err != nil {
 		return nil, err

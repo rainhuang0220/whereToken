@@ -18,8 +18,9 @@
 //	files       path, size, mtime, inode, offset (bytes consumed, not EOF)
 //	blobs       gob-encoded normalized events and turns
 //
-// Wipe (wheretoken rebuild) deletes the database. The next scan reads agents
-// from scratch. A schema mismatch also drops the cache.
+// Wipe (wheretoken rebuild) deletes this cache database only. Confirmed usage
+// lives in the durable ledger, which is a different file. A schema mismatch
+// also drops the cache, not the ledger.
 package index
 
 import (
@@ -29,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -48,9 +50,17 @@ const (
 
 type ParseFunc func(*os.File) (evs []event.UsageEvent, turns []event.TurnEvent, consumed int64, err error)
 
+// FactCommitter persists normalized usage before the scan checkpoint moves.
+// CommitUsage must return an error when the facts were not stored. put then
+// leaves the file row unchanged so the next scan parses those bytes again.
+type FactCommitter interface {
+	CommitUsage(events []event.UsageEvent) error
+}
+
 type Store struct {
-	db *sql.DB
-	mu sync.Mutex
+	db    *sql.DB
+	mu    sync.Mutex
+	facts FactCommitter
 }
 
 type fileRow struct {
@@ -289,6 +299,65 @@ func (s *Store) Offset(path string) (int64, error) {
 	return r.Offset, nil
 }
 
+// SetFacts attaches the durable ledger. The ledger commit runs before the
+// cache checkpoint. SetFacts is not safe to call while a parse holds the
+// store lock.
+func (s *Store) SetFacts(c FactCommitter) {
+	s.mu.Lock()
+	s.facts = c
+	s.mu.Unlock()
+}
+
+// BackupTo writes a consistent snapshot with VACUUM INTO. dest must not exist.
+// The error text does not include dest.
+func (s *Store) BackupTo(dest string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
+		return fmt.Errorf("index backup failed")
+	}
+	if _, err := os.Stat(dest); err == nil {
+		return fmt.Errorf("index backup failed")
+	}
+	q := strings.ReplaceAll(dest, "'", "''")
+	if _, err := s.db.Exec(`VACUUM INTO '` + q + `'`); err != nil {
+		return fmt.Errorf("index backup failed")
+	}
+	return nil
+}
+
+// ExportUsage returns every cached usage event, including files that are no
+// longer on disk. A blob that cannot be decoded increments gaps and is
+// skipped. The missing tokens are not invented.
+func (s *Store) ExportUsage() ([]event.UsageEvent, int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rows, err := s.db.Query(`SELECT events FROM blobs`)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []event.UsageEvent
+	gaps := 0
+	for rows.Next() {
+		var evB []byte
+		if err := rows.Scan(&evB); err != nil {
+			return nil, gaps, err
+		}
+		if len(evB) == 0 {
+			gaps++
+			continue
+		}
+		var evs []event.UsageEvent
+		if err := gob.NewDecoder(bytes.NewReader(evB)).Decode(&evs); err != nil {
+			gaps++
+			continue
+		}
+		out = append(out, evs...)
+	}
+	return out, gaps, rows.Err()
+}
+
 func (s *Store) put(path string, cur fileRow, offset int64, evs []event.UsageEvent, turns []event.TurnEvent) error {
 	if evs == nil {
 		evs = []event.UsageEvent{}
@@ -302,6 +371,14 @@ func (s *Store) put(path string, cur fileRow, offset int64, evs []event.UsageEve
 	}
 	if err := gob.NewEncoder(&tb).Encode(turns); err != nil {
 		return err
+	}
+	// Facts commit before the checkpoint transaction starts. A crash in
+	// between leaves the facts in place and the checkpoint behind, so the
+	// next scan parses again and inserts with OR IGNORE.
+	if s.facts != nil && len(evs) > 0 {
+		if err := s.facts.CommitUsage(evs); err != nil {
+			return err
+		}
 	}
 	tx, err := s.db.Begin()
 	if err != nil {

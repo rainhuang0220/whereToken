@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 )
 
 func TestParseUpdateAndUninstall(t *testing.T) {
@@ -37,6 +39,7 @@ func TestRunUninstallRemovesBinary(t *testing.T) {
 	}
 	app, _, errb := testApp([]string{"uninstall"})
 	app.Executable = func() (string, error) { return dest, nil }
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
@@ -61,7 +64,13 @@ func TestRunUpdateReplacesBinary(t *testing.T) {
 	app, _, errb := testApp([]string{"update"})
 	app.GOOS = "darwin"
 	app.GOARCH = "arm64"
+	app.Home = testhome.New(t.TempDir())
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
 	app.Executable = func() (string, error) { return dest, nil }
+	app.RunCmd = func(name string, args ...string) error {
+		t.Fatalf("update touched %s %v", name, args)
+		return nil
+	}
 	app.HTTPGet = func(url string) ([]byte, error) {
 		switch {
 		case strings.HasSuffix(url, "checksums.txt"):
@@ -96,6 +105,8 @@ func TestRunUpdateRejectsBadChecksum(t *testing.T) {
 	app, _, errb := testApp([]string{"update"})
 	app.GOOS = "darwin"
 	app.GOARCH = "arm64"
+	app.Home = testhome.New(t.TempDir())
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
 	app.Executable = func() (string, error) { return dest, nil }
 	app.HTTPGet = func(url string) ([]byte, error) {
 		if strings.HasSuffix(url, "checksums.txt") {
@@ -117,6 +128,8 @@ func TestRunUpdateRejectsBadChecksum(t *testing.T) {
 
 func TestRunUpdateUsesBrewWhenCellar(t *testing.T) {
 	app, _, errb := testApp([]string{"update"})
+	app.Home = testhome.New(t.TempDir())
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
 	var got []string
 	app.Executable = func() (string, error) {
 		return "/opt/homebrew/Cellar/wheretoken/0.3.0/bin/wheretoken", nil
@@ -135,6 +148,8 @@ func TestRunUpdateUsesBrewWhenCellar(t *testing.T) {
 
 func TestRunUninstallUsesBrewWhenCellar(t *testing.T) {
 	app, _, errb := testApp([]string{"uninstall"})
+	app.Home = testhome.New(t.TempDir())
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
 	var got []string
 	app.Executable = func() (string, error) {
 		return "/opt/homebrew/Cellar/wheretoken/0.3.0/bin/wheretoken", nil

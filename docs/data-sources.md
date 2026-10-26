@@ -14,8 +14,16 @@ Home (os.UserHomeDir / XDG / Application Support / %APPDATA%)
         ↓
    Adapter.Parse   →  UsageEvent + TurnEvent
         ↓
+   durable ledger (confirmed facts; not provider_api rows)
+        ↓
    metric.Aggregate (merge by Source+RequestID, max per field)
 ```
+
+The scan index (`index.v1.db`) is a cache of offsets and parsed blobs.
+`wheretoken rebuild` deletes that cache. Confirmed facts live in the ledger
+described in [`token-accounting.md`](token-accounting.md). Importing the cache
+into the ledger takes a SQLite `VACUUM INTO` snapshot first. A blob that
+cannot be decoded is counted as a gap and is not replaced with a zero.
 
 Rules that apply to every adapter:
 
@@ -264,7 +272,7 @@ Do not read `auth.json` or `logs_2.sqlite`.
 
 Stream line by line. Usage is `type=event_msg` / `payload.type=token_count`. Prefer advancing `info.total_token_usage`; otherwise `last_token_usage` with de-duplication. Model comes from the latest `turn_context`. User turns: `response_item` message with `role=user`.
 
-Because totals are cumulative, Codex uses `index.LoadOrReplay` (no mid-file resume).
+Because totals are cumulative, Codex uses `index.LoadOrReplay` (no mid-file resume). A rollout this machine already parsed, which Codex later deletes, is replayed from that cache. `wheretoken rebuild` forgets it.
 
 ### Token mapping
 
@@ -513,7 +521,7 @@ JSONL adapters (Claude, Kimi, Grok, OpenClaw) cache normalized events by path / 
 
 Codex, OpenCode, and MiniMax Agent replay an unchanged file and fully reparse on any change.
 
-`wheretoken rebuild` deletes `~/.cache/wheretoken/index.v1.db` (or `WHERETOKEN_INDEX`). The next scan reads agents again. The index is not a source of truth.
+`wheretoken rebuild` deletes `~/.cache/wheretoken/index.v1.db` (or `WHERETOKEN_INDEX`). The next scan reads agents again. The index is not a second ledger, except that a deleted Codex rollout stays replayable until that rebuild.
 
 ---
 

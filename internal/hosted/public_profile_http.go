@@ -6,9 +6,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,31 +89,86 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid profile", http.StatusBadRequest)
 		return
 	}
+	var permit publicprofile.Correction
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
 		var prevSnap publicprofile.Snapshot
 		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
-		if parsed && (!publicprofile.ShouldReplaceProjection(prevSnap, snap) || tokenRegressed(prevSnap, snap)) {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"ok":          true,
-				"snapshot_id": prevSnap.SnapshotID,
-				"kept":        "previous",
-				"readme":      "kept",
-			})
+		if parsed && !publicprofile.ShouldReplaceProjection(prevSnap, snap) {
+			writeKeptProjection(w, prevSnap, "coverage")
 			return
+		}
+		if parsed && tokenRegressed(prevSnap, snap) {
+			permit = correctionFromRequest(r, prevSnap, snap)
+			if permit.Delta <= 0 {
+				writeKeptProjection(w, prevSnap, "regression")
+				return
+			}
 		}
 	}
 	if err := s.opts.Store.SaveProjection(r.Context(), user.ID, canonical, snap); err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	readme := s.considerPublication(r.Context(), user, snap, false, false)
+	ctx := r.Context()
+	if permit.Delta > 0 {
+		ctx = publicprofile.ContextWithCorrection(ctx, permit)
+	}
+	readme := s.considerPublication(ctx, user, snap, false, false)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":          true,
 		"snapshot_id": snap.SnapshotID,
 		"readme":      readme,
 	})
+}
+
+func writeKeptProjection(w http.ResponseWriter, prev publicprofile.Snapshot, reason string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"ok":          true,
+		"snapshot_id": prev.SnapshotID,
+		"kept":        "previous",
+		"readme":      "kept",
+		"reason":      reason,
+	})
+}
+
+// correctionFromRequest accepts the drop only when both headers name that
+// exact drop. An ordinary PUT has neither header.
+func correctionFromRequest(r *http.Request, prev, next publicprofile.Snapshot) publicprofile.Correction {
+	a := prev.Periods.All.Totals.Total.Value
+	b := next.Periods.All.Totals.Total.Value
+	if a == nil || b == nil {
+		return publicprofile.Correction{}
+	}
+	reason := r.Header.Get("Wheretoken-Correction-Reason")
+	deltaText := r.Header.Get("Wheretoken-Correction-Delta")
+	if !publicprofile.CorrectionAllows(reason, deltaText, *a, *b) {
+		return publicprofile.Correction{}
+	}
+	delta, _ := strconv.ParseInt(strings.TrimSpace(deltaText), 10, 64)
+	return publicprofile.Correction{Reason: strings.TrimSpace(reason), Delta: delta}
+}
+
+func correctionTag(ctx context.Context, wall publicprofile.VerifiedWall, snap publicprofile.Snapshot) string {
+	total := snap.Periods.All.Totals.Total.Value
+	c := publicprofile.CorrectionFrom(ctx)
+	if wall.Total == nil || total == nil || !c.Explains(*wall.Total, *total) {
+		return ""
+	}
+	return fmt.Sprintf("corr:%d", c.Delta)
+}
+
+func correctionDelta(reason string) (int64, bool) {
+	rest, ok := strings.CutPrefix(reason, "corr:")
+	if !ok || rest == "" || strings.ContainsAny(rest, " \t") {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(rest, 10, 64)
+	if err != nil || n <= 0 {
+		return 0, false
+	}
+	return n, true
 }
 
 func tokenRegressed(prev, next publicprofile.Snapshot) bool {
@@ -135,6 +192,7 @@ func (s *server) considerPublication(ctx context.Context, user User, snap public
 		Now:         s.now(),
 		ThemeChange: theme,
 		FromWorker:  fromWorker,
+		Correction:  publicprofile.CorrectionFrom(ctx),
 	})
 	switch decision.Action {
 	case publicprofile.ActionNoChange:
@@ -144,7 +202,7 @@ func (s *server) considerPublication(ctx context.Context, user User, snap public
 		return "coalesced"
 	case publicprofile.ActionBlocked:
 		if decision.Reason != publicprofile.ReasonUnknownVerified {
-			_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "blocked_data", decision.Reason, publicprofile.CodeBlockedData, sql.NullTime{}, 0)
+			_ = s.opts.Store.SetPublicationIntent(ctx, user.ID, snap.SnapshotID, "blocked_data", decision.Reason, decision.Code, sql.NullTime{}, 0)
 		}
 		return "blocked"
 	case publicprofile.ActionWaitUntil:
@@ -169,6 +227,8 @@ func (s *server) publishUsageNow(ctx context.Context, user User, snap publicprof
 	kind := "usage"
 	if theme {
 		kind = "theme"
+	} else if tag := correctionTag(ctx, s.verifiedWall(ctx, user.ID), snap); tag != "" {
+		kind = tag
 	}
 	palette := s.usagePalette(ctx, user.ID)
 	row, _ := s.opts.Store.Projection(ctx, user.ID)
@@ -220,18 +280,15 @@ func (s *server) notePublishFailure(ctx context.Context, userID int64, snapshotI
 	_ = s.opts.Store.SetPublicationIntent(ctx, userID, snapshotID, status, kind, code, due, retry)
 }
 
+// publishBackoff is the gap before another GitHub attempt of a snapshot the
+// server already accepted. The first miss retries immediately. Later misses
+// wait an hour, with no attempt cap that drops the intent. Rate-limit waits
+// are decided separately from Retry-After or X-RateLimit-Reset.
 func publishBackoff(retry int) time.Duration {
 	if retry <= 1 {
 		return 0
 	}
-	wait := 30 * time.Second
-	for i := 1; i < retry && wait < 15*time.Minute; i++ {
-		wait *= 2
-	}
-	if wait > 15*time.Minute {
-		return 15 * time.Minute
-	}
-	return wait
+	return time.Hour
 }
 
 func (s *server) usagePalette(ctx context.Context, userID int64) string {
@@ -315,7 +372,11 @@ func (s *server) retryFailedReadmes(ctx context.Context) {
 			}
 			continue
 		}
-		s.considerPublication(ctx, user, snap, false, true)
+		callCtx := ctx
+		if delta, ok := correctionDelta(row.PendingReason); ok {
+			callCtx = publicprofile.ContextWithCorrection(ctx, publicprofile.Correction{Reason: "ledger", Delta: delta})
+		}
+		s.considerPublication(callCtx, user, snap, false, true)
 	}
 }
 

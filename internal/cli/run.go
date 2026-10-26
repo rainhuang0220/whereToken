@@ -64,6 +64,14 @@ type App struct {
 	// Reexec replaces the process when watch notices a new binary.
 	// Tests set it so the test process is not replaced.
 	Reexec func(argv []string)
+	// binSeen is the size and mtime of this process's executable at the
+	// previous watch wake. An in-place replace keeps the same path, so
+	// SameFile alone does not notice it.
+	binSeen struct {
+		size  int64
+		mtime int64
+		ok    bool
+	}
 	// PortraitSeed resolves the anonymous install identity that seeds the
 	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
 	// pin a constant so runs stay hermetic.

@@ -291,7 +291,7 @@ func TestApplyRefreshNilTotalsDoNotPublishOrPrintZero(t *testing.T) {
 	prev := gateSnap("sha256:prev", StatusAvailable, "2026-09-25", intPtr(1_000), measured("claude", 1_000))
 	pub = &fakePublisher{view: RemoteView{Found: true, Snapshot: prev, UpdatedAt: now.Add(-2 * time.Hour)}}
 	got = ApplyRefresh(context.Background(), drop, now, false, pub)
-	if pub.puts != 0 || got.Decision.Publish || got.Decision.Code != CodeSkippedDelta {
+	if pub.puts != 0 || got.Decision.Publish || got.Decision.Code != CodeBlockedRegression {
 		t.Fatalf("drop on a new date puts=%d %+v", pub.puts, got.Decision)
 	}
 }
@@ -325,10 +325,10 @@ func TestApplyRefreshDelta9999AtOneHourDoesNotPublish(t *testing.T) {
 	start := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
 	remote := mustBuild(t, usageInput(start, time.UTC, 1_000))
 	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: start}}
-	local := mustBuild(t, usageInput(start.Add(time.Hour), time.UTC, 1_000+9_999))
+	local := mustBuild(t, usageInput(start.Add(time.Hour), time.UTC, 1_004))
 	got := ApplyRefresh(context.Background(), local, start.Add(time.Hour), false, pub)
 	if pub.puts != 0 || got.Decision.Publish || got.Decision.Code != CodeSkippedDelta {
-		t.Fatalf("+9999 puts=%d %+v", pub.puts, got.Decision)
+		t.Fatalf("unchanged display puts=%d %+v", pub.puts, got.Decision)
 	}
 }
 

@@ -1072,10 +1072,10 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	puts := git.puts
 	sameDay := mustProjection(t, publicprofile.Input{
 		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_004)},
 	})
-	if publicprofile.TotalTokens(sameDay.snap)-publicprofile.TotalTokens(first.snap) >= publicprofile.RefreshMinDelta {
-		t.Fatal("fixture delta is large enough to pass the same-day gate")
+	if publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(sameDay.snap)) {
+		t.Fatal("fixture display changed on the same day")
 	}
 	small := putProjection(t, h, device, sameDay.raw)
 	if small["readme"] != "coalesced" || git.puts != puts {
@@ -1083,14 +1083,17 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	}
 	nextDay := mustProjection(t, publicprofile.Input{
 		Now: day.Add(24 * time.Hour), Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_100)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_004)},
 	})
 	if nextDay.snap.AsOfDate != "2026-09-25" || publicprofile.TotalTokens(nextDay.snap) != publicprofile.TotalTokens(sameDay.snap) {
 		t.Fatalf("next as_of=%s totals %d %d", nextDay.snap.AsOfDate, publicprofile.TotalTokens(nextDay.snap), publicprofile.TotalTokens(sameDay.snap))
 	}
 	rolled := putProjection(t, h, device, nextDay.raw)
 	if rolled["readme"] != "materialized" || git.puts == puts {
-		t.Fatalf("date change readme=%v puts %d -> %d", rolled["readme"], puts, git.puts)
+		st := readyStore(t)
+		var phase, result, errText string
+		_ = st.db.QueryRow(`SELECT phase, result_code, error_text FROM publish_jobs ORDER BY id DESC LIMIT 1`).Scan(&phase, &result, &errText)
+		t.Fatalf("date change readme=%v puts %d -> %d job=%s/%s %s", rolled["readme"], puts, git.puts, phase, result, errText)
 	}
 }
 
@@ -1294,17 +1297,20 @@ func TestHostedUsageWaitsForVerifiedHourThenPublishesWithoutAnotherPut(t *testin
 	now = early
 	small := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta-1)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+4)},
 	})
+	if publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(small.snap)) {
+		t.Fatal("small fixture changed the visible total")
+	}
 	if got := putProjection(t, h, device, small.raw); got["readme"] != "coalesced" || git.puts != puts {
-		t.Fatalf("+9999 readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+		t.Fatalf("unchanged display readme=%v puts %d -> %d", got["readme"], puts, git.puts)
 	}
 	waiting := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+10)},
 	})
-	if publicprofile.TotalTokens(waiting.snap)-publicprofile.TotalTokens(first.snap) != publicprofile.RefreshMinDelta {
-		t.Fatalf("delta %d", publicprofile.TotalTokens(waiting.snap)-publicprofile.TotalTokens(first.snap))
+	if !publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(waiting.snap)) {
+		t.Fatalf("waiting display %s", waiting.snap.Periods.All.Totals.Total.Display)
 	}
 	if got := putProjection(t, h, device, waiting.raw); got["readme"] != "pending" || git.puts != puts {
 		t.Fatalf("during cooldown readme=%v puts %d -> %d", got["readme"], puts, git.puts)

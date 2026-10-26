@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -179,6 +180,10 @@ func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
+	if c := publicprofile.CorrectionFrom(ctx); strings.TrimSpace(c.Reason) != "" && c.Delta > 0 {
+		req.Header.Set("Wheretoken-Correction-Reason", c.Reason)
+		req.Header.Set("Wheretoken-Correction-Delta", strconv.FormatInt(c.Delta, 10))
+	}
 	if do == nil {
 		do = a.doHTTP
 	}
@@ -193,17 +198,20 @@ func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []
 	}
 	kept := false
 	readme := ""
+	reason := ""
 	if resp.StatusCode < 400 && len(body) > 0 {
 		var env struct {
 			Kept   string `json:"kept"`
 			Readme string `json:"readme"`
+			Reason string `json:"reason"`
 		}
 		if json.Unmarshal(body, &env) == nil {
 			kept = env.Kept == "previous"
 			readme = env.Readme
+			reason = env.Reason
 		}
 	}
-	return publicprofile.PutResult{Status: resp.StatusCode, KeptPrevious: kept, Readme: readme}, nil
+	return publicprofile.PutResult{Status: resp.StatusCode, KeptPrevious: kept, Readme: readme, Reason: reason}, nil
 }
 
 func (a *App) accountIDs(home adapter.Home) map[string]string {

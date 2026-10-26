@@ -628,7 +628,7 @@ func finishProfile(f *Flags, extra []string) (Flags, error) {
 
 func refreshAction(s string) bool {
 	switch s {
-	case "status", "on", "off", "watch":
+	case "status", "on", "off", "watch", "doctor", "repair":
 		return true
 	default:
 		return false

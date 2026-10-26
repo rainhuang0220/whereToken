@@ -3,9 +3,9 @@ package publicprofile
 import "time"
 
 const (
-	// RefreshMinDelta is the smallest all-time raw token movement since the
-	// last verified GitHub wall that may publish on the same local day.
-	// It is the 0.01 M display step below 1e9. Comparison uses integers.
+	// RefreshMinDelta is the 0.01 M raw step below 1e9. Same-day publication
+	// compares FormatCompact, because half-up rounding moves the visible
+	// hundredth before this many raw tokens at some magnitudes.
 	RefreshMinDelta int64 = 10_000
 	// RefreshCooldown is the minimum absolute gap since the last verified
 	// GitHub wall publication. A strictly later owner-local date does not
@@ -21,19 +21,20 @@ const (
 )
 
 const (
-	CodePublished       = "PUBLISHED"
-	CodeDateRollover    = "DATE_ROLLOVER"
-	CodeSkippedCooldown = "SKIPPED_COOLDOWN"
-	CodeSkippedDelta    = "SKIPPED_DELTA"
-	CodeWillRetry       = "WILL_RETRY"
-	CodeNotSignedIn     = "NOT_SIGNED_IN"
-	CodeOffline         = "OFFLINE"
-	CodeBusy            = "BUSY"
-	CodeWaitingCooldown = "WAITING_COOLDOWN"
-	CodePendingGitHub   = "PENDING_GITHUB"
-	CodeBlockedData     = "BLOCKED_DATA"
-	CodeBlockedAuth     = "BLOCKED_AUTH"
-	CodeVerified        = "VERIFIED"
+	CodePublished         = "PUBLISHED"
+	CodeDateRollover      = "DATE_ROLLOVER"
+	CodeSkippedCooldown   = "SKIPPED_COOLDOWN"
+	CodeSkippedDelta      = "SKIPPED_DELTA"
+	CodeWillRetry         = "WILL_RETRY"
+	CodeNotSignedIn       = "NOT_SIGNED_IN"
+	CodeOffline           = "OFFLINE"
+	CodeBusy              = "BUSY"
+	CodeWaitingCooldown   = "WAITING_COOLDOWN"
+	CodePendingGitHub     = "PENDING_GITHUB"
+	CodeBlockedData       = "BLOCKED_DATA"
+	CodeBlockedAuth       = "BLOCKED_AUTH"
+	CodeBlockedRegression = "BLOCKED_REGRESSION"
+	CodeVerified          = "VERIFIED"
 )
 
 // Decision is the client upload gate. Publish is true when a sanitized PUT
@@ -46,6 +47,9 @@ type Decision struct {
 	Code    string
 	Action  string
 	DueAt   time.Time
+	// Detail is a comma-separated list of catalog agent ids. It is empty
+	// unless a coverage block can name them. It is not a path or an error.
+	Detail string
 }
 
 // RefreshInput is the client view of the shared wall gate. Remote is the
@@ -63,6 +67,7 @@ type RefreshInput struct {
 	WallKnown       bool
 	Now             time.Time
 	Offline         bool
+	Correction      Correction
 }
 
 // DecideRefresh chooses whether the client should PUT a sanitized snapshot.
@@ -81,12 +86,13 @@ func DecideRefresh(in RefreshInput) Decision {
 		verified = WallFromSnapshot(*in.Remote, in.RemoteUpdatedAt)
 	}
 	pub := DecidePublication(PublicationInput{
-		Candidate: in.Local,
-		Accepted:  in.Remote,
-		Verified:  verified,
-		Pending:   in.Pending,
-		Now:       in.Now,
-		Offline:   false,
+		Candidate:  in.Local,
+		Accepted:   in.Remote,
+		Verified:   verified,
+		Pending:    in.Pending,
+		Now:        in.Now,
+		Offline:    false,
+		Correction: in.Correction,
 	})
 	return refreshFromPublication(pub, in)
 }
@@ -113,7 +119,9 @@ func refreshFromPublication(pub PublicationDecision, in RefreshInput) Decision {
 	case ActionRetryPending:
 		return Decision{Publish: false, Phase: PhaseWaiting, Label: "主页更新将重试", Code: CodePendingGitHub, Action: pub.Action}
 	case ActionBlocked:
-		return blockedDecision(pub, in)
+		d := blockedDecision(pub, in)
+		d.Detail = pub.Detail
+		return d
 	default:
 		return noChangeDecision(pub, in)
 	}
@@ -129,7 +137,7 @@ func blockedDecision(pub PublicationDecision, in RefreshInput) Decision {
 	case ReasonCoverage:
 		return skipped("覆盖变弱，保留上次", CodeBlockedData)
 	case ReasonNegative:
-		return skipped("增量未到 0.01 M", CodeSkippedDelta)
+		return skipped("用量回退，保留上次", CodeBlockedRegression)
 	case ReasonUnknownVerified:
 		return skipped("已发布用量未知，保留上次", CodeBlockedData)
 	case ReasonCooldown:
@@ -154,7 +162,7 @@ func noChangeDecision(pub PublicationDecision, in RefreshInput) Decision {
 // AllowedRefreshCode is the only set persisted in profile-refresh-state.json.
 func AllowedRefreshCode(code string) bool {
 	switch code {
-	case "", CodePublished, CodeDateRollover, CodeSkippedCooldown, CodeSkippedDelta, CodeWillRetry, CodeNotSignedIn, CodeOffline, CodeBusy, CodeWaitingCooldown, CodePendingGitHub, CodeBlockedData, CodeBlockedAuth, CodeVerified:
+	case "", CodePublished, CodeDateRollover, CodeSkippedCooldown, CodeSkippedDelta, CodeWillRetry, CodeNotSignedIn, CodeOffline, CodeBusy, CodeWaitingCooldown, CodePendingGitHub, CodeBlockedData, CodeBlockedAuth, CodeBlockedRegression, CodeVerified:
 		return true
 	default:
 		return false

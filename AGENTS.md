@@ -29,6 +29,7 @@ Local-first token usage accounting. Read these before changing parsers or totals
 If source files only append, a later successful scan must not drop tokens.
 `/reset` archives (`*.jsonl.reset.*`, `*.jsonl.deleted.*`) still count.
 Incremental parse errors must keep the cached events for that file.
+`wheretoken rebuild` deletes the scan index only. Confirmed usage lives in the durable ledger and must survive that wipe. A scan must not lower a stored ledger count; a lower figure is a versioned correction.
 
 ## Installer invariants
 

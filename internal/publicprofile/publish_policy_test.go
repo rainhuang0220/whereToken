@@ -20,9 +20,9 @@ func TestDecidePublicationThresholds(t *testing.T) {
 		code   string
 	}{
 		{
-			name: "plus 9999 at one hour",
+			name: "plus 4999 at one hour stays 1M",
 			mutate: func(in PublicationInput) PublicationInput {
-				in.Candidate = gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+9_999))
+				in.Candidate = gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+4_999))
 				return in
 			},
 			action: ActionNoChange,
@@ -64,7 +64,7 @@ func TestDecidePublicationThresholds(t *testing.T) {
 				return in
 			},
 			action: ActionBlocked,
-			code:   CodeSkippedDelta,
+			code:   CodeBlockedRegression,
 		},
 		{
 			name: "missing verified total is not zero",

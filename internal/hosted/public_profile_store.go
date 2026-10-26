@@ -137,6 +137,10 @@ func (s *Store) MarkReadmeVerified(ctx context.Context, userID int64, cacheKey, 
 	if !notAfter.IsZero() {
 		notAfterArg = notAfter
 	}
+	// readme_materialized_at is DATETIME with second precision. MySQL rounds a
+	// fractional insert, so a stamp from the previous second can be stored
+	// one second ahead of this job's start. The lease above is what stops a
+	// different publish; this extra second only absorbs that rounding.
 	res, err := s.db.ExecContext(ctx, `
 UPDATE public_presentations
 SET readme_cache_key=?, readme_snapshot_id=?, readme_materialized_at=?,
@@ -145,7 +149,7 @@ WHERE user_id=?
   AND (
     readme_snapshot_id=''
     OR readme_snapshot_id=?
-    OR (readme_materialized_at IS NOT NULL AND ? IS NOT NULL AND readme_materialized_at <= ?)
+    OR (readme_materialized_at IS NOT NULL AND ? IS NOT NULL AND readme_materialized_at <= DATE_ADD(?, INTERVAL 1 SECOND))
   )
   AND EXISTS (
     SELECT 1 FROM public_projections WHERE user_id=? AND publish_lease_token=?
