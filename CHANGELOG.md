@@ -2,9 +2,12 @@
 
 ## Unreleased
 
+## 0.7.8 — 2026-10-27 (Alpha)
+
 - Confirmed usage is stored in a durable ledger outside the scan cache. Deleting a parsed source file or running `wheretoken rebuild` does not drop those facts. Account API rows stay out of that ledger so they are not added on top of a source the API already reported. A lower stored count is a versioned correction with a reason, and the same correction does not apply twice. The net drop is one publication permit. An ordinary scan does not grant it, and the wall accepts that lower total only when the drop matches the permit. `profile refresh doctor` prints `ledger_facts`, `ledger_tokens`, and `ledger_import_gaps`.
 - The public profile page defaults to English. `?lang=en` or `?lang=zh-CN` selects the page language, and an explicit switch is remembered in the browser. The GitHub README SVG stays English. A color choice on that page is a browser preview. Opening the local dashboard is a separate confirmation and does not publish.
 - A Codex rollout this machine already parsed stays in the scan after Codex deletes the jsonl, so a published total is not forgotten while the scan cache still exists. The durable ledger is what survives `wheretoken rebuild`. A lower total is `BLOCKED_REGRESSION` and does not publish on a new date. Same-day publication follows the visible two-decimal total, then one hour since the verified wall. `profile refresh watch` wakes hourly and at local midnight. A failed GitHub publish retries about hourly and is not cancelled by the same-day gate. `profile refresh doctor` and `repair` check the launchd job; `status` exits non-zero when that job is dead or the last result is blocked. An hourly health agent reloads a missing job and does not scan.
+- Each public agent is labeled fresh, retained, partial, or unavailable. A retained account observation shows the window it was measured on. The page header stays the snapshot time and is not that observation's date.
 
 ## 0.7.7 — 2026-09-26 (Alpha)
 

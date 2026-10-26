@@ -733,15 +733,12 @@
         meta.textContent = t("rank.share", { share: row.share || "—", n: req });
       }
       body.append(top, bar, meta);
-      if (cov.tokens === "unavailable") {
+      const noteText = coverageNote(cov, snap.as_of_date);
+      if (noteText) {
         const note = document.createElement("span");
         note.className = "rank-note";
-        note.textContent = t("rank.unavailable");
-        body.append(note);
-      } else if (cov.token_source === "account_api" && cov.token_window) {
-        const note = document.createElement("span");
-        note.className = "rank-note";
-        note.textContent = coverageNote(cov);
+        note.dataset.freshness = agentFreshness(cov, snap.as_of_date);
+        note.textContent = noteText;
         body.append(note);
       }
       b.append(n, body);
@@ -771,11 +768,15 @@
       const tr = document.createElement("tr");
       const tokenState = cov.tokens === "available" ? "available" : cov.tokens === "partial" ? "partial" : "missing";
       const requestState = cov.requests === "available" ? "available" : "missing";
+      const kind = agentFreshness(cov, snap.as_of_date);
+      const note = coverageNote(cov, snap.as_of_date);
+      const word = t("agent." + kind);
+      const notes = kind === "fresh" ? (note ? word + " · " + note : word) : (note || word);
       const cells = [
         row.label,
         t("coverage." + tokenState),
         t("coverage." + requestState),
-        coverageNote(cov),
+        notes,
       ];
       const states = ["", tokenState, requestState, ""];
       cells.forEach((text, i) => {
@@ -789,7 +790,20 @@
     host.append(table);
   }
 
-  function coverageNote(cov) {
+  function agentFreshness(cov, asOf) {
+    if (!cov || cov.tokens === "unavailable") return "unavailable";
+    const win = cov.token_window;
+    // A reused account observation keeps the label "account usage" and a
+    // window that ends before the snapshot date. A fresh account pull uses
+    // "53w account usage" through the snapshot date. The snapshot date is
+    // not this observation's date.
+    if (cov.token_source === "account_api" && win && win.label === "account usage" && win.to && asOf && win.to < asOf) return "retained";
+    if (cov.tokens === "partial") return "partial";
+    if (cov.tokens === "available") return "fresh";
+    return "unavailable";
+  }
+
+  function reasonText(cov) {
     switch (cov.reason) {
       case "account_api_skipped": return t("coverage.accountSkipped");
       case "auth_missing": return t("coverage.authMissing");
@@ -803,6 +817,18 @@
         if (cov.token_source === "account_api") return t("coverage.account");
         return "";
     }
+  }
+
+  function coverageNote(cov, asOf) {
+    const kind = agentFreshness(cov, asOf);
+    if (kind === "retained" && cov.token_window) {
+      const from = cov.token_window.from ? formatDay(cov.token_window.from) : t("coverage.startUnavailable");
+      return t("agent.retained", { from: from, to: formatDay(cov.token_window.to) });
+    }
+    const detail = reasonText(cov);
+    if (kind === "partial") return detail ? t("agent.partial") + " · " + detail : t("agent.partial");
+    if (kind === "unavailable") return detail || t("agent.unavailable");
+    return detail;
   }
 
   function tipValue(val, st) {

@@ -111,6 +111,29 @@ test("explains mixed source coverage next to the hero and with exact dates", asy
   await expect(page.locator("#coverage-table")).toContainText("Sep 8, 2025 – Sep 14, 2026");
 });
 
+test("labels a retained account observation with its own window", async ({ page }) => {
+  const cursor = snapshot.periods.all.by_agent.find((row) => row.id === "cursor") || snapshot.periods.all.by_agent[0];
+  snapshot.as_of_date = "2026-10-27";
+  cursor.quality = "degraded";
+  cursor.totals.total = { ...cursor.totals.total, status: "partial" };
+  cursor.coverage = {
+    tokens: "partial",
+    requests: "available",
+    token_source: "account_api",
+    token_window: { from: "2025-10-21", to: "2026-10-23", label: "account usage" },
+  };
+  await page.goto(baseURL);
+  const note = page.locator("#rows button", { hasText: cursor.label }).locator(".rank-note");
+  await expect(note).toHaveAttribute("data-freshness", "retained");
+  await expect(note).toContainText("Retained");
+  await expect(note).toContainText("Oct 23, 2026");
+  await expect(note).not.toContainText("Oct 27");
+  await expect(page.locator("#freshness")).not.toContainText("Oct 23, 2026");
+  await page.getByRole("button", { name: "中文" }).click();
+  await expect(note).toContainText("沿用历史观测");
+  await expect(note).toContainText("2026年10月23日");
+});
+
 test("uses the selected range for the trend window", async ({ page }) => {
   const series = snapshot.activity.series.find((item) => item.dimension === "all" && (item.metric || "tokens") === "tokens");
   series.values.fill(0);

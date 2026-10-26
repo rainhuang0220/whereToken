@@ -114,7 +114,11 @@ window.WT_MESSAGES = {
     "coverage.apiFailed": "Account usage failed",
     "coverage.ledgerMissing": "Token ledger missing",
     "coverage.account": "Account usage",
-    "coverage.startUnavailable": "Start unavailable"
+    "coverage.startUnavailable": "Start unavailable",
+    "agent.retained": "Retained · {from} – {to}",
+    "agent.partial": "Partial",
+    "agent.fresh": "Fresh",
+    "agent.unavailable": "Unavailable"
   },
   "zh-CN": {
     "meta.title": "whereToken · 编程活动",
@@ -231,7 +235,11 @@ window.WT_MESSAGES = {
     "coverage.apiFailed": "账号用量获取失败",
     "coverage.ledgerMissing": "缺少 Token 账本",
     "coverage.account": "账号用量",
-    "coverage.startUnavailable": "起点不可用"
+    "coverage.startUnavailable": "起点不可用",
+    "agent.retained": "沿用历史观测 · {from} – {to}",
+    "agent.partial": "部分覆盖",
+    "agent.fresh": "本次观测",
+    "agent.unavailable": "不可用"
   }
 };
 
