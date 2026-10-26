@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -179,6 +180,10 @@ func (a *App) putSanitizedProjectionDo(ctx context.Context, token string, raw []
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
+	if c := publicprofile.CorrectionFrom(ctx); strings.TrimSpace(c.Reason) != "" && c.Delta > 0 {
+		req.Header.Set("Wheretoken-Correction-Reason", c.Reason)
+		req.Header.Set("Wheretoken-Correction-Delta", strconv.FormatInt(c.Delta, 10))
+	}
 	if do == nil {
 		do = a.doHTTP
 	}

@@ -2,7 +2,7 @@ module github.com/rainhuang0220/whereToken
 
 go 1.25.0
 
-toolchain go1.26.9
+toolchain go1.26.10
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3

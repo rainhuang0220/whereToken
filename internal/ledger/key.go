@@ -21,7 +21,7 @@ import (
 // An empty request id is not invented. The event still flows through the
 // scan; it is simply not durable.
 func Key(e event.UsageEvent) (string, bool) {
-	if e.Derivation == event.DeriveProviderAPI || e.SkipRequest {
+	if e.Derivation == event.DeriveProviderAPI || e.Derivation == event.DeriveRetained || e.SkipRequest {
 		return "", false
 	}
 	if e.Source == "" || e.RequestID == "" {

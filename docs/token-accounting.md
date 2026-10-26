@@ -38,12 +38,28 @@ A deleted source log does not delete a fact. A repeated scan inserts a new
 identity or raises a component the new observation already covers. It does
 not lower a stored count. A lower figure is a versioned correction: a newer
 parser version, a reason, and the replacement event. Applying that same
-correction again does not write a second revision.
+correction again does not write a second revision. The revisions keep the
+before and after payloads. Their net drop is one publication permit. An
+ordinary scan does not grant that permit. Revert removes the drop that
+revision undid. A later wall may move down only when its drop equals the
+permit. A per-field maximum on ordinary facts is not applied across two
+API observation versions; the newest positive observation is kept whole.
 
 Account API rows (`provider_api`) are not facts. When a scan emits that API
 for a source, stored local facts for the source are not added on top.
-Overlapping API responses are recorded as observations and are not summed
-into the ledger.
+Each confirmed API response is one observation, identified by its payload.
+The same payload twice is one row. A later payload is a second row. Reuse
+picks the newest positive observation. It does not max-merge components
+from two versions, and a missing observation is not stored or published
+as zero.
+
+When a later fetch fails, that newest observation is reused as retained
+partial coverage. Its token window is the observation's own dates. Local
+token rows for that source are cleared first, so the observation is not
+added on top of them. A newer response whose window starts later keeps
+the previous observation's earlier days and uses the new response inside
+the new window. A successful empty response is not a license to delete
+the previous positive observation during an outage.
 
 The ledger stores counts, time, model, vendor, quality, derivation, and the
 stable identity. It does not store prompts, transcripts, paths, or credentials.

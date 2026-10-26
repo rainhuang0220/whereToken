@@ -56,6 +56,7 @@ type ApplyResult struct {
 	Transport bool
 	Already   bool
 	Auth      bool
+	Remote    *Snapshot
 }
 
 // ApplyRefresh fetches the hosted envelope, applies DecideRefresh, and
@@ -85,14 +86,22 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		WallKnown:       view.WallKnown,
 		Verified:        view.Wall,
 		Pending:         view.Pending,
+		Correction:      CorrectionFrom(ctx),
 	}
 	if view.Found && view.Snapshot.SnapshotID != "" {
 		remote := view.Snapshot
 		in.Remote = &remote
 	}
+	attach := func(r ApplyResult) ApplyResult {
+		if view.Found && view.Snapshot.SnapshotID != "" {
+			snap := view.Snapshot
+			r.Remote = &snap
+		}
+		return r
+	}
 	d := DecideRefresh(in)
 	if !d.Publish {
-		return ApplyResult{Decision: d}
+		return attach(ApplyResult{Decision: d})
 	}
 	if view.Found && view.Snapshot.SnapshotID != "" && view.Snapshot.SnapshotID == local.SnapshotID {
 		if d.Action == ActionPublishNow && (!in.WallKnown || in.Verified.SnapshotID != local.SnapshotID) {
@@ -102,35 +111,35 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 			d.Code = CodePendingGitHub
 			d.Action = ActionRetryPending
 		}
-		return ApplyResult{Decision: d, Already: true}
+		return attach(ApplyResult{Decision: d, Already: true})
 	}
 	if err := Validate(local); err != nil {
-		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
+		return attach(ApplyResult{Decision: FailedRefresh(), Rejected: true})
 	}
 	raw, err := Marshal(local)
 	if err != nil || Sensitive(string(raw)) {
-		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
+		return attach(ApplyResult{Decision: FailedRefresh(), Rejected: true})
 	}
 	res, err := pub.Put(ctx, raw)
 	if err != nil || res.Status == 429 || res.Status >= 500 {
 		if stored(ctx, pub, local.SnapshotID) {
-			return ApplyResult{Decision: d, Already: true}
+			return attach(ApplyResult{Decision: d, Already: true})
 		}
-		return ApplyResult{Decision: FailedRefresh(), Transport: true}
+		return attach(ApplyResult{Decision: FailedRefresh(), Transport: true})
 	}
 	if res.Status == 401 || res.Status == 403 {
-		return ApplyResult{Auth: true}
+		return attach(ApplyResult{Auth: true})
 	}
 	if res.Status >= 400 {
-		return ApplyResult{Decision: FailedRefresh(), Rejected: true}
+		return attach(ApplyResult{Decision: FailedRefresh(), Rejected: true})
 	}
 	if res.KeptPrevious {
 		if res.Reason == "regression" {
-			return ApplyResult{Decision: skipped("用量回退，保留上次", CodeBlockedRegression)}
+			return attach(ApplyResult{Decision: skipped("用量回退，保留上次", CodeBlockedRegression)})
 		}
-		return ApplyResult{Decision: skipped("覆盖变弱，保留上次", CodeBlockedData)}
+		return attach(ApplyResult{Decision: skipped("覆盖变弱，保留上次", CodeBlockedData)})
 	}
-	return ApplyResult{Decision: decisionAfterPut(d, res.Readme)}
+	return attach(ApplyResult{Decision: decisionAfterPut(d, res.Readme)})
 }
 
 // decisionAfterPut refuses to call a wall published when the server only

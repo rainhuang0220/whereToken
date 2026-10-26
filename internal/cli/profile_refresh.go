@@ -10,14 +10,17 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
+	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
 // profileRefreshInterval is the foreground watch period. Launchd does not
@@ -264,16 +267,8 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	}
 	defer release()
 	res := a.doScanOpt(home, flags.Quiet, flags.Offline, flags.ASCII, false)
-	snap, err := publicprofile.Build(publicprofile.Input{
-		Events:       res.Events,
-		Turns:        res.Turns,
-		Now:          a.Now(),
-		Loc:          a.Loc,
-		Version:      a.Version,
-		PortraitSeed: a.PortraitSeed(home),
-		Offline:      res.Offline,
-		Errors:       res.Errors,
-	})
+	events, restored := a.retainAccountObservations(home, res.Events, res.Errors, nil)
+	snap, err := a.refreshSnapshot(home, res, events)
 	if err != nil {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
@@ -284,7 +279,20 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 			return ExitOK
 		}
 	}
-	applied := publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, projectionClient{app: a, token: token, login: login})
+	ctx = a.withCorrectionPermit(ctx, home)
+	publisher := projectionClient{app: a, token: token, login: login}
+	applied := publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, publisher)
+	if !restored && applied.Decision.Code == publicprofile.CodeBlockedData && applied.Remote != nil {
+		seeded, ok := a.retainAccountObservations(home, res.Events, res.Errors, applied.Remote)
+		if ok {
+			snap, err = a.refreshSnapshot(home, res, seeded)
+			if err != nil {
+				a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+				return a.refreshFailed()
+			}
+			applied = publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, publisher)
+		}
+	}
 	if applied.Auth {
 		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
@@ -297,9 +305,141 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
 	}
+	a.clearPermitIfPublished(home, applied)
 	a.noteRefresh(home, applied.Decision.Phase, applied.Decision.Code)
 	a.writeRefresh(a.Stdout, applied.Decision, true)
 	return ExitOK
+}
+
+func (a *App) refreshSnapshot(home adapter.Home, res scan.Result, events []event.UsageEvent) (publicprofile.Snapshot, error) {
+	return publicprofile.Build(publicprofile.Input{
+		Events:       events,
+		Turns:        res.Turns,
+		Now:          a.Now(),
+		Loc:          a.Loc,
+		Version:      a.Version,
+		PortraitSeed: a.PortraitSeed(home),
+		Offline:      res.Offline,
+		Errors:       res.Errors,
+	})
+}
+
+// retainAccountObservations reuses a confirmed account-API observation when
+// the fresh fetch failed. remote, when set, can seed that observation from
+// the accepted public snapshot. Local token rows for that source are cleared
+// so the observation is not added on top of them.
+func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageEvent, errs []string, remote *publicprofile.Snapshot) ([]event.UsageEvent, bool) {
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return events, false
+	}
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return events, false
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		return events, false
+	}
+	defer lg.Close()
+	changed := false
+	if next, err := lg.SupplementNarrowWindow(events); err == nil && len(next) != len(events) {
+		events = next
+		changed = true
+	}
+	for _, source := range failedAccountSources(errs) {
+		if !publicprofile.AccountFetchFailed(events, errs, source) {
+			continue
+		}
+		got, ok, err := lg.LatestRetainedEvents(source)
+		if err == nil && ok {
+			events = publicprofile.ApplyRetainedEvents(events, got)
+			changed = true
+			continue
+		}
+		if remote == nil {
+			continue
+		}
+		days, ok := publicprofile.DaysFromSnapshot(*remote, source)
+		if !ok {
+			continue
+		}
+		observed, err := time.Parse(time.RFC3339, remote.GeneratedAt)
+		if err != nil {
+			continue
+		}
+		if err := lg.SaveObservation(source, "verified_snapshot", "retained", observed, publicprofile.EventsFromDays(source, days)); err != nil {
+			continue
+		}
+		got, ok, err = lg.LatestRetainedEvents(source)
+		if err != nil || !ok {
+			continue
+		}
+		events = publicprofile.ApplyRetainedEvents(events, got)
+		changed = true
+	}
+	return events, changed
+}
+
+func (a *App) withCorrectionPermit(ctx context.Context, home adapter.Home) context.Context {
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return ctx
+	}
+	lg, err := a.openRefreshLedger(home)
+	if err != nil {
+		return ctx
+	}
+	defer lg.Close()
+	reason, delta, ok, err := lg.CorrectionPermit()
+	if err != nil || !ok {
+		return ctx
+	}
+	return publicprofile.ContextWithCorrection(ctx, publicprofile.Correction{Reason: reason, Delta: delta})
+}
+
+func (a *App) clearPermitIfPublished(home adapter.Home, applied publicprofile.ApplyResult) {
+	if applied.Transport || applied.Rejected || applied.Auth {
+		return
+	}
+	switch applied.Decision.Code {
+	case publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover, publicprofile.CodeWaitingCooldown, publicprofile.CodePendingGitHub:
+	default:
+		return
+	}
+	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
+		return
+	}
+	lg, err := a.openRefreshLedger(home)
+	if err != nil {
+		return
+	}
+	defer lg.Close()
+	_ = lg.ClearCorrectionPermit()
+}
+
+func (a *App) openRefreshLedger(home adapter.Home) (*ledger.Ledger, error) {
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		return nil, err
+	}
+	return ledger.Open(p)
+}
+
+func failedAccountSources(errs []string) []string {
+	var out []string
+	seen := map[string]struct{}{}
+	for _, msg := range errs {
+		i := strings.IndexByte(msg, ':')
+		if i <= 0 {
+			continue
+		}
+		id := msg[:i]
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }
 
 func (a *App) refreshFailed() int {

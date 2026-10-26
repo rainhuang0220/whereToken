@@ -67,6 +67,7 @@ type RefreshInput struct {
 	WallKnown       bool
 	Now             time.Time
 	Offline         bool
+	Correction      Correction
 }
 
 // DecideRefresh chooses whether the client should PUT a sanitized snapshot.
@@ -85,12 +86,13 @@ func DecideRefresh(in RefreshInput) Decision {
 		verified = WallFromSnapshot(*in.Remote, in.RemoteUpdatedAt)
 	}
 	pub := DecidePublication(PublicationInput{
-		Candidate: in.Local,
-		Accepted:  in.Remote,
-		Verified:  verified,
-		Pending:   in.Pending,
-		Now:       in.Now,
-		Offline:   false,
+		Candidate:  in.Local,
+		Accepted:   in.Remote,
+		Verified:   verified,
+		Pending:    in.Pending,
+		Now:        in.Now,
+		Offline:    false,
+		Correction: in.Correction,
 	})
 	return refreshFromPublication(pub, in)
 }

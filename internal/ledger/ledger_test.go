@@ -75,6 +75,16 @@ func TestKeyIgnoresPathAndKeepsDistinctRequests(t *testing.T) {
 	if _, ok := Key(ev("codex", "", "/tmp/sessions/no-session.jsonl:1", 1)); ok {
 		t.Fatal("path-scoped id without a session was accepted")
 	}
+	lg := openTest(t)
+	left := ev("codex", "", "/tmp/a/one.jsonl:1", 10)
+	right := ev("codex", "", "/tmp/b/two.jsonl:1", 20)
+	if err := lg.CommitUsage([]event.UsageEvent{left, right}); err != nil {
+		t.Fatal(err)
+	}
+	st, err := lg.Status()
+	if err != nil || st.Facts != 0 {
+		t.Fatalf("missing session collapsed into a fact %+v %v", st, err)
+	}
 	if _, ok := Key(event.UsageEvent{Source: "claude", Miss: 1}); ok {
 		t.Fatal("empty request id was invented")
 	}

@@ -119,8 +119,28 @@ func startDockerMySQL() (string, func(), error) {
 	cleanup := func() {
 		_ = exec.Command("docker", "rm", "-f", name).Run()
 	}
+	// The official 5.7 image accepts connections, initializes, then shuts
+	// the server down and starts it again. A ping during the first ready
+	// window dies with unexpected EOF, and a publication in that window
+	// is reported as deferred after the files were already written.
+	if err := waitMySQLInitialized(name); err != nil {
+		cleanup()
+		return "", nil, err
+	}
 	dsn := fmt.Sprintf("root:wttest@tcp(127.0.0.1:%d)/wheretoken?parseTime=true&charset=utf8mb4", port)
 	return dsn, cleanup, nil
+}
+
+func waitMySQLInitialized(name string) error {
+	deadline := time.Now().Add(90 * time.Second)
+	for time.Now().Before(deadline) {
+		out, err := exec.Command("docker", "logs", name).CombinedOutput()
+		if err == nil && strings.Count(string(out), "ready for connections") >= 2 {
+			return nil
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	return fmt.Errorf("mysql did not finish initializing")
 }
 
 func bytesPreview(b []byte) string {

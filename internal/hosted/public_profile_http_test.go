@@ -1090,7 +1090,10 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	}
 	rolled := putProjection(t, h, device, nextDay.raw)
 	if rolled["readme"] != "materialized" || git.puts == puts {
-		t.Fatalf("date change readme=%v puts %d -> %d", rolled["readme"], puts, git.puts)
+		st := readyStore(t)
+		var phase, result, errText string
+		_ = st.db.QueryRow(`SELECT phase, result_code, error_text FROM publish_jobs ORDER BY id DESC LIMIT 1`).Scan(&phase, &result, &errText)
+		t.Fatalf("date change readme=%v puts %d -> %d job=%s/%s %s", rolled["readme"], puts, git.puts, phase, result, errText)
 	}
 }
 

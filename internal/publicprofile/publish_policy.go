@@ -25,6 +25,7 @@ const (
 	ReasonEarlierDate     = "earlier_date"
 	ReasonUnknownVerified = "unknown_verified"
 	ReasonNegative        = "negative"
+	ReasonCorrection      = "correction"
 	ReasonOffline         = "offline"
 	ReasonSame            = "same"
 )
@@ -72,6 +73,9 @@ type PublicationInput struct {
 	// same intent as RETRY_PENDING so intermediate snapshots do not each
 	// open a GitHub commit.
 	FromWorker bool
+	// Correction is the ledger permit for one evidenced drop. It does not
+	// bypass coverage loss, an earlier date, or an ordinary scan.
+	Correction Correction
 }
 
 // PublicationDecision is one policy result. DueAt is set for WAIT_UNTIL.
@@ -104,11 +108,14 @@ func DecidePublication(in PublicationInput) PublicationDecision {
 			return PublicationDecision{Action: ActionBlocked, Reason: ReasonCoverage, Code: CodeBlockedData, Detail: lostProviderIDs(*in.Accepted, in.Candidate)}
 		}
 	}
-	if in.Verified.Proven && in.Verified.Total != nil && *total < *in.Verified.Total {
+	if in.Verified.Proven && in.Verified.Total != nil && *total < *in.Verified.Total && !in.Correction.Explains(*in.Verified.Total, *total) {
 		return PublicationDecision{Action: ActionBlocked, Reason: ReasonNegative, Code: CodeBlockedRegression}
 	}
 	if in.Verified.Proven && validLocalDate(in.Verified.AsOfDate) && validLocalDate(in.Candidate.AsOfDate) && earlierLocalDate(in.Candidate.AsOfDate, in.Verified.AsOfDate) {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonEarlierDate, Code: CodeSkippedDelta}
+	}
+	if in.Verified.Proven && in.Verified.Total != nil && *total < *in.Verified.Total && in.Correction.Explains(*in.Verified.Total, *total) {
+		return PublicationDecision{Action: ActionPublishNow, Reason: ReasonCorrection, Code: CodePublished}
 	}
 	if in.ThemeChange {
 		return PublicationDecision{Action: ActionPublishNow, Reason: ReasonTheme, Code: CodePublished}

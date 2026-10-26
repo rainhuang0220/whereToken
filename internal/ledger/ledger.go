@@ -5,10 +5,12 @@
 // a deleted source log, `wheretoken rebuild`, and an index schema wipe.
 //
 // Ordinary CommitUsage inserts a new identity or raises a stored component
-// that the new observation already covers. It does not lower a stored count.
-// A lower figure is Correct: a higher parser version, a reason, and the
-// replacement event, recorded in revisions. The same correction twice is a
-// no-op. Revert restores the previous payload once.
+// that the new observation already covers. It does not lower a stored count
+// and does not grant a publication permit. A lower figure is Correct: a
+// higher parser version, a reason, and the replacement event, recorded in
+// revisions. The same payload twice writes nothing. The net drop of those
+// corrections is one permit. Revert restores the previous payload once and
+// removes the drop that revision undid.
 //
 // Facts store counts, time, model, vendor, quality, derivation, and the
 // stable identity. They do not store prompts, transcripts, workspaces, or paths.
@@ -21,10 +23,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -217,6 +221,16 @@ CREATE TABLE IF NOT EXISTS api_observations (
   parser_version INTEGER NOT NULL,
   PRIMARY KEY (source, payload_hash)
 );
+CREATE TABLE IF NOT EXISTS api_observation_days (
+  source TEXT NOT NULL,
+  payload_hash TEXT NOT NULL,
+  day TEXT NOT NULL,
+  miss INTEGER NOT NULL,
+  cache_read INTEGER NOT NULL,
+  cache_create INTEGER NOT NULL,
+  output INTEGER NOT NULL,
+  PRIMARY KEY (source, payload_hash, day)
+);
 CREATE TABLE IF NOT EXISTS omissions (
   id TEXT PRIMARY KEY,
   reason TEXT NOT NULL
@@ -225,8 +239,10 @@ CREATE TABLE IF NOT EXISTS omissions (
 	if err != nil {
 		return err
 	}
-	_, err = l.db.Exec(`INSERT OR REPLACE INTO meta(key,value) VALUES('schema', ?)`, fmt.Sprintf("%d", schemaVersion))
-	return err
+	if _, err = l.db.Exec(`INSERT OR REPLACE INTO meta(key,value) VALUES('schema', ?)`, fmt.Sprintf("%d", schemaVersion)); err != nil {
+		return err
+	}
+	return l.ensureObservationColumns()
 }
 
 // Path is the ledger file. Doctor output must not print it.
@@ -325,6 +341,7 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 		tokens int64
 		n      int
 		lines  []string
+		events []event.UsageEvent
 	}
 	by := map[string]*acc{}
 	for _, e := range events {
@@ -338,6 +355,7 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 		}
 		a.n++
 		a.tokens += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		a.events = append(a.events, e)
 		a.lines = append(a.lines, fmt.Sprintf("%s|%d|%d|%d|%d|%d", e.Model, e.Timestamp.UnixNano(), e.Miss, e.CacheRead, e.CacheCreate, e.Output))
 	}
 	if len(by) == 0 {
@@ -358,8 +376,8 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 			sum.Write([]byte{'\n'})
 		}
 		hash := hex.EncodeToString(sum.Sum(nil))
-		if _, err := tx.Exec(`INSERT OR IGNORE INTO api_observations(source,payload_hash,tokens,events,parser_version) VALUES(?,?,?,?,?)`,
-			source, hash, a.tokens, a.n, ParserVersion); err != nil {
+		meta, days := observationFromAPI(a.events)
+		if err := insertObservation(tx, source, hash, a.tokens, a.n, meta, days); err != nil {
 			return err
 		}
 	}
@@ -441,7 +459,7 @@ func (l *Ledger) Unseen(emitted []event.UsageEvent) ([]event.UsageEvent, error) 
 	seen := map[string]struct{}{}
 	api := map[string]struct{}{}
 	for _, e := range emitted {
-		if e.Derivation == event.DeriveProviderAPI && e.Source != "" {
+		if (e.Derivation == event.DeriveProviderAPI || e.Derivation == event.DeriveRetained) && e.Source != "" {
 			api[e.Source] = struct{}{}
 		}
 		if id, ok := Key(e); ok {
@@ -534,6 +552,9 @@ func (l *Ledger) Correct(e event.UsageEvent, reason string, parserVersion int) (
 	if err := writeFact(tx, next, parserVersion); err != nil {
 		return false, err
 	}
+	if err := adjustPermit(tx, reason, factTokens(next)-factTokens(cur)); err != nil {
+		return false, err
+	}
 	if err := tx.Commit(); err != nil {
 		return false, err
 	}
@@ -589,10 +610,40 @@ func (l *Ledger) Revert(factID, reason string) (bool, error) {
 	if err := writeFact(tx, prev, prevVer); err != nil {
 		return false, err
 	}
+	if err := adjustPermit(tx, "", factTokens(prev)-factTokens(cur)); err != nil {
+		return false, err
+	}
 	if err := tx.Commit(); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+const (
+	metaPermitReason = "correction_permit_reason"
+	metaPermitDelta  = "correction_permit_delta"
+)
+
+// CorrectionPermit is the net token drop of corrections that have not been
+// published. ok is false when there is no permit. A missing permit is not a
+// zero drop.
+func (l *Ledger) CorrectionPermit() (reason string, delta int64, ok bool, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	tx, err := l.db.Begin()
+	if err != nil {
+		return "", 0, false, err
+	}
+	defer tx.Rollback()
+	return readPermitTx(tx)
+}
+
+// ClearCorrectionPermit drops the publication permit. The revision rows stay.
+func (l *Ledger) ClearCorrectionPermit() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, err := l.db.Exec(`DELETE FROM meta WHERE key IN (?, ?)`, metaPermitReason, metaPermitDelta)
+	return err
 }
 
 // Status counts facts. Tokens are Miss+Cache Read+Cache Create+Output.
@@ -888,6 +939,83 @@ func insertRevision(tx *sql.Tx, prev, next fact, prevVer, nextVer int, reason st
 		next.Miss, next.CacheRead, next.CacheCreate, next.Output, next.Reasoning,
 		prev.Quality, next.Quality, prev.Derivation, next.Derivation,
 		time.Now().UTC().Format(time.RFC3339Nano))
+	return err
+}
+
+func factTokens(f fact) int64 {
+	return f.Miss + f.CacheRead + f.CacheCreate + f.Output
+}
+
+// adjustPermit moves the one publication permit by tokenDelta
+// (replacement tokens minus the tokens being replaced). A drop increases
+// the permit. A rise shrinks it. Zero or less deletes it. The reason of a
+// revert is not stored; the revisions table keeps that audit.
+func adjustPermit(tx *sql.Tx, reason string, tokenDelta int64) error {
+	oldReason, oldDelta, have, err := readPermitTx(tx)
+	if err != nil {
+		return err
+	}
+	next, err := permitAfter(oldDelta, have, tokenDelta)
+	if err != nil {
+		return err
+	}
+	if next <= 0 {
+		return deletePermitTx(tx)
+	}
+	use := strings.TrimSpace(reason)
+	if use == "" {
+		use = oldReason
+	}
+	if strings.TrimSpace(use) == "" {
+		return deletePermitTx(tx)
+	}
+	return writePermitTx(tx, use, next)
+}
+
+func permitAfter(old int64, have bool, tokenDelta int64) (int64, error) {
+	base := int64(0)
+	if have {
+		base = old
+	}
+	if tokenDelta == math.MinInt64 || (tokenDelta < 0 && base > math.MaxInt64+tokenDelta) {
+		return 0, ErrCorrectionRejected
+	}
+	return base - tokenDelta, nil
+}
+
+func readPermitTx(tx *sql.Tx) (string, int64, bool, error) {
+	var reason, deltaText string
+	err := tx.QueryRow(`SELECT value FROM meta WHERE key=?`, metaPermitReason).Scan(&reason)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", 0, false, nil
+	}
+	if err != nil {
+		return "", 0, false, err
+	}
+	err = tx.QueryRow(`SELECT value FROM meta WHERE key=?`, metaPermitDelta).Scan(&deltaText)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", 0, false, nil
+	}
+	if err != nil {
+		return "", 0, false, err
+	}
+	delta, err := strconv.ParseInt(strings.TrimSpace(deltaText), 10, 64)
+	if err != nil || delta <= 0 || strings.TrimSpace(reason) == "" {
+		return "", 0, false, nil
+	}
+	return reason, delta, true, nil
+}
+
+func writePermitTx(tx *sql.Tx, reason string, delta int64) error {
+	if _, err := tx.Exec(`INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)`, metaPermitReason, reason); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)`, metaPermitDelta, strconv.FormatInt(delta, 10))
+	return err
+}
+
+func deletePermitTx(tx *sql.Tx) error {
+	_, err := tx.Exec(`DELETE FROM meta WHERE key IN (?, ?)`, metaPermitReason, metaPermitDelta)
 	return err
 }
 

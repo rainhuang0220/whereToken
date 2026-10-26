@@ -339,6 +339,45 @@ func TestIncrementalParseErrorKeepsOldEvents(t *testing.T) {
 	}
 }
 
+func TestRestoredMtimeAndSizeKeepsThePreviousParse(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(filepath.Join(dir, "idx.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(dir, "a.jsonl")
+	body := []byte("same-size\n")
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = store.LoadOrParse("claude", path, fixed([]event.UsageEvent{{RequestID: "old", Miss: 9}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("rewritten\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, info.ModTime(), info.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	parsed := 0
+	evs, _, mode, err := store.LoadOrParse("claude", path, func(rf *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		parsed++
+		return fixed([]event.UsageEvent{{RequestID: "new", Miss: 1}})(rf)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode != ModeUnchanged || parsed != 0 || len(evs) != 1 || evs[0].RequestID != "old" {
+		t.Fatalf("restored identity mode=%s parsed=%d evs=%+v", mode, parsed, evs)
+	}
+}
+
 func TestSameSizeMtimeChangeIsFullRescan(t *testing.T) {
 	dir := t.TempDir()
 	store, err := Open(filepath.Join(dir, "idx.db"))
