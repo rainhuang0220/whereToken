@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -98,6 +97,8 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if parsed && tokenRegressed(prevSnap, snap) {
+			// Client headers are not a permit. Keep the previous projection
+			// before any save, so a rejected drop writes nothing to replay.
 			permit = correctionFromRequest(r, prevSnap, snap)
 			if permit.Delta <= 0 {
 				writeKeptProjection(w, prevSnap, "regression")
@@ -133,21 +134,12 @@ func writeKeptProjection(w http.ResponseWriter, prev publicprofile.Snapshot, rea
 	})
 }
 
-// correctionFromRequest accepts the drop only when both headers name that
-// exact drop. An ordinary PUT has neither header.
-func correctionFromRequest(r *http.Request, prev, next publicprofile.Snapshot) publicprofile.Correction {
-	a := prev.Periods.All.Totals.Total.Value
-	b := next.Periods.All.Totals.Total.Value
-	if a == nil || b == nil {
-		return publicprofile.Correction{}
-	}
-	reason := r.Header.Get("Wheretoken-Correction-Reason")
-	deltaText := r.Header.Get("Wheretoken-Correction-Delta")
-	if !publicprofile.CorrectionAllows(reason, deltaText, *a, *b) {
-		return publicprofile.Correction{}
-	}
-	delta, _ := strconv.ParseInt(strings.TrimSpace(deltaText), 10, 64)
-	return publicprofile.Correction{Reason: strings.TrimSpace(reason), Delta: delta}
+// correctionFromRequest does not read client headers. A device bearer
+// plus a reason and a matching delta is not authorization to publish a
+// lower total. Downward correction stays closed until a server-issued
+// permit binds the verified baseline, the target snapshot, and the owner.
+func correctionFromRequest(_ *http.Request, _, _ publicprofile.Snapshot) publicprofile.Correction {
+	return publicprofile.Correction{}
 }
 
 func correctionTag(ctx context.Context, wall publicprofile.VerifiedWall, snap publicprofile.Snapshot) string {
@@ -157,18 +149,6 @@ func correctionTag(ctx context.Context, wall publicprofile.VerifiedWall, snap pu
 		return ""
 	}
 	return fmt.Sprintf("corr:%d", c.Delta)
-}
-
-func correctionDelta(reason string) (int64, bool) {
-	rest, ok := strings.CutPrefix(reason, "corr:")
-	if !ok || rest == "" || strings.ContainsAny(rest, " \t") {
-		return 0, false
-	}
-	n, err := strconv.ParseInt(rest, 10, 64)
-	if err != nil || n <= 0 {
-		return 0, false
-	}
-	return n, true
 }
 
 func tokenRegressed(prev, next publicprofile.Snapshot) bool {
@@ -372,11 +352,10 @@ func (s *server) retryFailedReadmes(ctx context.Context) {
 			}
 			continue
 		}
-		callCtx := ctx
-		if delta, ok := correctionDelta(row.PendingReason); ok {
-			callCtx = publicprofile.ContextWithCorrection(ctx, publicprofile.Correction{Reason: "ledger", Delta: delta})
-		}
-		s.considerPublication(callCtx, user, snap, false, true)
+		// A stored corr: tag is not a permit. Replaying it would publish a
+		// drop the client declared, including one saved before GitHub
+		// verified the write.
+		s.considerPublication(ctx, user, snap, false, true)
 	}
 }
 

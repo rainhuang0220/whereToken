@@ -149,11 +149,15 @@ func blockedDecision(pub PublicationDecision, in RefreshInput) Decision {
 
 func noChangeDecision(pub PublicationDecision, in RefreshInput) Decision {
 	switch pub.Reason {
-	case ReasonEarlierDate, ReasonDelta, ReasonSame:
-		return skipped("增量未到 0.01 M", CodeSkippedDelta)
+	case ReasonEarlierDate:
+		return skipped("日期早于已发布", CodeSkippedDelta)
+	case ReasonSame:
+		return skipped("快照未变", CodeSkippedDelta)
+	case ReasonDelta:
+		return skipped("增量未到可见刻度", CodeSkippedDelta)
 	default:
 		if in.Remote != nil {
-			return skipped("增量未到 0.01 M", CodeSkippedDelta)
+			return skipped("增量未到可见刻度", CodeSkippedDelta)
 		}
 		return skipped("用量不可用", "")
 	}

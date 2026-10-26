@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The public sync route ignores client correction headers. A device bearer cannot publish a lower total by naming the drop. A stored `corr:` retry tag is not replayed as authorization. Upward publication is unchanged. The local ledger still records a correction permit and does not clear it on an ordinary verified, cooldown, or pending result.
+- Same-day skip text names the reason. It no longer says the gate is a fixed 0.01 M. The gate is still a visible two-decimal change, then one hour since the verified wall. A failed GitHub publish of an accepted upward snapshot still retries without that gate.
+- The hourly profile freshness check opens one GitHub issue when the public wall is stale or the check itself fails, and closes that issue after a later success. It does not comment on every failure. A separate local check can tell a stale wall, an offline Mac, a stuck publisher, and a silent Actions schedule apart.
+
 ## 0.7.8 — 2026-10-27 (Alpha)
 
 - Confirmed usage is stored in a durable ledger outside the scan cache. Deleting a parsed source file or running `wheretoken rebuild` does not drop those facts. Account API rows stay out of that ledger so they are not added on top of a source the API already reported. A lower stored count is a versioned correction with a reason, and the same correction does not apply twice. The net drop is one publication permit. An ordinary scan does not grant it, and the wall accepts that lower total only when the drop matches the permit. `profile refresh doctor` prints `ledger_facts`, `ledger_tokens`, and `ledger_import_gaps`.

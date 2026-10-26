@@ -15,7 +15,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
-func TestRefreshCarriesAPermitAndClearsItOnlyAfterPublish(t *testing.T) {
+func TestRefreshDoesNotSendOrConsumeALocalPermit(t *testing.T) {
 	home := testhome.New(t.TempDir())
 	path, err := ledger.PathFor(home)
 	if err != nil {
@@ -42,10 +42,10 @@ func TestRefreshCarriesAPermitAndClearsItOnlyAfterPublish(t *testing.T) {
 
 	app := &App{}
 	ctx := app.withCorrectionPermit(context.Background(), home)
-	got := publicprofile.CorrectionFrom(ctx)
-	if got.Reason != "dedup evidence" || got.Delta != 6 {
-		t.Fatalf("carried %+v", got)
+	if got := publicprofile.CorrectionFrom(ctx); got.Reason != "" || got.Delta != 0 {
+		t.Fatalf("refresh attached the local permit: %+v", got)
 	}
+	carried := publicprofile.ContextWithCorrection(context.Background(), publicprofile.Correction{Reason: "dedup evidence", Delta: 6})
 	var reason, delta string
 	respond := func(req *http.Request) (*http.Response, error) {
 		reason = req.Header.Get("Wheretoken-Correction-Reason")
@@ -58,23 +58,28 @@ func TestRefreshCarriesAPermitAndClearsItOnlyAfterPublish(t *testing.T) {
 	if reason != "" || delta != "" {
 		t.Fatalf("plain put sent %q %q", reason, delta)
 	}
-	if _, err := app.putSanitizedProjectionDo(ctx, "device", []byte(`{}`), respond); err != nil {
+	if _, err := app.putSanitizedProjectionDo(carried, "device", []byte(`{}`), respond); err != nil {
 		t.Fatal(err)
 	}
-	if reason != "dedup evidence" || delta != "6" {
-		t.Fatalf("headers %q %q", reason, delta)
+	if reason != "" || delta != "" {
+		t.Fatalf("permit context sent %q %q", reason, delta)
 	}
-	app.clearPermitIfPublished(home, publicprofile.ApplyResult{Decision: publicprofile.Decision{Code: publicprofile.CodeBlockedRegression}})
-	if _, _, ok, err := permitOf(t, home); err != nil || !ok {
-		t.Fatalf("regression cleared the permit ok=%v err=%v", ok, err)
+	for _, code := range []string{
+		publicprofile.CodeBlockedRegression,
+		publicprofile.CodeVerified,
+		publicprofile.CodePublished,
+		publicprofile.CodeDateRollover,
+		publicprofile.CodeWaitingCooldown,
+		publicprofile.CodePendingGitHub,
+	} {
+		app.clearPermitIfPublished(home, publicprofile.ApplyResult{Decision: publicprofile.Decision{Code: code}})
+		if _, _, ok, err := permitOf(t, home); err != nil || !ok {
+			t.Fatalf("%s cleared the permit ok=%v err=%v", code, ok, err)
+		}
 	}
 	app.clearPermitIfPublished(home, publicprofile.ApplyResult{Transport: true, Decision: publicprofile.Decision{Code: publicprofile.CodeVerified}})
-	if _, _, ok, _ := permitOf(t, home); !ok {
-		t.Fatal("transport cleared the permit")
-	}
-	app.clearPermitIfPublished(home, publicprofile.ApplyResult{Decision: publicprofile.Decision{Code: publicprofile.CodeVerified}})
-	if _, _, ok, err := permitOf(t, home); err != nil || ok {
-		t.Fatalf("published permit ok=%v err=%v", ok, err)
+	if _, _, ok, err := permitOf(t, home); err != nil || !ok {
+		t.Fatalf("transport cleared the permit ok=%v err=%v", ok, err)
 	}
 }
 

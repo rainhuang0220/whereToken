@@ -39,10 +39,11 @@ identity or raises a component the new observation already covers. It does
 not lower a stored count. A lower figure is a versioned correction: a newer
 parser version, a reason, and the replacement event. Applying that same
 correction again does not write a second revision. The revisions keep the
-before and after payloads. Their net drop is one publication permit. An
-ordinary scan does not grant that permit. Revert removes the drop that
-revision undid. A later wall may move down only when its drop equals the
-permit. A per-field maximum on ordinary facts is not applied across two
+before and after payloads. Their net drop is one local publication permit.
+An ordinary scan does not grant that permit. Revert removes the drop that
+revision undid. The public wall does not accept that permit from a device
+request, and client correction headers are not authorization to publish
+the lower total. A per-field maximum on ordinary facts is not applied across two
 API observation versions; the newest positive observation is kept whole.
 
 Account API rows (`provider_api`) are not facts. When a scan emits that API

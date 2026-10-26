@@ -206,6 +206,64 @@ func TestDecideRefreshTable(t *testing.T) {
 	}
 }
 
+func TestSkipLabelsNameTheReason(t *testing.T) {
+	at := time.Date(2026, 10, 27, 16, 4, 1, 0, time.UTC)
+	const live = int64(18_189_589_196)
+	remote := gateSnap("sha256:prev", StatusAvailable, "2026-10-27", intPtr(live))
+	verified := wall("sha256:prev", "2026-10-27", live, at)
+	cases := []struct {
+		name  string
+		local Snapshot
+		now   time.Time
+		label string
+		code  string
+	}{
+		{
+			name:  "earlier date",
+			local: gateSnap("sha256:old", StatusAvailable, "2026-10-26", intPtr(live)),
+			now:   at.Add(2 * time.Hour),
+			label: "日期早于已发布",
+			code:  CodeSkippedDelta,
+		},
+		{
+			name:  "same snapshot",
+			local: gateSnap("sha256:prev", StatusAvailable, "2026-10-27", intPtr(live)),
+			now:   at.Add(2 * time.Hour),
+			label: "快照未变",
+			code:  CodeSkippedDelta,
+		},
+		{
+			name:  "sub tick",
+			local: gateSnap("sha256:sub", StatusAvailable, "2026-10-27", intPtr(live+1)),
+			now:   at.Add(2 * time.Hour),
+			label: "增量未到可见刻度",
+			code:  CodeSkippedDelta,
+		},
+		{
+			name:  "visible tick inside the hour",
+			local: gateSnap("sha256:tick", StatusAvailable, "2026-10-27", intPtr(18_195_000_000)),
+			now:   at.Add(time.Hour - time.Nanosecond),
+			label: "间隔未满 1 小时",
+			code:  CodeWaitingCooldown,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DecideRefresh(RefreshInput{
+				Local:           tc.local,
+				Remote:          &remote,
+				RemoteUpdatedAt: at,
+				Now:             tc.now,
+				WallKnown:       true,
+				Verified:        verified,
+			})
+			if got.Label != tc.label || got.Code != tc.code || strings.Contains(got.Label, "0.01 M") {
+				t.Fatalf("%+v", got)
+			}
+		})
+	}
+}
+
 func TestDecideRefreshLostProviderDoesNotPublish(t *testing.T) {
 	updated := time.Date(2026, 9, 25, 8, 0, 0, 0, time.UTC)
 	prev := gateSnap("sha256:prev", StatusAvailable, "2026-09-25", intPtr(1000), measured("claude", 400), measured("cursor", 600))

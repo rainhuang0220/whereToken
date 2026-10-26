@@ -26,6 +26,10 @@ jobs:
         shell: bash
         run: test -z "$(gofmt -l .)"
 
+      - name: Freshness classifier
+        shell: bash
+        run: python3 scripts/freshness_classify_test.py
+
       - name: Go vet
         run: go vet ./...
 
