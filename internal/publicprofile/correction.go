@@ -20,9 +20,10 @@ func (c Correction) Explains(prev, next int64) bool {
 	return strings.TrimSpace(c.Reason) != "" && c.Delta > 0 && next < prev && prev-next == c.Delta
 }
 
-// CorrectionAllows is the server check for the two correction headers.
+// CorrectionAllows reports whether a reason and a delta name an exact drop.
 // The reason is trimmed, must be non-empty, at most 200 bytes, and must not
-// contain a carriage return or line feed. The delta must be the exact drop.
+// contain a carriage return or line feed. The public sync route does not
+// call this. A device request cannot grant itself a downward correction.
 func CorrectionAllows(reason, deltaText string, prev, next int64) bool {
 	reason = strings.TrimSpace(reason)
 	if reason == "" || len(reason) > 200 || strings.ContainsAny(reason, "\r\n") {
@@ -37,8 +38,10 @@ func CorrectionAllows(reason, deltaText string, prev, next int64) bool {
 
 type correctionKey struct{}
 
-// ContextWithCorrection carries a permit into DecidePublication and the PUT.
-// An empty reason or a non-positive delta leaves the context unchanged.
+// ContextWithCorrection carries a permit into DecidePublication.
+// The public sync route and the README retry worker do not call this
+// with a client-supplied value. An empty reason or a non-positive delta
+// leaves the context unchanged.
 func ContextWithCorrection(ctx context.Context, c Correction) context.Context {
 	if ctx == nil {
 		ctx = context.Background()

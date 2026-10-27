@@ -7,31 +7,41 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   freshness:
     runs-on: ubuntu-latest
     steps:
-      - name: Public wall verified age
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Classify the public wall
+        id: wall
         run: |
           set -euo pipefail
+          set +e
           curl -fsS --retry 3 --retry-delay 5 \
             -H 'Cache-Control: no-cache' \
             -o "$RUNNER_TEMP/wall.json" \
             'https://wheretoken.plainlist.space/api/v1/public-profile/rainhuang0220'
-          python3 - "$RUNNER_TEMP/wall.json" <<'PY'
-          import json, sys
-          from datetime import datetime, timezone
-          env = json.load(open(sys.argv[1], encoding="utf-8"))
-          wall = env.get("wall") or {}
-          verified = wall.get("verified_at") or ""
-          phase = wall.get("phase") or ""
-          if not verified:
-              raise SystemExit("public wall has no verified_at")
-          stamp = datetime.fromisoformat(verified.replace("Z", "+00:00"))
-          age = datetime.now(timezone.utc) - stamp
-          hours = age.total_seconds() / 3600
-          print(f"verified_at={verified} phase={phase} age_hours={hours:.1f}")
-          if age.total_seconds() > 36 * 3600:
-              raise SystemExit(f"public wall has not verified since {verified} (phase={phase})")
-          PY
+          curl_status=$?
+          set -e
+          if [ "$curl_status" -ne 0 ]; then
+            echo "class=check_failed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          class="$(python3 scripts/freshness_classify.py --surface actions --wall "$RUNNER_TEMP/wall.json")"
+          echo "class=${class}" >> "$GITHUB_OUTPUT"
+
+      - name: Open or close one alert issue
+        if: always() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
+        run: bash scripts/freshness-alert.sh --class "$CLASS"
+
+      - name: Fail when the public wall check is not ok
+        if: steps.wall.outputs.class != 'ok'
+        run: |
+          echo "profile freshness class=${{ steps.wall.outputs.class }}"
+          exit 1

@@ -380,40 +380,17 @@ func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageE
 	return events, changed
 }
 
-func (a *App) withCorrectionPermit(ctx context.Context, home adapter.Home) context.Context {
-	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
-		return ctx
-	}
-	lg, err := a.openRefreshLedger(home)
-	if err != nil {
-		return ctx
-	}
-	defer lg.Close()
-	reason, delta, ok, err := lg.CorrectionPermit()
-	if err != nil || !ok {
-		return ctx
-	}
-	return publicprofile.ContextWithCorrection(ctx, publicprofile.Correction{Reason: reason, Delta: delta})
+// withCorrectionPermit leaves the local ledger permit in the ledger.
+// Attaching it would make this refresh try to publish a lower total.
+// The public route does not accept that attempt.
+func (a *App) withCorrectionPermit(ctx context.Context, _ adapter.Home) context.Context {
+	return ctx
 }
 
-func (a *App) clearPermitIfPublished(home adapter.Home, applied publicprofile.ApplyResult) {
-	if applied.Transport || applied.Rejected || applied.Auth {
-		return
-	}
-	switch applied.Decision.Code {
-	case publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover, publicprofile.CodeWaitingCooldown, publicprofile.CodePendingGitHub:
-	default:
-		return
-	}
-	if os.Getenv("WHERETOKEN_NO_LEDGER") == "1" {
-		return
-	}
-	lg, err := a.openRefreshLedger(home)
-	if err != nil {
-		return
-	}
-	defer lg.Close()
-	_ = lg.ClearCorrectionPermit()
+// clearPermitIfPublished does not consume the local permit. A verified
+// upload, a cooldown, or a pending GitHub write is not proof that a
+// correction was published, and a failed write must not burn the permit.
+func (a *App) clearPermitIfPublished(_ adapter.Home, _ publicprofile.ApplyResult) {
 }
 
 func (a *App) openRefreshLedger(home adapter.Home) (*ledger.Ledger, error) {
