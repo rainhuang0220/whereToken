@@ -88,7 +88,6 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid profile", http.StatusBadRequest)
 		return
 	}
-	var permit publicprofile.Correction
 	if prev, err := s.opts.Store.Projection(r.Context(), user.ID); err == nil {
 		var prevSnap publicprofile.Snapshot
 		parsed := json.Unmarshal(prev.SnapshotJSON, &prevSnap) == nil
@@ -97,24 +96,18 @@ func (s *server) putPublicProjection(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if parsed && tokenRegressed(prevSnap, snap) {
-			// Client headers are not a permit. Keep the previous projection
-			// before any save, so a rejected drop writes nothing to replay.
-			permit = correctionFromRequest(r, prevSnap, snap)
-			if permit.Delta <= 0 {
-				writeKeptProjection(w, prevSnap, "regression")
-				return
-			}
+			// A device bearer is not a permit. Keep the previous projection
+			// before any save, so a rejected drop writes nothing to replay
+			// and does not move the verified wall.
+			writeKeptProjection(w, prevSnap, "regression")
+			return
 		}
 	}
 	if err := s.opts.Store.SaveProjection(r.Context(), user.ID, canonical, snap); err != nil {
 		http.Error(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	ctx := r.Context()
-	if permit.Delta > 0 {
-		ctx = publicprofile.ContextWithCorrection(ctx, permit)
-	}
-	readme := s.considerPublication(ctx, user, snap, false, false)
+	readme := s.considerPublication(r.Context(), user, snap, false, false)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":          true,
@@ -132,14 +125,6 @@ func writeKeptProjection(w http.ResponseWriter, prev publicprofile.Snapshot, rea
 		"readme":      "kept",
 		"reason":      reason,
 	})
-}
-
-// correctionFromRequest does not read client headers. A device bearer
-// plus a reason and a matching delta is not authorization to publish a
-// lower total. Downward correction stays closed until a server-issued
-// permit binds the verified baseline, the target snapshot, and the owner.
-func correctionFromRequest(_ *http.Request, _, _ publicprofile.Snapshot) publicprofile.Correction {
-	return publicprofile.Correction{}
 }
 
 func correctionTag(ctx context.Context, wall publicprofile.VerifiedWall, snap publicprofile.Snapshot) string {

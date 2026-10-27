@@ -34,10 +34,10 @@ jobs:
           echo "class=${class}" >> "$GITHUB_OUTPUT"
 
       - name: Open or close one alert issue
-        if: always() && steps.wall.outputs.class != ''
+        if: always() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
-          CLASS: ${{ steps.wall.outputs.class }}
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
         run: bash scripts/freshness-alert.sh --class "$CLASS"
 
       - name: Fail when the public wall check is not ok

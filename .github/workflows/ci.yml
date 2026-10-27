@@ -28,7 +28,9 @@ jobs:
 
       - name: Freshness classifier
         shell: bash
-        run: python3 scripts/freshness_classify_test.py
+        run: |
+          python3 scripts/freshness_classify_test.py
+          bash scripts/freshness_alert_test.sh
 
       - name: Go vet
         run: go vet ./...

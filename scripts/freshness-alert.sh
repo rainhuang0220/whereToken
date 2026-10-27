@@ -71,7 +71,9 @@ EOF
 
 open_number() {
   local title="$1"
-  gh issue list --repo "$REPO" --state open --limit 50 --json number,title --search "in:title ${title}" \
+  # List open issues and match the title exactly. GitHub search can lag
+  # behind a create and would open a second issue for the same alert.
+  gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
     | python3 -c 'import json,sys
 want=sys.argv[1]
 for item in json.load(sys.stdin):

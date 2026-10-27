@@ -127,6 +127,10 @@ func TestDeviceHeadersCannotForgeACorrection(t *testing.T) {
 	if git.puts != puts || publicSnapshotID(t, h, "rainhuang0220") != first.snap.SnapshotID {
 		t.Fatal("retry published a rejected drop")
 	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || pres.ReadmeSnapshotID != first.snap.SnapshotID || !pres.VerifiedTotal.Valid || pres.VerifiedTotal.Int64 != *first.snap.Periods.All.Totals.Total.Value {
+		t.Fatalf("verified moved %+v %v", pres, err)
+	}
 	higher := mustProjection(t, publicprofile.Input{
 		Now: day.Add(3 * time.Minute), Loc: time.UTC, Version: "test",
 		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 40_000)},
