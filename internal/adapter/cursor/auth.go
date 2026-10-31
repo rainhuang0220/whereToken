@@ -14,7 +14,37 @@ import (
 const authAccessTokenKey = "cursorAuth/accessToken"
 const authRefreshTokenKey = "cursorAuth/refreshToken"
 
+const sealedStoragePrefix = "cursor-safe-storage:"
+
 var errNoLocalAuth = errors.New("未找到本机登录态")
+
+// errAccountUsageUnavailable is a sealed or otherwise unreadable session.
+// publicprofile.tokenReason maps any "auth" substring, and the missing-login
+// sentence, to a logged-out user. This text must stay free of both.
+var errAccountUsageUnavailable = errors.New("账号用量不可用：Cursor 把会话封存在系统密钥中，本程序不读取该密钥")
+
+// usableSessionToken reports whether value can be sent as a bearer.
+// A JWT already stored by Cursor is usable. The safeStorage envelope and any
+// other ciphertext are not: reading the OS secret is not the default install.
+func usableSessionToken(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.HasPrefix(value, sealedStoragePrefix) {
+		return false
+	}
+	if i := strings.LastIndex(value, "::"); i >= 0 {
+		value = strings.TrimSpace(value[i+2:])
+	}
+	parts := strings.Split(value, ".")
+	if len(parts) != 3 || !strings.HasPrefix(parts[0], "eyJ") {
+		return false
+	}
+	for _, p := range parts {
+		if p == "" {
+			return false
+		}
+	}
+	return true
+}
 
 func readItem(db *sql.DB, key string) (string, error) {
 	var v sql.NullString

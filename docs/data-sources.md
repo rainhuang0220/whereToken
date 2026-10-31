@@ -294,15 +294,31 @@ Quality `authoritative`. Derivation `derived`.
 
 `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` (Linux `~/.config/Cursor/…`, Windows `%APPDATA%\Cursor\…`). `~/.cursor` is a discover fallback only.
 
-Login: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). 401 may refresh in memory using `cursorAuth/refreshToken`. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
+Login, only when the stored value is already a JWT: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). A 401 may refresh in memory when `cursorAuth/refreshToken` is a different JWT. The same JWT is not posted to `/oauth/token`. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
+
+A value that starts with `cursor-safe-storage:` (any version), or any other non-JWT, is not a bearer. whereToken does not read Keychain, DPAPI, or libsecret, and it does not send that value anywhere. Account usage is then unavailable. This is the same rule on macOS, Windows, and Linux.
 
 ### Parser
 
-Local bubbles: `type=2` (not thinking capability 30) → requests; `type=1` non-subagent → user turns.
+Local bubbles: `type=2` (not thinking capability 30) → requests; `type=1` non-subagent → user turns. A bubble with no `tokenCount` still counts as a request. Its token total is unavailable, not `0`. An explicit `tokenCount` of zero stays zero on the event and stays degraded.
 
-Token columns: `POST` Cursor `DashboardService/GetFilteredUsageEvents` (fallback `GetAggregatedUsageEvents`), last 53 local weeks. When the API has totals, local `tokenCount` is ignored so the two are not added together. `--offline` skips the API.
+Token columns, only for a readable JWT: `POST` Cursor `DashboardService/GetFilteredUsageEvents` (fallback `GetAggregatedUsageEvents`), last 53 local weeks. When the API has totals, local `tokenCount` is ignored so the two are not added together. `--offline` skips the API. A sealed session is still reported unavailable while offline, so a later refresh can keep a retained account observation instead of replacing it with local rows.
 
-Filtered pagination is atomic: every advertised page must complete. Partial rows from a failed or page-limited fetch are discarded. A complete aggregated response can recover the account total; otherwise the adapter reports a sanitized error and keeps only degraded local token counts plus local request/turn history.
+Filtered pagination is atomic. The response must include `totalUsageEventsCount`, and the raw row count must equal it. A short page, a missing total, a page that disagrees, a 429, or a schema change discards every row from that call. Aggregated usage is a fallback only when it returns events. An empty aggregated body after a filtered failure is not a measured zero. A complete filtered response with total `0` is a measured zero.
+
+### What a normal install can read
+
+| Situation | Account tokens | Local requests / turns | Extra setup |
+| --------- | -------------- | ---------------------- | ----------- |
+| macOS Cursor 3.x with encryption-at-rest (`cursor-safe-storage:` in `state.vscdb`; the key stays in the login item Cursor Safe Storage) | Unavailable | Yes | None. Do not edit the keychain ACL |
+| Windows, DPAPI / ciphertext in the same ItemTable key | Unavailable | Yes | None. Do not call DPAPI |
+| Linux, libsecret / ciphertext in the same ItemTable key | Unavailable | Yes | None. Do not call secret-tool |
+| Any OS, older Cursor, plaintext JWT already in ItemTable or `storage.json` | Yes, private DashboardService, about 53 weeks | Yes | None. The API is not a public personal-usage contract and can change |
+| No session row | Unavailable (not signed in) | Yes, when bubbles exist | None |
+| User-exported dashboard CSV | Not imported | — | Not a zero-config source. The columns are not a verified stable contract |
+| `api.cursor.com` Admin / Analytics, or a `crsr_` key | Not used for personal usage | — | Team or admin credentials. Not the default install |
+
+DashboardService and the cursor.com dashboard cookie APIs are private. A personal API key cannot read this usage. whereToken does not ship a helper, a private certificate, or a keychain trust entry.
 
 ### Token mapping
 
@@ -312,11 +328,11 @@ Filtered pagination is atomic: every advertised page must complete. Partial rows
 | Requests / turns | local bubbles | raw |
 | Local `tokenCount` | used only if the API has no token totals | raw |
 
-Quality `authoritative` when the API (or local tokenCount) has numbers; `degraded` when the ledger exists but tokens are missing; `absent` when only an empty `~/.cursor` is found.
+Quality `authoritative` when a complete API response has numbers, including a proven empty list; `degraded` when only local `tokenCount` exists; `absent` when only an empty `~/.cursor` is found. A degraded source whose token total is 0 is shown as unavailable, not `0.00 M`. Request counts stay.
 
 ### Limitations
 
-API token window is ~53 weeks; request/turn counts are all local sessions. Needs the user **signed in**. Encrypted storage is reported, not decrypted.
+The API window is about 53 weeks. Request and turn counts are local sessions on this machine. The account API, when it is readable, is one account window and must not be added across devices. A later successful scan of an append-only local log must not drop tokens. A failed or sealed account fetch does not delete a retained observation, does not add that observation on top of local `tokenCount`, and does not present the retained row as a fresh measurement. A narrower new window is still handled by the existing ledger supplement. Encrypted storage is reported, not decrypted.
 
 ---
 

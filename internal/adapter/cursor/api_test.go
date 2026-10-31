@@ -18,7 +18,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/metric"
 )
 
-const fakeJWT = "test-token"
+const fakeJWT = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.sig"
 
 func TestParseAccountAPIMapsFilteredEvents(t *testing.T) {
 	var sawAuth bool
@@ -83,7 +83,7 @@ func TestParseAccountAPIMapsFilteredEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !sawAuth {
-		t.Fatal("expected Bearer test-token on DashboardService call")
+		t.Fatal("expected Bearer session on DashboardService call")
 	}
 	if len(turns) != 1 {
 		t.Fatalf("turns=%d", len(turns))
@@ -477,7 +477,7 @@ func TestParseFilteredKeepsSameMsDifferentConversations(t *testing.T) {
 	    {"timestamp":"1700000000000","model":"grok-4","conversationId":"conv-b","tokenUsage":{"inputTokens":20,"outputTokens":2}}
 	  ]
 	}`)
-	evs, _, _, err := parseFiltered(raw)
+	evs, _, _, _, err := parseFiltered(raw)
 	if err != nil {
 		t.Fatal(err)
 	}

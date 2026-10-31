@@ -231,10 +231,10 @@ whereToken reads usage information from data made available by supported coding 
 | Roo Code | Full | Not required |
 | Kilo Code (legacy VS Code + CLI `kilo.db`) | Full | Not required |
 | ZCode (Z.ai ADE) | Full | Not required |
-| Cursor | Partial | Required for token columns |
+| Cursor | Partial | None for local requests. Account tokens only when Cursor already stored a readable JWT |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 
-Cursor and Trae must be **signed in** on this machine for token columns. Encrypted Trae storage is reported, not decrypted. Cline, Roo Code, and leftover Kilo Code VS Code tasks are read from `ui_messages.json` metrics only; settings and transcripts are skipped.
+Cursor account tokens need a JWT Cursor has already written into its own database. Current builds seal that session with the operating system's secret store. whereToken then reports account usage unavailable and still reads local requests and turns. It does not read Keychain, DPAPI, or libsecret, and it does not ask for a certificate or an API key. Encrypted Trae storage is reported, not decrypted. Cline, Roo Code, and leftover Kilo Code VS Code tasks are read from `ui_messages.json` metrics only; settings and transcripts are skipped.
 
 When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero. The dashboard labels each agent authoritative, degraded, estimated, or unavailable.
 
@@ -281,7 +281,7 @@ Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_
 
 Usage information is read from data made available by supported coding agents. Most sources are local application data.
 
-Cursor and Trae may access those applications' own APIs using credentials already stored by the corresponding application, to obtain token columns that are not present in the local files.
+Cursor and Trae may call those applications' own usage APIs only when a readable session is already stored in the application's database. A sealed Cursor session is left sealed. whereToken does not read Keychain, DPAPI, or libsecret, and it does not ask the user to paste a key.
 
 ### Credentials
 

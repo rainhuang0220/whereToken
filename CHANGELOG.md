@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cursor account usage is read only when Cursor has already stored a JWT. A `cursor-safe-storage` envelope, or any other non-JWT, is account usage unavailable on macOS, Windows, and Linux. whereToken does not read Keychain, DPAPI, or libsecret, does not send the sealed value, and does not publish a short or undeclared account page. Local bubbles that carry `tokenCount` stay degraded local counts. A missing `tokenCount` is not shown as `0.00 M`. A failed account fetch still leaves a retained observation in place.
+
 ## 0.7.9 — 2026-10-27 (Alpha)
 
 - The public sync route ignores client correction headers and does not attach an in-memory permit. A device bearer cannot publish a lower total by naming the drop. A stored `corr:` retry tag is not replayed as authorization. Upward publication is unchanged. The local ledger still records a correction permit and does not clear it on an ordinary verified, cooldown, or pending result.

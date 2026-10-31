@@ -181,6 +181,11 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	}
 	snap.TodayM = metric.FormatM(snap.TodayTotal)
 	snap.PeakDayM = metric.FormatM(snap.PeakDay)
+	if snap.Quality == event.QualityDegraded && snap.Total == 0 {
+		snap.TotalM = "不可用"
+		snap.TodayM = "不可用"
+		snap.PeakDayM = "不可用"
+	}
 	if hasUnknownVendorUsage(snap.Vendors) {
 		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}
@@ -195,7 +200,11 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		}
 	}
 	if snap.Total == 0 && snap.Requests > 0 {
-		snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
+		if snap.TotalM == "不可用" {
+			snap.Notes = appendUniqueNote(snap.Notes, "有请求次数，token 列没有可读数字")
+		} else {
+			snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
+		}
 	}
 	snap.Notes = appendCostNotes(snap.Notes, view)
 	snap.Notes = appendEmptyViewNotes(snap.Notes, snap, f)
@@ -395,7 +404,9 @@ func usageUnavailable(s metric.Slice) bool {
 	if s.Quality == event.QualityAbsent {
 		return true
 	}
-	return s.Quality == event.QualityDegraded && s.Total() == 0 && s.Requests == 0 && s.UserTurns == 0
+	// Degraded with no token components is missing usage. Request and turn
+	// counts stay on the row. 0.00 M would claim a measured zero.
+	return s.Quality == event.QualityDegraded && s.Total() == 0
 }
 
 func applyShares(rows []Row, total int64) {

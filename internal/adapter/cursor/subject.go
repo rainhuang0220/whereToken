@@ -36,7 +36,7 @@ func (a Adapter) AccountSubject(home adapter.Home) string {
 			continue
 		}
 		token, _, err := authTokens(path, false)
-		if err != nil || token == "" {
+		if err != nil || !usableSessionToken(token) {
 			continue
 		}
 		if sub := JWTSubject(token); sub != "" {
