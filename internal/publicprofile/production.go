@@ -18,6 +18,17 @@ func ValidateProduction(s Snapshot, allowPartial bool) error {
 	if s.Provenance.Kind != ProvenanceLocal {
 		return fmt.Errorf("publicprofile: production requires local_sanitized_snapshot")
 	}
+	// DecideRefresh already publishes other measured agents when one cloud
+	// row has no account total. The same split applies here: an unmeasured
+	// gap does not fail the snapshot once some agent has a credible total.
+	// No credible total still fails.
+	credible := false
+	for _, row := range s.Periods.All.ByAgent {
+		if measuredAgent(row) {
+			credible = true
+			break
+		}
+	}
 	var msgs []string
 	for _, row := range s.Periods.All.ByAgent {
 		if !cloudSource(row.ID) {
@@ -28,6 +39,9 @@ func ValidateProduction(s Snapshot, allowPartial bool) error {
 		skipped := row.Coverage.Reason == ReasonAccountAPISkipped ||
 			row.Coverage.Reason == ReasonAuthMissing ||
 			row.Coverage.Reason == ReasonAPIFailed
+		if reqOK && tokMissing && skipped && credible && !measuredAgent(row) {
+			continue
+		}
 		if reqOK && tokMissing && skipped {
 			action := "Regenerate online with a complete account API response."
 			if row.Coverage.Reason == ReasonAccountAPISkipped {

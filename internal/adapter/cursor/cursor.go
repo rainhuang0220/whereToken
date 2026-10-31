@@ -92,7 +92,7 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		// The value stays in the database and is never placed on a request.
 		apiErr = errAccountUsageUnavailable
 	case !a.Offline:
-		if !usableSessionToken(refresh) || refresh == token {
+		if !compatibleRefreshToken(refresh) || refresh == token {
 			refresh = ""
 		}
 		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)

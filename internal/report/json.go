@@ -13,6 +13,8 @@ type jsonRow struct {
 	Label       string `json:"label"`
 	Total       int64  `json:"total"`
 	TotalM      string `json:"total_m"`
+	TokensKnown bool   `json:"tokens_known"`
+	Coverage    string `json:"coverage"`
 	Share       string `json:"share,omitempty"`
 	HitRateText string `json:"hit_rate_text"`
 	Requests    int64  `json:"requests"`
@@ -27,6 +29,8 @@ type jsonSnap struct {
 	Scope             string          `json:"scope,omitempty"`
 	Total             int64           `json:"total"`
 	TotalM            string          `json:"total_m"`
+	TokensKnown       bool            `json:"tokens_known"`
+	Coverage          string          `json:"coverage"`
 	HitRate           *float64        `json:"hit_rate"`
 	HitRateText       string          `json:"hit_rate_text"`
 	MaxStreakDays     *int            `json:"max_streak_days,omitempty"`
@@ -55,6 +59,8 @@ func WriteJSON(w io.Writer, snap Snapshot) error {
 		Scope:       snap.Scope,
 		Total:       snap.Total,
 		TotalM:      snap.TotalM,
+		TokensKnown: snap.TokensKnown,
+		Coverage:    snap.Coverage,
 		HitRate:     snap.HitRate,
 		HitRateText: snap.HitRateText,
 		Requests:    snap.Requests,
@@ -123,6 +129,8 @@ func jsonRows(rows []Row, turns bool) []jsonRow {
 			Label:       r.Label,
 			Total:       r.Total,
 			TotalM:      r.TotalM,
+			TokensKnown: r.TokensKnown,
+			Coverage:    r.Coverage,
 			Share:       r.ShareText,
 			HitRateText: r.HitRateText,
 			Requests:    r.Requests,

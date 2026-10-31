@@ -2,6 +2,7 @@ package cursor
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"os"
@@ -59,6 +60,52 @@ func usableSessionToken(value string) bool {
 		}
 	}
 	return true
+}
+
+// compatibleRefreshToken reports whether value may be posted as
+// grant_type=refresh_token. The payload is decoded locally and is not
+// verified, logged, or sent. A different JWT is not enough: only type
+// refresh_token matches this client's refresh grant. A session JWT
+// (type session) and any other type stay unread, so a 401 degrades
+// without calling /oauth/token.
+func compatibleRefreshToken(value string) bool {
+	value = jwtBody(value)
+	if !usableSessionToken(value) {
+		return false
+	}
+	claims, ok := unverifiedJWTClaims(value)
+	if !ok {
+		return false
+	}
+	typ, _ := claims["type"].(string)
+	return typ == "refresh_token"
+}
+
+func jwtBody(value string) string {
+	value = normalizeStoredSession(value)
+	if i := strings.LastIndex(value, "::"); i >= 0 {
+		value = strings.TrimSpace(value[i+2:])
+	}
+	return value
+}
+
+func unverifiedJWTClaims(jwt string) (map[string]any, bool) {
+	parts := strings.Split(jwt, ".")
+	if len(parts) != 3 || parts[1] == "" {
+		return nil, false
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		raw, err = base64.URLEncoding.DecodeString(parts[1])
+		if err != nil {
+			return nil, false
+		}
+	}
+	var claims map[string]any
+	if json.Unmarshal(raw, &claims) != nil || len(claims) == 0 {
+		return nil, false
+	}
+	return claims, true
 }
 
 func readItem(db *sql.DB, key string) (string, error) {

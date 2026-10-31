@@ -31,6 +31,8 @@ type Row struct {
 	ID, Label    string
 	Total        int64
 	TotalM       string
+	TokensKnown  bool
+	Coverage     string
 	ShareText    string
 	HitRateText  string
 	Requests     int64
@@ -46,6 +48,8 @@ type Snapshot struct {
 	Period, Scope string
 	Total         int64
 	TotalM        string
+	TokensKnown   bool
+	Coverage      string
 	HitRate       *float64
 	HitRateText   string
 	MaxStreak     int
@@ -186,6 +190,7 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		snap.TodayM = "不可用"
 		snap.PeakDayM = "不可用"
 	}
+	snap.TokensKnown, snap.Coverage = tokenFacts(snap.Quality, snap.Total)
 	if hasUnknownVendorUsage(snap.Vendors) {
 		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}
@@ -384,11 +389,14 @@ func rowFrom(s metric.Slice) Row {
 	if usageUnavailable(s) {
 		totalM = "不可用"
 	}
+	known, coverage := tokenFacts(s.Quality, s.Total())
 	return Row{
 		ID:           s.ID,
 		Label:        s.Label,
 		Total:        s.Total(),
 		TotalM:       totalM,
+		TokensKnown:  known,
+		Coverage:     coverage,
 		HitRateText:  v.HitRateText,
 		Requests:     s.Requests,
 		UserTurns:    s.UserTurns,
@@ -397,6 +405,19 @@ func rowFrom(s metric.Slice) Row {
 		Quality:      s.Quality,
 		CostStatus:   v.CostStatus,
 		CostUSD:      v.CostUSD,
+	}
+}
+
+// tokenFacts separates a measured zero from missing usage. total stays an
+// integer either way: known false means that integer is not a measurement.
+func tokenFacts(q event.Quality, total int64) (bool, string) {
+	switch {
+	case q == event.QualityAbsent, q == event.QualityDegraded && total == 0, q == event.QualityEstimated && total == 0:
+		return false, "unavailable"
+	case q == event.QualityDegraded, q == event.QualityEstimated:
+		return true, "partial"
+	default:
+		return true, "available"
 	}
 }
 

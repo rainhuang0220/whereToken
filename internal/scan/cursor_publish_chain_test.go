@@ -59,8 +59,14 @@ func TestCursorPublishChain(t *testing.T) {
 			t.Fatalf("report total_m=%q requests=%d", rep.TotalM, rep.Requests)
 		}
 		raw := chainJSON(t, rep)
-		if !strings.Contains(raw, `"total_m": "不可用"`) || !strings.Contains(raw, `"requests":`) || strings.Contains(raw, "0.00 M") {
+		if !strings.Contains(raw, `"total_m": "不可用"`) || !strings.Contains(raw, `"tokens_known": false`) || !strings.Contains(raw, `"coverage": "unavailable"`) || strings.Contains(raw, "0.00 M") {
 			t.Fatalf("json=%s", raw)
+		}
+		if rep.TokensKnown || rep.Coverage != "unavailable" || rep.Total != 0 {
+			t.Fatalf("known=%v coverage=%s total=%d", rep.TokensKnown, rep.Coverage, rep.Total)
+		}
+		if err := publicprofile.ValidateProduction(snap, false); err == nil {
+			t.Fatal("no credible token total must still block production")
 		}
 		got := decideChain(snap, nil, nil, "", time.Time{}, day)
 		if got.Code != publicprofile.CodeBlockedData || got.Label != "用量不可用" || got.Detail != "" || got.Publish {
@@ -151,6 +157,9 @@ func TestCursorPublishChain(t *testing.T) {
 		if got.Code == publicprofile.CodeBlockedData || !got.Publish || got.Code != publicprofile.CodePublished {
 			t.Fatalf("decision=%+v", got)
 		}
+		if err := publicprofile.ValidateProduction(snap, false); err != nil {
+			t.Fatalf("manual production disagreed with refresh: %v", err)
+		}
 	})
 
 	t.Run("retained cursor lets grok and codex publish", func(t *testing.T) {
@@ -175,6 +184,9 @@ func TestCursorPublishChain(t *testing.T) {
 		got := decideChain(snap, &prev, &total, "2026-10-31", published, day)
 		if got.Code == publicprofile.CodeBlockedData || !got.Publish || got.Code != publicprofile.CodePublished {
 			t.Fatalf("decision=%+v", got)
+		}
+		if err := publicprofile.ValidateProduction(snap, false); err != nil {
+			t.Fatalf("manual production disagreed with refresh: %v", err)
 		}
 		if publicprofile.FormatCompact(chainObserved) == publicprofile.FormatCompact(want) {
 			t.Fatal("fixture did not cross a visible tick")

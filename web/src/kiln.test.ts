@@ -88,6 +88,8 @@ describe('cross table', () => {
     const cross = home.slice(home.indexOf('工具 × 厂家'))
     expect(cross).toMatch(/估价/)
     expect(cross).toMatch(/costCaption\(row\)/)
+    expect(cross).toMatch(/sourceVendorCell\(row\.total_m, row\)/)
+    expect(cross).toMatch(/qualityCaption\(row\.quality/)
     expect(cross).not.toMatch(/\$0/)
   })
 })

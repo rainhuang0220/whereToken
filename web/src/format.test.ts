@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCost2, formatCount, hitBand, qualityCaption, tokenCell } from './format'
+import { columnsFrom, costCaption, costHonestyNote, costKPI, derivationCaption, formatCost2, formatCount, hitBand, qualityCaption, sourceVendorCell, tokenCell } from './format'
 import type { SliceView } from './types'
 
 describe('columnsFrom', () => {
@@ -70,6 +70,16 @@ describe('tokenCell', () => {
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 0, user_turns: 0 })).toBe('不可用')
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('不可用')
     expect(tokenCell('1.10 M', 'degraded', { total: 1_100_000, requests: 2, user_turns: 1 })).toBe('1.10 M')
+  })
+})
+
+describe('sourceVendorCell', () => {
+  it('shows 不可用 for a degraded zero and keeps a measured zero', () => {
+    expect(sourceVendorCell('0.00 M', { quality: 'degraded', total: 0, requests: 4 })).toBe('不可用')
+    expect(sourceVendorCell('0.00 M', { quality: 'absent', total: 0, requests: 0 })).toBe('不可用')
+    expect(sourceVendorCell('0.00 M', { quality: 'authoritative', total: 0, requests: 0 })).toBe('0.00 M')
+    expect(sourceVendorCell('1.10 M', { quality: 'degraded', total: 1_100_000, requests: 2 })).toBe('1.10 M')
+    expect(sourceVendorCell('0.00 M', { total: 0, requests: 1 })).toBe('0.00 M')
   })
 })
 

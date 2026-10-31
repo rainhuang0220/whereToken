@@ -294,7 +294,7 @@ Quality `authoritative`. Derivation `derived`.
 
 `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` (Linux `~/.config/Cursor/…`, Windows `%APPDATA%\Cursor\…`). `~/.cursor` is a discover fallback only.
 
-Login, only when the stored value is already a JWT: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). A 401 may refresh in memory when `cursorAuth/refreshToken` is a different JWT. The same JWT is not posted to `/oauth/token`. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
+Login, only when the stored value is already a JWT: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). A 401 may refresh in memory only when `cursorAuth/refreshToken` is a different JWT whose payload `type` is `refresh_token`, the credential this client sends as `grant_type=refresh_token`. A session JWT (`type` `session`), a JWT with no type, the same JWT, or an unreadable payload is not posted to `/oauth/token`. The payload check is local and does not verify the signature. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
 
 A value that starts with `cursor-safe-storage:` (any version), or any other non-JWT, is not a bearer. whereToken does not read Keychain, DPAPI, or libsecret, and it does not send that value anywhere. Account usage is then unavailable. This is the same rule on macOS, Windows, and Linux.
 

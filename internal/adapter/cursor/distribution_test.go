@@ -1,6 +1,7 @@
 package cursor
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -224,8 +225,34 @@ func TestSameJWTIsNotPostedAsRefresh(t *testing.T) {
 	}
 }
 
-func TestDistinctRefreshJWTStillRuns(t *testing.T) {
-	const refreshJWT = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJyZWZyZXNoIn0.sig"
+func TestDistinctSessionJWTIsNotPosted(t *testing.T) {
+	session := testJWT(t, `{"sub":"other","iss":"https://authentication.cursor.sh","aud":"https://cursor.com","type":"session"}`)
+	plain := testJWT(t, `{"sub":"other"}`)
+	for _, refresh := range []string{session, "user_01::" + session, plain} {
+		oauth := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.Path, "oauth/token") {
+				oauth++
+			}
+			http.Error(w, "no", http.StatusUnauthorized)
+		}))
+		dir := t.TempDir()
+		db := writeVscdb(t, dir, nil, nil)
+		putItem(t, db, authAccessTokenKey, fakeJWT)
+		putItem(t, db, authRefreshTokenKey, refresh)
+		err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+		srv.Close()
+		if err == nil || !strings.Contains(err.Error(), "已失效") {
+			t.Fatalf("refresh kind err=%v", err)
+		}
+		if oauth != 0 {
+			t.Fatalf("a non-refresh JWT was posted %d times", oauth)
+		}
+	}
+}
+
+func TestDeclaredRefreshTokenIsPosted(t *testing.T) {
+	refreshJWT := "user_01::" + testJWT(t, `{"sub":"refresh","type":"refresh_token"}`)
 	var posted string
 	filtered := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +260,7 @@ func TestDistinctRefreshJWTStillRuns(t *testing.T) {
 		case strings.Contains(r.URL.Path, "oauth/token"):
 			var body map[string]string
 			_ = json.NewDecoder(r.Body).Decode(&body)
-			posted = body["refresh_token"]
+			posted = body["grant_type"] + " " + body["refresh_token"]
 			io.WriteString(w, `{"access_token":"`+fakeJWT+`"}`)
 		case strings.Contains(r.URL.Path, "GetFilteredUsageEvents"):
 			filtered++
@@ -258,12 +285,17 @@ func TestDistinctRefreshJWTStillRuns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if posted != refreshJWT {
-		t.Fatal("refresh did not use the distinct refresh JWT")
+	if posted != "refresh_token "+refreshJWT {
+		t.Fatal("declared refresh token was not posted with the refresh grant")
 	}
 	if metric.Aggregate(evs, nil).All.Total() != 4 {
 		t.Fatalf("events=%+v", evs)
 	}
+}
+
+func testJWT(t *testing.T, payload string) string {
+	t.Helper()
+	return "eyJhbGciOiJub25lIn0." + base64.RawURLEncoding.EncodeToString([]byte(payload)) + ".sig"
 }
 
 func TestSealedRefreshIsNotPosted(t *testing.T) {

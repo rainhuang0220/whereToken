@@ -33,7 +33,7 @@ func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.
 	}
 	token := access
 	events, err := a.fetchUsageWithToken(sourceRoot, token)
-	if err != nil && adapter.IsUnauthorized(err) && usableSessionToken(refresh) && refresh != access {
+	if err != nil && adapter.IsUnauthorized(err) && compatibleRefreshToken(refresh) && refresh != access {
 		next, rerr := a.refreshAccessToken(refresh)
 		if rerr != nil {
 			return nil, errExpiredAuth

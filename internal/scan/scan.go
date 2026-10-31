@@ -435,6 +435,7 @@ type sourceVendorView struct {
 	OutputM      string `json:"output_m"`
 	TotalM       string `json:"total_m"`
 	Requests     int64  `json:"requests"`
+	Quality      string `json:"quality"`
 	CostStatus   string `json:"cost_status,omitempty"`
 	CostUSD      string `json:"cost_usd,omitempty"`
 }
@@ -484,6 +485,15 @@ type whyJSON struct {
 	Total       int64  `json:"total"`
 	Quality     string `json:"quality"`
 	Derivation  string `json:"derivation"`
+}
+
+// crossTokenText keeps a measured zero as 0.00 M. A degraded or absent
+// zero is missing usage, so the cell says 不可用 instead of a fake measurement.
+func crossTokenText(n int64, q event.Quality, total int64) string {
+	if q == event.QualityAbsent || (q == event.QualityDegraded && total == 0) {
+		return "不可用"
+	}
+	return metric.FormatM(n)
 }
 
 func viewWithError(s metric.Slice, errs []string) metric.SliceView {
@@ -555,6 +565,7 @@ func buildSummaryJSON(r Result) summaryJSON {
 		out.ByVendor = []metric.SliceView{}
 	}
 	for _, s := range r.Summary.BySourceVendor {
+		total := s.Total()
 		row := sourceVendorView{
 			Source:       s.Source,
 			Vendor:       s.Vendor,
@@ -564,13 +575,14 @@ func buildSummaryJSON(r Result) summaryJSON {
 			CacheRead:    s.CacheRead,
 			CacheCreate:  s.CacheCreate,
 			Output:       s.Output,
-			Total:        s.Total(),
-			MissM:        metric.FormatM(s.Miss),
-			CacheReadM:   metric.FormatM(s.CacheRead),
-			CacheCreateM: metric.FormatM(s.CacheCreate),
-			OutputM:      metric.FormatM(s.Output),
-			TotalM:       metric.FormatM(s.Total()),
+			Total:        total,
+			MissM:        crossTokenText(s.Miss, s.Quality, total),
+			CacheReadM:   crossTokenText(s.CacheRead, s.Quality, total),
+			CacheCreateM: crossTokenText(s.CacheCreate, s.Quality, total),
+			OutputM:      crossTokenText(s.Output, s.Quality, total),
+			TotalM:       crossTokenText(total, s.Quality, total),
 			Requests:     s.Requests,
+			Quality:      string(s.Quality),
 			CostStatus:   s.CostStatus,
 			CostUSD:      metric.FormatCostUSD(s.CostStatus, s.CostMicro),
 		}

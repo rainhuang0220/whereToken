@@ -1,4 +1,4 @@
-import type { SliceView } from './types'
+import type { SliceView, SourceVendorView } from './types'
 
 export function formatCount(n: number): string {
   const neg = n < 0
@@ -77,6 +77,17 @@ export function tokenCell(
     return '不可用'
   }
   return formatted
+}
+
+export function sourceVendorCell(
+  formatted: string,
+  row: Pick<SourceVendorView, 'quality' | 'total' | 'requests'>,
+): string {
+  return tokenCell(formatted, row.quality || '', {
+    total: row.total,
+    requests: row.requests,
+    user_turns: 0,
+  })
 }
 
 export function columnsFrom(view: SliceView): string[] {
