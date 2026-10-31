@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Cursor account usage is read only when Cursor has already stored a JWT. A `cursor-safe-storage` envelope, or any other non-JWT, is account usage unavailable on macOS, Windows, and Linux. whereToken does not read Keychain, DPAPI, or libsecret, does not send the sealed value, and does not publish a short or undeclared account page. Local bubbles that carry `tokenCount` stay degraded local counts. A missing `tokenCount` is not shown as `0.00 M`. A failed account fetch still leaves a retained observation in place.
+- A session stored as one JSON string, including a WorkOS `user id::JWT`, is still sent as the bearer. A sealed envelope stays unread.
+- A sealed Cursor fetch leaves other measured agents publishable. A held account observation stays on the wall as partial coverage and does not freeze the refresh on `BLOCKED_DATA`. The dashboard labels a degraded row with requests and no tokens as 不可用. Zero-config Cursor data is local request and turn activity.
 
 ## 0.7.9 — 2026-10-27 (Alpha)
 

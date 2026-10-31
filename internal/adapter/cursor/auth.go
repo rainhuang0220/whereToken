@@ -23,11 +23,26 @@ var errNoLocalAuth = errors.New("未找到本机登录态")
 // sentence, to a logged-out user. This text must stay free of both.
 var errAccountUsageUnavailable = errors.New("账号用量不可用：Cursor 把会话封存在系统密钥中，本程序不读取该密钥")
 
-// usableSessionToken reports whether value can be sent as a bearer.
-// A JWT already stored by Cursor is usable. The safeStorage envelope and any
-// other ciphertext are not: reading the OS secret is not the default install.
-func usableSessionToken(value string) bool {
+// normalizeStoredSession unwraps one JSON string. ItemTable sometimes stores
+// the session that way, quotes included. A raw JWT is unchanged.
+func normalizeStoredSession(value string) string {
 	value = strings.TrimSpace(value)
+	if len(value) >= 2 && value[0] == '"' {
+		var decoded string
+		if json.Unmarshal([]byte(value), &decoded) == nil {
+			value = strings.TrimSpace(decoded)
+		}
+	}
+	return value
+}
+
+// usableSessionToken reports whether value can be sent as a bearer.
+// Accepted shapes are a three-part JWT whose header is the standard
+// base64url of "{", and that JWT after a WorkOS user id (anything::jwt).
+// The safeStorage envelope and any other ciphertext are not: reading the
+// OS secret is not the default install.
+func usableSessionToken(value string) bool {
+	value = normalizeStoredSession(value)
 	if value == "" || strings.HasPrefix(value, sealedStoragePrefix) {
 		return false
 	}

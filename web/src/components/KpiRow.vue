@@ -24,8 +24,16 @@ const noData = computed(
 const totalText = computed(() =>
   noData.value ? '—' : tokenCell(props.all.total_m, props.all.quality, props.all),
 )
-const todayText = computed(() => (noData.value ? '—' : props.todayTotalM || '—'))
-const peakText = computed(() => (noData.value ? '—' : props.peakTotalM || '—'))
+const todayText = computed(() => {
+  if (noData.value) return '—'
+  if (totalText.value === '不可用') return '不可用'
+  return props.todayTotalM || '—'
+})
+const peakText = computed(() => {
+  if (noData.value) return '—'
+  if (totalText.value === '不可用') return '不可用'
+  return props.peakTotalM || '—'
+})
 const peakTitle = computed(() => (props.peakDate ? `单日最高 ${props.peakDate}` : undefined))
 const estimateText = computed(() => formatCost2(props.all.cost_usd) || '—')
 const hasModels = computed(() => (props.byModel?.length ?? 0) > 0)

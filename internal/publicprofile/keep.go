@@ -10,10 +10,64 @@ func ShouldReplaceProjection(prev, next Snapshot) bool {
 	if prev.SnapshotID == "" {
 		return true
 	}
-	if coverageRank(next.DataStatus) < coverageRank(prev.DataStatus) {
+	if lostMeasuredProvider(prev, next) {
 		return false
 	}
-	return !lostMeasuredProvider(prev, next)
+	// A weaker snapshot status still blocks when a measured agent itself got
+	// weaker. A held account observation may display as partial, and a newly
+	// unmeasured agent must not freeze every other agent.
+	if coverageRank(next.DataStatus) < coverageRank(prev.DataStatus) && !measuredSetHeld(prev, next) {
+		return false
+	}
+	return true
+}
+
+// measuredSetHeld reports that every previously measured agent is still
+// measured, and that any drop in its token status is a held account
+// observation rather than a weaker reading of that agent.
+func measuredSetHeld(prev, next Snapshot) bool {
+	nextAgents := make(map[string]Breakdown, len(next.Periods.All.ByAgent))
+	for _, row := range next.Periods.All.ByAgent {
+		nextAgents[row.ID] = row
+	}
+	saw := false
+	for _, row := range prev.Periods.All.ByAgent {
+		if !measuredAgent(row) {
+			continue
+		}
+		saw = true
+		nxt, ok := nextAgents[row.ID]
+		if !ok || !measuredAgent(nxt) {
+			return false
+		}
+		if coverageRank(nxt.Coverage.Tokens) < coverageRank(row.Coverage.Tokens) ||
+			coverageRank(nxt.Totals.Total.Status) < coverageRank(row.Totals.Total.Status) {
+			if !heldAccountObservation(row, nxt) {
+				return false
+			}
+		}
+	}
+	return saw
+}
+
+// heldAccountObservation is a reused account measurement: same source, no
+// failure reason, and a total that did not shrink. It is not a fresh pull
+// and it is not local tokenCount.
+func heldAccountObservation(prev, next Breakdown) bool {
+	if next.Coverage.TokenSource != TokenSourceAccountAPI || next.Coverage.Reason != "" {
+		return false
+	}
+	if next.Coverage.Tokens != StatusPartial {
+		return false
+	}
+	win := next.Coverage.TokenWindow
+	if win == nil || win.Label != "account usage" || win.To == "" {
+		return false
+	}
+	if prev.Totals.Total.Value == nil || next.Totals.Total.Value == nil {
+		return false
+	}
+	return *next.Totals.Total.Value >= *prev.Totals.Total.Value
 }
 
 func coverageRank(status string) int {

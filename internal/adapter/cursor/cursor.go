@@ -163,10 +163,12 @@ func authTokens(path string, needRefresh bool) (access, refresh string, err erro
 	if access == "" {
 		access = readStorageJSONToken(path)
 	}
+	access = normalizeStoredSession(access)
 	if access != "" && needRefresh {
 		if refresh, err = readItem(db, authRefreshTokenKey); err != nil {
 			return "", "", err
 		}
+		refresh = normalizeStoredSession(refresh)
 	}
 	return access, refresh, nil
 }

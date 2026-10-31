@@ -57,6 +57,8 @@ describe('derivationCaption', () => {
   it('names how a number was produced', () => {
     expect(derivationCaption('deduplicated')).toBe('按请求去重')
     expect(derivationCaption('raw,derived')).toBe('原始字段 · 推导值')
+    expect(derivationCaption('retained_api')).toBe('沿用历史观测')
+    expect(derivationCaption('raw,retained_api')).toBe('原始字段 · 沿用历史观测')
   })
 })
 
@@ -64,8 +66,10 @@ describe('tokenCell', () => {
   it('does not present absent usage as zero', () => {
     expect(tokenCell('0.00 M', 'absent')).toBe('不可用')
     expect(tokenCell('1.20 M', 'authoritative')).toBe('1.20 M')
+    expect(tokenCell('0.00 M', 'authoritative', { total: 0, requests: 0, user_turns: 0 })).toBe('0.00 M')
     expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 0, user_turns: 0 })).toBe('不可用')
-    expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('0.00 M')
+    expect(tokenCell('0.00 M', 'degraded', { total: 0, requests: 12, user_turns: 3 })).toBe('不可用')
+    expect(tokenCell('1.10 M', 'degraded', { total: 1_100_000, requests: 2, user_turns: 1 })).toBe('1.10 M')
   })
 })
 

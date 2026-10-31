@@ -330,6 +330,8 @@ DashboardService and the cursor.com dashboard cookie APIs are private. A persona
 
 Quality `authoritative` when a complete API response has numbers, including a proven empty list; `degraded` when only local `tokenCount` exists; `absent` when only an empty `~/.cursor` is found. A degraded source whose token total is 0 is shown as unavailable, not `0.00 M`. Request counts stay.
 
+Local requests and turns are activity counts. They become an account token total only when a complete account observation exists. Scan index mode `full` means that file was reread. A retained row keeps the earlier observation on its own window and stays separate from local `tokenCount`. A missing `tokenCount` stays unavailable. An explicit local zero stays zero and degraded.
+
 ### Limitations
 
 The API window is about 53 weeks. Request and turn counts are local sessions on this machine. The account API, when it is readable, is one account window and must not be added across devices. A later successful scan of an append-only local log must not drop tokens. A failed or sealed account fetch does not delete a retained observation, does not add that observation on top of local `tokenCount`, and does not present the retained row as a fresh measurement. A narrower new window is still handled by the existing ledger supplement. Encrypted storage is reported, not decrypted.

@@ -40,6 +40,8 @@ export function derivationCaption(derivation: string): string {
           return '按请求去重'
         case 'estimated':
           return '估算'
+        case 'retained_api':
+          return '沿用历史观测'
         default:
           return d
       }
@@ -70,13 +72,8 @@ export function tokenCell(
   if (quality === 'absent') {
     return '不可用'
   }
-  if (
-    quality === 'degraded' &&
-    view &&
-    view.total === 0 &&
-    view.requests === 0 &&
-    !view.user_turns
-  ) {
+  // A degraded zero is missing token data. Requests and turns stay on their own cells.
+  if (quality === 'degraded' && view && view.total === 0) {
     return '不可用'
   }
   return formatted

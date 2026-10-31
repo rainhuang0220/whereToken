@@ -99,6 +99,73 @@ func TestStorageJSONSealIsTheSameRefusal(t *testing.T) {
 	}
 }
 
+func TestQuotedPlaintextSessionStillReadsAccountUsage(t *testing.T) {
+	cases := []string{
+		`"` + fakeJWT + `"`,
+		"\"user_1::" + fakeJWT + "\"\n",
+	}
+	for _, stored := range cases {
+		t.Run(stored[:8], func(t *testing.T) {
+			var bearer string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				bearer = r.Header.Get("Authorization")
+				if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+					io.WriteString(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"1770000000000","model":"gpt-5","tokenUsage":{"inputTokens":4,"outputTokens":1}}]}`)
+					return
+				}
+				http.NotFound(w, r)
+			}))
+			t.Cleanup(srv.Close)
+			dir := t.TempDir()
+			db := writeVscdb(t, dir, nil, nil)
+			putItem(t, db, authAccessTokenKey, stored)
+			var evs []event.UsageEvent
+			err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(e event.UsageEvent) {
+				evs = append(evs, e)
+			}, func(event.TurnEvent) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasPrefix(bearer, "Bearer ") || strings.Contains(bearer, `"`) || !strings.Contains(bearer, fakeJWT) {
+				t.Fatalf("bearer=%q", bearer)
+			}
+			if metric.Aggregate(evs, nil).All.Total() != 5 {
+				t.Fatalf("events=%+v", evs)
+			}
+		})
+	}
+}
+
+func TestQuotedSealStaysUnread(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		hits++
+	}))
+	t.Cleanup(srv.Close)
+	dir := t.TempDir()
+	db := writeVscdb(t, dir, nil, nil)
+	putItem(t, db, authAccessTokenKey, `"cursor-safe-storage:v1:QUJDRA"`)
+	err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+	if err == nil || !strings.Contains(err.Error(), "账号用量不可用") {
+		t.Fatalf("err=%v", err)
+	}
+	if hits != 0 {
+		t.Fatalf("quoted seal made %d HTTP calls", hits)
+	}
+}
+
+func TestTwoPartSessionIsNotABearer(t *testing.T) {
+	if usableSessionToken("eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0") {
+		t.Fatal("a two-part token was treated as a session JWT")
+	}
+	if usableSessionToken("e30.eyJzdWIiOiJ4In0.sig") {
+		t.Fatal("a non-object header was treated as a session JWT")
+	}
+	if !usableSessionToken("  user_01::" + fakeJWT + "  ") {
+		t.Fatal("a WorkOS-prefixed JWT was rejected")
+	}
+}
+
 func TestPlaintextSessionStillReadsAccountUsage(t *testing.T) {
 	var bearer string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -401,5 +468,112 @@ func TestAdapterSourceDoesNotTouchOSSecretStores(t *testing.T) {
 				t.Fatalf("%s contains %s", e.Name(), bad)
 			}
 		}
+	}
+}
+
+// TestReleaseSurfaceLeavesCursorSecretsOut checks the files a release
+// packages. internal/credstore is the product login store for service
+// whereToken. It is outside this scan, and it must not name the Cursor item.
+func TestReleaseSurfaceLeavesCursorSecretsOut(t *testing.T) {
+	root := moduleRoot(t)
+	banned := []string{
+		"cursor-bridge",
+		"PlainList",
+		"find-generic-password",
+		"set-key-partition-list",
+		"SecItemCopyMatching",
+		"CryptUnprotectData",
+		"secret-tool",
+		"Cursor Safe Storage",
+		"/Users/rainhuang",
+		"/private/tmp",
+		"/tmp/wt-",
+	}
+	var files []string
+	walk := func(rel string) {
+		t.Helper()
+		base := filepath.Join(root, rel)
+		err := filepath.WalkDir(base, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				if os.IsNotExist(err) {
+					return nil
+				}
+				return err
+			}
+			if d.IsDir() {
+				switch d.Name() {
+				case "credstore", "testdata", "node_modules":
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			name := d.Name()
+			if strings.HasSuffix(name, "_test.go") || strings.HasSuffix(name, ".test.js") {
+				return nil
+			}
+			files = append(files, path)
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, rel := range []string{"cmd", "internal", "completions", "npm", "Formula"} {
+		walk(rel)
+	}
+	for _, rel := range []string{
+		"scripts/install.sh",
+		"scripts/install.ps1",
+		"scripts/install.cmd",
+		"scripts/package-release.sh",
+		".goreleaser.yaml",
+	} {
+		files = append(files, filepath.Join(root, rel))
+	}
+	if len(files) == 0 {
+		t.Fatal("release surface was empty")
+	}
+	for _, path := range files {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(body)
+		for _, bad := range banned {
+			if strings.Contains(text, bad) {
+				t.Fatalf("%s contains %s", path, bad)
+			}
+		}
+	}
+	cred, err := os.ReadFile(filepath.Join(root, "internal", "credstore", "keychain.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	credText := string(cred)
+	if !strings.Contains(credText, "whereToken") {
+		t.Fatal("credstore is no longer the product login store")
+	}
+	for _, bad := range []string{"Cursor Safe Storage", "cursor-bridge", "PlainList"} {
+		if strings.Contains(credText, bad) {
+			t.Fatalf("credstore contains %s", bad)
+		}
+	}
+}
+
+func moduleRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		next := filepath.Dir(dir)
+		if next == dir {
+			t.Fatal("go.mod not found")
+		}
+		dir = next
 	}
 }
