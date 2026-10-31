@@ -25,11 +25,20 @@ const (
 )
 
 func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.UsageEvent, error) {
+	if strings.TrimSpace(access) == "" {
+		return nil, errNoLocalAuth
+	}
+	if !usableSessionToken(access) {
+		return nil, errAccountUsageUnavailable
+	}
 	token := access
 	events, err := a.fetchUsageWithToken(sourceRoot, token)
-	if err != nil && adapter.IsUnauthorized(err) && refresh != "" {
+	if err != nil && adapter.IsUnauthorized(err) && compatibleRefreshToken(refresh) && refresh != access {
 		next, rerr := a.refreshAccessToken(refresh)
 		if rerr != nil {
+			return nil, errExpiredAuth
+		}
+		if !usableSessionToken(next) {
 			return nil, errExpiredAuth
 		}
 		token = next
@@ -47,15 +56,29 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	if ferr == nil {
 		return tagged(sourceRoot, completeAccountUsage(filtered, now)), nil
 	}
-	if adapter.IsUnauthorized(ferr) {
+	if stopAccountFallback(ferr) {
 		return nil, ferr
 	}
 
 	agg, aerr := a.fetchAggregated(token, start, end)
-	if aerr == nil {
-		return tagged(sourceRoot, completeAccountUsage(agg, now)), nil
+	if aerr != nil || len(agg) == 0 {
+		// An empty fallback is not a measured zero. The filtered failure stands.
+		return nil, ferr
 	}
-	return nil, ferr
+	return tagged(sourceRoot, agg), nil
+}
+
+func stopAccountFallback(err error) bool {
+	es, ok := err.(adapter.ErrStatus)
+	if !ok {
+		return false
+	}
+	switch es.Code {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests:
+		return true
+	default:
+		return false
+	}
 }
 
 func completeAccountUsage(events []event.UsageEvent, now time.Time) []event.UsageEvent {
@@ -93,40 +116,36 @@ func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEve
 		}
 		raw, err := a.postJSON(filteredRPC, token, body)
 		if err != nil {
-			if len(out) > 0 {
-				return out, err
-			}
 			return nil, err
 		}
-		pageEvents, rawN, pageTotal, err := parseFiltered(raw)
+		pageEvents, rawN, pageTotal, known, err := parseFiltered(raw)
 		if err != nil {
-			if len(out) > 0 {
-				return out, err
-			}
 			return nil, err
+		}
+		if !known {
+			return nil, fmt.Errorf("账号用量接口没有给出完整条数")
 		}
 		if page == 1 {
 			total = pageTotal
 			if rawN > 0 && rawN < usagePageSize {
 				pageSize = rawN
 			}
+		} else if pageTotal != total {
+			return nil, fmt.Errorf("账号用量分页不一致")
+		}
+		if rawSeen+rawN > total {
+			return nil, fmt.Errorf("账号用量条数超出接口声明")
 		}
 		out = append(out, pageEvents...)
 		rawSeen += rawN
-		if rawN == 0 {
-			break
+		if rawSeen == total {
+			return out, nil
 		}
-		if total > 0 && rawSeen >= total {
-			break
-		}
-		if rawN < pageSize {
-			break
-		}
-		if page == maxUsagePages && (total == 0 || rawSeen < total) {
-			return out, fmt.Errorf("只拉了前 %d 页账号用量", maxUsagePages)
+		if rawN == 0 || rawN < pageSize {
+			return nil, fmt.Errorf("账号用量分页不完整")
 		}
 	}
-	return out, nil
+	return nil, fmt.Errorf("只拉了前 %d 页账号用量", maxUsagePages)
 }
 
 func (a Adapter) fetchAggregated(token string, start, end int64) ([]event.UsageEvent, error) {
@@ -256,13 +275,15 @@ func (a Adapter) allowedURL(u *url.URL) bool {
 	return false
 }
 
-func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, error) {
+func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 	var top map[string]any
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	if err := dec.Decode(&top); err != nil {
-		return nil, 0, 0, fmt.Errorf("账号用量接口返回无法解析")
+		return nil, 0, 0, false, fmt.Errorf("账号用量接口返回无法解析")
 	}
+	_, hasCamel := top["totalUsageEventsCount"]
+	_, hasSnake := top["total_usage_events_count"]
 	total := int(adapter.FlexInt(adapter.Pick(top, "totalUsageEventsCount", "total_usage_events_count")))
 	list := asSlice(adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
 	out := make([]event.UsageEvent, 0, len(list))
@@ -282,7 +303,7 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, error) {
 			out = append(out, ev)
 		}
 	}
-	return out, len(list), total, nil
+	return out, len(list), total, hasCamel || hasSnake, nil
 }
 
 func parseAggregated(raw []byte, now time.Time) ([]event.UsageEvent, bool) {

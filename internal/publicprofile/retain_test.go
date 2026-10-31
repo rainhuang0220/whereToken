@@ -59,6 +59,75 @@ func TestRetainedCursorStaysMeasuredWithoutDoubleCountingOrAZero(t *testing.T) {
 	}
 }
 
+func TestSealedCursorKeepsVerifiedObservation(t *testing.T) {
+	const observed int64 = 8_700_453_509
+	now := time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC)
+	msg := "cursor: 账号用量不可用：Cursor 把会话封存在系统密钥中，本程序不读取该密钥"
+	local := ev("cursor", "cursor", now.Add(-time.Hour), 100, 0, 10)
+	local.Quality = event.QualityDegraded
+	local.Derivation = event.DeriveRaw
+	if !AccountFetchFailed([]event.UsageEvent{local}, []string{msg}, "cursor") {
+		t.Fatal("sealed session must count as a failed account fetch")
+	}
+	retained := event.UsageEvent{
+		Source: "cursor", RequestID: "retained:2026-10-23",
+		Timestamp:   time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC),
+		Miss:        observed,
+		Quality:     event.QualityDegraded,
+		Derivation:  event.DeriveRetained,
+		SkipRequest: true,
+	}
+	events := ApplyRetainedEvents([]event.UsageEvent{local}, []event.UsageEvent{retained})
+	var tokens int64
+	for _, e := range events {
+		if e.Derivation == event.DeriveProviderAPI {
+			t.Fatal("sealed path emitted a fresh account row")
+		}
+		tokens += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	}
+	if tokens != observed {
+		t.Fatalf("tokens=%d want the retained observation, not a zero and not a double count", tokens)
+	}
+	snap, err := Build(Input{Events: events, Now: now, Loc: time.UTC, Errors: []string{msg}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row Breakdown
+	for _, agent := range snap.Periods.All.ByAgent {
+		if agent.ID == "cursor" {
+			row = agent
+		}
+	}
+	if row.Totals.Total.Value == nil || *row.Totals.Total.Value != observed {
+		t.Fatalf("total=%+v", row.Totals.Total)
+	}
+	if row.Coverage.Reason != "" || row.Coverage.Tokens == StatusUnavailable {
+		t.Fatalf("coverage=%+v", row.Coverage)
+	}
+}
+
+func TestSealedCursorWithoutHistoryIsUnavailableNotLoggedOut(t *testing.T) {
+	now := time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC)
+	local := event.UsageEvent{
+		Source: "cursor", RequestID: "local", Timestamp: now,
+		Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+	}
+	snap, err := Build(Input{
+		Events: []event.UsageEvent{local}, Now: now, Loc: time.UTC,
+		Errors: []string{"cursor: 账号用量不可用：Cursor 把会话封存在系统密钥中，本程序不读取该密钥"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Coverage.Tokens != StatusUnavailable || row.Coverage.Reason != ReasonAPIFailed {
+		t.Fatalf("coverage=%+v", row.Coverage)
+	}
+	if row.Coverage.Reason == ReasonAuthMissing {
+		t.Fatal("sealed session was labeled as a missing login")
+	}
+}
+
 func TestSnapshotSeriesWithAGapIsNotImportedAsZero(t *testing.T) {
 	total := int64(10)
 	miss := int64(10)

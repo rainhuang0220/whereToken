@@ -85,7 +85,7 @@ this number?”, not “how was it computed?”.
 | Quality | Meaning |
 | ------- | ------- |
 | `authoritative` | The source exposed these token fields directly and they are treated as complete. |
-| `degraded` | A source exists but the numbers are incomplete (Claude stream placeholders after max-merge; Cursor/Trae without a usable login). |
+| `degraded` | A source exists but the numbers are incomplete (Claude stream placeholders after max-merge; Cursor/Trae without a usable account total). A degraded total of 0 is shown as unavailable, not `0.00 M`. |
 | `estimated` | whereToken invented a figure. No adapter currently emits this. |
 | `absent` | The agent was found (or expected) but there is no usage to show. **Not displayed as zero.** |
 
@@ -145,11 +145,11 @@ guarantee for every row.
 | OpenCode | `tokens.cache.write` | Cache Create | raw | authoritative | |
 | OpenCode | `tokens.output + tokens.reasoning` | Output | derived | authoritative | |
 | OpenCode | `tokens.reasoning` | Reasoning | raw | authoritative | Also included in Output. |
-| Cursor | API `inputTokens` | Miss | provider_api | authoritative | DashboardService. Local bubbles supply requests/turns, not this column, when the API has totals. |
+| Cursor | API `inputTokens` | Miss | provider_api | authoritative | DashboardService, and only when the local session is already a JWT. A sealed session does not call the API. Local bubbles supply requests/turns, not this column, when a complete API response has totals. |
 | Cursor | API `cacheReadTokens` | Cache Read | provider_api | authoritative | |
 | Cursor | API `cacheWriteTokens` | Cache Create | provider_api | authoritative | |
-| Cursor | API `outputTokens` | Output | provider_api | authoritative | |
-| Cursor | local `tokenCount.*` | Miss/Output | raw | degraded | Used only when the account API has no token totals. |
+| Cursor | API `outputTokens` | Output | provider_api | authoritative | Reasoning is not a second output charge. |
+| Cursor | local `tokenCount.*` | Miss/Output | raw | degraded | Used only when the account API has no token totals. Missing `tokenCount` is not a measured 0. |
 | Trae | `input_token - cache_read_token` | Miss | derived | authoritative | `input_token` includes cache read. |
 | Trae | `cache_read_token` | Cache Read | raw | authoritative | |
 | Trae | `cache_write_token` | Cache Create | raw | authoritative | |

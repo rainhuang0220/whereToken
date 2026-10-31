@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/rainhuang0220/whereToken/main/docs/cli-json.schema.json",
   "title": "wheretoken --json",
-  "description": "Schema 1 stdout for `wheretoken --json`. Tables stay the default. No events, turns payloads, timestamps, or secrets.",
+  "description": "Schema 1 stdout for `wheretoken --json`. Tables stay the default. No events, turns payloads, timestamps, or secrets. total stays an integer so existing readers keep working. It is a measurement only when tokens_known is true. When tokens_known is false, total, today, and peak_day stay 0 and are not a measured zero; read total_m and coverage. A measured zero is tokens_known true, coverage available, and total 0. The dashboard reads scan summary JSON, not this schema.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,6 +10,8 @@
     "period",
     "total",
     "total_m",
+    "tokens_known",
+    "coverage",
     "hit_rate",
     "hit_rate_text",
     "requests",
@@ -22,8 +24,13 @@
     "schema": { "type": "integer", "const": 1 },
     "period": { "type": "string" },
     "scope": { "type": "string" },
-    "total": { "type": "integer" },
+    "total": {
+      "type": "integer",
+      "description": "Token sum. A measurement only when tokens_known is true. When tokens_known is false this stays 0 and is not a measured zero."
+    },
     "total_m": { "type": "string" },
+    "tokens_known": { "type": "boolean" },
+    "coverage": { "type": "string", "enum": ["available", "partial", "unavailable"] },
     "hit_rate": { "type": ["number", "null"] },
     "hit_rate_text": { "type": "string" },
     "max_streak_days": { "type": "integer", "minimum": 0 },
@@ -53,12 +60,17 @@
     "row": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "total", "total_m", "hit_rate_text", "requests"],
+      "required": ["id", "label", "total", "total_m", "tokens_known", "coverage", "hit_rate_text", "requests"],
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string" },
-        "total": { "type": "integer" },
+        "total": {
+          "type": "integer",
+          "description": "Token sum for this row. A measurement only when tokens_known is true."
+        },
         "total_m": { "type": "string" },
+        "tokens_known": { "type": "boolean" },
+        "coverage": { "type": "string", "enum": ["available", "partial", "unavailable"] },
         "share": { "type": "string" },
         "hit_rate_text": { "type": "string" },
         "requests": { "type": "integer", "minimum": 0 },

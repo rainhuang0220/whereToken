@@ -324,11 +324,22 @@ func TestWriteJSONSatisfiesPublishedSchema(t *testing.T) {
 					t.Errorf("undeclared key %q", k)
 				}
 			}
-			tools := m["tools"].([]any)
-			row := tools[0].(map[string]any)
-			for _, k := range schema.Defs.Row.Required {
-				if _, ok := row[k]; !ok {
-					t.Errorf("tools row missing %q", k)
+			for _, key := range []string{"tools", "vendors", "models"} {
+				rawRows, ok := m[key].([]any)
+				if !ok {
+					continue
+				}
+				for i, raw := range rawRows {
+					row, ok := raw.(map[string]any)
+					if !ok {
+						t.Fatalf("%s[%d] is not an object", key, i)
+					}
+					assertDeclaredKeys(t, row, schema.Defs.Row.Properties, key)
+					for _, req := range schema.Defs.Row.Required {
+						if _, ok := row[req]; !ok {
+							t.Errorf("%s row missing %q", key, req)
+						}
+					}
 				}
 			}
 			if tc.comm == nil {
@@ -381,6 +392,56 @@ func TestWriteJSONCommunitySanitizesZeroRank(t *testing.T) {
 	}
 }
 
+func TestJSONUnavailableCursorIsNotAMeasuredZero(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", RequestID: "a", Timestamp: now,
+		Quality: event.QualityDegraded,
+	}}
+	snap, err := Build(events, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.TokensKnown || snap.Coverage != "unavailable" || snap.Total != 0 || snap.TotalM != "不可用" {
+		t.Fatalf("snap known=%v coverage=%s total=%d total_m=%q", snap.TokensKnown, snap.Coverage, snap.Total, snap.TotalM)
+	}
+	got := writeJSONMap(t, snap)
+	if got.obj["tokens_known"] != false || got.obj["coverage"] != "unavailable" || got.obj["total"].(float64) != 0 {
+		t.Fatalf("json=%s", got.raw)
+	}
+	if strings.Contains(got.raw, "0.00 M") {
+		t.Fatalf("unavailable rendered as a measured zero: %s", got.raw)
+	}
+	row := got.obj["tools"].([]any)[0].(map[string]any)
+	if row["tokens_known"] != false || row["coverage"] != "unavailable" || row["total"].(float64) != 0 {
+		t.Fatalf("row=%v", row)
+	}
+}
+
+func TestJSONMeasuredZeroStaysZeroAndKnown(t *testing.T) {
+	loc := shanghai()
+	now := ts(loc, 2026, 8, 16, 15)
+	events := []event.UsageEvent{{
+		Source: "cursor", RequestID: "cursor-api:measured-zero", Timestamp: now,
+		Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}}
+	snap, err := Build(events, nil, nil, Filter{}, now, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !snap.TokensKnown || snap.Coverage != "available" || snap.Total != 0 || snap.TotalM != "0.00 M" {
+		t.Fatalf("snap known=%v coverage=%s total=%d total_m=%q", snap.TokensKnown, snap.Coverage, snap.Total, snap.TotalM)
+	}
+	got := writeJSONMap(t, snap)
+	if got.obj["tokens_known"] != true || got.obj["coverage"] != "available" || got.obj["total"].(float64) != 0 {
+		t.Fatalf("json=%s", got.raw)
+	}
+	if !strings.Contains(got.raw, `"total_m": "0.00 M"`) {
+		t.Fatalf("measured zero lost its display: %s", got.raw)
+	}
+}
+
 func TestWriteJSONOmitsRoundingToZeroCost(t *testing.T) {
 	loc := shanghai()
 	now := ts(loc, 2026, 8, 16, 15)
@@ -416,7 +477,8 @@ type publishedCLIJSONSchema struct {
 	Properties map[string]any `json:"properties"`
 	Defs       struct {
 		Row struct {
-			Required []string `json:"required"`
+			Required   []string       `json:"required"`
+			Properties map[string]any `json:"properties"`
 		} `json:"row"`
 		Community struct {
 			Properties map[string]any `json:"properties"`

@@ -68,6 +68,7 @@ export type SourceVendorView = {
   output_m: string
   total_m: string
   requests: number
+  quality?: string
   cost_status?: string
   cost_usd?: string
 }

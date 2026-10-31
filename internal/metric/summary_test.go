@@ -217,3 +217,19 @@ func TestAggregateSkipRequestKeepsTokenTotals(t *testing.T) {
 		t.Fatalf("cross requests=%d", sum.BySourceVendor[0].Requests)
 	}
 }
+
+func TestSourceVendorQualityKeepsUnavailableApartFromMeasuredZero(t *testing.T) {
+	missing := Aggregate([]event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", RequestID: "bubble", Quality: event.QualityDegraded,
+	}}, nil)
+	if len(missing.BySourceVendor) != 1 || missing.BySourceVendor[0].Quality != event.QualityDegraded || missing.BySourceVendor[0].Total() != 0 {
+		t.Fatalf("missing=%+v", missing.BySourceVendor)
+	}
+	zero := Aggregate([]event.UsageEvent{{
+		Source: "cursor", Vendor: "unknown", RequestID: "cursor-api:measured-zero",
+		Quality: event.QualityAuthoritative, SkipRequest: true,
+	}}, nil)
+	if len(zero.BySourceVendor) != 1 || zero.BySourceVendor[0].Quality != event.QualityAuthoritative || zero.BySourceVendor[0].Total() != 0 {
+		t.Fatalf("zero=%+v", zero.BySourceVendor)
+	}
+}

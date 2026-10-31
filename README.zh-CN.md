@@ -225,10 +225,10 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Roo Code | 完整 | 不需要 |
 | Kilo Code（旧版 VS Code + CLI `kilo.db`） | 完整 | 不需要 |
 | ZCode（Z.ai ADE） | 完整 | 不需要 |
-| Cursor | 部分 | token 列需要 |
+| Cursor | 部分 | 本地请求不需要。账号 token 仅在已有可读 JWT 时 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
-Cursor 和 Trae 的 token 列需要那些应用在本机 **已登录**。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
+Cursor 的零配置采集是本机 `state.vscdb` 里的请求和回合。账号 token 只在 Cursor 已经写入可读 JWT 时才会请求。会话被封在操作系统密钥里时，账号用量显示为不可用，请求和回合仍然保留。程序不读取钥匙串、DPAPI 或 libsecret，也不要求证书或 API 密钥。把 `state.vscdb` 整份重读是文件索引的 full。沿用的历史观测保留原先的账号测量，单独记录，不与本地 `tokenCount` 相加。Trae 的 token 列需要那些应用在本机已登录。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
 
 当某个 coding agent 没有提供可靠的用量信息时，whereToken 会标为不可用，而不是记成零。
 
@@ -275,7 +275,7 @@ whereToken 设计为在本机运行，不依赖 whereToken 云服务。本机优
 
 用量信息来自各 coding agent 提供的数据。大多数来源是本机应用数据。
 
-Cursor 和 Trae 可能使用那些应用已经保存的认证信息，访问它们自己的接口，以获取本地文件中没有的 token 列。
+Cursor 和 Trae 可能使用那些应用已经保存的可读会话，访问它们自己的接口，以获取本地文件中没有的 token 列。Cursor 上被封存的会话保持原样。零配置读到的请求和回合是本机活动，不是一份完整的账号 token 账本。
 
 ### 凭证
 

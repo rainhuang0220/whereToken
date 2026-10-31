@@ -8,7 +8,7 @@ import KilnKid from '../components/KilnKid.vue'
 import KilnWall from '../components/KilnWall.vue'
 import KpiRow from '../components/KpiRow.vue'
 import SliceTable from '../components/SliceTable.vue'
-import { costCaption, derivationCaption, formatCount, qualityCaption } from '../format'
+import { costCaption, derivationCaption, formatCount, qualityCaption, sourceVendorCell } from '../format'
 import {
   collectKilnMouth,
   observatoryCursorWindowHint,
@@ -368,6 +368,7 @@ onUnmounted(() => {
               <th class="num">输出</th>
               <th class="num">合计</th>
               <th class="num">请求</th>
+              <th class="name">质量</th>
               <th class="num">估价</th>
             </tr>
           </thead>
@@ -375,12 +376,13 @@ onUnmounted(() => {
             <tr v-for="row in payload.by_source_vendor" :key="row.source + row.vendor">
               <td class="name">{{ row.source_label }}</td>
               <td class="name">{{ row.vendor_label }}</td>
-              <td class="num">{{ row.miss_m }}</td>
-              <td class="num">{{ row.cache_read_m }}</td>
-              <td class="num">{{ row.cache_create_m }}</td>
-              <td class="num">{{ row.output_m }}</td>
-              <td class="num">{{ row.total_m }}</td>
+              <td class="num">{{ sourceVendorCell(row.miss_m, row) }}</td>
+              <td class="num">{{ sourceVendorCell(row.cache_read_m, row) }}</td>
+              <td class="num">{{ sourceVendorCell(row.cache_create_m, row) }}</td>
+              <td class="num">{{ sourceVendorCell(row.output_m, row) }}</td>
+              <td class="num">{{ sourceVendorCell(row.total_m, row) }}</td>
               <td class="num">{{ formatCount(row.requests) }}</td>
+              <td class="name">{{ qualityCaption(row.quality || '') || '—' }}</td>
               <td class="num">{{ costCaption(row) || '—' }}</td>
             </tr>
           </tbody>

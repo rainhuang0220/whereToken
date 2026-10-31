@@ -31,6 +31,8 @@ type Row struct {
 	ID, Label    string
 	Total        int64
 	TotalM       string
+	TokensKnown  bool
+	Coverage     string
 	ShareText    string
 	HitRateText  string
 	Requests     int64
@@ -46,6 +48,8 @@ type Snapshot struct {
 	Period, Scope string
 	Total         int64
 	TotalM        string
+	TokensKnown   bool
+	Coverage      string
 	HitRate       *float64
 	HitRateText   string
 	MaxStreak     int
@@ -181,6 +185,12 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 	}
 	snap.TodayM = metric.FormatM(snap.TodayTotal)
 	snap.PeakDayM = metric.FormatM(snap.PeakDay)
+	if snap.Quality == event.QualityDegraded && snap.Total == 0 {
+		snap.TotalM = "不可用"
+		snap.TodayM = "不可用"
+		snap.PeakDayM = "不可用"
+	}
+	snap.TokensKnown, snap.Coverage = tokenFacts(snap.Quality, snap.Total)
 	if hasUnknownVendorUsage(snap.Vendors) {
 		snap.Notes = appendUniqueNote(snap.Notes, "未知厂家 · 账本没写模型名（Cursor 账号用量常这样）")
 	}
@@ -195,7 +205,11 @@ func Build(events []event.UsageEvent, turns []event.TurnEvent, errs []string, f 
 		}
 	}
 	if snap.Total == 0 && snap.Requests > 0 {
-		snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
+		if snap.TotalM == "不可用" {
+			snap.Notes = appendUniqueNote(snap.Notes, "有请求次数，token 列没有可读数字")
+		} else {
+			snap.Notes = appendUniqueNote(snap.Notes, "总用量是 0 但有请求：本机账本只记了次数（Cursor 要登录，或不要 --offline）")
+		}
 	}
 	snap.Notes = appendCostNotes(snap.Notes, view)
 	snap.Notes = appendEmptyViewNotes(snap.Notes, snap, f)
@@ -375,11 +389,14 @@ func rowFrom(s metric.Slice) Row {
 	if usageUnavailable(s) {
 		totalM = "不可用"
 	}
+	known, coverage := tokenFacts(s.Quality, s.Total())
 	return Row{
 		ID:           s.ID,
 		Label:        s.Label,
 		Total:        s.Total(),
 		TotalM:       totalM,
+		TokensKnown:  known,
+		Coverage:     coverage,
 		HitRateText:  v.HitRateText,
 		Requests:     s.Requests,
 		UserTurns:    s.UserTurns,
@@ -391,11 +408,26 @@ func rowFrom(s metric.Slice) Row {
 	}
 }
 
+// tokenFacts separates a measured zero from missing usage. total stays an
+// integer either way: known false means that integer is not a measurement.
+func tokenFacts(q event.Quality, total int64) (bool, string) {
+	switch {
+	case q == event.QualityAbsent, q == event.QualityDegraded && total == 0, q == event.QualityEstimated && total == 0:
+		return false, "unavailable"
+	case q == event.QualityDegraded, q == event.QualityEstimated:
+		return true, "partial"
+	default:
+		return true, "available"
+	}
+}
+
 func usageUnavailable(s metric.Slice) bool {
 	if s.Quality == event.QualityAbsent {
 		return true
 	}
-	return s.Quality == event.QualityDegraded && s.Total() == 0 && s.Requests == 0 && s.UserTurns == 0
+	// Degraded with no token components is missing usage. Request and turn
+	// counts stay on the row. 0.00 M would claim a measured zero.
+	return s.Quality == event.QualityDegraded && s.Total() == 0
 }
 
 func applyShares(rows []Row, total int64) {

@@ -377,13 +377,33 @@ func TestOfflineCloudTokensAreUnavailableNotZero(t *testing.T) {
 	if reqSum != 1 {
 		t.Fatalf("cursor request series sum=%d", reqSum)
 	}
-	if err := ValidateProduction(snap, false); err == nil {
-		t.Fatal("production validation must fail for skipped account API")
-	} else if !strings.Contains(err.Error(), "Regenerate without --offline") {
-		t.Fatalf("msg=%v", err)
+	if err := ValidateProduction(snap, false); err != nil {
+		t.Fatalf("measured grok must keep production open while cursor stays unavailable: %v", err)
 	}
 	if err := ValidateProduction(snap, true); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCursorOnlyOfflineStillBlocksProduction(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, loc)
+	events := []event.UsageEvent{{
+		Source: "cursor", Vendor: "anthropic", RequestID: "bubble-1",
+		Timestamp: now.Add(-time.Hour), Quality: event.QualityDegraded, Derivation: event.DeriveRaw,
+	}}
+	snap, err := Build(Input{Events: events, Now: now, Loc: loc, Offline: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Totals.Total.Status != StatusUnavailable || row.Totals.Total.Value != nil {
+		t.Fatalf("cursor tokens=%+v", row.Totals.Total)
+	}
+	if err := ValidateProduction(snap, false); err == nil {
+		t.Fatal("no credible token total must still block production")
+	} else if !strings.Contains(err.Error(), "Regenerate without --offline") {
+		t.Fatalf("msg=%v", err)
 	}
 }
 
@@ -484,8 +504,11 @@ func TestProductionGateKeepsLowRankCloudSourceVisible(t *testing.T) {
 	if cursor == nil {
 		t.Fatal("low-rank cloud source was hidden in Other")
 	}
-	if err := ValidateProduction(snap, false); err == nil {
-		t.Fatal("hidden low-rank cloud coverage must not bypass production gate")
+	if cursor.Totals.Total.Status != StatusUnavailable || cursor.Totals.Total.Value != nil {
+		t.Fatalf("cursor tokens=%+v", cursor.Totals.Total)
+	}
+	if err := ValidateProduction(snap, false); err != nil {
+		t.Fatalf("other measured agents must stay publishable: %v", err)
 	}
 }
 

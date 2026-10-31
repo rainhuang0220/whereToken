@@ -84,7 +84,17 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 
 	var apiEvents []event.UsageEvent
 	var apiErr error
-	if token != "" && !a.Offline {
+	switch {
+	case token == "":
+		apiErr = errNoLocalAuth
+	case !usableSessionToken(token):
+		// Sealed envelopes on every OS share this refusal.
+		// The value stays in the database and is never placed on a request.
+		apiErr = errAccountUsageUnavailable
+	case !a.Offline:
+		if !compatibleRefreshToken(refresh) || refresh == token {
+			refresh = ""
+		}
 		apiEvents, apiErr = a.fetchAccountUsage(root.Path, token, refresh)
 	}
 
@@ -102,12 +112,6 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		for _, e := range apiEvents {
 			emit(e)
 		}
-	}
-	if token == "" {
-		return errNoLocalAuth
-	}
-	if a.Offline {
-		return nil
 	}
 	return apiErr
 }
@@ -159,10 +163,12 @@ func authTokens(path string, needRefresh bool) (access, refresh string, err erro
 	if access == "" {
 		access = readStorageJSONToken(path)
 	}
+	access = normalizeStoredSession(access)
 	if access != "" && needRefresh {
 		if refresh, err = readItem(db, authRefreshTokenKey); err != nil {
 			return "", "", err
 		}
+		refresh = normalizeStoredSession(refresh)
 	}
 	return access, refresh, nil
 }

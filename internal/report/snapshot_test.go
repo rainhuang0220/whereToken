@@ -824,14 +824,25 @@ func TestZeroTotalWithRequestsNote(t *testing.T) {
 	if snap.Total != 0 || snap.Requests != 1 {
 		t.Fatalf("total=%d req=%d", snap.Total, snap.Requests)
 	}
+	if snap.TotalM != "不可用" {
+		t.Fatalf("missing tokens displayed as %q", snap.TotalM)
+	}
 	found := false
 	for _, n := range snap.Notes {
-		if strings.Contains(n, "总用量") && strings.Contains(n, "只记了次数") {
+		if strings.Contains(n, "没有可读数字") {
 			found = true
+		}
+		if strings.Contains(n, "0.00 M") || strings.Contains(n, "要登录") {
+			t.Fatalf("missing tokens blamed on login: %q", n)
 		}
 	}
 	if !found {
 		t.Fatalf("notes=%v", snap.Notes)
+	}
+	for _, r := range snap.Tools {
+		if r.ID == "cursor" && r.TotalM != "不可用" {
+			t.Fatalf("cursor row=%+v", r)
+		}
 	}
 }
 

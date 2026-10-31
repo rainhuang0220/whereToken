@@ -35,6 +35,7 @@ type SourceVendor struct {
 	Source, Vendor, SourceLabel, VendorLabel string
 	Miss, CacheRead, CacheCreate, Output     int64
 	Requests                                 int64
+	Quality                                  event.Quality
 	CostMicro                                int64
 	PricedTokens, UnpricedTokens             int64
 	CostStatus                               string
@@ -258,6 +259,9 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 		cross.Output = satAdd(cross.Output, e.Output)
 		if !e.SkipRequest {
 			cross.Requests++
+		}
+		if qualityRank(e.Quality) > qualityRank(cross.Quality) {
+			cross.Quality = e.Quality
 		}
 		toks := satAdd(satAdd(e.Miss, e.CacheRead), satAdd(e.CacheCreate, e.Output))
 		if ch.OK {

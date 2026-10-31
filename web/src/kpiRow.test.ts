@@ -153,6 +153,39 @@ describe('KpiRow', () => {
     expect(html).not.toContain('$0')
   })
 
+  it('shows 不可用 when degraded usage has requests and no tokens', async () => {
+    const degraded: SliceView = {
+      ...all,
+      miss: 0,
+      cache_read: 0,
+      cache_create: 0,
+      output: 0,
+      total: 0,
+      miss_m: '0.00 M',
+      cache_read_m: '0.00 M',
+      cache_create_m: '0.00 M',
+      output_m: '0.00 M',
+      total_m: '0.00 M',
+      requests: 12,
+      user_turns: 3,
+      quality: 'degraded',
+      hit_rate: null,
+      hit_rate_text: '—',
+      cost_status: 'unavailable',
+      cost_usd: undefined,
+    }
+    const html = await render(KpiRow, {
+      ...fullProps,
+      all: degraded,
+      todayTotalM: '0.00 M',
+      peakTotalM: '0.00 M',
+    })
+    expect(html).toContain('不可用')
+    expect(html).not.toContain('0.00 M')
+    expect(html).toContain('>12<')
+    expect(html).toContain('>3<')
+  })
+
   it('renders the portrait states: none, insufficient, ok', async () => {
     const none = await render(KpiRow, { ...fullProps, portrait: { state: 'none', primary: '—' } })
     expect(none).toMatch(/用户画像<\/span><strong>—<\/strong>/)
