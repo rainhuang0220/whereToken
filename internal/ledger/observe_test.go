@@ -140,6 +140,228 @@ func TestChainedWindowsKeepEarlierDaysAndReplaceOverlap(t *testing.T) {
 	}
 }
 
+func TestVerifiedEarlyDaySurvivesAShorterLaterWindow(t *testing.T) {
+	lg := openTest(t)
+	early := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2025-10-21",
+		Timestamp: time.Date(2025, 10, 21, 12, 0, 0, 0, time.UTC),
+		Miss:      50, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	inside := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2025-10-27",
+		Timestamp: time.Date(2025, 10, 27, 12, 0, 0, 0, time.UTC),
+		Miss:      9, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), []event.UsageEvent{early, inside}); err != nil {
+		t.Fatal(err)
+	}
+	replaced := event.UsageEvent{
+		Source: "cursor", RequestID: "new-2025-10-27",
+		Timestamp: time.Date(2025, 10, 27, 12, 0, 0, 0, time.UTC),
+		Miss:      4, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	added := event.UsageEvent{
+		Source: "cursor", RequestID: "new-2025-10-26",
+		Timestamp: time.Date(2025, 10, 26, 12, 0, 0, 0, time.UTC),
+		Miss:      3, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2025-10-26", "2025-10-31", []event.UsageEvent{replaced, added}); err != nil {
+		t.Fatal(err)
+	}
+	later := event.UsageEvent{
+		Source: "cursor", RequestID: "new-2026-11-01",
+		Timestamp: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC),
+		Miss:      8, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2026-11-01", "2026-11-30", []event.UsageEvent{later}); err != nil {
+		t.Fatal(err)
+	}
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	got := map[string]int64{}
+	for _, e := range chained {
+		day := e.Timestamp.UTC().Format("2006-01-02")
+		got[day] += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	}
+	if got["2025-10-21"] != 50 || got["2025-10-27"] != 4 || got["2025-10-26"] != 3 || got["2026-11-01"] != 8 {
+		t.Fatalf("days=%v", got)
+	}
+	for _, day := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
+		if _, ok := got[day]; ok {
+			t.Fatalf("missing day %s was fabricated", day)
+		}
+	}
+	if tokensOf(chained) != 65 {
+		t.Fatalf("total=%d", tokensOf(chained))
+	}
+}
+
+func TestCoveredRangesIgnoreARetainedSnapshot(t *testing.T) {
+	lg := openTest(t)
+	early := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2025-10-21",
+		Timestamp: time.Date(2025, 10, 21, 12, 0, 0, 0, time.UTC),
+		Miss:      50, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), []event.UsageEvent{early}); err != nil {
+		t.Fatal(err)
+	}
+	month := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2025-10-27",
+		Timestamp: time.Date(2025, 10, 27, 12, 0, 0, 0, time.UTC),
+		Miss:      4, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2025-10-26", "2025-10-31", []event.UsageEvent{month}); err != nil {
+		t.Fatal(err)
+	}
+	ranges, err := lg.CoveredRanges("cursor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ranges) != 1 || ranges[0].From != "2025-10-26" || ranges[0].To != "2025-10-31" {
+		t.Fatalf("ranges=%+v", ranges)
+	}
+	extra, err := lg.AccountSupplement("cursor", DayRange{From: "2025-10-26", To: "2026-11-01"}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]event.UsageEvent{}
+	for _, e := range extra {
+		got[e.Timestamp.UTC().Format("2006-01-02")] = e
+	}
+	if e, ok := got["2025-10-27"]; !ok || e.Derivation != event.DeriveProviderAPI || e.Quality != event.QualityAuthoritative || e.Miss != 4 {
+		t.Fatalf("cached month day=%+v", got["2025-10-27"])
+	}
+	if e, ok := got["2025-10-21"]; !ok || e.Derivation != event.DeriveRetained || e.Quality != event.QualityDegraded || e.Miss != 50 {
+		t.Fatalf("snapshot day=%+v", got["2025-10-21"])
+	}
+	for _, day := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
+		if _, ok := got[day]; ok {
+			t.Fatalf("missing day %s was fabricated", day)
+		}
+	}
+}
+
+func TestOldDailyRowsReplaceByWindowAndKeepTheUnknownGap(t *testing.T) {
+	lg := openTest(t)
+	oct21 := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2025-10-21",
+		Timestamp: time.Date(2025, 10, 21, 12, 0, 0, 0, time.UTC),
+		Miss:      539187, CacheRead: 5675130, CacheCreate: 77078, Output: 55585,
+		Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if oct21.Miss+oct21.CacheRead+oct21.CacheCreate+oct21.Output != 6346980 {
+		t.Fatalf("oct 21 fixture=%d", oct21.Miss+oct21.CacheRead+oct21.CacheCreate+oct21.Output)
+	}
+	old := []event.UsageEvent{oct21}
+	day := time.Date(2025, 10, 26, 12, 0, 0, 0, time.UTC)
+	for len(old) < 166 {
+		old = append(old, event.UsageEvent{
+			Source: "cursor", RequestID: "day-" + day.Format("2006-01-02"),
+			Timestamp: day, Miss: 1,
+			Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		})
+		day = day.AddDate(0, 0, 1)
+	}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), old); err != nil {
+		t.Fatal(err)
+	}
+	replaced := []event.UsageEvent{
+		{
+			Source: "cursor", RequestID: "new-2025-10-26",
+			Timestamp: time.Date(2025, 10, 26, 12, 0, 0, 0, time.UTC),
+			Miss:      3, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		},
+		{
+			Source: "cursor", RequestID: "new-2025-10-27",
+			Timestamp: time.Date(2025, 10, 27, 12, 0, 0, 0, time.UTC),
+			Miss:      4, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		},
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2025-10-26", "2025-10-31", replaced); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.NoteWindowAudit("cursor", WindowAudit{
+		From: "2025-10-26", To: "2025-10-31",
+		Declared: 2, RawRows: 2, Deduped: 2, Days: 2, Miss: 7, Validation: "ok",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertChain := func() {
+		t.Helper()
+		chained, ok, err := lg.ChainedRetainedEvents("cursor")
+		if err != nil || !ok {
+			t.Fatalf("ok=%v err=%v", ok, err)
+		}
+		got := map[string]int64{}
+		for _, e := range chained {
+			got[e.Timestamp.UTC().Format("2006-01-02")] += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		}
+		if got["2025-10-21"] != 6346980 {
+			t.Fatalf("oct 21=%d", got["2025-10-21"])
+		}
+		for _, day := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
+			if _, ok := got[day]; ok {
+				t.Fatalf("unknown day %s was fabricated", day)
+			}
+		}
+		if got["2025-10-26"] != 3 || got["2025-10-27"] != 4 {
+			t.Fatalf("replaced days=%v", got)
+		}
+		if got["2025-10-28"] != 0 {
+			t.Fatalf("day inside the new window survived the replacement: %d", got["2025-10-28"])
+		}
+	}
+	assertChain()
+	var rows int
+	if err := lg.db.QueryRow(`SELECT COUNT(*) FROM api_observations`).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2025-10-26", "2025-10-31", replaced); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.NoteWindowAudit("cursor", WindowAudit{
+		From: "2025-10-26", To: "2025-10-31",
+		Declared: 2, RawRows: 2, Deduped: 2, Days: 2, Miss: 7, Validation: "ok",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var rowsAgain, audits int
+	if err := lg.db.QueryRow(`SELECT COUNT(*) FROM api_observations`).Scan(&rowsAgain); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.db.QueryRow(`SELECT COUNT(*) FROM api_window_audits`).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if rowsAgain != rows || audits != 1 {
+		t.Fatalf("rows %d→%d audits=%d", rows, rowsAgain, audits)
+	}
+	assertChain()
+	stored, err := lg.WindowAudit("cursor", "2025-10-26", "2025-10-31")
+	if err != nil || stored.Validation != "ok" || stored.Declared != 2 || stored.RawRows != 2 || stored.Deduped != 2 || stored.Miss != 7 {
+		t.Fatalf("audit=%+v err=%v", stored, err)
+	}
+	missing, err := lg.WindowAudit("cursor", "2025-11-01", "2025-11-30")
+	if err != nil || missing.Validation != "missing" || missing.Declared != 0 || missing.Miss != 0 {
+		t.Fatalf("missing audit=%+v err=%v", missing, err)
+	}
+	if err := lg.NoteWindowAudit("cursor", WindowAudit{From: "2025-11-01", To: "2025-11-30", Validation: "missing"}); err == nil {
+		t.Fatal("a missing audit was stored")
+	}
+	if err := lg.db.QueryRow(`SELECT COUNT(*) FROM api_window_audits`).Scan(&audits); err != nil || audits != 1 {
+		t.Fatalf("audits=%d err=%v", audits, err)
+	}
+}
+
 func TestRetainedReuseDoesNotAddLocalFacts(t *testing.T) {
 	lg := openTest(t)
 	local := ev("cursor", "s", "bubble-1", 100)

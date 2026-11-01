@@ -68,6 +68,10 @@ func (s usageSpan) coverage() CoverageWindow {
 }
 
 func (a Adapter) usageWindows() []usageSpan {
+	return a.uncoveredWindows(a.allUsageWindows())
+}
+
+func (a Adapter) allUsageWindows() []usageSpan {
 	now := a.now().UTC()
 	if a.Probe {
 		start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
@@ -101,19 +105,60 @@ func (a Adapter) usageWindows() []usageSpan {
 	return out
 }
 
+// uncoveredWindows keeps a gap and the two newest months. A month already
+// stored whole is left on the ledger. The open month and the one before it
+// are fetched again so the current day and the boundary stay current.
+func (a Adapter) uncoveredWindows(all []usageSpan) []usageSpan {
+	if len(a.Covered) == 0 || len(all) == 0 {
+		return all
+	}
+	var out []usageSpan
+	for i, w := range all {
+		if i >= len(all)-2 || !windowCovered(w.coverage(), a.Covered) {
+			out = append(out, w)
+		}
+	}
+	if len(out) == 0 {
+		out = append(out, all[len(all)-1])
+	}
+	return out
+}
+
+func windowCovered(w CoverageWindow, covered []CoverageWindow) bool {
+	if w.From == "" || w.To == "" {
+		return false
+	}
+	for _, c := range covered {
+		if c.From != "" && c.To != "" && c.From <= w.From && c.To >= w.To {
+			return true
+		}
+	}
+	return false
+}
+
 func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEvent, error) {
 	clearCoverage(sourceRoot)
-	windows := a.usageWindows()
+	all := a.allUsageWindows()
+	windows := a.uncoveredWindows(all)
+	if len(all) > 0 {
+		setLookback(sourceRoot, CoverageWindow{
+			From: all[0].coverage().From,
+			To:   all[len(all)-1].coverage().To,
+		})
+	}
 	seen := map[string]struct{}{}
 	var out []event.UsageEvent
 	var covered []CoverageWindow
 	missing := 0
 	var failed error
 	for _, w := range windows {
-		evs, err := a.fetchFilteredWindow(token, w, 0)
+		got, err := a.fetchFilteredWindow(token, w, 0)
 		if err == nil {
-			out = dedupeUsage(out, seen, evs)
-			covered = append(covered, w.coverage())
+			var added []event.UsageEvent
+			out, added = dedupeUsage(out, seen, got.events)
+			cov := w.coverage()
+			cov.Audit = auditWindow(cov, got.declared, got.raw, added, w.inclusive && cov.To == a.now().UTC().Format("2006-01-02"))
+			covered = append(covered, cov)
 			continue
 		}
 		if isNotFound(err) {
@@ -142,13 +187,14 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		if len(out) == 0 {
 			return nil, failed
 		}
-		return tagged(sourceRoot, out), failed
+		// Successful months stay. The whole lookback is not a finished span.
+		return tagged(sourceRoot, degradeAPI(out)), failed
 	}
 	if missing > 0 && len(covered) > 0 {
 		if len(out) == 0 {
 			return nil, errEndpointUnavailable
 		}
-		return tagged(sourceRoot, out), errEndpointUnavailable
+		return tagged(sourceRoot, degradeAPI(out)), errEndpointUnavailable
 	}
 	if len(covered) == len(windows) && len(out) == 0 {
 		return tagged(sourceRoot, completeAccountUsage(nil, a.now())), nil
@@ -156,31 +202,39 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	return tagged(sourceRoot, out), nil
 }
 
-func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) ([]event.UsageEvent, error) {
+type filteredFetch struct {
+	events        []event.UsageEvent
+	declared, raw int
+}
+
+func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filteredFetch, error) {
 	endMs := w.end.UnixMilli()
 	if !w.inclusive && endMs > w.start.UnixMilli() {
 		endMs--
 	}
-	evs, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
+	got, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
 	if err == nil || err != errUsagePageLimit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
 		if err == errUsagePageLimit && (depth >= 6 || w.end.Sub(w.start) < time.Hour) {
-			return nil, errPaginationIncomplete
+			return filteredFetch{}, errPaginationIncomplete
 		}
-		return evs, err
+		return got, err
 	}
 	mid := w.start.Add(w.end.Sub(w.start) / 2)
 	left, lerr := a.fetchFilteredWindow(token, usageSpan{start: w.start, end: mid, inclusive: false}, depth+1)
 	if lerr != nil {
-		return nil, lerr
+		return filteredFetch{}, lerr
 	}
 	right, rerr := a.fetchFilteredWindow(token, usageSpan{start: mid, end: w.end, inclusive: w.inclusive}, depth+1)
 	if rerr != nil {
-		return nil, rerr
+		return filteredFetch{}, rerr
 	}
-	return append(left, right...), nil
+	left.events = append(left.events, right.events...)
+	left.declared += right.declared
+	left.raw += right.raw
+	return left, nil
 }
 
-func dedupeUsage(dst []event.UsageEvent, seen map[string]struct{}, add []event.UsageEvent) []event.UsageEvent {
+func dedupeUsage(dst []event.UsageEvent, seen map[string]struct{}, add []event.UsageEvent) (out, added []event.UsageEvent) {
 	for _, e := range add {
 		if e.RequestID != "" {
 			if _, ok := seen[e.RequestID]; ok {
@@ -188,9 +242,38 @@ func dedupeUsage(dst []event.UsageEvent, seen map[string]struct{}, add []event.U
 			}
 			seen[e.RequestID] = struct{}{}
 		}
+		added = append(added, e)
 		dst = append(dst, e)
 	}
-	return dst
+	return dst, added
+}
+
+func auditWindow(cov CoverageWindow, declared, raw int, kept []event.UsageEvent, open bool) WindowAudit {
+	audit := WindowAudit{
+		From: cov.From, To: cov.To,
+		Declared: declared, RawRows: raw, Deduped: len(kept),
+		Validation: "ok",
+	}
+	if open {
+		audit.Validation = "open"
+	}
+	days := map[string]struct{}{}
+	for _, e := range kept {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		day := e.Timestamp.UTC().Format("2006-01-02")
+		if day < cov.From || day > cov.To {
+			continue
+		}
+		days[day] = struct{}{}
+		audit.Miss += e.Miss
+		audit.CacheRead += e.CacheRead
+		audit.CacheCreate += e.CacheCreate
+		audit.Output += e.Output
+	}
+	audit.Days = len(days)
+	return audit
 }
 
 func isNotFound(err error) bool {
@@ -246,9 +329,9 @@ func (a Adapter) pageCap() int {
 	return maxUsagePages
 }
 
-func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEvent, error) {
-	var out []event.UsageEvent
-	var total, rawSeen int
+func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, error) {
+	var out filteredFetch
+	var total int
 	full := a.pageSize()
 	pageSize := full
 	for page := 1; page <= a.pageCap(); page++ {
@@ -261,14 +344,14 @@ func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEve
 		}
 		raw, err := a.postJSON(filteredRPC, token, body)
 		if err != nil {
-			return nil, err
+			return filteredFetch{}, err
 		}
 		pageEvents, rawN, pageTotal, known, err := parseFiltered(raw)
 		if err != nil {
-			return nil, err
+			return filteredFetch{}, err
 		}
 		if !known {
-			return nil, errSchemaChanged
+			return filteredFetch{}, errSchemaChanged
 		}
 		if page == 1 {
 			total = pageTotal
@@ -276,24 +359,25 @@ func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEve
 				pageSize = rawN
 			}
 		} else if pageTotal != total {
-			return nil, errSchemaChanged
+			return filteredFetch{}, errSchemaChanged
 		}
-		if rawSeen+rawN > total {
-			return nil, errSchemaChanged
+		if out.raw+rawN > total {
+			return filteredFetch{}, errSchemaChanged
 		}
-		out = append(out, pageEvents...)
-		rawSeen += rawN
-		if rawSeen == total {
+		out.events = append(out.events, pageEvents...)
+		out.raw += rawN
+		out.declared = total
+		if out.raw == total {
 			return out, nil
 		}
 		if rawN == 0 || rawN < pageSize {
-			return nil, errPaginationIncomplete
+			return filteredFetch{}, errPaginationIncomplete
 		}
 	}
 	if pageSize < full {
-		return nil, errPaginationIncomplete
+		return filteredFetch{}, errPaginationIncomplete
 	}
-	return nil, errUsagePageLimit
+	return filteredFetch{}, errUsagePageLimit
 }
 
 func (a Adapter) fetchAggregated(token string, start, end int64) ([]event.UsageEvent, error) {
@@ -537,6 +621,15 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 		Derivation:  event.DeriveProviderAPI,
 		SkipRequest: true,
 	}
+}
+
+func degradeAPI(events []event.UsageEvent) []event.UsageEvent {
+	for i := range events {
+		if events[i].Derivation == event.DeriveProviderAPI {
+			events[i].Quality = event.QualityDegraded
+		}
+	}
+	return events
 }
 
 func hasAccountUsage(events []event.UsageEvent) bool {

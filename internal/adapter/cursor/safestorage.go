@@ -61,13 +61,26 @@ func AccountMismatchError() error { return errAccountMismatch }
 // CoverageWindow is one UTC date range whose filtered pages completed.
 // From and To are inclusive calendar days.
 type CoverageWindow struct {
-	From string
-	To   string
+	From, To string
+	Audit    WindowAudit
+}
+
+// WindowAudit is the desensitized count check for one filtered window.
+// Validation "ok" is a closed window whose raw rows matched the API total.
+// Validation "open" is the same check for a window that ends on the current
+// UTC day; that day is not a finished calendar day. Validation "missing"
+// is not stored. It is what a lookup returns when this process has no audit.
+type WindowAudit struct {
+	From, To                             string
+	Declared, RawRows, Deduped, Days     int
+	Miss, CacheRead, CacheCreate, Output int64
+	Validation                           string
 }
 
 var (
 	coverageMu   sync.Mutex
 	coverageByDB = map[string][]CoverageWindow{}
+	lookbackByDB = map[string]CoverageWindow{}
 )
 
 func setCoverage(dbPath string, windows []CoverageWindow) {
@@ -80,10 +93,17 @@ func setCoverage(dbPath string, windows []CoverageWindow) {
 	coverageByDB[dbPath] = append([]CoverageWindow(nil), windows...)
 }
 
+func setLookback(dbPath string, w CoverageWindow) {
+	coverageMu.Lock()
+	defer coverageMu.Unlock()
+	lookbackByDB[dbPath] = w
+}
+
 func clearCoverage(dbPath string) {
 	coverageMu.Lock()
 	defer coverageMu.Unlock()
 	delete(coverageByDB, dbPath)
+	delete(lookbackByDB, dbPath)
 }
 
 // TakeAccountCoverage returns the windows recorded by the last parse of
@@ -98,6 +118,19 @@ func TakeAccountCoverage(dbPath string) []CoverageWindow {
 		return nil
 	}
 	return append([]CoverageWindow(nil), w...)
+}
+
+// TakeLookback returns the UTC span this parse was willing to request,
+// including months left on the ledger, and clears it.
+func TakeLookback(dbPath string) (CoverageWindow, bool) {
+	coverageMu.Lock()
+	defer coverageMu.Unlock()
+	w, ok := lookbackByDB[dbPath]
+	delete(lookbackByDB, dbPath)
+	if !ok || w.From == "" || w.To == "" || w.From > w.To {
+		return CoverageWindow{}, false
+	}
+	return w, true
 }
 
 type connectFile struct {

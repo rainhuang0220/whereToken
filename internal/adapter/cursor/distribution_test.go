@@ -446,10 +446,11 @@ func TestDuplicateRowsInsideDeclaredTotalStayComplete(t *testing.T) {
 		}`)
 	}))
 	t.Cleanup(srv.Close)
-	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	evs := got.events
 	if len(evs) != 2 || metric.Aggregate(evs, nil).All.Total() != 22 {
 		t.Fatalf("events=%+v", evs)
 	}
@@ -466,9 +467,9 @@ func TestRowsBeyondDeclaredTotalAreRejected(t *testing.T) {
 		}`)
 	}))
 	t.Cleanup(srv.Close)
-	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
-	if err == nil || len(evs) != 0 {
-		t.Fatalf("err=%v events=%d", err, len(evs))
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	if err == nil || len(got.events) != 0 {
+		t.Fatalf("err=%v events=%d", err, len(got.events))
 	}
 }
 

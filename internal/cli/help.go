@@ -40,12 +40,15 @@ No npm package. GitHub Release binaries are unsigned.
 go install and brew --HEAD embed the CLI table; the kiln dashboard is in
 GitHub Release and brew tap rainhuang0220/wheretoken.
 
-wheretoken cursor connect records one explicit choice, then asks the operating
-system for Cursor's sealed session. A later scan of that same binary does not
-ask again. Disconnect deletes that choice only. A zero-config scan still does
-not read the system secret. Linux sealed sessions stay unavailable. An unsigned
-upgrade can ask again; a Developer ID signed build keeps the grant. Users do
-not create a certificate.
+wheretoken cursor connect records one explicit choice to read the operating
+system's protected Cursor session, then may ask once. A later scan of that
+same binary does not ask again. Disconnect deletes that choice and stops
+later reads. It does not remove an allow the operating system already
+remembered for this binary. Remove that allow in the system keychain UI,
+then run connect again. A zero-config scan still does not read the secret.
+Linux sealed sessions stay unavailable. An unsigned upgrade can ask again.
+A Developer ID build with the same team identifier keeps the grant. Users
+do not create a certificate.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,

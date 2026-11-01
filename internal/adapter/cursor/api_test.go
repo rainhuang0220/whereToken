@@ -357,10 +357,11 @@ func TestFetchFilteredTurnsPageWhenParsedRowsAreFewerThanRaw(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	evs := got.events
 	if len(pages) < 2 {
 		t.Fatalf("pages=%v; a short parsed page must not stop pagination when raw rows remain", pages)
 	}
@@ -464,6 +465,132 @@ func TestFetchUsageRepresentsAuthoritativeZero(t *testing.T) {
 	}
 	if len(evs) != 1 || evs[0].Quality != event.QualityAuthoritative || evs[0].Derivation != event.DeriveProviderAPI || evs[0].Miss+evs[0].CacheRead+evs[0].CacheCreate+evs[0].Output != 0 {
 		t.Fatalf("authoritative zero not represented: %+v", evs)
+	}
+}
+
+func TestCoveredMonthsStayPutAndGapsAreRetried(t *testing.T) {
+	when := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC)
+	base := Adapter{Now: func() time.Time { return when }}
+	all := base.usageWindows()
+	if len(all) < 4 {
+		t.Fatalf("windows=%d", len(all))
+	}
+	var covered []CoverageWindow
+	for _, w := range all[:len(all)-2] {
+		covered = append(covered, w.coverage())
+	}
+	gap := covered[len(covered)/2]
+	covered = append(covered[:len(covered)/2], covered[len(covered)/2+1:]...)
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		starts = append(starts, time.UnixMilli(body.Start).UTC().Format("2006-01-02"))
+		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
+		_, _ = io.WriteString(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"`+day+`T12:00:00Z","model":"gpt-5","conversationId":"`+day+`","tokenUsage":{"inputTokens":1}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	evs, err := (Adapter{
+		HTTP: srv.Client(), APIBase: srv.URL, Now: base.Now, Covered: covered,
+	}).fetchUsageWithToken("root", fakeJWT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(starts) != 3 {
+		t.Fatalf("starts=%v want the gap plus the two newest months", starts)
+	}
+	if !strings.Contains(strings.Join(starts, ","), gap.From) {
+		t.Fatalf("gap %s was not retried in %v", gap.From, starts)
+	}
+	if len(evs) == 0 || evs[0].Quality != event.QualityAuthoritative {
+		t.Fatalf("events=%d quality=%s", len(evs), evs[0].Quality)
+	}
+}
+
+func TestFailedMonthDoesNotMarkTheLookbackFinished(t *testing.T) {
+	when := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if time.UnixMilli(body.Start).UTC().Month() == time.March && time.UnixMilli(body.Start).UTC().Year() == 2026 {
+			http.Error(w, "boom", http.StatusInternalServerError)
+			return
+		}
+		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
+		_, _ = io.WriteString(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"`+day+`","tokenUsage":{"inputTokens":2}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return when }}).fetchUsageWithToken("root", fakeJWT)
+	if err == nil || len(evs) == 0 {
+		t.Fatalf("err=%v events=%d", err, len(evs))
+	}
+	for _, e := range evs {
+		if e.Derivation == event.DeriveProviderAPI && e.Quality != event.QualityDegraded {
+			t.Fatalf("incomplete lookback stayed authoritative: %+v", e.Quality)
+		}
+	}
+	for _, w := range TakeAccountCoverage("root") {
+		if strings.HasPrefix(w.From, "2026-03") {
+			t.Fatalf("failed March window was stored: %+v", w)
+		}
+	}
+}
+
+func TestWindowAuditCountsAndMarksTheOpenUTCDay(t *testing.T) {
+	when := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+			Page  int   `json:"page"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		start := time.UnixMilli(body.Start).UTC()
+		day := start.Format("2006-01-02")
+		open := start.Year() == 2026 && start.Month() == time.March
+		if open {
+			if body.Page <= 1 {
+				_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
+				return
+			}
+			_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
+			return
+		}
+		_, _ = io.WriteString(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"`+day+`","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
+	}))
+	t.Cleanup(srv.Close)
+	_, err := (Adapter{
+		HTTP: srv.Client(), APIBase: srv.URL, PageSize: 1,
+		Now: func() time.Time { return when },
+	}).fetchUsageWithToken("audit-root", fakeJWT)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var openN, okN int
+	for _, w := range TakeAccountCoverage("audit-root") {
+		switch w.Audit.Validation {
+		case "open":
+			openN++
+			if w.To != "2026-03-15" || w.Audit.Declared != 2 || w.Audit.RawRows != 2 || w.Audit.Deduped != 1 || w.Audit.Days != 1 {
+				t.Fatalf("open audit=%+v", w.Audit)
+			}
+			if w.Audit.Miss != 10 || w.Audit.CacheRead != 3 || w.Audit.CacheCreate != 4 || w.Audit.Output != 2 {
+				t.Fatalf("open components=%+v", w.Audit)
+			}
+		case "ok":
+			okN++
+			if w.To == "2026-03-15" || w.Audit.Declared != 1 || w.Audit.RawRows != 1 || w.Audit.Deduped != 1 || w.Audit.Days != 1 {
+				t.Fatalf("closed audit=%+v", w.Audit)
+			}
+		default:
+			t.Fatalf("window %+v has no audit", w)
+		}
+	}
+	if openN != 1 || okN < 1 {
+		t.Fatalf("open=%d ok=%d", openN, okN)
 	}
 }
 

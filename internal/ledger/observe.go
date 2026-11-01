@@ -74,7 +74,82 @@ func (l *Ledger) ensureObservationColumns() error {
   output INTEGER NOT NULL,
   PRIMARY KEY (source, payload_hash, day)
 )`)
+	if err != nil {
+		return err
+	}
+	_, err = l.db.Exec(`CREATE TABLE IF NOT EXISTS api_window_audits (
+  source TEXT NOT NULL,
+  window_from TEXT NOT NULL,
+  window_to TEXT NOT NULL,
+  declared INTEGER NOT NULL,
+  raw_rows INTEGER NOT NULL,
+  deduped INTEGER NOT NULL,
+  days INTEGER NOT NULL,
+  miss INTEGER NOT NULL,
+  cache_read INTEGER NOT NULL,
+  cache_create INTEGER NOT NULL,
+  output INTEGER NOT NULL,
+  validation TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  PRIMARY KEY (source, window_from, window_to)
+)`)
 	return err
+}
+
+// WindowAudit is the desensitized count check for one filtered window.
+// Validation "missing" is computed when no row exists. It is not stored,
+// and its zero components are not a measured zero.
+type WindowAudit struct {
+	From, To                             string
+	Declared, RawRows, Deduped, Days     int
+	Miss, CacheRead, CacheCreate, Output int64
+	Validation                           string
+}
+
+// NoteWindowAudit stores one successful window check. The same window
+// replaces its previous row. "missing" is not a value this method accepts.
+func (l *Ledger) NoteWindowAudit(source string, a WindowAudit) error {
+	if source == "" || a.From == "" || a.To == "" || a.From > a.To {
+		return errors.New("ledger observation rejected")
+	}
+	if a.Validation != "ok" && a.Validation != "open" {
+		return errors.New("ledger observation rejected")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, err := l.db.Exec(`INSERT OR REPLACE INTO api_window_audits(
+		source,window_from,window_to,declared,raw_rows,deduped,days,
+		miss,cache_read,cache_create,output,validation,observed_at
+	) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		source, a.From, a.To, a.Declared, a.RawRows, a.Deduped, a.Days,
+		a.Miss, a.CacheRead, a.CacheCreate, a.Output, a.Validation,
+		time.Now().UTC().Format(time.RFC3339Nano))
+	return err
+}
+
+// WindowAudit returns the stored check for one window. A window this
+// process never audited comes back as validation "missing" and is not
+// written. Callers must not treat that row as a measured zero.
+func (l *Ledger) WindowAudit(source, from, to string) (WindowAudit, error) {
+	missing := WindowAudit{From: from, To: to, Validation: "missing"}
+	if source == "" || from == "" || to == "" {
+		return missing, nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var a WindowAudit
+	err := l.db.QueryRow(`SELECT window_from, window_to, declared, raw_rows, deduped, days,
+		miss, cache_read, cache_create, output, validation
+		FROM api_window_audits WHERE source=? AND window_from=? AND window_to=?`,
+		source, from, to).Scan(&a.From, &a.To, &a.Declared, &a.RawRows, &a.Deduped, &a.Days,
+		&a.Miss, &a.CacheRead, &a.CacheCreate, &a.Output, &a.Validation)
+	if errors.Is(err, sql.ErrNoRows) {
+		return missing, nil
+	}
+	if err != nil {
+		return WindowAudit{}, err
+	}
+	return a, nil
 }
 
 func observationFromAPI(events []event.UsageEvent) (observationMeta, []dayComp) {
@@ -352,7 +427,7 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 		ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		WindowFrom: from,
 		WindowTo:   to,
-		Coverage:   "complete",
+		Coverage:   "window",
 		Origin:     "api",
 	}
 	l.mu.Lock()
@@ -366,6 +441,41 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 		return err
 	}
 	return tx.Commit()
+}
+
+// CoveredRanges lists finished filtered windows for source, oldest first.
+// A retained snapshot's first and last day is not one of these windows:
+// days between those endpoints were not given a token total.
+func (l *Ledger) CoveredRanges(source string) ([]DayRange, error) {
+	if source == "" {
+		return nil, nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.finishedWindowsLocked(source)
+}
+
+func (l *Ledger) finishedWindowsLocked(source string) ([]DayRange, error) {
+	rows, err := l.db.Query(`SELECT window_from, window_to FROM api_observations
+		WHERE source=? AND observed_at != '' AND window_from != '' AND window_to != ''
+		  AND origin='api' AND coverage='window'
+		ORDER BY observed_at, rowid`, source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []DayRange
+	for rows.Next() {
+		var r DayRange
+		if err := rows.Scan(&r.From, &r.To); err != nil {
+			return nil, err
+		}
+		if r.From == "" || r.To == "" || r.From > r.To {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // DaysOutside returns chained observation days that this scan did not cover.
@@ -406,6 +516,63 @@ func (l *Ledger) DaysOutside(source string, ranges []DayRange, already []event.U
 	for _, day := range keys {
 		d := days[day]
 		out = append(out, retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
+	}
+	return out, nil
+}
+
+// AccountSupplement returns stored days this scan did not fetch.
+// A day inside the current lookback and inside a finished filtered window
+// is a cached API total. A day outside that lookback, or a day that only
+// exists on a retained snapshot, stays a retained observation. A calendar
+// day with no component row is not created.
+func (l *Ledger) AccountSupplement(source string, lookback DayRange, fetched []DayRange, already []event.UsageEvent) ([]event.UsageEvent, error) {
+	if source == "" {
+		return nil, nil
+	}
+	have := map[string]struct{}{}
+	for _, e := range already {
+		if e.Source != source || e.Timestamp.IsZero() {
+			continue
+		}
+		if e.Derivation != event.DeriveProviderAPI && e.Derivation != event.DeriveRetained {
+			continue
+		}
+		have[e.Timestamp.UTC().Format("2006-01-02")] = struct{}{}
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	obs, err := l.observationsAsc(source, "")
+	if err != nil || len(obs) == 0 {
+		return nil, err
+	}
+	finished, err := l.finishedWindowsLocked(source)
+	if err != nil {
+		return nil, err
+	}
+	days := chainDayMap(obs)
+	var keys []string
+	for day, d := range days {
+		if _, ok := have[day]; ok || dayInside(day, fetched) {
+			continue
+		}
+		if d.Miss+d.CacheRead+d.CacheCreate+d.Output == 0 {
+			continue
+		}
+		keys = append(keys, day)
+	}
+	sort.Strings(keys)
+	insideLookback := lookback.From != "" && lookback.To != "" && lookback.From <= lookback.To
+	var out []event.UsageEvent
+	for _, day := range keys {
+		d := days[day]
+		cached := insideLookback && day >= lookback.From && day <= lookback.To && dayInside(day, finished)
+		ev := retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output)
+		if cached {
+			ev.Derivation = event.DeriveProviderAPI
+			ev.Quality = event.QualityAuthoritative
+			ev.RequestID = "cursor-api:covered:" + day
+		}
+		out = append(out, ev)
 	}
 	return out, nil
 }

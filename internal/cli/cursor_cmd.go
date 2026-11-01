@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
@@ -44,12 +45,17 @@ func (a *App) cursorDisconnect(home adapter.Home) int {
 		return ExitFail
 	}
 	fmt.Fprintln(a.Stdout, "cursor connect: off")
+	fmt.Fprintln(a.Stdout, "后续扫描不再读取 Cursor 会话。")
+	fmt.Fprintln(a.Stdout, "本程序的同意记录已删除。系统里已经记住的允许还在。要去掉那项允许，在钥匙串访问中移除本程序后再运行 wheretoken cursor connect。")
 	return ExitOK
 }
 
 func (a *App) cursorConnect(home adapter.Home) int {
 	path := cursor.ConsentPath(home)
-	fmt.Fprintln(a.Stderr, "下一步可能会出现系统授权窗口。允许一次后，同一份程序的后台刷新不再询问。未签名的升级可能会再问一次。")
+	fmt.Fprintln(a.Stderr, "这一步会读取操作系统保护的 Cursor 会话，用来统计账号 token。系统可能会询问是否允许本程序读取。允许一次后，同一份未改动的程序在后台不再询问。未签名的升级可能会再问一次。同一开发者签名的升级通常不必再问。")
+	if runtime.GOOS == "linux" {
+		fmt.Fprintln(a.Stderr, "Linux 上的密封会话无法读取。明文 JWT 仍可统计。连接不会把密封会话变成可用账本。")
+	}
 	if err := cursor.WriteConsent(path); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail

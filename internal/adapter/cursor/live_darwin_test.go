@@ -15,13 +15,12 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/ledger"
 )
 
-// TestLiveNoUIFilteredWindow reads this machine's Cursor session only when
-// WHERETOKEN_CURSOR_LIVE=1. The keychain call sets the no-UI flag, so a
-// missing allowance fails instead of opening a dialog. The ledger is a
-// temp file. Output is counts, dates, and a subject hash.
+// TestLiveNoUIFilteredWindow is not release acceptance. This machine's
+// login item already lists older programs, so a no-UI read here does not
+// prove a clean install. The ledger it writes is a temp file.
 func TestLiveNoUIFilteredWindow(t *testing.T) {
-	if os.Getenv("WHERETOKEN_CURSOR_LIVE") != "1" {
-		t.Skip("set WHERETOKEN_CURSOR_LIVE=1 for a no-UI read on this machine")
+	if os.Getenv("WHERETOKEN_CURSOR_LIVE") != "contaminated-acl" {
+		t.Skip("not a clean-install proof; set WHERETOKEN_CURSOR_LIVE=contaminated-acl to opt in")
 	}
 	dir, err := os.UserHomeDir()
 	if err != nil {

@@ -31,6 +31,7 @@ type Adapter struct {
 	Probe         bool
 	PageSize      int
 	PageCap       int
+	Covered       []CoverageWindow
 	Unseal        func(string) (string, error)
 	AcceptSubject func(string) error
 }

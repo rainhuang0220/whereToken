@@ -178,6 +178,8 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	adapters = prepareCursor(home, adapters, lg)
 	var events []event.UsageEvent
 	var cursorWindows []cursor.CoverageWindow
+	var cursorLookback cursor.CoverageWindow
+	var haveCursorLookback bool
 	var complete []event.UsageEvent
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
@@ -226,6 +228,10 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 					turns = append(turns, te)
 				})
 				if a.ID() == "cursor" {
+					if w, ok := cursor.TakeLookback(root.Path); ok {
+						cursorLookback = w
+						haveCursorLookback = true
+					}
 					cursorWindows = append(cursorWindows, cursor.TakeAccountCoverage(root.Path)...)
 				}
 				if err != nil {
@@ -262,13 +268,33 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		if len(cursorWindows) > 0 {
 			for _, w := range cursorWindows {
 				_ = lg.NoteCoveredWindow("cursor", w.From, w.To, cursorWindowEvents(events, w))
+				if w.Audit.Validation == "ok" || w.Audit.Validation == "open" {
+					_ = lg.NoteWindowAudit("cursor", ledger.WindowAudit{
+						From: w.From, To: w.To,
+						Declared: w.Audit.Declared, RawRows: w.Audit.RawRows,
+						Deduped: w.Audit.Deduped, Days: w.Audit.Days,
+						Miss: w.Audit.Miss, CacheRead: w.Audit.CacheRead,
+						CacheCreate: w.Audit.CacheCreate, Output: w.Audit.Output,
+						Validation: w.Audit.Validation,
+					})
+				}
 			}
 			_ = lg.NoteAPI(withoutCursorProviderAPI(events))
 			ranges := make([]ledger.DayRange, 0, len(cursorWindows))
 			for _, w := range cursorWindows {
 				ranges = append(ranges, ledger.DayRange{From: w.From, To: w.To})
 			}
-			if extra, err := lg.DaysOutside("cursor", ranges, events); err == nil && len(extra) > 0 {
+			var extra []event.UsageEvent
+			var extraErr error
+			if haveCursorLookback {
+				extra, extraErr = lg.AccountSupplement("cursor", ledger.DayRange{
+					From: cursorLookback.From,
+					To:   cursorLookback.To,
+				}, ranges, events)
+			} else {
+				extra, extraErr = lg.DaysOutside("cursor", ranges, events)
+			}
+			if extraErr == nil && len(extra) > 0 {
 				events = append(events, extra...)
 			}
 		} else {
@@ -307,6 +333,14 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 			c.ConsentPath = cursor.ConsentPath(home)
 		}
 		c.AllowPrompt = false
+		if lg != nil && len(c.Covered) == 0 {
+			ranges, err := lg.CoveredRanges("cursor")
+			if err == nil {
+				for _, r := range ranges {
+					c.Covered = append(c.Covered, cursor.CoverageWindow{From: r.From, To: r.To})
+				}
+			}
+		}
 		if c.AcceptSubject == nil && lg != nil {
 			bound := lg
 			c.AcceptSubject = func(sub string) error {

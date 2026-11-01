@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -131,5 +132,340 @@ func TestCoveredMonthKeepsEarlierObservationAndBlocksAnotherAccount(t *testing.T
 	}
 	if !sawOld {
 		t.Fatal("the 2026-10-23 observation left the chain")
+	}
+}
+
+func TestHourlyScanKeepsAnEarlyDayAndSkipsCoveredMonths(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	p, err := ledger.PathFor(testhome.New(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	early := event.UsageEvent{
+		Source: "cursor", RequestID: "day-2024-06-01",
+		Timestamp: time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC),
+		Miss:      41, Quality: event.QualityAuthoritative,
+		Derivation: event.DeriveProviderAPI, SkipRequest: true,
+	}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC), []event.UsageEvent{early}); err != nil {
+		t.Fatal(err)
+	}
+	lg.Close()
+
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
+		starts = append(starts, day)
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":1}}]}`, body.Start+int64(12*time.Hour/time.Millisecond), day)
+	}))
+	t.Cleanup(srv.Close)
+	ad := func(when time.Time) cursor.Adapter {
+		return cursor.Adapter{
+			HTTP: srv.Client(), APIBase: srv.URL,
+			Now:    func() time.Time { return when },
+			Unseal: func(string) (string, error) { return windowJWT, nil },
+		}
+	}
+	first := Run(testhome.New(home), []adapter.Adapter{ad(time.Date(2026, 11, 2, 15, 0, 0, 0, time.UTC))})
+	if len(first.Errors) != 0 {
+		t.Fatalf("first errors=%v", first.Errors)
+	}
+	firstN := len(starts)
+	if firstN < 10 {
+		t.Fatalf("first starts=%d %v", firstN, starts)
+	}
+	starts = nil
+	second := Run(testhome.New(home), []adapter.Adapter{ad(time.Date(2027, 11, 2, 15, 0, 0, 0, time.UTC))})
+	if len(second.Errors) != 0 {
+		t.Fatalf("second errors=%v starts=%v", second.Errors, starts)
+	}
+	joined := strings.Join(starts, ",")
+	if strings.Contains(joined, "2026-08-01") || strings.Contains(joined, "2026-10-27") {
+		t.Fatalf("covered month was downloaded again: %v", starts)
+	}
+	if !strings.Contains(joined, "2027-11-01") || !strings.Contains(joined, "2026-11-01") {
+		t.Fatalf("gap or open month missing: %v", starts)
+	}
+	if len(starts) >= firstN {
+		t.Fatalf("second pass %d was not smaller than first pass %d", len(starts), firstN)
+	}
+	lg, err = ledger.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	var kept int64
+	for _, e := range chained {
+		if e.Timestamp.UTC().Format("2006-01-02") == "2024-06-01" {
+			kept += e.Miss
+		}
+	}
+	if kept != 41 {
+		t.Fatalf("early day=%d chain_days=%d", kept, len(chained))
+	}
+	var august int64
+	for _, e := range chained {
+		if e.Timestamp.UTC().Format("2006-01-02") == "2026-08-01" {
+			august += e.Miss
+		}
+	}
+	if august == 0 {
+		t.Fatalf("August 2026 left the chain after the lookback moved")
+	}
+}
+
+func TestRetainedSnapshotDoesNotSkipTheBackfill(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	p, err := ledger.PathFor(testhome.New(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wide := []event.UsageEvent{
+		{
+			Source: "cursor", RequestID: "day-2025-11-01",
+			Timestamp: time.Date(2025, 11, 1, 12, 0, 0, 0, time.UTC),
+			Miss:      5, Quality: event.QualityAuthoritative,
+			Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		},
+		{
+			Source: "cursor", RequestID: "day-2026-06-01",
+			Timestamp: time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+			Miss:      6, Quality: event.QualityAuthoritative,
+			Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		},
+	}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), wide); err != nil {
+		t.Fatal(err)
+	}
+	lg.Close()
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
+		starts = append(starts, day)
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":1}}]}`, body.Start, day)
+	}))
+	t.Cleanup(srv.Close)
+	res := Run(testhome.New(home), []adapter.Adapter{cursor.Adapter{
+		HTTP: srv.Client(), APIBase: srv.URL,
+		Now:    func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
+		Unseal: func(string) (string, error) { return windowJWT, nil },
+	}})
+	if len(res.Errors) != 0 {
+		t.Fatalf("errors=%v starts=%v", res.Errors, starts)
+	}
+	if !strings.Contains(strings.Join(starts, ","), "2025-12-01") {
+		t.Fatalf("retained span skipped December 2025: %v", starts)
+	}
+}
+
+func TestSameLookbackRefreshReplaysACoveredMonth(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
+		starts = append(starts, day)
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":1}}]}`, body.Start+int64(12*time.Hour/time.Millisecond), day)
+	}))
+	t.Cleanup(srv.Close)
+	when := time.Date(2026, 11, 2, 15, 0, 0, 0, time.UTC)
+	ad := func(at time.Time) cursor.Adapter {
+		return cursor.Adapter{
+			HTTP: srv.Client(), APIBase: srv.URL,
+			Now:    func() time.Time { return at },
+			Unseal: func(string) (string, error) { return windowJWT, nil },
+		}
+	}
+	first := Run(testhome.New(home), []adapter.Adapter{ad(when)})
+	if len(first.Errors) != 0 {
+		t.Fatalf("first errors=%v", first.Errors)
+	}
+	starts = nil
+	second := Run(testhome.New(home), []adapter.Adapter{ad(when.Add(time.Hour))})
+	if len(second.Errors) != 0 {
+		t.Fatalf("second errors=%v starts=%v", second.Errors, starts)
+	}
+	joined := strings.Join(starts, ",")
+	if strings.Contains(joined, "2026-08-01") {
+		t.Fatalf("covered August was downloaded again: %v", starts)
+	}
+	if !strings.Contains(joined, "2026-10-01") || !strings.Contains(joined, "2026-11-01") {
+		t.Fatalf("open edge missing: %v", starts)
+	}
+	var august event.UsageEvent
+	var saw bool
+	var retained int
+	for _, e := range second.Events {
+		if e.Source != "cursor" {
+			continue
+		}
+		if e.Derivation == event.DeriveRetained {
+			retained++
+		}
+		if e.Timestamp.UTC().Format("2006-01-02") == "2026-08-01" && e.Miss > 0 {
+			august = e
+			saw = true
+		}
+	}
+	if !saw || august.Derivation != event.DeriveProviderAPI || august.Quality != event.QualityAuthoritative {
+		t.Fatalf("replay=%+v saw=%v", august, saw)
+	}
+	if retained != 0 {
+		t.Fatalf("complete lookback kept %d retained rows", retained)
+	}
+}
+
+func TestRateLimitKeepsVerifiedDaysAndRetriesTheMonth(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	phase := 0
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Start int64 `json:"startDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		start := time.UnixMilli(body.Start).UTC()
+		day := start.Format("2006-01-02")
+		starts = append(starts, day)
+		if phase == 1 && start.Year() == 2026 && start.Month() == time.March {
+			w.Header().Set("Retry-After", "3600")
+			http.Error(w, "later", http.StatusTooManyRequests)
+			return
+		}
+		tokens := 5
+		if phase == 2 && start.Year() == 2026 && start.Month() == time.March {
+			tokens = 9
+		}
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":%d,"outputTokens":1,"cacheReadTokens":1,"cacheWriteTokens":1}}]}`, body.Start, day, tokens)
+	}))
+	t.Cleanup(srv.Close)
+	when := time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC)
+	ad := cursor.Adapter{
+		HTTP: srv.Client(), APIBase: srv.URL,
+		Now:    func() time.Time { return when },
+		Unseal: func(string) (string, error) { return windowJWT, nil },
+	}
+	run := func() Result {
+		t.Helper()
+		return Run(testhome.New(home), []adapter.Adapter{ad})
+	}
+	first := run()
+	if len(first.Errors) != 0 {
+		t.Fatalf("first errors=%v", first.Errors)
+	}
+	p, err := ledger.PathFor(testhome.New(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dayTotal := func(day string) int64 {
+		t.Helper()
+		lg, err := ledger.Open(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer lg.Close()
+		chained, ok, err := lg.ChainedRetainedEvents("cursor")
+		if err != nil || !ok {
+			t.Fatalf("ok=%v err=%v", ok, err)
+		}
+		var n int64
+		for _, e := range chained {
+			if e.Timestamp.UTC().Format("2006-01-02") == day {
+				n += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+			}
+		}
+		return n
+	}
+	auditOf := func(from, to string) ledger.WindowAudit {
+		t.Helper()
+		lg, err := ledger.Open(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer lg.Close()
+		got, err := lg.WindowAudit("cursor", from, to)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if dayTotal("2026-01-01") != 8 || dayTotal("2026-03-01") != 8 {
+		t.Fatalf("jan=%d march=%d", dayTotal("2026-01-01"), dayTotal("2026-03-01"))
+	}
+	january := auditOf("2026-01-01", "2026-01-31")
+	if january.Validation != "ok" || january.Declared != 1 || january.RawRows != 1 || january.Deduped != 1 || january.Miss != 5 {
+		t.Fatalf("january audit=%+v", january)
+	}
+	march := auditOf("2026-03-01", "2026-03-15")
+	if march.Validation != "open" || march.Declared != 1 || march.Days != 1 {
+		t.Fatalf("march audit=%+v", march)
+	}
+	absent := auditOf("2024-06-01", "2024-06-30")
+	if absent.Validation != "missing" || absent.Miss != 0 {
+		t.Fatalf("unaudited window=%+v", absent)
+	}
+	phase = 1
+	starts = nil
+	second := run()
+	if len(second.Errors) == 0 {
+		t.Fatal("rate limit returned no error")
+	}
+	if strings.Contains(strings.Join(starts, ","), "2026-01-01") || len(starts) > 3 {
+		t.Fatalf("rate-limited refresh redownloaded history: %v", starts)
+	}
+	if dayTotal("2026-01-01") != 8 || dayTotal("2026-03-01") != 8 {
+		t.Fatalf("rate limit rewrote verified days jan=%d march=%d", dayTotal("2026-01-01"), dayTotal("2026-03-01"))
+	}
+	if got := auditOf("2026-03-01", "2026-03-15"); got.Validation != "open" || got.Miss != 5 {
+		t.Fatalf("rate limit replaced the march audit: %+v", got)
+	}
+	phase = 2
+	starts = nil
+	third := run()
+	if len(third.Errors) != 0 {
+		t.Fatalf("retry errors=%v starts=%v", third.Errors, starts)
+	}
+	if strings.Contains(strings.Join(starts, ","), "2026-01-01") {
+		t.Fatalf("retry downloaded a covered month: %v", starts)
+	}
+	if !strings.Contains(strings.Join(starts, ","), "2026-03-01") {
+		t.Fatalf("retry skipped the rate-limited month: %v", starts)
+	}
+	if dayTotal("2026-03-01") != 12 || dayTotal("2026-01-01") != 8 {
+		t.Fatalf("retry jan=%d march=%d", dayTotal("2026-01-01"), dayTotal("2026-03-01"))
+	}
+	if got := auditOf("2026-03-01", "2026-03-15"); got.Validation != "open" || got.Miss != 9 || got.Declared != 1 {
+		t.Fatalf("retried march audit=%+v", got)
 	}
 }
