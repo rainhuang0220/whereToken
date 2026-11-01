@@ -175,7 +175,9 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	if lg != nil {
 		defer lg.Close()
 	}
+	adapters = prepareCursor(home, adapters, lg)
 	var events []event.UsageEvent
+	var cursorWindows []cursor.CoverageWindow
 	var complete []event.UsageEvent
 	var turns []event.TurnEvent
 	var roots []adapter.SourceRoot
@@ -223,6 +225,9 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 				}, func(te event.TurnEvent) {
 					turns = append(turns, te)
 				})
+				if a.ID() == "cursor" {
+					cursorWindows = append(cursorWindows, cursor.TakeAccountCoverage(root.Path)...)
+				}
 				if err != nil {
 					hadErr = true
 					errs = append(errs, a.ID()+": "+err.Error())
@@ -254,7 +259,21 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		// commit inside index.put. Unseen then adds facts whose source file
 		// was not in this scan. Provider API authority suppresses that source.
 		_ = lg.CommitUsage(events)
-		_ = lg.NoteAPI(events)
+		if len(cursorWindows) > 0 {
+			for _, w := range cursorWindows {
+				_ = lg.NoteCoveredWindow("cursor", w.From, w.To, cursorWindowEvents(events, w))
+			}
+			_ = lg.NoteAPI(withoutCursorProviderAPI(events))
+			ranges := make([]ledger.DayRange, 0, len(cursorWindows))
+			for _, w := range cursorWindows {
+				ranges = append(ranges, ledger.DayRange{From: w.From, To: w.To})
+			}
+			if extra, err := lg.DaysOutside("cursor", ranges, events); err == nil && len(extra) > 0 {
+				events = append(events, extra...)
+			}
+		} else {
+			_ = lg.NoteAPI(events)
+		}
 		// complete is the successful rereads only. A parse error must not
 		// omit facts that this scan did not see.
 		_ = lg.NoteComplete(complete)
@@ -274,6 +293,67 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		Deltas:    index.Deltas(),
 		home:      home,
 	}
+}
+
+func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Ledger) []adapter.Adapter {
+	out := make([]adapter.Adapter, len(adapters))
+	copy(out, adapters)
+	for i, item := range out {
+		c, ok := item.(cursor.Adapter)
+		if !ok {
+			continue
+		}
+		if c.ConsentPath == "" {
+			c.ConsentPath = cursor.ConsentPath(home)
+		}
+		c.AllowPrompt = false
+		if c.AcceptSubject == nil && lg != nil {
+			bound := lg
+			c.AcceptSubject = func(sub string) error {
+				if sub == "" {
+					return nil
+				}
+				prev, err := bound.Meta(cursor.AccountSubjectMeta)
+				if err != nil {
+					return err
+				}
+				if prev == "" {
+					return bound.SetMeta(cursor.AccountSubjectMeta, sub)
+				}
+				if prev != sub {
+					return cursor.AccountMismatchError()
+				}
+				return nil
+			}
+		}
+		out[i] = c
+	}
+	return out
+}
+
+func cursorWindowEvents(events []event.UsageEvent, w cursor.CoverageWindow) []event.UsageEvent {
+	var out []event.UsageEvent
+	for _, e := range events {
+		if e.Source != "cursor" || e.Derivation != event.DeriveProviderAPI || e.Timestamp.IsZero() {
+			continue
+		}
+		day := e.Timestamp.UTC().Format("2006-01-02")
+		if day >= w.From && day <= w.To {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func withoutCursorProviderAPI(events []event.UsageEvent) []event.UsageEvent {
+	out := make([]event.UsageEvent, 0, len(events))
+	for _, e := range events {
+		if e.Source == "cursor" && e.Derivation == event.DeriveProviderAPI {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 func attachLedger(home adapter.Home, st *index.Store) *ledger.Ledger {

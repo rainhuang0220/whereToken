@@ -12,6 +12,7 @@ USAGE
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] community [status|on|off|serve]
+  wheretoken [flags] cursor [status|connect|disconnect]
   wheretoken [flags] pricing     built-in model price card with official sources
   wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
   wheretoken [flags] login [--no-sync]  pair this device, then sync aggregated usage
@@ -38,6 +39,13 @@ INSTALL
 No npm package. GitHub Release binaries are unsigned.
 go install and brew --HEAD embed the CLI table; the kiln dashboard is in
 GitHub Release and brew tap rainhuang0220/wheretoken.
+
+wheretoken cursor connect records one explicit choice, then asks the operating
+system for Cursor's sealed session. A later scan of that same binary does not
+ask again. Disconnect deletes that choice only. A zero-config scan still does
+not read the system secret. Linux sealed sessions stay unavailable. An unsigned
+upgrade can ask again; a Developer ID signed build keeps the grant. Users do
+not create a certificate.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,

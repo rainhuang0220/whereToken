@@ -98,6 +98,48 @@ func TestNarrowerWindowKeepsEarlierDaysAndUsesTheNewOverlap(t *testing.T) {
 	}
 }
 
+func TestChainedWindowsKeepEarlierDaysAndReplaceOverlap(t *testing.T) {
+	lg := openTest(t)
+	first := []event.UsageEvent{apiEvent(1, 100), apiEvent(2, 50), apiEvent(3, 7)}
+	if err := lg.SaveObservation("cursor", "api", "complete", time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), first); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2026-01-03", "2026-01-03", []event.UsageEvent{apiEvent(3, 9)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.NoteCoveredWindow("cursor", "2026-01-04", "2026-01-04", []event.UsageEvent{apiEvent(4, 4)}); err != nil {
+		t.Fatal(err)
+	}
+	fresh := apiEvent(4, 4)
+	got, err := lg.SupplementNarrowWindow([]event.UsageEvent{fresh})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tokensOf(got) != 163 {
+		t.Fatalf("total=%d want 163", tokensOf(got))
+	}
+	var day3 int64
+	for _, e := range got {
+		if e.Timestamp.UTC().Format("2006-01-02") == "2026-01-03" {
+			day3 += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		}
+	}
+	if day3 != 9 {
+		t.Fatalf("overlap day=%d", day3)
+	}
+	again, err := lg.SupplementNarrowWindow(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tokensOf(again) != 163 {
+		t.Fatalf("second supplement total=%d", tokensOf(again))
+	}
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok || tokensOf(chained) != 163 {
+		t.Fatalf("chain ok=%v err=%v total=%d", ok, err, tokensOf(chained))
+	}
+}
+
 func TestRetainedReuseDoesNotAddLocalFacts(t *testing.T) {
 	lg := openTest(t)
 	local := ev("cursor", "s", "bubble-1", 100)

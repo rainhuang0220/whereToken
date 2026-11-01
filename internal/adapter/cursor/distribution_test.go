@@ -477,15 +477,18 @@ func TestAdapterSourceDoesNotTouchOSSecretStores(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	banned := []string{
+	always := []string{
 		"find-generic-password",
 		"set-key-partition-list",
-		"SecItemCopyMatching",
-		"CryptUnprotectData",
 		"secret-tool",
-		"DPAPI",
 		"PlainList",
 		"cursor-bridge",
+	}
+	osOnly := []string{
+		"SecItemCopyMatching",
+		"CryptUnprotectData",
+		"DPAPI",
+		"Cursor Safe Storage",
 	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
@@ -495,10 +498,27 @@ func TestAdapterSourceDoesNotTouchOSSecretStores(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, bad := range banned {
-			if strings.Contains(string(body), bad) {
+		text := string(body)
+		for _, bad := range always {
+			if strings.Contains(text, bad) {
 				t.Fatalf("%s contains %s", e.Name(), bad)
 			}
+		}
+		for _, bad := range osOnly {
+			if !strings.Contains(text, bad) {
+				continue
+			}
+			switch e.Name() {
+			case "os_darwin.go":
+				if bad == "SecItemCopyMatching" || bad == "Cursor Safe Storage" {
+					continue
+				}
+			case "os_windows.go":
+				if bad == "CryptUnprotectData" || bad == "DPAPI" {
+					continue
+				}
+			}
+			t.Fatalf("%s contains %s", e.Name(), bad)
 		}
 	}
 }
@@ -571,10 +591,16 @@ func TestReleaseSurfaceLeavesCursorSecretsOut(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := string(body)
+		rel, relErr := filepath.Rel(root, path)
+		underCursor := relErr == nil && strings.HasPrefix(filepath.ToSlash(rel), "internal/adapter/cursor/")
 		for _, bad := range banned {
-			if strings.Contains(text, bad) {
-				t.Fatalf("%s contains %s", path, bad)
+			if !strings.Contains(text, bad) {
+				continue
 			}
+			if underCursor && (bad == "SecItemCopyMatching" || bad == "CryptUnprotectData" || bad == "Cursor Safe Storage") {
+				continue
+			}
+			t.Fatalf("%s contains %s", path, bad)
 		}
 	}
 	cred, err := os.ReadFile(filepath.Join(root, "internal", "credstore", "keychain.go"))

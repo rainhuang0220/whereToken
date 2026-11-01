@@ -22,10 +22,17 @@ import (
 const thinkingCapability = 30
 
 type Adapter struct {
-	HTTP    *http.Client
-	APIBase string
-	Now     func() time.Time
-	Offline bool
+	HTTP          *http.Client
+	APIBase       string
+	Now           func() time.Time
+	Offline       bool
+	ConsentPath   string
+	AllowPrompt   bool
+	Probe         bool
+	PageSize      int
+	PageCap       int
+	Unseal        func(string) (string, error)
+	AcceptSubject func(string) error
 }
 
 func (Adapter) ID() string { return "cursor" }
@@ -70,6 +77,7 @@ func resolveDB(p string) string {
 }
 
 func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.UsageEvent), emitTurn func(event.TurnEvent)) error {
+	clearCoverage(root.Path)
 	localEvs, localTurns, _, err := index.LoadOrReplay("cursor", path, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
 		return parseLocalDB(f.Name(), root)
 	})
@@ -84,14 +92,40 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 
 	var apiEvents []event.UsageEvent
 	var apiErr error
+	if token != "" {
+		opened, oerr := a.openSealed(token, path)
+		if oerr != nil {
+			apiErr = oerr
+			token = ""
+		} else {
+			token = opened
+		}
+	}
+	if refresh != "" {
+		opened, oerr := a.openSealed(refresh, path)
+		if oerr != nil || !usableSessionToken(opened) {
+			refresh = ""
+		} else {
+			refresh = opened
+		}
+	}
 	switch {
+	case apiErr != nil:
+		// A sealed session without consent, or an OS denial, stops here.
+		// The stored value is not placed on a request.
 	case token == "":
 		apiErr = errNoLocalAuth
 	case !usableSessionToken(token):
-		// Sealed envelopes on every OS share this refusal.
-		// The value stays in the database and is never placed on a request.
 		apiErr = errAccountUsageUnavailable
 	case !a.Offline:
+		if a.AcceptSubject != nil {
+			if sub := JWTSubject(token); sub != "" {
+				if err := a.AcceptSubject(sub); err != nil {
+					apiErr = err
+					break
+				}
+			}
+		}
 		if !compatibleRefreshToken(refresh) || refresh == token {
 			refresh = ""
 		}

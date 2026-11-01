@@ -164,6 +164,8 @@ func (a *App) Run() int {
 		return a.runCard(flags, home)
 	case CommandProfile:
 		return a.runProfile(flags, home)
+	case CommandCursor:
+		return a.runCursor(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}

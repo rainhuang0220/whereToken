@@ -294,31 +294,31 @@ Quality `authoritative`. Derivation `derived`.
 
 `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` (Linux `~/.config/Cursor/…`, Windows `%APPDATA%\Cursor\…`). `~/.cursor` is a discover fallback only.
 
-Login, only when the stored value is already a JWT: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). A 401 may refresh in memory only when `cursorAuth/refreshToken` is a different JWT whose payload `type` is `refresh_token`, the credential this client sends as `grant_type=refresh_token`. A session JWT (`type` `session`), a JWT with no type, the same JWT, or an unreadable payload is not posted to `/oauth/token`. The payload check is local and does not verify the signature. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
+Login, when the stored value is already a JWT: `ItemTable` `cursorAuth/accessToken` (then `storage.json`). A 401 may refresh in memory only when `cursorAuth/refreshToken` is a different JWT whose payload `type` is `refresh_token`, the credential this client sends as `grant_type=refresh_token`. A session JWT (`type` `session`), a JWT with no type, the same JWT, or an unreadable payload is not posted to `/oauth/token`. The payload check is local and does not verify the signature. Never print the token. Hosts: `api2.cursor.sh` / `cursor.com`.
 
-A value that starts with `cursor-safe-storage:` (any version), or any other non-JWT, is not a bearer. whereToken does not read Keychain, DPAPI, or libsecret, and it does not send that value anywhere. Account usage is then unavailable. This is the same rule on macOS, Windows, and Linux.
+A value that starts with `cursor-safe-storage:` is not a bearer. The default scan does not read it and does not send it. `wheretoken cursor connect` records that the user allowed one OS read. macOS then copies the Cursor Safe Storage password with `SecItemCopyMatching` inside this process. The dialog names wheretoken. Always Allow matches this binary's signature, so an unsigned rebuild asks again and a Developer ID signed upgrade does not. Windows unwraps Cursor's `Local State` key with `CryptUnprotectData` for the current user. Linux does not call the desktop secret service; a sealed session stays unavailable there. `cursor disconnect` deletes the choice file only. The password and the JWT are not written to the ledger, the profile, or a log.
 
 ### Parser
 
 Local bubbles: `type=2` (not thinking capability 30) → requests; `type=1` non-subagent → user turns. A bubble with no `tokenCount` still counts as a request. Its token total is unavailable, not `0`. An explicit `tokenCount` of zero stays zero on the event and stays degraded.
 
-Token columns, only for a readable JWT: `POST` Cursor `DashboardService/GetFilteredUsageEvents` (fallback `GetAggregatedUsageEvents`), last 53 local weeks. When the API has totals, local `tokenCount` is ignored so the two are not added together. `--offline` skips the API. A sealed session is still reported unavailable while offline, so a later refresh can keep a retained account observation instead of replacing it with local rows.
+Token columns, for a readable JWT or a session opened by `cursor connect`: `POST` Cursor `DashboardService/GetFilteredUsageEvents`. The lookback is about 53 weeks, split into UTC calendar months. Pages are 1000 rows. A window that fills every page is split in half instead of being published short. When the API has totals, local `tokenCount` is ignored so the two are not added together. `--offline` skips the API. A sealed session without connect is still reported unavailable while offline, so a later refresh can keep a retained account observation instead of replacing it with local rows.
 
-Filtered pagination is atomic. The response must include `totalUsageEventsCount`, and the raw row count must equal it. A short page, a missing total, a page that disagrees, a 429, or a schema change discards every row from that call. Aggregated usage is a fallback only when it returns events. An empty aggregated body after a filtered failure is not a measured zero. A complete filtered response with total `0` is a measured zero.
+Filtered pagination is atomic per window. The response must include `totalUsageEventsCount`, and the raw row count must equal it. A short page, a missing total, a page that disagrees, a 429, or a schema change discards that window. Earlier finished months are kept. Aggregated usage is requested only when every filtered window is HTTP 404. An empty aggregated body is not a measured zero. A complete filtered response with total `0` is a measured zero. A 429 with `Retry-After` of at most two seconds is retried once. The same request id is not added twice when two windows return it.
 
 ### What a normal install can read
 
 | Situation | Account tokens | Local requests / turns | Extra setup |
 | --------- | -------------- | ---------------------- | ----------- |
-| macOS Cursor 3.x with encryption-at-rest (`cursor-safe-storage:` in `state.vscdb`; the key stays in the login item Cursor Safe Storage) | Unavailable | Yes | None. Do not edit the keychain ACL |
-| Windows, DPAPI / ciphertext in the same ItemTable key | Unavailable | Yes | None. Do not call DPAPI |
-| Linux, libsecret / ciphertext in the same ItemTable key | Unavailable | Yes | None. Do not call secret-tool |
-| Any OS, older Cursor, plaintext JWT already in ItemTable or `storage.json` | Yes, private DashboardService, about 53 weeks | Yes | None. The API is not a public personal-usage contract and can change |
+| macOS Cursor 3.x with encryption-at-rest (`cursor-safe-storage:` in `state.vscdb`) | After `wheretoken cursor connect` and one system prompt for this binary | Yes | Do not edit an ACL. Unsigned upgrades can ask again |
+| Windows, ciphertext in the same ItemTable key | After `wheretoken cursor connect`, using the current user's DPAPI secret | Yes | No extra certificate |
+| Linux, ciphertext in the same ItemTable key | Unavailable | Yes | Connect records the choice and does not call a desktop secret helper |
+| Any OS, older Cursor, plaintext JWT already in ItemTable or `storage.json` | Yes, private DashboardService, about 53 weeks in UTC months | Yes | None. The API is not a public personal-usage contract and can change |
 | No session row | Unavailable (not signed in) | Yes, when bubbles exist | None |
 | User-exported dashboard CSV | Not imported | — | Not a zero-config source. The columns are not a verified stable contract |
 | `api.cursor.com` Admin / Analytics, or a `crsr_` key | Not used for personal usage | — | Team or admin credentials. Not the default install |
 
-DashboardService and the cursor.com dashboard cookie APIs are private. A personal API key cannot read this usage. whereToken does not ship a helper, a private certificate, or a keychain trust entry.
+DashboardService and the cursor.com dashboard cookie APIs are private. A personal API key cannot read this usage. whereToken does not ship a helper, a private certificate, or a trust entry for a system secret tool. Cookie sessions are not uploaded.
 
 ### Token mapping
 
@@ -334,7 +334,7 @@ Local requests and turns are activity counts. They become an account token total
 
 ### Limitations
 
-The API window is about 53 weeks. Request and turn counts are local sessions on this machine. The account API, when it is readable, is one account window and must not be added across devices. A later successful scan of an append-only local log must not drop tokens. A failed or sealed account fetch does not delete a retained observation, does not add that observation on top of local `tokenCount`, and does not present the retained row as a fresh measurement. A narrower new window is still handled by the existing ledger supplement. Encrypted storage is reported, not decrypted.
+The API window is about 53 weeks, fetched by UTC month. Request and turn counts are local sessions on this machine. The account API, when it is readable, is one account and must not be added across devices. A different JWT subject does not merge into an observation already bound on this install. A later successful scan of an append-only local log must not drop tokens. A failed or still-sealed account fetch does not delete a retained observation, does not add that observation on top of local `tokenCount`, and does not present the retained row as a fresh measurement. Finished months replace only those days. Earlier days stay on the observation chain. Encrypted storage is decrypted only after `cursor connect`.
 
 ---
 

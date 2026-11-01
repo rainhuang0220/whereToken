@@ -400,7 +400,7 @@ func TestFetchUsageRejectsPartialFilteredPages(t *testing.T) {
 	}
 }
 
-func TestFetchUsageUsesCompleteAggregatedFallbackAfterPartialFilteredPages(t *testing.T) {
+func TestFetchUsageDoesNotPublishAggregateAfterPartialFilteredPages(t *testing.T) {
 	filteredPages := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -420,11 +420,8 @@ func TestFetchUsageUsesCompleteAggregatedFallbackAfterPartialFilteredPages(t *te
 	t.Cleanup(srv.Close)
 
 	evs, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchUsageWithToken("cursor-root", fakeJWT)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := metric.Aggregate(evs, nil).All.Total(); got != 275 {
-		t.Fatalf("fallback total=%d want complete aggregate 275", got)
+	if err == nil || len(evs) != 0 {
+		t.Fatalf("partial filtered pages must not publish an aggregate total: err=%v events=%d", err, len(evs))
 	}
 }
 

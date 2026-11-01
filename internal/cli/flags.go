@@ -31,6 +31,7 @@ const (
 	CommandSync       = "sync"
 	CommandCard       = "card"
 	CommandProfile    = "profile"
+	CommandCursor     = "cursor"
 )
 
 const (
@@ -57,6 +58,7 @@ type Flags struct {
 	RankPeriod           string
 	NoCommunity          bool
 	CommunityAction      string
+	CursorAction         string
 	NoSync               bool
 	CardPath             string
 	ProfileAction        string
@@ -127,9 +129,15 @@ func Parse(args []string) (Flags, error) {
 	if f.Command == CommandProfile {
 		return finishProfile(&f, fs.Args())
 	}
+	if f.Command == CommandCursor {
+		return finishCursor(&f, fs.Args())
+	}
 	if extra := fs.Args(); len(extra) > 0 {
 		if f.Command == CommandCommunity {
 			return finishCommunity(&f, extra)
+		}
+		if f.Command == CommandCursor {
+			return finishCursor(&f, extra)
 		}
 		if f.Command == CommandProfile {
 			return finishProfile(&f, extra)
@@ -140,6 +148,9 @@ func Parse(args []string) (Flags, error) {
 		}
 		if f.Command == CommandCommunity {
 			return finishCommunity(&f, leftover)
+		}
+		if f.Command == CommandCursor {
+			return finishCursor(&f, leftover)
 		}
 		if f.Command == CommandCompletion {
 			if err := parseCompletionTail(&f, leftover); err != nil {
@@ -223,6 +234,9 @@ func Parse(args []string) (Flags, error) {
 	}
 	if f.Command == CommandCommunity && f.CommunityAction == "" {
 		f.CommunityAction = "status"
+	}
+	if f.Command == CommandCursor && f.CursorAction == "" {
+		f.CursorAction = "status"
 	}
 	return f, nil
 }
@@ -421,10 +435,39 @@ func applyCommandWord(f *Flags, word string) bool {
 		f.Command = CommandCard
 	case "profile":
 		f.Command = CommandProfile
+	case "cursor":
+		f.Command = CommandCursor
 	default:
 		return false
 	}
 	return true
+}
+
+func finishCursor(f *Flags, extra []string) (Flags, error) {
+	if f.CursorAction == "" && len(extra) > 0 && !strings.HasPrefix(extra[0], "-") {
+		switch extra[0] {
+		case "status", "connect", "disconnect":
+			f.CursorAction = extra[0]
+			extra = extra[1:]
+		default:
+			return Flags{}, usageError{msg: fmt.Sprintf("unknown cursor action %q\ntry `wheretoken --help`", extra[0])}
+		}
+	}
+	if f.CursorAction == "" {
+		f.CursorAction = "status"
+	}
+	if len(extra) == 0 {
+		return *f, nil
+	}
+	var tf toolFlags
+	fs := newFlagSet(f, &tf)
+	if err := parseFlagSet(fs, f, extra); err != nil {
+		return Flags{}, err
+	}
+	if leftover := fs.Args(); len(leftover) > 0 {
+		return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q\ntry `wheretoken --help`", leftover[0])}
+	}
+	return *f, nil
 }
 
 func applyTrailingCommand(f *Flags, extra []string) ([]string, error) {

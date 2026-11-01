@@ -234,7 +234,7 @@ whereToken reads usage information from data made available by supported coding 
 | Cursor | Partial | None for local requests. Account tokens only when Cursor already stored a readable JWT |
 | Trae / Trae CN / TRAE SOLO | Partial | Required |
 
-Cursor account tokens need a JWT Cursor has already written into its own database. Current builds seal that session with the operating system's secret store. whereToken then reports account usage unavailable and still reads local requests and turns. It does not read Keychain, DPAPI, or libsecret, and it does not ask for a certificate or an API key. Zero-config Cursor collection is that local request and turn activity. A complete account token total exists only after a full account observation. Rereading `state.vscdb` from the start is the file index mode `full`. A retained observation keeps the earlier account measurement on its own window, separate from local `tokenCount`. Encrypted Trae storage is reported, not decrypted. Cline, Roo Code, and leftover Kilo Code VS Code tasks are read from `ui_messages.json` metrics only; settings and transcripts are skipped.
+Cursor account tokens need a session Cursor has already stored. A plaintext JWT is used directly. A `cursor-safe-storage` envelope stays unread until `wheretoken cursor connect`. That command records the choice and asks the operating system once: macOS through Security.framework in this process, Windows through the account DPAPI secret Cursor already stored. Later scans of the same binary do not ask again. Linux sealed sessions stay unavailable. Disconnect deletes the choice only. The install does not create a certificate and does not grant a helper broad access to Cursor's secret. Zero-config Cursor collection is local requests and turns. A complete account token total exists only after a full filtered observation. Rereading `state.vscdb` from the start is the file index mode `full`. A retained observation keeps the earlier account measurement on its own window, separate from local `tokenCount`. Encrypted Trae storage is reported, not decrypted. Cline, Roo Code, and leftover Kilo Code VS Code tasks are read from `ui_messages.json` metrics only; settings and transcripts are skipped.
 
 When a coding agent does not expose reliable usage information, whereToken reports the data as unavailable rather than treating it as zero. The dashboard labels each agent authoritative, degraded, estimated, or unavailable.
 
@@ -281,7 +281,7 @@ Local analytics stay on this machine. Community Rank runs only when `WHERETOKEN_
 
 Usage information is read from data made available by supported coding agents. Most sources are local application data.
 
-Cursor and Trae may call those applications' own usage APIs only when a readable session is already stored in the application's database. A sealed Cursor session is left sealed. whereToken does not read Keychain, DPAPI, or libsecret, and it does not ask the user to paste a key.
+Cursor and Trae may call those applications' own usage APIs only when a readable session is already stored in the application's database. A sealed Cursor session stays unread unless `wheretoken cursor connect` has recorded an explicit choice. whereToken does not ask the user to paste a key.
 
 ### Credentials
 
