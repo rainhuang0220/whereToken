@@ -15,6 +15,7 @@ import (
 // unsealOS uses CryptUnprotectData on the Cursor Local State key, then
 // AES-GCM. That is the user-account DPAPI secret Electron already stored.
 // It does not add an ACL entry. The caller has already required cursor connect.
+// Experimental: a real Windows DPAPI login has not been accepted.
 func unsealOS(token, dbPath string, _ bool) (string, error) {
 	blob, ok := sealedBlob(token)
 	if !ok {

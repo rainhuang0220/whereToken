@@ -443,6 +443,22 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 	return tx.Commit()
 }
 
+// HasObservation reports whether source has a stored observation.
+// A retained snapshot counts. An empty ledger does not.
+func (l *Ledger) HasObservation(source string) (bool, error) {
+	if source == "" {
+		return false, nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var one int
+	err := l.db.QueryRow(`SELECT 1 FROM api_observations WHERE source=? AND observed_at != '' LIMIT 1`, source).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 // CoveredRanges lists finished filtered windows for source, oldest first.
 // A retained snapshot's first and last day is not one of these windows:
 // days between those endpoints were not given a token total.

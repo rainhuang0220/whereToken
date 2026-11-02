@@ -46,9 +46,12 @@ same binary does not ask again. Disconnect deletes that choice and stops
 later reads. It does not remove an allow the operating system already
 remembered for this binary. Remove that allow in the system keychain UI,
 then run connect again. A zero-config scan still does not read the secret.
-Linux sealed sessions stay unavailable. An unsigned upgrade can ask again.
-A Developer ID build with the same team identifier keeps the grant. Users
-do not create a certificate.
+Linux sealed sessions stay unavailable. Windows sealed unwrap is
+experimental and is not accepted full support. An unsigned upgrade can ask
+again. A Developer ID build with the same team identifier keeps the grant.
+Users do not create a certificate. A Cursor observation stored before an
+account subject was recorded is not claimed by the first account that
+connects.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,

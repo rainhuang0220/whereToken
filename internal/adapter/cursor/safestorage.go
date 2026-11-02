@@ -30,6 +30,7 @@ const (
 	KindSchemaChanged        = "RESPONSE_SCHEMA_CHANGED"
 	KindPaginationIncomplete = "PAGINATION_INCOMPLETE"
 	KindAccountMismatch      = "ACCOUNT_MISMATCH"
+	KindUnboundHistory       = "UNBOUND_HISTORY"
 )
 
 // AccountSubjectMeta is the ledger meta key for the Cursor account that
@@ -51,12 +52,18 @@ var (
 	errSchemaChanged        = usageKind(KindSchemaChanged)
 	errPaginationIncomplete = usageKind(KindPaginationIncomplete)
 	errAccountMismatch      = usageKind(KindAccountMismatch)
+	errUnboundHistory       = usageKind(KindUnboundHistory)
 	errUsagePageLimit       = usageKind("PAGE_LIMIT")
 )
 
 // AccountMismatchError is returned when this install's Cursor subject
 // changes. The text does not include the subject.
 func AccountMismatchError() error { return errAccountMismatch }
+
+// UnboundHistoryError is returned when Cursor observations already exist
+// and this install has not recorded an account subject. The first account
+// seen is not written onto that history. The text does not include the subject.
+func UnboundHistoryError() error { return errUnboundHistory }
 
 // CoverageWindow is one UTC date range whose filtered pages completed.
 // From and To are inclusive calendar days.

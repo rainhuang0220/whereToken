@@ -56,6 +56,9 @@ func (a *App) cursorConnect(home adapter.Home) int {
 	if runtime.GOOS == "linux" {
 		fmt.Fprintln(a.Stderr, "Linux 上的密封会话无法读取。明文 JWT 仍可统计。连接不会把密封会话变成可用账本。")
 	}
+	if runtime.GOOS == "windows" {
+		fmt.Fprintln(a.Stderr, "Windows 上的密封会话解封仍是实验性的，尚未在真实 DPAPI 登录上验收，不能当作已经全面支持。")
+	}
 	if err := cursor.WriteConsent(path); err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
 		return ExitFail

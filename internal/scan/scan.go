@@ -344,15 +344,25 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 		if c.AcceptSubject == nil && lg != nil {
 			bound := lg
 			c.AcceptSubject = func(sub string) error {
-				if sub == "" {
-					return nil
-				}
 				prev, err := bound.Meta(cursor.AccountSubjectMeta)
 				if err != nil {
 					return err
 				}
 				if prev == "" {
+					has, err := bound.HasObservation("cursor")
+					if err != nil {
+						return err
+					}
+					if has {
+						return cursor.UnboundHistoryError()
+					}
+					if sub == "" {
+						return nil
+					}
 					return bound.SetMeta(cursor.AccountSubjectMeta, sub)
+				}
+				if sub == "" {
+					return nil
 				}
 				if prev != sub {
 					return cursor.AccountMismatchError()

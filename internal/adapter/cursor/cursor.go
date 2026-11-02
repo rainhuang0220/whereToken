@@ -120,11 +120,9 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		apiErr = errAccountUsageUnavailable
 	case !a.Offline:
 		if a.AcceptSubject != nil {
-			if sub := JWTSubject(token); sub != "" {
-				if err := a.AcceptSubject(sub); err != nil {
-					apiErr = err
-					break
-				}
+			if err := a.AcceptSubject(JWTSubject(token)); err != nil {
+				apiErr = err
+				break
 			}
 		}
 		if !compatibleRefreshToken(refresh) || refresh == token {

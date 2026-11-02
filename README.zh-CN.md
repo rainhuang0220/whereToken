@@ -228,7 +228,7 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Cursor | 部分 | 本地请求不需要。账号 token 仅在已有可读 JWT 时 |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
-Cursor 的零配置采集是本机 `state.vscdb` 里的请求和回合。账号 token 在 Cursor 已经写入可读 JWT 时会直接请求。会话被封在操作系统密钥里时，默认扫描不读取该密钥，账号用量显示为不可用，请求和回合仍然保留。`wheretoken cursor connect` 记下这一次明确选择：macOS 由本进程向系统申请一次授权，Windows 使用 Cursor 已经保存在当前账户下的 DPAPI 密钥，Linux 的密封会话仍不可用。之后同一份程序的刷新不再询问。`cursor disconnect` 只删除这个选择，之后的扫描不再读取会话。它不会取消系统已经记住的允许。程序不要求用户自己创建证书，也不把系统密钥工具设成长期可读取 Cursor 密钥。把 `state.vscdb` 整份重读是文件索引的 full。沿用的历史观测保留原先的账号测量，单独记录，不与本地 `tokenCount` 相加。Trae 的 token 列需要那些应用在本机已登录。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
+Cursor 的零配置采集是本机 `state.vscdb` 里的请求和回合。账号 token 在 Cursor 已经写入可读 JWT 时会直接请求。会话被封在操作系统密钥里时，默认扫描不读取该密钥，账号用量显示为不可用，请求和回合仍然保留。`wheretoken cursor connect` 记下这一次明确选择：macOS 由本进程向系统申请一次授权。Windows 的密封会话解封使用 Cursor 已经保存在当前账户下的 DPAPI 密钥，这一路径是实验性的，真实 Windows 登录尚未验收，不能当作已经全面支持。未签名升级可能再次询问。Linux 的密封会话仍不可用。之后同一份程序的刷新不再询问。`cursor disconnect` 只删除这个选择，之后的扫描不再读取会话。它不会取消系统已经记住的允许。尚未记录账号主体的历史观测，不会在第一次连接某个账号时被认领、覆盖或合并。程序不要求用户自己创建证书，也不把系统密钥工具设成长期可读取 Cursor 密钥。把 `state.vscdb` 整份重读是文件索引的 full。沿用的历史观测保留原先的账号测量，单独记录，不与本地 `tokenCount` 相加。Trae 的 token 列需要那些应用在本机已登录。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
 
 当某个 coding agent 没有提供可靠的用量信息时，whereToken 会标为不可用，而不是记成零。
 

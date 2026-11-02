@@ -26,6 +26,7 @@ func TestCoveredMonthKeepsEarlierObservationAndBlocksAnotherAccount(t *testing.T
 	home := t.TempDir()
 	writeChainCursorDB(t, home, false)
 	seedChainObservation(t, testhome.New(home))
+	bindCursorSubject(t, testhome.New(home), "test-user")
 
 	when := time.Date(2026, 11, 2, 15, 0, 0, 0, time.UTC)
 	stamp := when.UnixMilli()
@@ -135,6 +136,95 @@ func TestCoveredMonthKeepsEarlierObservationAndBlocksAnotherAccount(t *testing.T
 	}
 }
 
+// An observation stored before any account subject exists must not be
+// given to whichever Cursor account connects first. The synthetic JWTs
+// are not live sessions.
+func TestUnboundObservationIsNotClaimedByTheFirstAccount(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	seedChainObservation(t, testhome.New(home))
+
+	when := time.Date(2026, 11, 2, 15, 0, 0, 0, time.UTC)
+	stamp := when.UnixMilli()
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"win","tokenUsage":{"inputTokens":7,"outputTokens":1,"cacheReadTokens":1,"cacheWriteTokens":1}}]}`, stamp)
+	}))
+	t.Cleanup(srv.Close)
+
+	runAs := func(token string) Result {
+		t.Helper()
+		return Run(testhome.New(home), []adapter.Adapter{cursor.Adapter{
+			HTTP:    srv.Client(),
+			APIBase: srv.URL,
+			Probe:   true,
+			Now:     func() time.Time { return when },
+			Unseal:  func(string) (string, error) { return token, nil },
+		}})
+	}
+	for _, token := range []string{otherJWT, windowJWT} {
+		hits = 0
+		got := runAs(token)
+		joined := strings.Join(got.Errors, "\n")
+		if !strings.Contains(joined, "UNBOUND_HISTORY") || strings.Contains(strings.ToLower(joined), "auth") {
+			t.Fatalf("token subject scan errors=%v", got.Errors)
+		}
+		if strings.Contains(joined, "other-user") || strings.Contains(joined, "test-user") || strings.Contains(joined, "eyJ") {
+			t.Fatalf("error carried account material: %v", got.Errors)
+		}
+		if hits != 0 {
+			t.Fatalf("unbound history reached the API: hits=%d", hits)
+		}
+		for _, e := range got.Events {
+			if e.Source == "cursor" && e.Derivation == event.DeriveProviderAPI {
+				t.Fatalf("unbound history accepted a new account window: %+v", e)
+			}
+		}
+		if tokenSum(got.Events, "cursor") == chainObserved+10 {
+			t.Fatal("the first account was merged onto the unbound observation")
+		}
+	}
+
+	p, err := ledger.PathFor(testhome.New(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	sub, err := lg.Meta(cursor.AccountSubjectMeta)
+	if err != nil || sub != "" {
+		t.Fatalf("subject=%q err=%v", sub, err)
+	}
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok || tokenSum(chained, "cursor") != chainObserved || len(chained) != 1 {
+		t.Fatalf("ok=%v err=%v days=%d sum=%d", ok, err, len(chained), tokenSum(chained, "cursor"))
+	}
+	if chained[0].Timestamp.UTC().Format("2006-01-02") != "2026-10-23" || chained[0].Miss != chainObserved {
+		t.Fatalf("observation changed: %+v", chained[0])
+	}
+}
+
+func bindCursorSubject(t *testing.T, home adapter.Home, sub string) {
+	t.Helper()
+	p, err := ledger.PathFor(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg, err := ledger.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	if err := lg.SetMeta(cursor.AccountSubjectMeta, sub); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestHourlyScanKeepsAnEarlyDayAndSkipsCoveredMonths(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	home := t.TempDir()
@@ -154,6 +244,9 @@ func TestHourlyScanKeepsAnEarlyDayAndSkipsCoveredMonths(t *testing.T) {
 		Derivation: event.DeriveProviderAPI, SkipRequest: true,
 	}
 	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC), []event.UsageEvent{early}); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.SetMeta(cursor.AccountSubjectMeta, "test-user"); err != nil {
 		t.Fatal(err)
 	}
 	lg.Close()
@@ -255,6 +348,9 @@ func TestRetainedSnapshotDoesNotSkipTheBackfill(t *testing.T) {
 		},
 	}
 	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), wide); err != nil {
+		t.Fatal(err)
+	}
+	if err := lg.SetMeta(cursor.AccountSubjectMeta, "test-user"); err != nil {
 		t.Fatal(err)
 	}
 	lg.Close()
