@@ -95,12 +95,19 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 	var apiEvents []event.UsageEvent
 	var apiErr error
 	if token != "" {
-		opened, oerr := a.openSealed(token, path)
-		if oerr != nil {
-			apiErr = oerr
+		if a.Offline && strings.HasPrefix(token, sealedStoragePrefix) {
+			// Offline must never read the OS Keychain or prompt for a sealed
+			// session just to render local/retained data.
+			apiErr = errAccountUsageUnavailable
 			token = ""
 		} else {
-			token = opened
+			opened, oerr := a.openSealed(token, path)
+			if oerr != nil {
+				apiErr = oerr
+				token = ""
+			} else {
+				token = opened
+			}
 		}
 	}
 	if refresh != "" {
