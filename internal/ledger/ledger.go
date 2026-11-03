@@ -87,6 +87,7 @@ type Ledger struct {
 	path               string
 	mu                 sync.Mutex
 	beforeImportCommit func() error
+	beforeMetaCommit   func() error
 }
 
 // PathFor is the ledger file for home. It is not under the scan cache
@@ -319,6 +320,32 @@ func (l *Ledger) Import(events []event.UsageEvent, gaps int) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// Meta reads one ledger meta value. A missing key is an empty string.
+func (l *Ledger) Meta(key string) (string, error) {
+	if key == "" {
+		return "", nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var v string
+	err := l.db.QueryRow(`SELECT value FROM meta WHERE key=?`, key).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
+// SetMeta writes one ledger meta value. The caller must not pass a secret.
+func (l *Ledger) SetMeta(key, value string) error {
+	if key == "" {
+		return errors.New("ledger meta rejected")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, err := l.db.Exec(`INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, key, value)
+	return err
 }
 
 // Imported reports whether the one-time cache import has committed.

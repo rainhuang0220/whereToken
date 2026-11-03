@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,37 +36,249 @@ func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.
 	events, err := a.fetchUsageWithToken(sourceRoot, token)
 	if err != nil && adapter.IsUnauthorized(err) && compatibleRefreshToken(refresh) && refresh != access {
 		next, rerr := a.refreshAccessToken(refresh)
-		if rerr != nil {
+		if rerr != nil || !usableSessionToken(next) {
+			if len(events) > 0 {
+				return events, errExpiredAuth
+			}
 			return nil, errExpiredAuth
 		}
-		if !usableSessionToken(next) {
-			return nil, errExpiredAuth
+		retried, rerr := a.fetchUsageWithToken(sourceRoot, next)
+		if rerr != nil && len(retried) == 0 && len(events) > 0 {
+			return events, rerr
 		}
-		token = next
-		events, err = a.fetchUsageWithToken(sourceRoot, token)
+		return retried, rerr
 	}
 	return events, err
 }
 
+type usageSpan struct {
+	start, end time.Time
+	inclusive  bool
+}
+
+func (s usageSpan) coverage() CoverageWindow {
+	end := s.end.UTC()
+	if !s.inclusive {
+		end = end.Add(-time.Millisecond)
+	}
+	return CoverageWindow{
+		From: s.start.UTC().Format("2006-01-02"),
+		To:   end.Format("2006-01-02"),
+	}
+}
+
+func (a Adapter) usageWindows() []usageSpan {
+	return a.uncoveredWindows(a.allUsageWindows())
+}
+
+func (a Adapter) allUsageWindows() []usageSpan {
+	now := a.now().UTC()
+	if a.Probe {
+		start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		if !start.Before(now) {
+			start = now
+		}
+		return []usageSpan{{start: start, end: now, inclusive: true}}
+	}
+	earliest := now.AddDate(0, 0, -53*7)
+	cur := time.Date(earliest.Year(), earliest.Month(), 1, 0, 0, 0, 0, time.UTC)
+	var out []usageSpan
+	for cur.Before(now) {
+		next := cur.AddDate(0, 1, 0)
+		start := cur
+		if start.Before(earliest) {
+			start = earliest
+		}
+		if !start.Before(now) {
+			break
+		}
+		if next.After(now) {
+			out = append(out, usageSpan{start: start, end: now, inclusive: true})
+		} else {
+			out = append(out, usageSpan{start: start, end: next, inclusive: false})
+		}
+		cur = next
+	}
+	if len(out) == 0 {
+		out = append(out, usageSpan{start: earliest, end: now, inclusive: true})
+	}
+	return out
+}
+
+// uncoveredWindows keeps a gap and the two newest months. A month already
+// stored whole is left on the ledger. The open month and the one before it
+// are fetched again so the current day and the boundary stay current.
+func (a Adapter) uncoveredWindows(all []usageSpan) []usageSpan {
+	if len(a.Covered) == 0 || len(all) == 0 {
+		return all
+	}
+	var out []usageSpan
+	for i, w := range all {
+		if i >= len(all)-2 || !windowCovered(w.coverage(), a.Covered) {
+			out = append(out, w)
+		}
+	}
+	if len(out) == 0 {
+		out = append(out, all[len(all)-1])
+	}
+	return out
+}
+
+func windowCovered(w CoverageWindow, covered []CoverageWindow) bool {
+	if w.From == "" || w.To == "" {
+		return false
+	}
+	for _, c := range covered {
+		if c.From != "" && c.To != "" && c.From <= w.From && c.To >= w.To {
+			return true
+		}
+	}
+	return false
+}
+
 func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEvent, error) {
-	now := a.now()
-	start := now.AddDate(0, 0, -53*7).UnixMilli()
-	end := now.UnixMilli()
+	clearCoverage(sourceRoot)
+	all := a.allUsageWindows()
+	windows := a.uncoveredWindows(all)
+	if len(all) > 0 {
+		setLookback(sourceRoot, CoverageWindow{
+			From: all[0].coverage().From,
+			To:   all[len(all)-1].coverage().To,
+		})
+	}
+	seen := map[string]struct{}{}
+	var out []event.UsageEvent
+	var covered []CoverageWindow
+	missing := 0
+	var failed error
+	for _, w := range windows {
+		got, err := a.fetchFilteredWindow(token, w, 0)
+		if err == nil {
+			var added []event.UsageEvent
+			out, added = dedupeUsage(out, seen, got.events)
+			cov := w.coverage()
+			cov.Audit = auditWindow(cov, got.declared, got.raw, added, w.inclusive && cov.To == a.now().UTC().Format("2006-01-02"))
+			covered = append(covered, cov)
+			continue
+		}
+		if isNotFound(err) {
+			missing++
+			continue
+		}
+		failed = err
+		break
+	}
+	if len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+		start := windows[0].start.UnixMilli()
+		end := windows[len(windows)-1].end.UnixMilli()
+		agg, aerr := a.fetchAggregated(token, start, end)
+		if aerr != nil || len(agg) == 0 {
+			if aerr != nil {
+				return nil, aerr
+			}
+			return nil, errEndpointUnavailable
+		}
+		return tagged(sourceRoot, agg), nil
+	}
+	if len(covered) > 0 {
+		setCoverage(sourceRoot, covered)
+	}
+	if failed != nil {
+		if len(out) == 0 {
+			return nil, failed
+		}
+		// Successful months stay. The whole lookback is not a finished span.
+		return tagged(sourceRoot, degradeAPI(out)), failed
+	}
+	if missing > 0 && len(covered) > 0 {
+		if len(out) == 0 {
+			return nil, errEndpointUnavailable
+		}
+		return tagged(sourceRoot, degradeAPI(out)), errEndpointUnavailable
+	}
+	if len(covered) == len(windows) && len(out) == 0 {
+		return tagged(sourceRoot, completeAccountUsage(nil, a.now())), nil
+	}
+	return tagged(sourceRoot, out), nil
+}
 
-	filtered, ferr := a.fetchFiltered(token, start, end)
-	if ferr == nil {
-		return tagged(sourceRoot, completeAccountUsage(filtered, now)), nil
-	}
-	if stopAccountFallback(ferr) {
-		return nil, ferr
-	}
+type filteredFetch struct {
+	events        []event.UsageEvent
+	declared, raw int
+}
 
-	agg, aerr := a.fetchAggregated(token, start, end)
-	if aerr != nil || len(agg) == 0 {
-		// An empty fallback is not a measured zero. The filtered failure stands.
-		return nil, ferr
+func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filteredFetch, error) {
+	endMs := w.end.UnixMilli()
+	if !w.inclusive && endMs > w.start.UnixMilli() {
+		endMs--
 	}
-	return tagged(sourceRoot, agg), nil
+	got, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
+	if err == nil || err != errUsagePageLimit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
+		if err == errUsagePageLimit && (depth >= 6 || w.end.Sub(w.start) < time.Hour) {
+			return filteredFetch{}, errPaginationIncomplete
+		}
+		return got, err
+	}
+	mid := w.start.Add(w.end.Sub(w.start) / 2)
+	left, lerr := a.fetchFilteredWindow(token, usageSpan{start: w.start, end: mid, inclusive: false}, depth+1)
+	if lerr != nil {
+		return filteredFetch{}, lerr
+	}
+	right, rerr := a.fetchFilteredWindow(token, usageSpan{start: mid, end: w.end, inclusive: w.inclusive}, depth+1)
+	if rerr != nil {
+		return filteredFetch{}, rerr
+	}
+	left.events = append(left.events, right.events...)
+	left.declared += right.declared
+	left.raw += right.raw
+	return left, nil
+}
+
+func dedupeUsage(dst []event.UsageEvent, seen map[string]struct{}, add []event.UsageEvent) (out, added []event.UsageEvent) {
+	for _, e := range add {
+		if e.RequestID != "" {
+			if _, ok := seen[e.RequestID]; ok {
+				continue
+			}
+			seen[e.RequestID] = struct{}{}
+		}
+		added = append(added, e)
+		dst = append(dst, e)
+	}
+	return dst, added
+}
+
+func auditWindow(cov CoverageWindow, declared, raw int, kept []event.UsageEvent, open bool) WindowAudit {
+	audit := WindowAudit{
+		From: cov.From, To: cov.To,
+		Declared: declared, RawRows: raw, Deduped: len(kept),
+		Validation: "ok",
+	}
+	if open {
+		audit.Validation = "open"
+	}
+	days := map[string]struct{}{}
+	for _, e := range kept {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		day := e.Timestamp.UTC().Format("2006-01-02")
+		if day < cov.From || day > cov.To {
+			continue
+		}
+		days[day] = struct{}{}
+		audit.Miss += e.Miss
+		audit.CacheRead += e.CacheRead
+		audit.CacheCreate += e.CacheCreate
+		audit.Output += e.Output
+	}
+	audit.Days = len(days)
+	return audit
+}
+
+func isNotFound(err error) bool {
+	es, ok := err.(adapter.ErrStatus)
+	return ok && es.Code == http.StatusNotFound
 }
 
 func stopAccountFallback(err error) bool {
@@ -102,50 +315,69 @@ func tagged(sourceRoot string, events []event.UsageEvent) []event.UsageEvent {
 	return events
 }
 
-func (a Adapter) fetchFiltered(token string, start, end int64) ([]event.UsageEvent, error) {
-	var out []event.UsageEvent
-	var total, rawSeen int
-	pageSize := usagePageSize
-	for page := 1; page <= maxUsagePages; page++ {
+func (a Adapter) pageSize() int {
+	if a.PageSize > 0 {
+		return a.PageSize
+	}
+	return usagePageSize
+}
+
+func (a Adapter) pageCap() int {
+	if a.PageCap > 0 {
+		return a.PageCap
+	}
+	return maxUsagePages
+}
+
+func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, error) {
+	var out filteredFetch
+	var total int
+	full := a.pageSize()
+	pageSize := full
+	for page := 1; page <= a.pageCap(); page++ {
 		body := map[string]any{
 			"teamId":    0,
 			"startDate": start,
 			"endDate":   end,
 			"page":      page,
-			"pageSize":  usagePageSize,
+			"pageSize":  full,
 		}
 		raw, err := a.postJSON(filteredRPC, token, body)
 		if err != nil {
-			return nil, err
+			return filteredFetch{}, err
 		}
 		pageEvents, rawN, pageTotal, known, err := parseFiltered(raw)
 		if err != nil {
-			return nil, err
+			return filteredFetch{}, err
 		}
 		if !known {
-			return nil, fmt.Errorf("账号用量接口没有给出完整条数")
+			return filteredFetch{}, errSchemaChanged
 		}
 		if page == 1 {
 			total = pageTotal
-			if rawN > 0 && rawN < usagePageSize {
+			if rawN > 0 && rawN < full {
 				pageSize = rawN
 			}
 		} else if pageTotal != total {
-			return nil, fmt.Errorf("账号用量分页不一致")
+			return filteredFetch{}, errSchemaChanged
 		}
-		if rawSeen+rawN > total {
-			return nil, fmt.Errorf("账号用量条数超出接口声明")
+		if out.raw+rawN > total {
+			return filteredFetch{}, errSchemaChanged
 		}
-		out = append(out, pageEvents...)
-		rawSeen += rawN
-		if rawSeen == total {
+		out.events = append(out.events, pageEvents...)
+		out.raw += rawN
+		out.declared = total
+		if out.raw == total {
 			return out, nil
 		}
 		if rawN == 0 || rawN < pageSize {
-			return nil, fmt.Errorf("账号用量分页不完整")
+			return filteredFetch{}, errPaginationIncomplete
 		}
 	}
-	return nil, fmt.Errorf("只拉了前 %d 页账号用量", maxUsagePages)
+	if pageSize < full {
+		return filteredFetch{}, errPaginationIncomplete
+	}
+	return filteredFetch{}, errUsagePageLimit
 }
 
 func (a Adapter) fetchAggregated(token string, start, end int64) ([]event.UsageEvent, error) {
@@ -188,6 +420,10 @@ func (a Adapter) refreshAccessToken(refresh string) (string, error) {
 }
 
 func (a Adapter) postJSON(path, token string, payload any) ([]byte, error) {
+	return a.postJSONOnce(path, token, payload, true)
+}
+
+func (a Adapter) postJSONOnce(path, token string, payload any, retry bool) ([]byte, error) {
 	base := a.apiBase()
 	u, err := url.Parse(base + path)
 	if err != nil {
@@ -207,7 +443,7 @@ func (a Adapter) postJSON(path, token string, payload any) ([]byte, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connect-Protocol-Version", "1")
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Authorization", "Bearer "+normalizeStoredSession(token))
 	}
 	resp, err := a.client().Do(req)
 	if err != nil {
@@ -215,6 +451,15 @@ func (a Adapter) postJSON(path, token string, payload any) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	raw, _ := adapter.ReadHTTPBody(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		if retry {
+			if d, ok := retryAfterWait(resp.Header); ok {
+				time.Sleep(d)
+				return a.postJSONOnce(path, token, payload, false)
+			}
+		}
+		return nil, adapter.ErrStatus{Code: resp.StatusCode}
+	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
@@ -225,6 +470,27 @@ func (a Adapter) postJSON(path, token string, payload any) ([]byte, error) {
 		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	return raw, nil
+}
+
+func retryAfterWait(h http.Header) (time.Duration, bool) {
+	v := strings.TrimSpace(h.Get("Retry-After"))
+	if v == "" {
+		return 0, false
+	}
+	if n, err := strconv.Atoi(v); err == nil {
+		d := time.Duration(n) * time.Second
+		if d >= time.Millisecond && d <= 2*time.Second {
+			return d, true
+		}
+		return 0, false
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		d := time.Until(t)
+		if d >= time.Millisecond && d <= 2*time.Second {
+			return d, true
+		}
+	}
+	return 0, false
 }
 
 func (a Adapter) client() *http.Client {
@@ -355,6 +621,15 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 		Derivation:  event.DeriveProviderAPI,
 		SkipRequest: true,
 	}
+}
+
+func degradeAPI(events []event.UsageEvent) []event.UsageEvent {
+	for i := range events {
+		if events[i].Derivation == event.DeriveProviderAPI {
+			events[i].Quality = event.QualityDegraded
+		}
+	}
+	return events
 }
 
 func hasAccountUsage(events []event.UsageEvent) bool {

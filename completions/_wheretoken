@@ -3,7 +3,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|cursor|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -66,6 +66,13 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[rank server port]:port:' \
         '1:action:(status on off serve)'
+      ;;
+    cursor)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--home[fake home]:dir:_files -/' \
+        '1:action:(status connect disconnect)'
       ;;
     update|upgrade|uninstall)
       _arguments -s \
@@ -152,7 +159,7 @@ _wheretoken() {
         '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile cursor help version)'
       ;;
   esac
 }

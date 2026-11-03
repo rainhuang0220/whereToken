@@ -145,7 +145,7 @@ guarantee for every row.
 | OpenCode | `tokens.cache.write` | Cache Create | raw | authoritative | |
 | OpenCode | `tokens.output + tokens.reasoning` | Output | derived | authoritative | |
 | OpenCode | `tokens.reasoning` | Reasoning | raw | authoritative | Also included in Output. |
-| Cursor | API `inputTokens` | Miss | provider_api | authoritative | DashboardService, and only when the local session is already a JWT. A sealed session does not call the API. Local bubbles supply requests/turns, not this column, when a complete API response has totals. |
+| Cursor | API `inputTokens` | Miss | provider_api | authoritative | DashboardService `GetFilteredUsageEvents`, when the local session is a JWT or `wheretoken cursor connect` has unsealed it. A sealed session without that choice does not call the API. Local bubbles supply requests/turns, not this column, when a complete API response has totals. |
 | Cursor | API `cacheReadTokens` | Cache Read | provider_api | authoritative | |
 | Cursor | API `cacheWriteTokens` | Cache Create | provider_api | authoritative | |
 | Cursor | API `outputTokens` | Output | provider_api | authoritative | Reasoning is not a second output charge. |

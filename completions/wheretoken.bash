@@ -4,7 +4,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|cursor|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -17,13 +17,14 @@ _wheretoken() {
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
+    cursor) opts="status connect disconnect --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
     profile) opts="build validate palette publish refresh status on off watch cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --dry-run --yes --product --profile-repo --pages --checkout --quiet -q --offline --home --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile cursor help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }

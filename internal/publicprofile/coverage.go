@@ -106,16 +106,15 @@ func publicID(raw string, asSource bool) string {
 }
 
 func tokenWindowOf(id string, in Input, loc *time.Location) *DateRange {
-	if id == "cursor" && hasFreshAccountAPI(id, in.Events) && !hasRetainedAccount(id, in.Events) {
+	if id == "cursor" && hasFreshAccountAPI(id, in.Events) && !hasRetainedAccount(id, in.Events) && sourceError(id, in.Errors) == "" {
 		now := in.Now
 		if now.IsZero() {
 			now = time.Now()
 		}
-		if loc == nil {
-			loc = time.UTC
-		}
-		from := now.In(loc).AddDate(0, 0, -53*7).Format("2006-01-02")
-		return &DateRange{From: &from, To: now.In(loc).Format("2006-01-02"), Label: "53w account usage"}
+		// The fetch splits UTC months. The label uses the same clock.
+		from := now.UTC().AddDate(0, 0, -53*7).Format("2006-01-02")
+		to := now.UTC().Format("2006-01-02")
+		return &DateRange{From: &from, To: to, Label: "53w account usage"}
 	}
 	var from, to string
 	for _, e := range in.Events {
@@ -167,6 +166,11 @@ func tokenReason(id string, in Input) string {
 	// The fresh-fetch error must not relabel that reuse as api_failed:
 	// api_failed is an unmeasured provider and would hide every other agent.
 	if hasRetainedAccount(id, in.Events) && !hasFreshAccountAPI(id, in.Events) {
+		return ""
+	}
+	// A finished month can stand beside a failed month. The slice is partial.
+	// api_failed is reserved for a provider that returned no account events.
+	if hasFreshAccountAPI(id, in.Events) && sourceError(id, in.Errors) != "" {
 		return ""
 	}
 	if in.Offline && cloudSource(id) {

@@ -43,7 +43,7 @@ _wheretoken() {
   local cmd="" i
   for ((i=1; i<COMP_CWORD; i++)); do
     case "${COMP_WORDS[i]}" in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd="${COMP_WORDS[i]}" ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|cursor|help|version) cmd="${COMP_WORDS[i]}" ;;
     esac
   done
   local opts
@@ -56,13 +56,14 @@ _wheretoken() {
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
+    cursor) opts="status connect disconnect --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
     logout|sync) opts="--quiet -q --offline --home --help" ;;
     card) opts="--quiet -q --offline --home --help --version" ;;
     profile) opts="build validate palette publish refresh status on off watch cobalt magenta newsprint --include-models --include-cost --public-palette --production --allow-partial --dry-run --yes --product --profile-repo --pages --checkout --quiet -q --offline --home --help" ;;
-    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
+    *) opts="serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile cursor help version --help --version --json --today --since --from --to --ascii --no-color --quiet -q --offline --rank --no-community --tool --vendor --model --claude --kimi --grok --minimax --openclaw --codex --opencode --cursor --trae --home --port --width" ;;
   esac
   COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
 }
@@ -74,7 +75,7 @@ _wheretoken() {
   local cmd w
   for w in $words; do
     case $w in
-      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|help|version) cmd=$w ;;
+      serve|scan|sources|doctor|rebuild|update|upgrade|uninstall|community|pricing|login|logout|sync|completion|card|profile|cursor|help|version) cmd=$w ;;
     esac
   done
   case $cmd in
@@ -137,6 +138,13 @@ _wheretoken() {
         '--home[fake home]:dir:_files -/' \
         '--port[rank server port]:port:' \
         '1:action:(status on off serve)'
+      ;;
+    cursor)
+      _arguments -s \
+        '(-h --help)'{-h,--help}'[help]' \
+        '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
+        '--home[fake home]:dir:_files -/' \
+        '1:action:(status connect disconnect)'
       ;;
     update|upgrade|uninstall)
       _arguments -s \
@@ -223,7 +231,7 @@ _wheretoken() {
         '--no-sync[skip initial hosted sync after login]' \
         '--port[serve port]:port:' \
         '--width[table width]:cols:' \
-        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version)'
+        '1:command:(serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile cursor help version)'
       ;;
   esac
 }
@@ -231,7 +239,7 @@ _wheretoken "$@"
 `
 
 const fishCompletion = `complete -c wheretoken -f
-complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile help version"
+complete -c wheretoken -n "__fish_use_subcommand" -a "serve scan sources doctor rebuild update uninstall community pricing login logout sync completion card profile cursor help version"
 complete -c wheretoken -l help -s h
 complete -c wheretoken -l version -s V
 complete -c wheretoken -l json
@@ -254,6 +262,7 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community pricing completion card" -l rank -r -a "today all"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion card" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
+complete -c wheretoken -n "__fish_seen_subcommand_from cursor" -a "status connect disconnect"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
@@ -287,6 +296,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
       'upgrade' { $cmd = $t }
       'uninstall' { $cmd = $t }
       'community' { $cmd = $t }
+      'cursor' { $cmd = $t }
       'pricing' { $cmd = $t }
       'login' { $cmd = $t }
       'logout' { $cmd = $t }
@@ -308,12 +318,13 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
+    'cursor' { @('status','connect','disconnect','--quiet','--home','--help') }
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }
     'profile' { @('build','validate','palette','publish','refresh','status','on','off','watch','cobalt','magenta','newsprint','--include-models','--include-cost','--public-palette','--production','--allow-partial','--quiet','--offline','--home','--help') }
     'login' { @('--no-sync','--quiet','--offline','--home','--help') }
-    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','profile','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
+    default { @('serve','scan','sources','doctor','rebuild','update','uninstall','community','pricing','login','logout','sync','completion','card','profile','cursor','help','version','--help','--version','--json','--today','--since','--from','--to','--ascii','--no-color','--quiet','--offline','--rank','--no-community','--tool','--vendor','--model','--claude','--kimi','--grok','--minimax','--openclaw','--codex','--opencode','--cursor','--trae','--home','--port','--width') }
   }
   $cmds | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
     [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)

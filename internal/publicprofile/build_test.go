@@ -478,6 +478,32 @@ func TestAccountAPIFailureMarksLocalCloudTokensPartialAndBlocksProduction(t *tes
 	}
 }
 
+func TestIncompleteCursorWindowStaysPartial(t *testing.T) {
+	loc := shanghai()
+	now := time.Date(2026, 11, 1, 15, 0, 0, 0, time.UTC)
+	fresh := ev("cursor", "anthropic", now.Add(-time.Hour), 7, 1, 1)
+	fresh.Derivation = event.DeriveProviderAPI
+	fresh.Quality = event.QualityDegraded
+	fresh.SkipRequest = true
+	snap, err := Build(Input{
+		Events: []event.UsageEvent{fresh}, Now: now, Loc: loc,
+		Errors: []string{"cursor: 账号用量不可用：PAGINATION_INCOMPLETE"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := snap.Periods.All.ByAgent[0]
+	if row.Coverage.Tokens != StatusPartial || row.Coverage.Reason != "" {
+		t.Fatalf("coverage=%+v", row.Coverage)
+	}
+	if row.Coverage.TokenWindow == nil || row.Coverage.TokenWindow.Label == "53w account usage" {
+		t.Fatalf("window=%+v", row.Coverage.TokenWindow)
+	}
+	if snap.DataStatus != StatusPartial {
+		t.Fatalf("data_status=%q", snap.DataStatus)
+	}
+}
+
 func TestProductionGateKeepsLowRankCloudSourceVisible(t *testing.T) {
 	loc := shanghai()
 	now := time.Date(2026, 9, 14, 12, 0, 0, 0, loc)

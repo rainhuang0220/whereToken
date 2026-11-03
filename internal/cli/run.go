@@ -34,23 +34,27 @@ const PublicSiteURL = "https://rainhuang0220.github.io/whereToken/"
 const HostedWebURL = "https://wheretoken.plainlist.space"
 
 type App struct {
-	Args       []string
-	Stdout     io.Writer
-	Stderr     io.Writer
-	Version    string
-	Now        func() time.Time
-	Loc        *time.Location
-	LookupEnv  func(string) string
-	Scan       func(adapter.Home) scan.Result
-	Home       adapter.Home
-	Serve      func(addr string, home adapter.Home, offline bool) error
-	Executable func() (string, error)
-	HTTPGet    func(url string) ([]byte, error)
-	HTTPDo     func(req *http.Request) (*http.Response, error)
-	OpenURL    func(string) error
-	Sleep      func(time.Duration)
-	Creds      credstore.Store
-	RunCmd     func(name string, args ...string) error
+	Args   []string
+	Stdout io.Writer
+	Stderr io.Writer
+	Stdin  io.Reader
+	// StdinInteractive reports whether cursor connect may read one history
+	// answer. Nil means a real terminal. A piped command does not answer yes.
+	StdinInteractive func() bool
+	Version          string
+	Now              func() time.Time
+	Loc              *time.Location
+	LookupEnv        func(string) string
+	Scan             func(adapter.Home) scan.Result
+	Home             adapter.Home
+	Serve            func(addr string, home adapter.Home, offline bool) error
+	Executable       func() (string, error)
+	HTTPGet          func(url string) ([]byte, error)
+	HTTPDo           func(req *http.Request) (*http.Response, error)
+	OpenURL          func(string) error
+	Sleep            func(time.Duration)
+	Creds            credstore.Store
+	RunCmd           func(name string, args ...string) error
 	// RunCmdOutput is the stdout-capable command seam. Profile refresh
 	// uses it for launchctl so unit tests never spawn a real launchctl.
 	// When it is nil and RunCmd is set, RunCmd runs and stdout is empty.
@@ -164,6 +168,8 @@ func (a *App) Run() int {
 		return a.runCard(flags, home)
 	case CommandProfile:
 		return a.runProfile(flags, home)
+	case CommandCursor:
+		return a.runCursor(flags, home)
 	default:
 		return a.runReport(flags, home)
 	}

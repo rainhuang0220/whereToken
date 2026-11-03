@@ -350,7 +350,7 @@ func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageE
 		if !publicprofile.AccountFetchFailed(events, errs, source) {
 			continue
 		}
-		got, ok, err := lg.LatestRetainedEvents(source)
+		got, ok, err := lg.ChainedRetainedEvents(source)
 		if err == nil && ok {
 			events = publicprofile.ApplyRetainedEvents(events, got)
 			changed = true
@@ -370,7 +370,7 @@ func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageE
 		if err := lg.SaveObservation(source, "verified_snapshot", "retained", observed, publicprofile.EventsFromDays(source, days)); err != nil {
 			continue
 		}
-		got, ok, err = lg.LatestRetainedEvents(source)
+		got, ok, err = lg.ChainedRetainedEvents(source)
 		if err != nil || !ok {
 			continue
 		}

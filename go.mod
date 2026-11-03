@@ -5,6 +5,7 @@ go 1.25.0
 toolchain go1.26.10
 
 require (
+	github.com/ebitengine/purego v0.8.4
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/mattn/go-isatty v0.0.24
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3

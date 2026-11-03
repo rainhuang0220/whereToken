@@ -12,6 +12,7 @@ USAGE
   wheretoken [flags] update      replace this binary with the latest GitHub Release
   wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] community [status|on|off|serve]
+  wheretoken [flags] cursor [status|connect|disconnect]
   wheretoken [flags] pricing     built-in model price card with official sources
   wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
   wheretoken [flags] login [--no-sync]  pair this device, then sync aggregated usage
@@ -38,6 +39,22 @@ INSTALL
 No npm package. GitHub Release binaries are unsigned.
 go install and brew --HEAD embed the CLI table; the kiln dashboard is in
 GitHub Release and brew tap rainhuang0220/wheretoken.
+
+wheretoken cursor connect records one explicit choice to read the operating
+system's protected Cursor session, then may ask once. A later scan of that
+same binary does not ask again. Disconnect deletes that choice and stops
+later reads. It does not remove an allow the operating system already
+remembered for this binary. Remove that allow in the system keychain UI,
+then run connect again. A zero-config scan still does not read the secret.
+Linux sealed sessions stay unavailable. Windows sealed unwrap is
+experimental and is not accepted full support. An unsigned upgrade can ask
+again. A Developer ID build with the same team identifier keeps the grant.
+Users do not create a certificate. A Cursor observation stored before an
+account subject was recorded is not claimed by the first account that
+connects. In a terminal, cursor connect shows that history and asks once.
+yes binds it and continues the filtered collection. no keeps the old
+history separate from later observations for the current account. A
+normal scan still does not claim it and does not ask.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,

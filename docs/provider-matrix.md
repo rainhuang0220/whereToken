@@ -23,7 +23,7 @@ Finding `~/.tool` is **discovery**, not usage.
 | OpenClaw | A | session JSONL + reset/deleted | yes | no | no | no | yes | Never agent/*.sqlite |
 | OpenCode | A | `opencode.db` message tokens | yes | no | no | no | replay | Skip account tables |
 | Codex | A | `~/.codex/sessions/**/rollout-*.jsonl` | yes | no | no | no | replay | Skip auth.json |
-| Cursor | B/C | `state.vscdb` bubbles; DashboardService only when a JWT is already stored | yes | no | JWT only | readable JWT | no | Sealed `cursor-safe-storage`, DPAPI, and libsecret are unavailable. No keychain, no pasted key. Private API, ~53-week window |
+| Cursor | B/C | `state.vscdb` bubbles; DashboardService after a plaintext JWT or `cursor connect` | yes | no | JWT only | JWT, or one OS prompt after connect | no | Default scan does not open a sealed session and does not claim an unbound history. `cursor connect` asks before binding that history, then uses Security.framework on macOS. Windows DPAPI unwrap is experimental and is not full support. Linux sealed stays unavailable. Private API, filtered by UTC month, ~53-week window |
 | Trae | B/C | session usage API | yes* | no | yes | yes | no | CN credits → empty_result = unavailable |
 | Gemini CLI | A | `~/.gemini/tmp/*/chats/session-*` | yes | no | no | no | yes | Official `TokensSummary`; skip oauth |
 | Qwen Code | A | `~/.qwen/usage/token-usage-*.jsonl` | yes | no | no | no | yes | Dedicated ledger; no prompts |
