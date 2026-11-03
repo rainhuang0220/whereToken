@@ -152,8 +152,55 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	var covered []CoverageWindow
 	missing := 0
 	var failed error
+	useBilling := false
+	var protectFrom time.Time
+	if a.ProtectedThrough != "" {
+		if last, err := time.Parse("2006-01-02", a.ProtectedThrough); err == nil {
+			protectFrom = last.AddDate(0, 0, 1)
+		}
+	}
 	for _, w := range windows {
-		got, err := a.fetchFilteredWindow(token, w, 0)
+		var got filteredFetch
+		var err error
+		if useBilling {
+			if !protectFrom.IsZero() {
+				if !w.end.After(protectFrom) {
+					// Older dates are intentionally sourced from a retained
+					// verified snapshot, not a failed remote window.
+					continue
+				}
+				if w.start.Before(protectFrom) {
+					w.start = protectFrom
+				}
+			}
+			got, err = a.fetchBillingWindow(token, w)
+		} else {
+			got, err = a.fetchFilteredWindow(token, w, 0)
+			if errors.Is(err, errSchemaChanged) {
+				// The legacy personal endpoint can return HTTP 200 {} even
+				// for active users. Only fall back on a verified schema
+				// failure, never on 401/403/rate limits/network errors.
+				useBilling = true
+				if !protectFrom.IsZero() {
+					if !w.end.After(protectFrom) {
+						// Historical snapshot has priority over the new
+						// endpoint's unknown retention window.
+						continue
+					}
+					if w.start.Before(protectFrom) {
+						w.start = protectFrom
+					}
+				}
+				got, err = a.fetchBillingWindow(token, w)
+			}
+		}
+		if err == nil && useBilling && len(got.events) == 0 {
+			// Cursor does not document the personal billing endpoint's
+			// historical retention. An empty month is not enough to
+			// delete verified older observations.
+			missing++
+			continue
+		}
 		if err == nil {
 			var added []event.UsageEvent
 			out, added = dedupeUsage(out, seen, got.events)
@@ -162,7 +209,9 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			covered = append(covered, cov)
 			continue
 		}
-		if isNotFound(err) {
+		if isNotFound(err) || (useBilling && errors.Is(err, errBillingAvailability)) {
+			// A billing availability-only envelope is not usage data. Leave
+			// this month unknown and continue to newer months.
 			missing++
 			continue
 		}
@@ -196,7 +245,10 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		// Successful months stay. The whole lookback is not a finished span.
 		return tagged(sourceRoot, degradeAPI(out)), failed
 	}
-	if missing > 0 && len(covered) > 0 {
+	if missing > 0 {
+		// A protected historical prefix is intentionally skipped. Real
+		// unavailable requested months still mean incomplete coverage,
+		// even when none of those months produced usable rows.
 		if len(out) == 0 {
 			return nil, errEndpointUnavailable
 		}

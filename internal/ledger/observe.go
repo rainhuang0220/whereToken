@@ -459,6 +459,19 @@ func (l *Ledger) HasObservation(source string) (bool, error) {
 	return err == nil, err
 }
 
+// VerifiedSnapshotLastDay protects the last day of a historical snapshot
+// from being overwritten by a differently scoped billing API. The snapshot
+// may contain missing days, so its start..end is NOT complete API coverage.
+func (l *Ledger) VerifiedSnapshotLastDay(source string) (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var last string
+	err := l.db.QueryRow(`SELECT COALESCE(MAX(d.day), '') FROM api_observation_days d
+   JOIN api_observations o ON o.source=d.source AND o.payload_hash=d.payload_hash
+   WHERE o.source=? AND o.origin='verified_snapshot' AND o.coverage='retained'`, source).Scan(&last)
+	return last, err
+}
+
 // CoveredRanges lists finished filtered windows for source, oldest first.
 // A retained snapshot's first and last day is not one of these windows:
 // days between those endpoints were not given a token total.

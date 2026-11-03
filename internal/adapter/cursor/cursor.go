@@ -22,18 +22,19 @@ import (
 const thinkingCapability = 30
 
 type Adapter struct {
-	HTTP          *http.Client
-	APIBase       string
-	Now           func() time.Time
-	Offline       bool
-	ConsentPath   string
-	AllowPrompt   bool
-	Probe         bool
-	PageSize      int
-	PageCap       int
-	Covered       []CoverageWindow
-	Unseal        func(string) (string, error)
-	AcceptSubject func(string) error
+	HTTP             *http.Client
+	APIBase          string
+	Now              func() time.Time
+	Offline          bool
+	ConsentPath      string
+	AllowPrompt      bool
+	Probe            bool
+	PageSize         int
+	PageCap          int
+	Covered          []CoverageWindow
+	ProtectedThrough string // UTC day of the last verified legacy snapshot
+	Unseal           func(string) (string, error)
+	AcceptSubject    func(string) error
 }
 
 func (Adapter) ID() string { return "cursor" }

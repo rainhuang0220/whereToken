@@ -360,6 +360,11 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 				}
 			}
 		}
+		if lg != nil && c.ProtectedThrough == "" {
+			if last, err := lg.VerifiedSnapshotLastDay("cursor"); err == nil {
+				c.ProtectedThrough = last
+			}
+		}
 		if c.AcceptSubject == nil && lg != nil {
 			bound := lg
 			c.AcceptSubject = func(sub string) error {
