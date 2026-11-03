@@ -479,3 +479,30 @@ func assertHistoryLinkErrors(t *testing.T, errs []string) {
 		t.Fatalf("errors=%v", errs)
 	}
 }
+
+func TestDeclinedBillingAccountDoesNotInheritOldSnapshotCutoff(t *testing.T) {
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	h := testhome.New(home)
+	seedUnboundCursorHistory(t, h)
+	lg := openHistoryLedger(t, h)
+	defer lg.Close()
+	when := time.Date(2026, 11, 2, 15, 0, 0, 0, time.UTC)
+	if err := ApplyCursorHistory(lg, "test-user", "no", when); err != nil {
+		t.Fatal(err)
+	}
+	source := "cursor"
+	got := prepareCursor(h, []adapter.Adapter{cursor.Adapter{}}, lg, &source)
+	ad, ok := got[0].(cursor.Adapter)
+	if !ok || ad.ProtectedThrough != "" {
+		t.Fatalf("declined account inherited legacy cutoff: %+v", ad)
+	}
+	if err := ApplyCursorHistory(lg, "test-user", "yes", when.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	got = prepareCursor(h, []adapter.Adapter{cursor.Adapter{}}, lg, &source)
+	ad = got[0].(cursor.Adapter)
+	if ad.ProtectedThrough != "2026-10-23" {
+		t.Fatalf("confirmed account lost verified cutoff: %q", ad.ProtectedThrough)
+	}
+}

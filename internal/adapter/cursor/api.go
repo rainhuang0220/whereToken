@@ -3,6 +3,7 @@ package cursor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -105,16 +106,36 @@ func (a Adapter) allUsageWindows() []usageSpan {
 	return out
 }
 
-// uncoveredWindows keeps a gap and the two newest months. A month already
-// stored whole is left on the ledger. The open month and the one before it
-// are fetched again so the current day and the boundary stay current.
+// uncoveredWindows keeps uncovered history and the open UTC month. The
+// existing legacy behavior also refreshes the previous month. Once an
+// explicitly linked verified snapshot exists, a fully audited previous
+// month can be reused after the first two days of the next UTC month.
 func (a Adapter) uncoveredWindows(all []usageSpan) []usageSpan {
-	if len(a.Covered) == 0 || len(all) == 0 {
-		return all
+	if len(all) == 0 {
+		return nil
 	}
+	var protectFrom time.Time
+	if a.ProtectedThrough != "" {
+		if last, err := time.Parse("2006-01-02", a.ProtectedThrough); err == nil {
+			protectFrom = last.AddDate(0, 0, 1)
+		}
+	}
+	now := a.now().UTC()
 	var out []usageSpan
 	for i, w := range all {
-		if i >= len(all)-2 || !windowCovered(w.coverage(), a.Covered) {
+		// Older windows must still be considered: the legacy endpoint may
+		// remain functional and can backfill genuinely unknown historical days.
+		// Only the billing-v2 fallback skips older dates after a detected
+		// schema change, inside fetchUsageWithToken.
+		coverage := w.coverage()
+		if !protectFrom.IsZero() && w.start.Before(protectFrom) && w.end.After(protectFrom) {
+			coverage.From = protectFrom.Format("2006-01-02")
+		}
+		current := i == len(all)-1
+		// Keep revisiting the just-closed month during the first two UTC
+		// days so late-finishing requests around midnight can settle.
+		boundaryRecheck := i == len(all)-2 && (a.ProtectedThrough == "" || now.Day() <= 2)
+		if current || boundaryRecheck || !windowCovered(coverage, a.Covered) {
 			out = append(out, w)
 		}
 	}
@@ -150,9 +171,67 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	var out []event.UsageEvent
 	var covered []CoverageWindow
 	missing := 0
+	availabilityOnly := 0
+	var availabilityDetails string
+	emptyBilling := 0
+	var firstMissing, lastMissing string
+	recordMissing := func(w usageSpan) {
+		missing++
+		cov := w.coverage()
+		if firstMissing == "" {
+			firstMissing = cov.From
+		}
+		lastMissing = cov.To
+	}
 	var failed error
+	useBilling := false
+	var protectFrom time.Time
+	if a.ProtectedThrough != "" {
+		if last, err := time.Parse("2006-01-02", a.ProtectedThrough); err == nil {
+			protectFrom = last.AddDate(0, 0, 1)
+		}
+	}
 	for _, w := range windows {
-		got, err := a.fetchFilteredWindow(token, w, 0)
+		var got filteredFetch
+		var err error
+		if useBilling {
+			if !protectFrom.IsZero() {
+				if !w.end.After(protectFrom) {
+					// Older dates are intentionally sourced from a retained
+					// verified snapshot, not a failed remote window.
+					continue
+				}
+				if w.start.Before(protectFrom) {
+					w.start = protectFrom
+				}
+			}
+			got, err = a.fetchBillingWindow(token, w)
+		} else {
+			got, err = a.fetchFilteredWindow(token, w, 0)
+			if errors.Is(err, errSchemaChanged) {
+				// The legacy personal endpoint can return HTTP 200 {} even
+				// for active users. Only fall back on a verified schema
+				// failure, never on 401/403/rate limits/network errors.
+				useBilling = true
+				if !protectFrom.IsZero() {
+					if !w.end.After(protectFrom) {
+						// Historical snapshot has priority over the new
+						// endpoint's unknown retention window.
+						continue
+					}
+					if w.start.Before(protectFrom) {
+						w.start = protectFrom
+					}
+				}
+				got, err = a.fetchBillingWindow(token, w)
+			}
+		}
+		if err == nil && useBilling && len(got.events) == 0 {
+			// An empty response is not proof of historical retention.
+			emptyBilling++
+			recordMissing(w)
+			continue
+		}
 		if err == nil {
 			var added []event.UsageEvent
 			out, added = dedupeUsage(out, seen, got.events)
@@ -161,14 +240,27 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			covered = append(covered, cov)
 			continue
 		}
-		if isNotFound(err) {
-			missing++
+		if isNotFound(err) || (useBilling && errors.Is(err, errBillingAvailability)) {
+			// A billing availability-only envelope is not usage data.
+			if errors.Is(err, errBillingAvailability) {
+				availabilityOnly++
+				if availabilityDetails == "" {
+					availabilityDetails = err.Error()
+				}
+			}
+			recordMissing(w)
 			continue
 		}
+		// Dates and page counts are safe diagnostics. Never include the raw
+		// response, credentials, conversation IDs or event bodies.
 		failed = err
+		if errors.Is(err, errSchemaChanged) {
+			failed = fmt.Errorf("%w [utc_window=%s..%s]", err, w.coverage().From, w.coverage().To)
+		}
 		break
 	}
-	if len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+	if !useBilling && len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+		// Never retry a dead legacy aggregate endpoint after switching to billing v2.
 		start := windows[0].start.UnixMilli()
 		end := windows[len(windows)-1].end.UnixMilli()
 		agg, aerr := a.fetchAggregated(token, start, end)
@@ -190,11 +282,17 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		// Successful months stay. The whole lookback is not a finished span.
 		return tagged(sourceRoot, degradeAPI(out)), failed
 	}
-	if missing > 0 && len(covered) > 0 {
-		if len(out) == 0 {
-			return nil, errEndpointUnavailable
+	if missing > 0 {
+		// Dates and enumerated failure counts are safe to print; raw response,
+		// cookies, account IDs and tokens must never appear in diagnostics.
+		partialErr := fmt.Errorf("%w [reason=incomplete_billing_windows missing=%d first_utc=%s last_utc=%s availability_only=%d empty=%d]", errEndpointUnavailable, missing, firstMissing, lastMissing, availabilityOnly, emptyBilling)
+		if availabilityDetails != "" {
+			partialErr = fmt.Errorf("%w [availability_detail=%s]", partialErr, availabilityDetails)
 		}
-		return tagged(sourceRoot, degradeAPI(out)), errEndpointUnavailable
+		if len(out) == 0 {
+			return nil, partialErr
+		}
+		return tagged(sourceRoot, degradeAPI(out)), partialErr
 	}
 	if len(covered) == len(windows) && len(out) == 0 {
 		return tagged(sourceRoot, completeAccountUsage(nil, a.now())), nil
@@ -213,7 +311,12 @@ func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filt
 		endMs--
 	}
 	got, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
-	if err == nil || err != errUsagePageLimit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
+	// In a live period Cursor can add usage between pages, changing its
+	// declared total. Re-query a smaller complete time slice rather than
+	// accepting an unverifiable partial page or giving up the entire scan.
+	var drift *filteredCountDrift
+	canSplit := err == errUsagePageLimit || errors.As(err, &drift)
+	if err == nil || !canSplit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
 		if err == errUsagePageLimit && (depth >= 6 || w.end.Sub(w.start) < time.Hour) {
 			return filteredFetch{}, errPaginationIncomplete
 		}
@@ -329,6 +432,21 @@ func (a Adapter) pageCap() int {
 	return maxUsagePages
 }
 
+// filteredCountDrift covers a changing (or internally contradictory)
+// upstream count. The error intentionally contains only public pagination
+// numbers; it never embeds event records, JWTs or HTTP response bodies.
+type filteredCountDrift struct {
+	reason        string
+	page          int
+	before, after int
+}
+
+func (e *filteredCountDrift) Error() string {
+	return fmt.Sprintf("%s [reason=%s page=%d expected=%d observed=%d]", errSchemaChanged, e.reason, e.page, e.before, e.after)
+}
+
+func (e *filteredCountDrift) Unwrap() error { return errSchemaChanged }
+
 func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, error) {
 	var out filteredFetch
 	var total int
@@ -351,7 +469,7 @@ func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, e
 			return filteredFetch{}, err
 		}
 		if !known {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, fmt.Errorf("%w [reason=missing_declared_count page=%d]", errSchemaChanged, page)
 		}
 		if page == 1 {
 			total = pageTotal
@@ -359,10 +477,10 @@ func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, e
 				pageSize = rawN
 			}
 		} else if pageTotal != total {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, &filteredCountDrift{reason: "count_changed_between_pages", page: page, before: total, after: pageTotal}
 		}
 		if out.raw+rawN > total {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, &filteredCountDrift{reason: "rows_exceed_declared_count", page: page, before: total, after: out.raw + rawN}
 		}
 		out.events = append(out.events, pageEvents...)
 		out.raw += rawN
@@ -551,7 +669,13 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 	_, hasCamel := top["totalUsageEventsCount"]
 	_, hasSnake := top["total_usage_events_count"]
 	total := int(adapter.FlexInt(adapter.Pick(top, "totalUsageEventsCount", "total_usage_events_count")))
-	list := asSlice(adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
+	listValue := adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events")
+	list, listOK := listValue.([]any)
+	if !listOK {
+		// A missing or renamed list is not an authoritative zero, even if
+		// totalUsageEventsCount happens to be zero.
+		return nil, 0, 0, false, fmt.Errorf("%w [reason=missing_usage_events_array]", errSchemaChanged)
+	}
 	out := make([]event.UsageEvent, 0, len(list))
 	for i, item := range list {
 		m := adapter.AsMap(item)

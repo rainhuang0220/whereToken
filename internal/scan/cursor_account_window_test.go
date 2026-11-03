@@ -1,8 +1,10 @@
 package scan
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -563,5 +565,132 @@ func TestRateLimitKeepsVerifiedDaysAndRetriesTheMonth(t *testing.T) {
 	}
 	if got := auditOf("2026-03-01", "2026-03-15"); got.Validation != "open" || got.Miss != 9 || got.Declared != 1 {
 		t.Fatalf("retried march audit=%+v", got)
+	}
+}
+
+// A legacy verified snapshot is retained while the late-2026 dashboard v2
+// provides new events. This checks the real scan->ledger join, not only the
+// adapter parser.
+func TestBillingV2ScanPreserves166DayHistoryAndAddsRecentTokens(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	seedUnboundCursorHistory(t, testhome.New(home))
+	sub := "auth0|user_test"
+	bindCursorSubject(t, testhome.New(home), sub)
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	jwt := "eyJhbGciOiJub25lIn0." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"auth0|user_test"}`)) + ".sig"
+	var starts []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+			io.WriteString(w, `{}`)
+			return
+		}
+		if r.URL.Path != "/api/dashboard/v2/query-billing-items" {
+			http.NotFound(w, r)
+			return
+		}
+		st := r.URL.Query().Get("startTime")
+		starts = append(starts, st)
+		end := r.URL.Query().Get("endTime")
+		if strings.HasPrefix(st, "2026-10-01") && !strings.HasPrefix(end, "2026-10-31T23:59:59Z") {
+			t.Errorf("October request must use the known-good UTC-second boundary: %s", end)
+		}
+		ts, err := time.Parse(time.RFC3339Nano, st)
+		if err != nil {
+			t.Errorf("bad start: %v", err)
+			return
+		}
+		// Include an October 22 event that must be parsed as part of the
+		// full-month page, but never re-attributed over verified history.
+		if ts.Month() == time.October {
+			fmt.Fprint(w, `{"data":[{"billingItemId":"before-baseline","eventTime":"2026-10-22T12:00:00Z","principal":{"type":"user","id":"user_test"},"hasTokenMeters":true,"usage":{"prompt-text-tokens":"999"},"totalTokens":"999"},{"billingItemId":"after-baseline","eventTime":"2026-10-25T12:00:00Z","principal":{"type":"user","id":"user_test"},"hasTokenMeters":true,"usage":{"prompt-text-tokens":"5","cached-prompt-text-tokens":"2","cache-write-text-tokens":"1","completion-text-tokens":"2"},"totalTokens":"10"}],"pagination":{"nextCursor":null}}`)
+			return
+		}
+		fmt.Fprintf(w, `{"data":[{"billingItemId":"win-%s","eventTime":"%s","principal":{"type":"user","id":"user_test"},"hasTokenMeters":true,"usage":{"prompt-text-tokens":"5","cached-prompt-text-tokens":"2","cache-write-text-tokens":"1","completion-text-tokens":"2"},"totalTokens":"10"}],"pagination":{"nextCursor":null}}`, ts.Format("20060102"), ts.Add(time.Hour).Add(func() time.Duration {
+			if ts.Month() == time.October {
+				return 24 * 24 * time.Hour
+			}
+			return 0
+		}()).Format(time.RFC3339Nano))
+	}))
+	defer srv.Close()
+	ad := cursor.Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return now }, Unseal: func(string) (string, error) { return jwt, nil }}
+	res := Run(testhome.New(home), []adapter.Adapter{ad})
+	if len(res.Errors) > 0 {
+		t.Fatalf("unexpected errors: %v", res.Errors)
+	}
+	if len(starts) != 2 || !strings.HasPrefix(starts[0], "2026-10-01") || !strings.HasPrefix(starts[1], "2026-11-01") {
+		t.Fatalf("wrong windows: %v", starts)
+	}
+	if got := tokenSum(res.Events, "cursor"); got != chainObserved+20 {
+		t.Fatalf("Cursor total=%d want=%d", got, chainObserved+20)
+	}
+	lg := openHistoryLedger(t, testhome.New(home))
+	defer lg.Close()
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok || tokenSum(chained, "cursor") != chainObserved+20 {
+		t.Fatalf("persisted chain sum=%d err=%v", tokenSum(chained, "cursor"), err)
+	}
+	if last, err := lg.VerifiedSnapshotLastDay("cursor"); err != nil || last != "2026-10-23" {
+		t.Fatalf("baseline last=%s err=%v", last, err)
+	}
+	audit, err := lg.WindowAudit("cursor", "2026-11-01", "2026-11-03")
+	if err != nil || audit.Validation != "open" || audit.Declared != -1 {
+		t.Fatalf("v2 audit=%+v err=%v", audit, err)
+	}
+	beforeRequests := len(starts)
+	again := Run(testhome.New(home), []adapter.Adapter{ad})
+	if len(again.Errors) > 0 || tokenSum(again.Events, "cursor") != chainObserved+20 {
+		t.Fatalf("rescan errors=%v total=%d", again.Errors, tokenSum(again.Events, "cursor"))
+	}
+	if len(starts) != beforeRequests+1 || !strings.HasPrefix(starts[len(starts)-1], "2026-11-01") {
+		t.Fatalf("rescan should not download a closed, protected October again; starts=%v", starts)
+	}
+}
+
+func TestBillingAvailabilityLeavesHistoryUnknownButShowsRecentUsage(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	seedUnboundCursorHistory(t, testhome.New(home))
+	bindCursorSubject(t, testhome.New(home), "auth0|user_test")
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	jwt := "eyJhbGciOiJub25lIn0." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"auth0|user_test"}`)) + ".sig"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+			fmt.Fprint(w, `{}`)
+			return
+		}
+		if strings.HasPrefix(r.URL.Query().Get("startTime"), "2026-11-01") {
+			fmt.Fprint(w, `{"data":[{"billingItemId":"current","eventTime":"2026-11-02T12:00:00Z","principal":{"type":"user","id":"user_test"},"hasTokenMeters":true,"usage":{"prompt-text-tokens":"10"},"totalTokens":"10"}],"pagination":{"nextCursor":null}}`)
+			return
+		}
+		fmt.Fprint(w, `{"availability":{}}`)
+	}))
+	defer srv.Close()
+	a := cursor.Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return now }, Unseal: func(string) (string, error) { return jwt, nil }}
+	for n := 0; n < 2; n++ {
+		res := Run(testhome.New(home), []adapter.Adapter{a})
+		if len(res.Errors) == 0 {
+			t.Fatalf("missing historical range must show partial notice")
+		}
+		if got := tokenSum(res.Events, "cursor"); got != chainObserved+10 {
+			t.Fatalf("pass %d total=%d want=%d", n, got, chainObserved+10)
+		}
+		lg := openHistoryLedger(t, testhome.New(home))
+		chained, ok, err := lg.ChainedRetainedEvents("cursor")
+		if err != nil || !ok || tokenSum(chained, "cursor") != chainObserved+10 {
+			t.Fatalf("pass %d persisted history=%d err=%v", n, tokenSum(chained, "cursor"), err)
+		}
+		audit, err := lg.WindowAudit("cursor", "2026-11-01", "2026-11-03")
+		if err != nil || audit.Validation != "open" {
+			t.Fatalf("pass %d good month audit=%+v err=%v", n, audit, err)
+		}
+		oct, err := lg.WindowAudit("cursor", "2026-10-24", "2026-10-31")
+		if err != nil || oct.Validation != "missing" {
+			t.Fatalf("pass %d unavailable month was measured %+v err=%v", n, oct, err)
+		}
+		lg.Close()
 	}
 }

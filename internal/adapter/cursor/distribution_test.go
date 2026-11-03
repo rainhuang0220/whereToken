@@ -636,3 +636,18 @@ func moduleRoot(t *testing.T) string {
 		dir = next
 	}
 }
+
+func TestOfflineNeverUnsealsEvenWithUserConsent(t *testing.T) {
+	dir := t.TempDir()
+	db := writeVscdb(t, dir, nil, nil)
+	putItem(t, db, authAccessTokenKey, "cursor-safe-storage:v1:QUJDRA")
+	calls := 0
+	ad := Adapter{Offline: true, Unseal: func(string) (string, error) { calls++; return fakeJWT, nil }}
+	err := ad.Parse(adapter.SourceRoot{ID: "cursor", Path: db}, func(event.UsageEvent) {}, func(event.TurnEvent) {})
+	if calls != 0 {
+		t.Fatalf("offline requested keychain unseal %d times", calls)
+	}
+	if err == nil || !strings.Contains(err.Error(), "账号用量不可用") {
+		t.Fatalf("offline reporting status=%v", err)
+	}
+}

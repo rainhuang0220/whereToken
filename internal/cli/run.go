@@ -13,11 +13,14 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/community"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/httpapi"
 	"github.com/rainhuang0220/whereToken/internal/index"
+	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/profile"
@@ -253,8 +256,78 @@ func (a *App) runRebuild(flags Flags, home adapter.Home) int {
 	return a.runReport(flags, home)
 }
 
+// restoreBoundCursorHistoryForReport only affects this human-facing report.
+// The account API can fail after an owner has explicitly confirmed their old
+// verified Cursor snapshot. Never print that historical total as a new fetch,
+// never silently claim unbound/declined history, and never mutate the ledger.
+func restoreBoundCursorHistoryForReport(home adapter.Home, res *scan.Result) {
+	if res == nil {
+		return
+	}
+	failed := false
+	for _, msg := range res.Errors {
+		if strings.HasPrefix(msg, "cursor: ") {
+			failed = true
+			break
+		}
+	}
+	if !failed && !res.Offline {
+		return
+	}
+	for _, e := range res.Events {
+		if e.Source == "cursor" && (e.Derivation == event.DeriveProviderAPI || e.Derivation == event.DeriveRetained) {
+			return
+		}
+	}
+	path, err := ledger.PathFor(home)
+	if err != nil {
+		return
+	}
+	lg, err := ledger.Open(path)
+	if err != nil {
+		return
+	}
+	defer lg.Close()
+	sub, err := lg.Meta(cursor.AccountSubjectMeta)
+	if err != nil || sub == "" {
+		return
+	}
+	decision, err := lg.Meta(cursor.HistoryDecisionMeta)
+	if err != nil || decision != cursor.HistoryConfirmed {
+		return
+	}
+	old, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok {
+		return
+	}
+	// Local per-session Cursor counters can be incomplete and overlap the
+	// account's verified history. Preserve model/request dimensions but
+	// strip their token components before adding the retained account days.
+	for i := range res.Events {
+		if res.Events[i].Source != "cursor" {
+			continue
+		}
+		res.Events[i].Miss = 0
+		res.Events[i].CacheRead = 0
+		res.Events[i].CacheCreate = 0
+		res.Events[i].Output = 0
+		res.Events[i].Reasoning = 0
+	}
+	res.Events = append(res.Events, old...)
+	if res.Offline {
+		res.Errors = append(res.Errors, "Cursor · 当前仅展示明确关联账号的保留历史；离线未查询云端，未知日期不计入")
+	} else {
+		res.Errors = append(res.Errors, "Cursor · 已采用明确关联账号的保留历史；本次云端采集失败，未包含未知日期的新增量")
+	}
+}
+
 func (a *App) runReport(flags Flags, home adapter.Home) int {
 	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	// A test-provided or embedded scan is self-contained. Never read the
+	// surrounding machine's real ledger to supplement a mock result.
+	if a.Scan == nil {
+		restoreBoundCursorHistoryForReport(home, &res)
+	}
 	win, err := metric.ParseWindow(flags.Today, flags.Since, flags.From, flags.To, a.Now(), a.Loc)
 	if err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())

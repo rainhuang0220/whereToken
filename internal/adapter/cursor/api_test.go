@@ -3,6 +3,7 @@ package cursor
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -645,5 +646,113 @@ func TestAllowedURLRejectsLoopback(t *testing.T) {
 	}
 	if (Adapter{}).allowedURL(req.URL) {
 		t.Fatal("loopback should be rejected unless it is APIBase")
+	}
+}
+
+func TestFilteredCountChangeSplitsIntoVerifiedRanges(t *testing.T) {
+	start := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(48 * time.Hour)
+	widePages, halves := 0, 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var q struct {
+			Start int64 `json:"startDate"`
+			End   int64 `json:"endDate"`
+			Page  int   `json:"page"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&q)
+		count := 1
+		if q.End-q.Start > (36 * time.Hour).Milliseconds() {
+			widePages++
+			if q.Page == 1 {
+				count = 2
+			} else {
+				count = 3
+			}
+		} else {
+			halves++
+		}
+		fmt.Fprintf(w, `{"totalUsageEventsCount":%d,"usageEventsDisplay":[{"timestamp":"%d","model":"test","tokenUsage":{"inputTokens":3}}]}`, count, q.Start+1000)
+	}))
+	defer srv.Close()
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFilteredWindow(fakeJWT, usageSpan{start: start, end: end, inclusive: false}, 0)
+	if err != nil || widePages != 2 || halves != 2 || got.declared != 2 || got.raw != 2 || len(got.events) != 2 {
+		t.Fatalf("err=%v pages=%d halves=%d got=%+v", err, widePages, halves, got)
+	}
+}
+
+func TestFilteredMissingArrayCannotBecomeMeasuredZero(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"totalUsageEventsCount":0}`)
+	}))
+	defer srv.Close()
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	if err == nil || len(got.events) != 0 || !strings.Contains(err.Error(), "reason=missing_usage_events_array") {
+		t.Fatalf("invalid count-only envelope: got=%+v err=%v", got, err)
+	}
+}
+
+func TestFilteredMissingTotalReportsWhichCheckFailed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"usageEventsDisplay":[{"timestamp":"1770000000000","model":"test","tokenUsage":{"inputTokens":9}}]}`)
+	}))
+	defer srv.Close()
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFiltered(fakeJWT, 1, 2)
+	if err == nil || len(got.events) != 0 || !strings.Contains(err.Error(), "reason=missing_declared_count") {
+		t.Fatalf("missing count did not fail closed: got=%+v err=%v", got, err)
+	}
+}
+
+func TestRowsOverDeclaredCountCanOnlyRecoverByCompleteSplit(t *testing.T) {
+	start := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(48 * time.Hour)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var q struct {
+			Start int64 `json:"startDate"`
+			End   int64 `json:"endDate"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&q)
+		if q.End-q.Start > (36 * time.Hour).Milliseconds() {
+			fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"test","tokenUsage":{"inputTokens":1}},{"timestamp":"%d","model":"test","tokenUsage":{"inputTokens":2}}]}`, q.Start+1000, q.Start+2000)
+			return
+		}
+		fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"test","tokenUsage":{"inputTokens":3}}]}`, q.Start+1000)
+	}))
+	defer srv.Close()
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchFilteredWindow(fakeJWT, usageSpan{start: start, end: end, inclusive: false}, 0)
+	if err != nil || got.raw != 2 || got.declared != 2 || len(got.events) != 2 {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}
+
+func TestProtectedBillingMonthCanBeCachedWithoutSuppressingLegacyBackfill(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	a := Adapter{Now: func() time.Time { return now }, ProtectedThrough: "2026-10-23", Covered: []CoverageWindow{{From: "2026-10-24", To: "2026-10-31"}}}
+	spans := a.uncoveredWindows(a.allUsageWindows())
+	hasOld, hasOctober, hasCurrent := false, false, false
+	for _, span := range spans {
+		from := span.coverage().From
+		if from == "2025-12-01" {
+			hasOld = true
+		}
+		if from == "2026-10-01" {
+			hasOctober = true
+		}
+		if from == "2026-11-01" {
+			hasCurrent = true
+		}
+	}
+	if !hasOld || hasOctober || !hasCurrent {
+		t.Fatalf("must preserve historical backfill and current month but reuse October coverage; old=%v oct=%v current=%v", hasOld, hasOctober, hasCurrent)
+	}
+	a.Now = func() time.Time { return time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC) }
+	spans = a.uncoveredWindows(a.allUsageWindows())
+	octEarly := false
+	for _, span := range spans {
+		if span.coverage().From == "2026-10-01" {
+			octEarly = true
+		}
+	}
+	if !octEarly {
+		t.Fatal("previous UTC month must be refreshed during boundary settlement")
 	}
 }

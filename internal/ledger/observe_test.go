@@ -381,3 +381,39 @@ func TestRetainedReuseDoesNotAddLocalFacts(t *testing.T) {
 		t.Fatalf("retained row changed facts %+v", st)
 	}
 }
+
+func TestVerifiedSnapshotLastDaySurvivesNewBillingWindow(t *testing.T) {
+	lg := openTest(t)
+	before, err := lg.VerifiedSnapshotLastDay("cursor")
+	if err != nil || before != "" {
+		t.Fatalf("empty=%q err=%v", before, err)
+	}
+	early := event.UsageEvent{Source: "cursor", Timestamp: time.Date(2025, 10, 21, 8, 0, 0, 0, time.UTC), Miss: 6346980, Derivation: event.DeriveProviderAPI, Quality: event.QualityAuthoritative}
+	last := event.UsageEvent{Source: "cursor", Timestamp: time.Date(2026, 10, 23, 8, 0, 0, 0, time.UTC), Miss: 52691673, Derivation: event.DeriveProviderAPI, Quality: event.QualityAuthoritative}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), []event.UsageEvent{early, last}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := lg.VerifiedSnapshotLastDay("cursor")
+	if err != nil || a != "2026-10-23" {
+		t.Fatalf("last=%q err=%v", a, err)
+	}
+	fresh := event.UsageEvent{Source: "cursor", Timestamp: time.Date(2026, 11, 2, 8, 0, 0, 0, time.UTC), Miss: 10, Derivation: event.DeriveProviderAPI, Quality: event.QualityAuthoritative}
+	if err := lg.NoteCoveredWindow("cursor", "2026-11-01", "2026-11-03", []event.UsageEvent{fresh}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := lg.VerifiedSnapshotLastDay("cursor")
+	if err != nil || b != "2026-10-23" {
+		t.Fatalf("snapshot cutoff changed=%q err=%v", b, err)
+	}
+	chained, ok, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil || !ok {
+		t.Fatalf("chain err=%v ok=%v", err, ok)
+	}
+	total := int64(0)
+	for _, e := range chained {
+		total += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	}
+	if total != 6346980+52691673+10 {
+		t.Fatalf("history lost or duplicated: %d", total)
+	}
+}

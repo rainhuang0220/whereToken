@@ -360,6 +360,16 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 				}
 			}
 		}
+		if lg != nil && c.ProtectedThrough == "" {
+			// The old snapshot belongs to the current account only after an
+			// explicit confirmed link. A declined account lives in its own
+			// namespace and must not inherit another account's cutoff.
+			if current, err := lg.Meta(cursor.AccountSubjectMeta); err == nil && current != "" {
+				if last, err := lg.VerifiedSnapshotLastDay("cursor"); err == nil {
+					c.ProtectedThrough = last
+				}
+			}
+		}
 		if c.AcceptSubject == nil && lg != nil {
 			bound := lg
 			c.AcceptSubject = func(sub string) error {

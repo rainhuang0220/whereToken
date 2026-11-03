@@ -22,18 +22,19 @@ import (
 const thinkingCapability = 30
 
 type Adapter struct {
-	HTTP          *http.Client
-	APIBase       string
-	Now           func() time.Time
-	Offline       bool
-	ConsentPath   string
-	AllowPrompt   bool
-	Probe         bool
-	PageSize      int
-	PageCap       int
-	Covered       []CoverageWindow
-	Unseal        func(string) (string, error)
-	AcceptSubject func(string) error
+	HTTP             *http.Client
+	APIBase          string
+	Now              func() time.Time
+	Offline          bool
+	ConsentPath      string
+	AllowPrompt      bool
+	Probe            bool
+	PageSize         int
+	PageCap          int
+	Covered          []CoverageWindow
+	ProtectedThrough string // UTC day of the last verified legacy snapshot
+	Unseal           func(string) (string, error)
+	AcceptSubject    func(string) error
 }
 
 func (Adapter) ID() string { return "cursor" }
@@ -94,12 +95,19 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 	var apiEvents []event.UsageEvent
 	var apiErr error
 	if token != "" {
-		opened, oerr := a.openSealed(token, path)
-		if oerr != nil {
-			apiErr = oerr
+		if a.Offline && strings.HasPrefix(token, sealedStoragePrefix) {
+			// Offline must never read the OS Keychain or prompt for a sealed
+			// session just to render local/retained data.
+			apiErr = errAccountUsageUnavailable
 			token = ""
 		} else {
-			token = opened
+			opened, oerr := a.openSealed(token, path)
+			if oerr != nil {
+				apiErr = oerr
+				token = ""
+			} else {
+				token = opened
+			}
 		}
 	}
 	if refresh != "" {
