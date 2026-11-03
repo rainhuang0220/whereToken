@@ -19,7 +19,14 @@ import (
 
 // The verified 2025-10-21 vector is the published component split.
 // 2025-10-22 through 2025-10-25 are absent on purpose.
-const oct21Total int64 = 6_346_980
+// The retained total is the sum of 166 positive day rows. The other 165
+// amounts are a structural stand-in: 164 equal days from 2025-10-26, and
+// the remainder on 2026-10-23. No day holds the cumulative total.
+const (
+	oct21Total       int64 = 6_346_980
+	standInDay       int64 = 52_691_554
+	standInRemainder int64 = 119
+)
 
 func TestUnboundHistoryConfirmThenCollectsFilteredUsage(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
@@ -34,11 +41,15 @@ func TestUnboundHistoryConfirmThenCollectsFilteredUsage(t *testing.T) {
 	if !strings.Contains(joined, cursor.KindUnboundHistory) || strings.Contains(strings.ToLower(joined), "auth") {
 		t.Fatalf("errors=%v", before.Errors)
 	}
+	if strings.Contains(joined, "输入 yes") || strings.Contains(joined, "当前账号") {
+		t.Fatalf("background scan printed the association prompt: %v", before.Errors)
+	}
 	if *hits != 0 {
 		t.Fatalf("unbound history reached the API: hits=%d", *hits)
 	}
 	assertCursorSubject(t, testhome.New(home), "")
 	assertNoHistoryDecision(t, testhome.New(home))
+	assertHistoryShape(t, chainDayTotals(t, testhome.New(home), "cursor"), nil)
 
 	lg := openHistoryLedger(t, testhome.New(home))
 	prompt, err := DescribeCursorHistory(lg, "test-user")
@@ -46,11 +57,12 @@ func TestUnboundHistoryConfirmThenCollectsFilteredUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		fmt.Sprintf("历史 token：%d", chainObserved+oct21Total),
+		fmt.Sprintf("历史 token：%d", chainObserved),
 		"日期：2025-10-21..2026-10-23",
-		"已记录日数：2",
+		"已记录日数：166",
 		"当前账号：test-user",
 		"没有足够证据把这份历史关联到当前账号",
+		"输入 yes 关联。输入 no 保持旧历史独立，当前账号以后单独记录。",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("prompt missing %q\n%s", want, prompt)
@@ -70,7 +82,7 @@ func TestUnboundHistoryConfirmThenCollectsFilteredUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	base2, at2 := historyAudit(t, lg)
-	if base2 != base || at2 != at || at == "" || !strings.Contains(base, "2025-10-21") {
+	if base2 != base || at2 != at || at == "" || !strings.HasPrefix(base, fmt.Sprintf("%d|2025-10-21|2026-10-23|166|", chainObserved)) {
 		t.Fatalf("repeat confirm rewrote the audit base=%q at=%q then %q %q", base, at, base2, at2)
 	}
 	if got, _ := lg.Meta(cursor.HistoryAuditSourceMeta); got != cursor.HistoryAuditConfirm {
@@ -99,17 +111,7 @@ func TestUnboundHistoryConfirmThenCollectsFilteredUsage(t *testing.T) {
 		t.Fatal("confirmed account made no filtered request")
 	}
 	got := chainDayTotals(t, testhome.New(home), "cursor")
-	if got["2025-10-21"] != oct21Total || got["2026-10-23"] != chainObserved {
-		t.Fatalf("history=%v", got)
-	}
-	if got["2026-11-02"] != 10 {
-		t.Fatalf("new day=%v", got)
-	}
-	for _, day := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
-		if _, ok := got[day]; ok {
-			t.Fatalf("unknown day %s was fabricated", day)
-		}
-	}
+	assertHistoryShape(t, got, map[string]int64{"2026-11-02": 10})
 
 	*hits = 0
 	other := runHistoryLink(t, home, srv, otherJWT, when)
@@ -205,19 +207,12 @@ func TestDeclinedHistoryStaysSeparateFromTheNewAccount(t *testing.T) {
 	*hits = 0
 	restored := runHistoryLink(t, home, srv, windowJWT, when)
 	assertHistoryLinkErrors(t, restored.Errors)
-	want := chainObserved + oct21Total + 10
+	want := chainObserved + 10
 	if sum := tokenSum(restored.Events, "cursor"); sum != want {
 		t.Fatalf("restored sum=%d want=%d", sum, want)
 	}
 	restoredDays := chainDayTotals(t, testhome.New(home), "cursor")
-	if restoredDays["2025-10-21"] != oct21Total || restoredDays["2026-10-23"] != chainObserved || restoredDays["2026-11-02"] != 10 {
-		t.Fatalf("restored history=%v", restoredDays)
-	}
-	for _, day := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
-		if _, ok := restoredDays[day]; ok {
-			t.Fatalf("unknown day %s was fabricated", day)
-		}
-	}
+	assertHistoryShape(t, restoredDays, map[string]int64{"2026-11-02": 10})
 	if nsAgain := chainDayTotals(t, testhome.New(home), ns); nsAgain["2026-11-02"] != 10 {
 		t.Fatalf("namespace changed after confirm %v", nsAgain)
 	}
@@ -271,38 +266,70 @@ func TestConflictingHistoryHintRejectsYes(t *testing.T) {
 	lg.Close()
 	assertCursorSubject(t, testhome.New(home), "")
 	assertNoHistoryDecision(t, testhome.New(home))
-	if got := chainDayTotals(t, testhome.New(home), "cursor"); got["2026-10-23"] != chainObserved || got["2025-10-21"] != oct21Total {
-		t.Fatalf("history changed %v", got)
-	}
+	assertHistoryShape(t, chainDayTotals(t, testhome.New(home), "cursor"), nil)
 }
 
 func seedUnboundCursorHistory(t *testing.T, home adapter.Home) {
 	t.Helper()
 	lg := openHistoryLedger(t, home)
 	defer lg.Close()
-	oct21 := event.UsageEvent{
-		Source: "cursor", RequestID: "day-2025-10-21",
-		Timestamp: time.Date(2025, 10, 21, 12, 0, 0, 0, time.UTC),
-		Miss:      539187, CacheRead: 5675130, CacheCreate: 77078, Output: 55585,
-		Quality:     event.QualityAuthoritative,
-		Derivation:  event.DeriveProviderAPI,
-		SkipRequest: true,
-	}
-	if oct21.Miss+oct21.CacheRead+oct21.CacheCreate+oct21.Output != oct21Total {
-		t.Fatalf("oct 21 fixture=%d", oct21.Miss+oct21.CacheRead+oct21.CacheCreate+oct21.Output)
-	}
-	lump := event.UsageEvent{
-		Source: "cursor", RequestID: "retained:2026-10-23",
-		Timestamp:   time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC),
-		Miss:        chainObserved,
-		Quality:     event.QualityAuthoritative,
-		Derivation:  event.DeriveProviderAPI,
-		SkipRequest: true,
-	}
-	err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), []event.UsageEvent{oct21, lump})
+	rows := productionShapeDays(t)
+	err := lg.SaveObservation("cursor", "verified_snapshot", "retained", time.Date(2026, 10, 23, 17, 13, 41, 0, time.UTC), rows)
 	if err != nil {
 		t.Fatal(err)
 	}
+	summary, err := lg.CursorHistorySummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.Tokens != chainObserved || summary.Days != 166 || summary.From != "2025-10-21" || summary.To != "2026-10-23" {
+		t.Fatalf("summary=%+v", summary)
+	}
+	if len(summary.Origins) != 1 || summary.Origins[0] != "verified_snapshot" {
+		t.Fatalf("origins=%v", summary.Origins)
+	}
+}
+
+func productionShapeDays(t *testing.T) []event.UsageEvent {
+	t.Helper()
+	row := func(day time.Time, miss, cacheRead, cacheCreate, output int64) event.UsageEvent {
+		return event.UsageEvent{
+			Source: "cursor", RequestID: "day-" + day.UTC().Format("2006-01-02"),
+			Timestamp: day, Miss: miss, CacheRead: cacheRead, CacheCreate: cacheCreate, Output: output,
+			Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+		}
+	}
+	oct21 := time.Date(2025, 10, 21, 12, 0, 0, 0, time.UTC)
+	rows := []event.UsageEvent{row(oct21, 539187, 5675130, 77078, 55585)}
+	day := time.Date(2025, 10, 26, 12, 0, 0, 0, time.UTC)
+	for len(rows) < 165 {
+		rows = append(rows, row(day, standInDay, 0, 0, 0))
+		day = day.AddDate(0, 0, 1)
+	}
+	rows = append(rows, row(time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC), standInDay+standInRemainder, 0, 0, 0))
+	if len(rows) != 166 {
+		t.Fatalf("days=%d", len(rows))
+	}
+	var sum int64
+	seen := map[string]struct{}{}
+	for _, e := range rows {
+		n := e.Miss + e.CacheRead + e.CacheCreate + e.Output
+		key := e.Timestamp.UTC().Format("2006-01-02")
+		if _, ok := seen[key]; ok || n <= 0 || n == chainObserved || n > 629_615_505 {
+			t.Fatalf("day %s total %d", key, n)
+		}
+		seen[key] = struct{}{}
+		sum += n
+	}
+	if sum != chainObserved || rows[0].Miss+rows[0].CacheRead+rows[0].CacheCreate+rows[0].Output != oct21Total {
+		t.Fatalf("sum=%d oct21=%d", sum, rows[0].Miss+rows[0].CacheRead+rows[0].CacheCreate+rows[0].Output)
+	}
+	for _, gap := range []string{"2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25"} {
+		if _, ok := seen[gap]; ok {
+			t.Fatalf("unknown day %s was seeded", gap)
+		}
+	}
+	return rows
 }
 
 func historyLinkServer(t *testing.T, when time.Time) (*httptest.Server, *int) {
@@ -389,6 +416,41 @@ func historyAudit(t *testing.T, lg *ledger.Ledger) (baseline, at string) {
 		t.Fatalf("audit at=%q err=%v", at, err)
 	}
 	return baseline, at
+}
+
+func assertHistoryShape(t *testing.T, got map[string]int64, extra map[string]int64) {
+	t.Helper()
+	wantDays := 166
+	wantSum := chainObserved
+	for day, n := range extra {
+		wantDays++
+		wantSum += n
+		if got[day] != n {
+			t.Fatalf("day %s=%d want %d", day, got[day], n)
+		}
+	}
+	if got["2025-10-21"] != oct21Total || got["2026-10-23"] != standInDay+standInRemainder {
+		t.Fatalf("oct21=%d last=%d", got["2025-10-21"], got["2026-10-23"])
+	}
+	var sum int64
+	days := 0
+	for day, n := range got {
+		if n == 0 {
+			continue
+		}
+		if n == chainObserved {
+			t.Fatalf("day %s holds the cumulative total", day)
+		}
+		switch day {
+		case "2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25":
+			t.Fatalf("unknown day %s was fabricated", day)
+		}
+		sum += n
+		days++
+	}
+	if days != wantDays || sum != wantSum {
+		t.Fatalf("days=%d sum=%d want days=%d sum=%d", days, sum, wantDays, wantSum)
+	}
 }
 
 func chainDayTotals(t *testing.T, home adapter.Home, source string) map[string]int64 {

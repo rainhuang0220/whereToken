@@ -78,7 +78,15 @@ func TestCursorConnectConfirmsUnboundHistoryBeforeCollecting(t *testing.T) {
 		t.Fatalf("code=%d out=%s err=%s", code, out.String(), errb.String())
 	}
 	text := out.String() + errb.String()
-	for _, want := range []string{"没有足够证据把这份历史关联到当前账号", "已记录日数：2", "当前账号：test-user", "cursor connect: on", "session: jwt"} {
+	for _, want := range []string{
+		"没有足够证据把这份历史关联到当前账号",
+		"日期：2025-10-21..2026-10-23",
+		"已记录日数：2",
+		"当前账号：test-user",
+		"输入 yes 关联。输入 no 保持旧历史独立，当前账号以后单独记录。",
+		"cursor connect: on",
+		"session: jwt",
+	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q\n%s", want, text)
 		}
