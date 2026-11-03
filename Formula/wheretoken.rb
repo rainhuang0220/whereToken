@@ -1,8 +1,8 @@
 class Wheretoken < Formula
   desc "Local coding-agent token usage as a character table"
   homepage "https://github.com/rainhuang0220/whereToken"
-  url "https://github.com/rainhuang0220/whereToken/archive/refs/tags/v0.7.10.tar.gz"
-  sha256 "cf3e925bc9ceaaff6080b10ec97402406daf2184e6091a38fad70a4ab904986d"
+  url "https://github.com/rainhuang0220/whereToken/archive/refs/tags/v0.7.11.tar.gz"
+  sha256 "0a66cdeef4200707642342c1470efa63a7d3fc34047d97f8ed057df92b6299bf"
   license "MIT"
   head "https://github.com/rainhuang0220/whereToken.git", branch: "main"
 
