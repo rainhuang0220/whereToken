@@ -25,7 +25,7 @@ func billingTestSpan() usageSpan {
 func TestBillingV2ParsesFourMetersAndCursorPagination(t *testing.T) {
 	pages := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != billingV2Path || r.URL.Query().Get("scope") != "user" || r.Method != "GET" {
+		if r.URL.Path != billingV2Path || r.URL.Query().Get("scope") != "user" || r.URL.Query().Has("teamId") || r.Method != "GET" {
 			t.Errorf("wrong endpoint %s", r.URL.Path)
 			w.WriteHeader(400)
 			return
@@ -202,5 +202,137 @@ func TestBillingAvailabilityIsUnknownNotMeasuredZero(t *testing.T) {
 	cov := TakeAccountCoverage(root)
 	if len(cov) != 1 || cov[0].From != "2026-11-01" || cov[0].To != "2026-11-03" {
 		t.Fatalf("unavailable month marked complete: %+v", cov)
+	}
+}
+
+func TestBillingMissingWindowDiagnosticDoesNotHideReasonOrClaimZero(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+			fmt.Fprint(w, `{}`)
+			return
+		}
+		calls++
+		fmt.Fprint(w, `{"availability":{}}`)
+	}))
+	defer srv.Close()
+	root := "billing-diagnostic-missing"
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return now }, ProtectedThrough: "2026-10-23"}).fetchUsageWithToken(root, billingTestJWT())
+	if err == nil || len(got) != 0 || !strings.Contains(err.Error(), "reason=incomplete_billing_windows") || !strings.Contains(err.Error(), "availability_only=2") || !strings.Contains(err.Error(), "first_utc=2026-10-24") || !strings.Contains(err.Error(), "last_utc=2026-11-03") {
+		t.Fatalf("lost missing-period diagnostic: events=%d err=%v", len(got), err)
+	}
+	if calls != 2 {
+		t.Fatalf("retired aggregate or unexpected calls=%d", calls)
+	}
+	if cov := TakeAccountCoverage(root); len(cov) > 0 {
+		t.Fatalf("missing periods marked complete: %+v", cov)
+	}
+}
+
+func TestBillingHTTPFailureCarriesOnlySafeStatusAndPage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(503)
+		fmt.Fprint(w, `{"private-secret":"should-never-be-printed"}`)
+	}))
+	defer srv.Close()
+	_, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchBillingWindow(billingTestJWT(), billingTestSpan())
+	if err == nil || !strings.Contains(err.Error(), "phase=http") || !strings.Contains(err.Error(), "status=503") || strings.Contains(err.Error(), "private-secret") {
+		t.Fatalf("bad safe HTTP diagnostic: %v", err)
+	}
+}
+
+// An unavailable historical billing month must yield an actionable, safe
+// diagnostic, not a generic endpoint message or zero account tokens.
+func TestBillingOnlyAvailabilityReportsPeriodAndNeverCallsOldAggregate(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	oldAggregate := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "GetFilteredUsageEvents") {
+			fmt.Fprint(w, `{}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "GetAggregatedUsageEvents") {
+			oldAggregate++
+			fmt.Fprint(w, `{}`)
+			return
+		}
+		if r.URL.Path != billingV2Path {
+			t.Errorf("unexpected path: %q", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprint(w, `{"availability":{}}`)
+	}))
+	defer srv.Close()
+	root := "billing-all-unavailable-test"
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL, Now: func() time.Time { return now }, ProtectedThrough: "2026-10-23"}).fetchUsageWithToken(root, billingTestJWT())
+	if err == nil || len(got) != 0 {
+		t.Fatalf("unavailable API must fail: events=%d err=%v", len(got), err)
+	}
+	if !strings.Contains(err.Error(), "reason=incomplete_billing_windows") || !strings.Contains(err.Error(), "availability_only=2") || !strings.Contains(err.Error(), "first_utc=2026-10-24") {
+		t.Fatalf("missing safe diagnostics: %v", err)
+	}
+	if oldAggregate != 0 {
+		t.Fatal("obsolete aggregated endpoint called after billing fallback")
+	}
+	if cov := TakeAccountCoverage(root); len(cov) > 0 {
+		t.Fatalf("unexpected coverage: %+v", cov)
+	}
+}
+
+func TestBillingMissingTeamIDResolvesOnlyUniqueAccountTeam(t *testing.T) {
+	teamCalls := 0
+	billingCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/dashboard/teams" {
+			teamCalls++
+			if r.Method != http.MethodPost {
+				t.Errorf("wrong team lookup method")
+			}
+			fmt.Fprint(w, `{"teams":[{"id":12345}]}`)
+			return
+		}
+		if r.URL.Path != billingV2Path {
+			t.Errorf("wrong path %s", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		billingCalls++
+		if r.URL.Query().Get("teamId") == "" {
+			fmt.Fprint(w, `{"availability":"missing_team_id"}`)
+			return
+		}
+		if r.URL.Query().Get("teamId") != "12345" {
+			t.Errorf("wrong chosen team")
+		}
+		fmt.Fprint(w, `{"data":[{"billingItemId":"one","eventTime":"2026-11-02T12:00:00Z","principal":{"type":"user","id":"user_test"},"hasTokenMeters":true,"usage":{"prompt-text-tokens":"5"},"totalTokens":"5"}],"pagination":{"nextCursor":null}}`)
+	}))
+	defer srv.Close()
+	got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchBillingWindow(billingTestJWT(), billingTestSpan())
+	if err != nil || teamCalls != 1 || billingCalls != 2 || len(got.events) != 1 || got.events[0].Miss != 5 {
+		t.Fatalf("team lookup=%d billing=%d got=%+v err=%v", teamCalls, billingCalls, got, err)
+	}
+}
+
+func TestBillingMissingTeamIDAmbiguousNeverGuesses(t *testing.T) {
+	for _, teams := range []string{`[]`, `[{"id":123},{"id":456}]`} {
+		t.Run(teams, func(t *testing.T) {
+			billing := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/dashboard/teams" {
+					fmt.Fprintf(w, `{"teams":%s}`, teams)
+					return
+				}
+				billing++
+				fmt.Fprint(w, `{"availability":"missing_team_id"}`)
+			}))
+			defer srv.Close()
+			got, err := (Adapter{HTTP: srv.Client(), APIBase: srv.URL}).fetchBillingWindow(billingTestJWT(), billingTestSpan())
+			if err == nil || billing != 1 || len(got.events) > 0 || !strings.Contains(err.Error(), "team_selection_required") {
+				t.Fatalf("bad guess billing=%d got=%+v err=%v", billing, got, err)
+			}
+		})
 	}
 }

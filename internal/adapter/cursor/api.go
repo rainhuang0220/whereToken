@@ -171,6 +171,18 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	var out []event.UsageEvent
 	var covered []CoverageWindow
 	missing := 0
+	availabilityOnly := 0
+	var availabilityDetails string
+	emptyBilling := 0
+	var firstMissing, lastMissing string
+	recordMissing := func(w usageSpan) {
+		missing++
+		cov := w.coverage()
+		if firstMissing == "" {
+			firstMissing = cov.From
+		}
+		lastMissing = cov.To
+	}
 	var failed error
 	useBilling := false
 	var protectFrom time.Time
@@ -215,10 +227,9 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			}
 		}
 		if err == nil && useBilling && len(got.events) == 0 {
-			// Cursor does not document the personal billing endpoint's
-			// historical retention. An empty month is not enough to
-			// delete verified older observations.
-			missing++
+			// An empty response is not proof of historical retention.
+			emptyBilling++
+			recordMissing(w)
 			continue
 		}
 		if err == nil {
@@ -230,9 +241,14 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			continue
 		}
 		if isNotFound(err) || (useBilling && errors.Is(err, errBillingAvailability)) {
-			// A billing availability-only envelope is not usage data. Leave
-			// this month unknown and continue to newer months.
-			missing++
+			// A billing availability-only envelope is not usage data.
+			if errors.Is(err, errBillingAvailability) {
+				availabilityOnly++
+				if availabilityDetails == "" {
+					availabilityDetails = err.Error()
+				}
+			}
+			recordMissing(w)
 			continue
 		}
 		// Dates and page counts are safe diagnostics. Never include the raw
@@ -243,7 +259,8 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		}
 		break
 	}
-	if len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+	if !useBilling && len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+		// Never retry a dead legacy aggregate endpoint after switching to billing v2.
 		start := windows[0].start.UnixMilli()
 		end := windows[len(windows)-1].end.UnixMilli()
 		agg, aerr := a.fetchAggregated(token, start, end)
@@ -266,13 +283,16 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		return tagged(sourceRoot, degradeAPI(out)), failed
 	}
 	if missing > 0 {
-		// A protected historical prefix is intentionally skipped. Real
-		// unavailable requested months still mean incomplete coverage,
-		// even when none of those months produced usable rows.
-		if len(out) == 0 {
-			return nil, errEndpointUnavailable
+		// Dates and enumerated failure counts are safe to print; raw response,
+		// cookies, account IDs and tokens must never appear in diagnostics.
+		partialErr := fmt.Errorf("%w [reason=incomplete_billing_windows missing=%d first_utc=%s last_utc=%s availability_only=%d empty=%d]", errEndpointUnavailable, missing, firstMissing, lastMissing, availabilityOnly, emptyBilling)
+		if availabilityDetails != "" {
+			partialErr = fmt.Errorf("%w [availability_detail=%s]", partialErr, availabilityDetails)
 		}
-		return tagged(sourceRoot, degradeAPI(out)), errEndpointUnavailable
+		if len(out) == 0 {
+			return nil, partialErr
+		}
+		return tagged(sourceRoot, degradeAPI(out)), partialErr
 	}
 	if len(covered) == len(windows) && len(out) == 0 {
 		return tagged(sourceRoot, completeAccountUsage(nil, a.now())), nil

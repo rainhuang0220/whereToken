@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,11 +26,16 @@ const billingV2MaxPages = 500
 // without returning the requested usage rows. That is unknown coverage,
 // never zero usage or a completed billing window.
 var errBillingAvailability = fmt.Errorf("%w [reason=billing_range_availability_only]", errEndpointUnavailable)
+var errMissingBillingTeam = fmt.Errorf("%w [reason=billing_missing_team_id]", errBillingAvailability)
 
 // This is a compatibility path for the personal Cursor web dashboard, which
 // moved from the DashboardService filtered event RPC in late 2026. It is not
 // Cursor's public team Admin API. Never persist or log its session cookie.
 func (a Adapter) fetchBillingWindow(token string, w usageSpan) (filteredFetch, error) {
+	return a.fetchBillingWindowForTeam(token, w, 0)
+}
+
+func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int64) (filteredFetch, error) {
 	var out filteredFetch
 	userID, jwt, ok := billingSessionIdentity(token)
 	if !ok {
@@ -55,6 +61,9 @@ func (a Adapter) fetchBillingWindow(token string, w usageSpan) (filteredFetch, e
 	for page := 1; page <= billingV2MaxPages; page++ {
 		q := url.Values{}
 		q.Set("scope", "user")
+		if teamID > 0 {
+			q.Set("teamId", strconv.FormatInt(teamID, 10))
+		}
 		q.Set("startTime", queryFrom.UTC().Format(time.RFC3339Nano))
 		q.Set("endTime", queryTo.UTC().Format(time.RFC3339Nano))
 		q.Set("pageSize", strconv.Itoa(billingV2PageSize))
@@ -68,21 +77,22 @@ func (a Adapter) fetchBillingWindow(token string, w usageSpan) (filteredFetch, e
 		endpoint := base + billingV2Path + "?" + q.Encode()
 		req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 		if err != nil {
-			return filteredFetch{}, errEndpointUnavailable
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=request_build page=%d]", errEndpointUnavailable, page)
 		}
 		req.Header.Set("Cookie", "WorkosCursorSessionToken="+url.QueryEscape(userID+"::"+jwt))
 		req.Header.Set("Accept", "application/json")
-		c := a.client()
-		// Cookie-bearing requests must not follow redirects of any kind.
+		c := *a.client()
+		// Do not mutate the shared HTTP client; cookie-bearing requests
+		// must never follow redirects to another host.
 		c.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 		resp, err := c.Do(req)
 		if err != nil {
-			return filteredFetch{}, errEndpointUnavailable
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=network page=%d]", errEndpointUnavailable, page)
 		}
 		limited, readErr := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
 		resp.Body.Close()
 		if readErr != nil {
-			return filteredFetch{}, errEndpointUnavailable
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=body_read page=%d]", errEndpointUnavailable, page)
 		}
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || (resp.StatusCode >= 300 && resp.StatusCode < 400) {
 			return filteredFetch{}, errTokenRejected
@@ -91,9 +101,19 @@ func (a Adapter) fetchBillingWindow(token string, w usageSpan) (filteredFetch, e
 			return filteredFetch{}, errRateLimited
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return filteredFetch{}, errEndpointUnavailable
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=http status=%d page=%d]", errEndpointUnavailable, resp.StatusCode, page)
 		}
 		part, raw, after, err := decodeBillingPage(limited, userID, w, queryFrom)
+		if errors.Is(err, errMissingBillingTeam) && teamID == 0 {
+			// Cursor may require an explicitly selected team even for a user
+			// scope. Resolve only a unique team of the logged-in account.
+			// Never assume teamId=0 or guess an unrelated team's ID.
+			id, teamErr := a.uniqueBillingTeamID(userID, jwt)
+			if teamErr != nil {
+				return filteredFetch{}, teamErr
+			}
+			return a.fetchBillingWindowForTeam(token, w, id)
+		}
 		if err != nil {
 			return filteredFetch{}, err
 		}
@@ -149,8 +169,68 @@ func decodeBillingPage(raw []byte, userID string, w usageSpan, queryFrom time.Ti
 	}
 	data, found := obj["data"]
 	if !found {
-		if _, ok := obj["availability"]; ok && len(obj) == 1 {
-			return nil, 0, "", errBillingAvailability
+		if available, ok := obj["availability"]; ok && len(obj) == 1 {
+			// Report only harmless nested JSON field names, never their values.
+			var nested map[string]json.RawMessage
+			if json.Unmarshal(available, &nested) == nil && len(nested) > 0 {
+				keys := make([]string, 0, len(nested))
+				for key := range nested {
+					if len(key) == 0 || len(key) > 36 {
+						continue
+					}
+					valid := true
+					for _, c := range key {
+						if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						keys = append(keys, key)
+					}
+				}
+				sort.Strings(keys)
+				if len(keys) > 10 {
+					keys = keys[:10]
+				}
+				return nil, 0, "", fmt.Errorf("%w [available_keys=%s]", errBillingAvailability, strings.Join(keys, ","))
+			}
+			kind := "unknown"
+			if len(available) > 0 {
+				switch available[0] {
+				case '{':
+					kind = "object"
+				case '[':
+					kind = "array"
+				case '"':
+					kind = "string"
+				case 't', 'f':
+					kind = "boolean"
+				case 'n':
+					kind = "null"
+				default:
+					kind = "number_or_unknown"
+				}
+			}
+			if kind == "string" {
+				var state string
+				if json.Unmarshal(available, &state) == nil && len(state) <= 40 {
+					valid := len(state) > 0
+					for _, ch := range state {
+						if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '-') {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						if state == "missing_team_id" {
+							return nil, 0, "", errMissingBillingTeam
+						}
+						return nil, 0, "", fmt.Errorf("%w [availability_state=%s]", errBillingAvailability, state)
+					}
+				}
+			}
+			return nil, 0, "", fmt.Errorf("%w [availability_type=%s]", errBillingAvailability, kind)
 		}
 		// Only schema key names are disclosed, never error text, IDs,
 		// response bodies or anything from the account.
