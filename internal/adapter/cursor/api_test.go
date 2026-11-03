@@ -723,3 +723,36 @@ func TestRowsOverDeclaredCountCanOnlyRecoverByCompleteSplit(t *testing.T) {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
+
+func TestProtectedBillingMonthCanBeCachedWithoutSuppressingLegacyBackfill(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	a := Adapter{Now: func() time.Time { return now }, ProtectedThrough: "2026-10-23", Covered: []CoverageWindow{{From: "2026-10-24", To: "2026-10-31"}}}
+	spans := a.uncoveredWindows(a.allUsageWindows())
+	hasOld, hasOctober, hasCurrent := false, false, false
+	for _, span := range spans {
+		from := span.coverage().From
+		if from == "2025-12-01" {
+			hasOld = true
+		}
+		if from == "2026-10-01" {
+			hasOctober = true
+		}
+		if from == "2026-11-01" {
+			hasCurrent = true
+		}
+	}
+	if !hasOld || hasOctober || !hasCurrent {
+		t.Fatalf("must preserve historical backfill and current month but reuse October coverage; old=%v oct=%v current=%v", hasOld, hasOctober, hasCurrent)
+	}
+	a.Now = func() time.Time { return time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC) }
+	spans = a.uncoveredWindows(a.allUsageWindows())
+	octEarly := false
+	for _, span := range spans {
+		if span.coverage().From == "2026-10-01" {
+			octEarly = true
+		}
+	}
+	if !octEarly {
+		t.Fatal("previous UTC month must be refreshed during boundary settlement")
+	}
+}

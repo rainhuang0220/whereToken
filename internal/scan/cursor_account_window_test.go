@@ -639,6 +639,14 @@ func TestBillingV2ScanPreserves166DayHistoryAndAddsRecentTokens(t *testing.T) {
 	if err != nil || audit.Validation != "open" || audit.Declared != -1 {
 		t.Fatalf("v2 audit=%+v err=%v", audit, err)
 	}
+	beforeRequests := len(starts)
+	again := Run(testhome.New(home), []adapter.Adapter{ad})
+	if len(again.Errors) > 0 || tokenSum(again.Events, "cursor") != chainObserved+20 {
+		t.Fatalf("rescan errors=%v total=%d", again.Errors, tokenSum(again.Events, "cursor"))
+	}
+	if len(starts) != beforeRequests+1 || !strings.HasPrefix(starts[len(starts)-1], "2026-11-01") {
+		t.Fatalf("rescan should not download a closed, protected October again; starts=%v", starts)
+	}
 }
 
 func TestBillingAvailabilityLeavesHistoryUnknownButShowsRecentUsage(t *testing.T) {

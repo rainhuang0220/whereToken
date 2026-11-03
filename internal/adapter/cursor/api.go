@@ -106,16 +106,36 @@ func (a Adapter) allUsageWindows() []usageSpan {
 	return out
 }
 
-// uncoveredWindows keeps a gap and the two newest months. A month already
-// stored whole is left on the ledger. The open month and the one before it
-// are fetched again so the current day and the boundary stay current.
+// uncoveredWindows keeps uncovered history and the open UTC month. The
+// existing legacy behavior also refreshes the previous month. Once an
+// explicitly linked verified snapshot exists, a fully audited previous
+// month can be reused after the first two days of the next UTC month.
 func (a Adapter) uncoveredWindows(all []usageSpan) []usageSpan {
-	if len(a.Covered) == 0 || len(all) == 0 {
-		return all
+	if len(all) == 0 {
+		return nil
 	}
+	var protectFrom time.Time
+	if a.ProtectedThrough != "" {
+		if last, err := time.Parse("2006-01-02", a.ProtectedThrough); err == nil {
+			protectFrom = last.AddDate(0, 0, 1)
+		}
+	}
+	now := a.now().UTC()
 	var out []usageSpan
 	for i, w := range all {
-		if i >= len(all)-2 || !windowCovered(w.coverage(), a.Covered) {
+		// Older windows must still be considered: the legacy endpoint may
+		// remain functional and can backfill genuinely unknown historical days.
+		// Only the billing-v2 fallback skips older dates after a detected
+		// schema change, inside fetchUsageWithToken.
+		coverage := w.coverage()
+		if !protectFrom.IsZero() && w.start.Before(protectFrom) && w.end.After(protectFrom) {
+			coverage.From = protectFrom.Format("2006-01-02")
+		}
+		current := i == len(all)-1
+		// Keep revisiting the just-closed month during the first two UTC
+		// days so late-finishing requests around midnight can settle.
+		boundaryRecheck := i == len(all)-2 && (a.ProtectedThrough == "" || now.Day() <= 2)
+		if current || boundaryRecheck || !windowCovered(coverage, a.Covered) {
 			out = append(out, w)
 		}
 	}
