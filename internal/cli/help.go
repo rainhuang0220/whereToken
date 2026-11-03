@@ -51,7 +51,10 @@ experimental and is not accepted full support. An unsigned upgrade can ask
 again. A Developer ID build with the same team identifier keeps the grant.
 Users do not create a certificate. A Cursor observation stored before an
 account subject was recorded is not claimed by the first account that
-connects.
+connects. In a terminal, cursor connect shows that history and asks once.
+yes binds it and continues the filtered collection. no keeps the old
+history separate from later observations for the current account. A
+normal scan still does not claim it and does not ask.
 
 With no flags, scans ledgers already on this machine and prints the KPI box
 since records began: total (M), cache hit rate, streaks, today/peak,

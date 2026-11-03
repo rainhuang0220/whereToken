@@ -31,6 +31,13 @@ func JWTSubject(accessToken string) string {
 
 func (a Adapter) AccountSubject(home adapter.Home) string {
 	a.AllowPrompt = false
+	return a.Subject(home)
+}
+
+// Subject reads the current Cursor account id. AllowPrompt controls whether
+// a sealed session may ask the operating system. The returned value is the
+// JWT subject, not the token.
+func (a Adapter) Subject(home adapter.Home) string {
 	if a.ConsentPath == "" {
 		a.ConsentPath = ConsentPath(home)
 	}

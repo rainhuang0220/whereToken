@@ -1,14 +1,20 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
 	"runtime"
 	"strings"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/scan"
+	"golang.org/x/term"
 )
 
 func (a *App) runCursor(flags Flags, home adapter.Home) int {
@@ -66,7 +72,7 @@ func (a *App) cursorConnect(home adapter.Home) int {
 	ad := cursor.Adapter{
 		ConsentPath: path,
 		AllowPrompt: true,
-		Probe:       true,
+		Probe:       false,
 		Now:         a.Now,
 	}
 	roots := ad.Discover(home)
@@ -75,20 +81,124 @@ func (a *App) cursorConnect(home adapter.Home) int {
 		fmt.Fprintln(a.Stdout, "session: missing")
 		return ExitOK
 	}
-	var evs []event.UsageEvent
-	var apiErr error
-	for _, root := range roots {
-		err := ad.Parse(root, func(e event.UsageEvent) {
-			evs = append(evs, e)
-		}, func(event.TurnEvent) {})
-		if err != nil && apiErr == nil {
-			apiErr = err
-		}
+	sub := ad.Subject(home)
+	lp, err := ledger.PathFor(home)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "账号用量不可用：UNBOUND_HISTORY")
+		return ExitFail
+	}
+	lg, err := ledger.Open(lp)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "这次没有读取账号用量。")
+		return ExitFail
+	}
+	code, stop := a.confirmCursorHistory(lg, sub)
+	_ = lg.Close()
+	if stop {
+		return code
+	}
+	return a.finishCursorConnect(home, ad)
+}
+
+func (a *App) confirmCursorHistory(lg *ledger.Ledger, sub string) (int, bool) {
+	has, err := lg.HasObservation("cursor")
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "这次没有读取账号用量。")
+		return ExitFail, true
+	}
+	if !has {
+		return 0, false
+	}
+	if sub == "" {
+		fmt.Fprintln(a.Stderr, "当前账号没有可读的身份标识。这次没有关联历史。")
+		return ExitFail, true
+	}
+	prev, err := lg.Meta(cursor.AccountSubjectMeta)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "账号用量不可用：UNBOUND_HISTORY")
+		return ExitFail, true
+	}
+	if prev != "" && prev != sub {
+		fmt.Fprintln(a.Stderr, cursor.AccountMismatchError().Error())
+		return ExitFail, true
+	}
+	if prev == sub {
+		return 0, false
+	}
+	decision, err := lg.Meta(cursor.HistoryDecisionMeta)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "账号用量不可用：UNBOUND_HISTORY")
+		return ExitFail, true
+	}
+	who, err := lg.Meta(cursor.HistoryDecisionSubjectMeta)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "账号用量不可用：UNBOUND_HISTORY")
+		return ExitFail, true
+	}
+	if decision == cursor.HistoryConfirmed && who == sub {
+		return 0, false
+	}
+	if decision == cursor.HistoryDeclined && who == sub {
+		return 0, false
+	}
+	if who != "" && who != sub {
+		fmt.Fprintln(a.Stderr, "当前账号和已经记下的选择不是同一个。旧历史保持独立，这次没有写入。")
+		fmt.Fprintln(a.Stderr, cursor.HistoryHeldError().Error())
+		return ExitFail, true
+	}
+	prompt, err := scan.DescribeCursorHistory(lg, sub)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "账号用量不可用：UNBOUND_HISTORY")
+		return ExitFail, true
+	}
+	fmt.Fprint(a.Stderr, prompt)
+	line, ok := a.readHistoryAnswer()
+	if !ok {
+		fmt.Fprintln(a.Stderr, "请在终端里输入 yes 或 no。这次没有自动关联。")
+		return ExitFail, true
+	}
+	if err := scan.ApplyCursorHistory(lg, sub, line, a.Now()); err != nil {
+		fmt.Fprintln(a.Stderr, err.Error())
+		return ExitFail, true
+	}
+	return 0, false
+}
+
+func (a *App) readHistoryAnswer() (string, bool) {
+	interactive := false
+	switch {
+	case a.StdinInteractive != nil:
+		interactive = a.StdinInteractive()
+	case a.Stdin != nil:
+		interactive = true
+	default:
+		interactive = term.IsTerminal(int(os.Stdin.Fd()))
+	}
+	if !interactive {
+		return "", false
+	}
+	var r io.Reader = os.Stdin
+	if a.Stdin != nil {
+		r = a.Stdin
+	}
+	line, err := bufio.NewReader(r).ReadString('\n')
+	if err != nil && strings.TrimSpace(line) == "" {
+		return "", false
+	}
+	return line, true
+}
+
+func (a *App) finishCursorConnect(home adapter.Home, ad cursor.Adapter) int {
+	var res scan.Result
+	if a.Scan != nil {
+		res = a.Scan(home)
+	} else {
+		res = scan.Run(home, []adapter.Adapter{ad})
 	}
 	var api []event.UsageEvent
 	var from, to string
-	for _, e := range evs {
-		if e.Derivation != event.DeriveProviderAPI {
+	for _, e := range res.Events {
+		if e.Source != "cursor" || e.Derivation != event.DeriveProviderAPI {
 			continue
 		}
 		api = append(api, e)
@@ -115,13 +225,14 @@ func (a *App) cursorConnect(home adapter.Home) int {
 	fmt.Fprintf(a.Stdout, "cache_write: %d\n", sum.All.CacheCreate)
 	fmt.Fprintf(a.Stdout, "output: %d\n", sum.All.Output)
 	fmt.Fprintf(a.Stdout, "total: %d\n", sum.All.Total())
-	if apiErr != nil {
-		fmt.Fprintln(a.Stderr, apiErr.Error())
+	apiErr := strings.Join(res.Errors, "\n")
+	if apiErr != "" {
+		fmt.Fprintln(a.Stderr, apiErr)
 		if len(api) == 0 {
 			return ExitFail
 		}
 	}
-	if strings.Contains(strings.ToLower(fmt.Sprint(apiErr)), "eyj") {
+	if strings.Contains(strings.ToLower(apiErr), "eyj") {
 		return ExitFail
 	}
 	return ExitOK

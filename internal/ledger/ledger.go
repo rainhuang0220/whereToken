@@ -87,6 +87,7 @@ type Ledger struct {
 	path               string
 	mu                 sync.Mutex
 	beforeImportCommit func() error
+	beforeMetaCommit   func() error
 }
 
 // PathFor is the ledger file for home. It is not under the scan cache

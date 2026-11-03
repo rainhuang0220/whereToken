@@ -216,13 +216,49 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if a.Unseal != nil {
 		return a.Unseal(value)
 	}
+	if plain, ok := rememberedOpened(dbPath); ok {
+		return plain, nil
+	}
 	if !consentAllows(a.ConsentPath) {
 		return "", errAccountUsageUnavailable
 	}
 	if flag.Lookup("test.v") != nil {
 		return "", errAccountUsageUnavailable
 	}
-	return unsealOS(value, dbPath, a.AllowPrompt)
+	plain, err := unsealOS(value, dbPath, a.AllowPrompt)
+	if err != nil {
+		return "", err
+	}
+	rememberOpened(dbPath, plain)
+	return plain, nil
+}
+
+// rememberedOpened keeps a sealed session opened earlier in this process.
+// cursor connect reads the subject once, then the same command collects
+// usage without a second system dialog. The value is not written to the
+// ledger, a log, or an error.
+var (
+	openedMu    sync.Mutex
+	openedPlain = map[string]string{}
+)
+
+func rememberedOpened(dbPath string) (string, bool) {
+	if dbPath == "" {
+		return "", false
+	}
+	openedMu.Lock()
+	defer openedMu.Unlock()
+	plain, ok := openedPlain[dbPath]
+	return plain, ok && plain != ""
+}
+
+func rememberOpened(dbPath, plain string) {
+	if dbPath == "" || plain == "" {
+		return
+	}
+	openedMu.Lock()
+	openedPlain[dbPath] = plain
+	openedMu.Unlock()
 }
 
 // sealedBlob returns the v10 ciphertext including its three-byte prefix.

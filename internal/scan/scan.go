@@ -175,7 +175,8 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	if lg != nil {
 		defer lg.Close()
 	}
-	adapters = prepareCursor(home, adapters, lg)
+	cursorSource := "cursor"
+	adapters = prepareCursor(home, adapters, lg, &cursorSource)
 	var events []event.UsageEvent
 	var cursorWindows []cursor.CoverageWindow
 	var cursorLookback cursor.CoverageWindow
@@ -266,10 +267,14 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		// was not in this scan. Provider API authority suppresses that source.
 		_ = lg.CommitUsage(events)
 		if len(cursorWindows) > 0 {
+			store := cursorSource
+			if store == "" {
+				store = "cursor"
+			}
 			for _, w := range cursorWindows {
-				_ = lg.NoteCoveredWindow("cursor", w.From, w.To, cursorWindowEvents(events, w))
+				_ = lg.NoteCoveredWindow(store, w.From, w.To, cursorWindowEvents(events, w))
 				if w.Audit.Validation == "ok" || w.Audit.Validation == "open" {
-					_ = lg.NoteWindowAudit("cursor", ledger.WindowAudit{
+					_ = lg.NoteWindowAudit(store, ledger.WindowAudit{
 						From: w.From, To: w.To,
 						Declared: w.Audit.Declared, RawRows: w.Audit.RawRows,
 						Deduped: w.Audit.Deduped, Days: w.Audit.Days,
@@ -287,14 +292,19 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 			var extra []event.UsageEvent
 			var extraErr error
 			if haveCursorLookback {
-				extra, extraErr = lg.AccountSupplement("cursor", ledger.DayRange{
+				extra, extraErr = lg.AccountSupplement(store, ledger.DayRange{
 					From: cursorLookback.From,
 					To:   cursorLookback.To,
 				}, ranges, events)
 			} else {
-				extra, extraErr = lg.DaysOutside("cursor", ranges, events)
+				extra, extraErr = lg.DaysOutside(store, ranges, events)
 			}
 			if extraErr == nil && len(extra) > 0 {
+				if store != "cursor" {
+					for i := range extra {
+						extra[i].Source = "cursor"
+					}
+				}
 				events = append(events, extra...)
 			}
 		} else {
@@ -321,7 +331,7 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	}
 }
 
-func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Ledger) []adapter.Adapter {
+func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Ledger, cursorSource *string) []adapter.Adapter {
 	out := make([]adapter.Adapter, len(adapters))
 	copy(out, adapters)
 	for i, item := range out {
@@ -334,7 +344,16 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 		}
 		c.AllowPrompt = false
 		if lg != nil && len(c.Covered) == 0 {
-			ranges, err := lg.CoveredRanges("cursor")
+			source := "cursor"
+			prev, _ := lg.Meta(cursor.AccountSubjectMeta)
+			decision, _ := lg.Meta(cursor.HistoryDecisionMeta)
+			who, _ := lg.Meta(cursor.HistoryDecisionSubjectMeta)
+			// A declined account keeps its own finished windows. Those windows
+			// must not be treated as coverage of the old unbound chain.
+			if prev == "" && decision == cursor.HistoryDeclined && who != "" {
+				source = cursor.AccountNamespace(who)
+			}
+			ranges, err := lg.CoveredRanges(source)
 			if err == nil {
 				for _, r := range ranges {
 					c.Covered = append(c.Covered, cursor.CoverageWindow{From: r.From, To: r.To})
@@ -354,6 +373,20 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 						return err
 					}
 					if has {
+						decision, err := bound.Meta(cursor.HistoryDecisionMeta)
+						if err != nil {
+							return err
+						}
+						who, err := bound.Meta(cursor.HistoryDecisionSubjectMeta)
+						if err != nil {
+							return err
+						}
+						if decision == cursor.HistoryDeclined && who != "" && who == sub {
+							if cursorSource != nil {
+								*cursorSource = cursor.AccountNamespace(sub)
+							}
+							return nil
+						}
 						return cursor.UnboundHistoryError()
 					}
 					if sub == "" {
