@@ -96,6 +96,33 @@ func TestRunUpdateReplacesBinary(t *testing.T) {
 	}
 }
 
+func TestRunUpdateKeepsBinaryWhenDownloadFails(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "wheretoken")
+	if err := os.WriteFile(dest, []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app, _, errb := testApp([]string{"update"})
+	app.GOOS = "darwin"
+	app.GOARCH = "arm64"
+	app.Home = testhome.New(t.TempDir())
+	app.UserHome = func() (string, error) { return t.TempDir(), nil }
+	app.Executable = func() (string, error) { return dest, nil }
+	app.HTTPGet = func(string) ([]byte, error) {
+		return []byte("partial"), fmt.Errorf("unexpected EOF")
+	}
+	if code := app.Run(); code != ExitFail {
+		t.Fatalf("code=%d", code)
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil || string(got) != "old" {
+		t.Fatalf("binary changed: %q err=%v", got, err)
+	}
+	if !strings.Contains(errb.String(), "download failed") || !strings.Contains(errb.String(), "unexpected EOF") {
+		t.Fatalf("stderr=%s", errb.String())
+	}
+}
+
 func TestRunUpdateRejectsBadChecksum(t *testing.T) {
 	dir := t.TempDir()
 	dest := filepath.Join(dir, "wheretoken")

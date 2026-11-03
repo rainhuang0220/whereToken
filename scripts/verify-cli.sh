@@ -15,6 +15,7 @@ ver="$("$dir/wheretoken" --version)"
 echo "$ver" | grep -q wheretoken
 
 "$dir/wheretoken" --help | grep -q USAGE
+"$dir/wheretoken" --help | grep -F -q 'cursor [status|connect|disconnect]'
 "$dir/wheretoken" --help | grep -q 'EXIT CODES'
 "$dir/wheretoken" --help | grep -q 'curl -fsSL'
 "$dir/wheretoken" --help | grep -q 刷新
