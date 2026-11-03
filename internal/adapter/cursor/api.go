@@ -3,6 +3,7 @@ package cursor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -165,7 +166,12 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			missing++
 			continue
 		}
+		// Dates and page counts are safe diagnostics. Never include the raw
+		// response, credentials, conversation IDs or event bodies.
 		failed = err
+		if errors.Is(err, errSchemaChanged) {
+			failed = fmt.Errorf("%w [utc_window=%s..%s]", err, w.coverage().From, w.coverage().To)
+		}
 		break
 	}
 	if len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
@@ -213,7 +219,12 @@ func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filt
 		endMs--
 	}
 	got, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
-	if err == nil || err != errUsagePageLimit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
+	// In a live period Cursor can add usage between pages, changing its
+	// declared total. Re-query a smaller complete time slice rather than
+	// accepting an unverifiable partial page or giving up the entire scan.
+	var drift *filteredCountDrift
+	canSplit := err == errUsagePageLimit || errors.As(err, &drift)
+	if err == nil || !canSplit || depth >= 6 || w.end.Sub(w.start) < time.Hour {
 		if err == errUsagePageLimit && (depth >= 6 || w.end.Sub(w.start) < time.Hour) {
 			return filteredFetch{}, errPaginationIncomplete
 		}
@@ -329,6 +340,21 @@ func (a Adapter) pageCap() int {
 	return maxUsagePages
 }
 
+// filteredCountDrift covers a changing (or internally contradictory)
+// upstream count. The error intentionally contains only public pagination
+// numbers; it never embeds event records, JWTs or HTTP response bodies.
+type filteredCountDrift struct {
+	reason        string
+	page          int
+	before, after int
+}
+
+func (e *filteredCountDrift) Error() string {
+	return fmt.Sprintf("%s [reason=%s page=%d expected=%d observed=%d]", errSchemaChanged, e.reason, e.page, e.before, e.after)
+}
+
+func (e *filteredCountDrift) Unwrap() error { return errSchemaChanged }
+
 func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, error) {
 	var out filteredFetch
 	var total int
@@ -351,7 +377,7 @@ func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, e
 			return filteredFetch{}, err
 		}
 		if !known {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, fmt.Errorf("%w [reason=missing_declared_count page=%d]", errSchemaChanged, page)
 		}
 		if page == 1 {
 			total = pageTotal
@@ -359,10 +385,10 @@ func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, e
 				pageSize = rawN
 			}
 		} else if pageTotal != total {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, &filteredCountDrift{reason: "count_changed_between_pages", page: page, before: total, after: pageTotal}
 		}
 		if out.raw+rawN > total {
-			return filteredFetch{}, errSchemaChanged
+			return filteredFetch{}, &filteredCountDrift{reason: "rows_exceed_declared_count", page: page, before: total, after: out.raw + rawN}
 		}
 		out.events = append(out.events, pageEvents...)
 		out.raw += rawN
@@ -551,7 +577,13 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 	_, hasCamel := top["totalUsageEventsCount"]
 	_, hasSnake := top["total_usage_events_count"]
 	total := int(adapter.FlexInt(adapter.Pick(top, "totalUsageEventsCount", "total_usage_events_count")))
-	list := asSlice(adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events"))
+	listValue := adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events")
+	list, listOK := listValue.([]any)
+	if !listOK {
+		// A missing or renamed list is not an authoritative zero, even if
+		// totalUsageEventsCount happens to be zero.
+		return nil, 0, 0, false, fmt.Errorf("%w [reason=missing_usage_events_array]", errSchemaChanged)
+	}
 	out := make([]event.UsageEvent, 0, len(list))
 	for i, item := range list {
 		m := adapter.AsMap(item)
