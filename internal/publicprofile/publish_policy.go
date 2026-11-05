@@ -142,16 +142,24 @@ func DecidePublication(in PublicationInput) PublicationDecision {
 	if in.Verified.Total == nil {
 		return PublicationDecision{Action: ActionBlocked, Reason: ReasonUnknownVerified, Code: CodeBlockedData}
 	}
+	ownerNow := in.Now
+	if offset := in.Candidate.OwnerUTCOffsetMinutes; offset != nil && *offset >= -840 && *offset <= 840 {
+		ownerNow = in.Now.In(time.FixedZone("owner", *offset*60))
+	}
+	// A usage change held for midnight is waiting for the owner's new-day
+	// snapshot. Publishing the previous day's stored projection *at* midnight
+	// would create two GitHub commits when the client wakes and rolls its date.
+	// Keep the pending intent intact; the next new-day PUT wins the rollover.
+	if !ownerNow.IsZero() && in.Pending.Reason == ReasonCooldown &&
+		validLocalDate(in.Candidate.AsOfDate) && earlierLocalDate(in.Candidate.AsOfDate, ownerNow.Format("2006-01-02")) {
+		return PublicationDecision{Action: ActionNoChange, Reason: ReasonEarlierDate, Code: CodeSkippedDelta}
+	}
 	minDelta := RefreshMinDelta
 	if *total >= 1_000_000_000 || *in.Verified.Total >= 1_000_000_000 {
 		minDelta = RefreshMinDeltaB
 	}
 	if *total-*in.Verified.Total < minDelta {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonDelta, Code: CodeSkippedDelta}
-	}
-	ownerNow := in.Now
-	if offset := in.Candidate.OwnerUTCOffsetMinutes; offset != nil && *offset >= -840 && *offset <= 840 {
-		ownerNow = in.Now.In(time.FixedZone("owner", *offset*60))
 	}
 	if !ownerNow.IsZero() {
 		y, m, d := ownerNow.Date()

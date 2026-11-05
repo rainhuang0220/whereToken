@@ -132,6 +132,29 @@ func TestDecidePublicationMidnightMergeRetainsOneIntent(t *testing.T) {
 	}
 }
 
+// The host must not publish yesterday's buffered 20:00 snapshot at midnight;
+// the client's new as_of_date snapshot performs exactly one date rollover.
+func TestDeferredYesterdaySnapshotDoesNotPublishAtMidnight(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	off := 480
+	last := time.Date(2026, 11, 4, 19, 0, 0, 0, loc)
+	verified := wall("sha256:prev", "2026-11-04", 19_000_000_000, last)
+	prev := gateSnap("sha256:deferred", StatusAvailable, "2026-11-04", intPtr(19_010_000_000))
+	prev.OwnerUTCOffsetMinutes = &off
+	midnight := time.Date(2026, 11, 5, 0, 0, 0, 0, loc)
+	pending := PendingIntent{SnapshotID: prev.SnapshotID, Reason: ReasonCooldown, DueAt: midnight}
+	stale := DecidePublication(PublicationInput{Candidate: prev, Verified: verified, Pending: pending, Now: midnight, FromWorker: true})
+	if stale.Action != ActionNoChange {
+		t.Fatalf("stale midnight replay %+v", stale)
+	}
+	updated := gateSnap("sha256:newday", StatusAvailable, "2026-11-05", intPtr(19_010_000_000))
+	updated.OwnerUTCOffsetMinutes = &off
+	rolled := DecidePublication(PublicationInput{Candidate: updated, Verified: verified, Pending: pending, Now: midnight.Add(time.Minute)})
+	if rolled.Action != ActionPublishNow || rolled.Reason != ReasonDate {
+		t.Fatalf("new day did not publish %+v", rolled)
+	}
+}
+
 func TestDecidePublicationMidnightBypassesCooldown(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	last := time.Date(2026, 9, 24, 23, 59, 0, 0, loc)
