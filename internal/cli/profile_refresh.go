@@ -37,7 +37,7 @@ func (a *App) refreshDo(req *http.Request) (*http.Response, error) {
 	if a.HTTPDo != nil {
 		return a.HTTPDo(req)
 	}
-	return (&http.Client{Timeout: profileRefreshTimeout}).Do(req)
+	return (&http.Client{Timeout: profileRefreshTimeout, Transport: scopedProfileRefreshTransport(a.hostedBase())}).Do(req)
 }
 
 func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
