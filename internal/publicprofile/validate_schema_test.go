@@ -55,6 +55,7 @@ func v1SchemaTestDocument(t *testing.T) map[string]any {
 	t.Helper()
 	doc := schemaTestDocument(t)
 	doc["schema_version"] = float64(SchemaVersionV1)
+	delete(doc, "owner_utc_offset_minutes") // optional v2-only local-midnight metadata
 
 	periods := objectAt(t, doc, []string{"periods"})
 	for _, rawPeriod := range periods {

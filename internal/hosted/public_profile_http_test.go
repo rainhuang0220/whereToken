@@ -1273,65 +1273,78 @@ func TestCoalescedPutKeepsFailedReadmeForNewestSnapshot(t *testing.T) {
 	}
 }
 
-func TestHostedUsageWaitsForVerifiedHourThenPublishesWithoutAnotherPut(t *testing.T) {
+// Integration test with MySQL: 20:00+08 usage is staged, not published.
+// A midnight maintenance tick must not push a stale old-day snapshot; the
+// first new-day client snapshot makes exactly one verified README update.
+func TestHostedUsageMergesAtOwnerMidnightWithoutDoublePublish(t *testing.T) {
 	git := newMemGit(publishReadme)
 	st := readyStore(t)
 	prevClock := st.now
 	t.Cleanup(func() { st.now = prevClock })
-	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	loc := time.FixedZone("CST", 8*3600)
+	now := time.Date(2026, 9, 24, 19, 0, 0, 0, loc)
 	st.now = func() time.Time { return now }
 	opts := publishOptions(st, git)
 	opts.Now = func() time.Time { return now }
 	h := NewMux(opts)
 	device, _, _ := seedOwner(t)
-	base := int64(1_000)
+	const base int64 = 1_000
 	first := mustProjection(t, publicprofile.Input{
-		Now: now, Loc: time.UTC, Version: "test",
+		Now: now, Loc: loc, Version: "test",
 		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base)},
 	})
 	if got := putProjection(t, h, device, first.raw); got["readme"] != "materialized" {
 		t.Fatalf("first %+v", got)
 	}
 	puts := git.puts
-	early := now.Add(time.Hour - time.Nanosecond)
-	now = early
+	now = time.Date(2026, 9, 24, 20, 0, 0, 0, loc)
 	small := mustProjection(t, publicprofile.Input{
-		Now: now, Loc: time.UTC, Version: "test",
+		Now: now, Loc: loc, Version: "test",
 		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+4)},
 	})
-	if publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(small.snap)) {
-		t.Fatal("small fixture changed the visible total")
-	}
 	if got := putProjection(t, h, device, small.raw); got["readme"] != "coalesced" || git.puts != puts {
-		t.Fatalf("unchanged display readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+		t.Fatalf("subthreshold readme=%v puts=%d", got["readme"], git.puts)
 	}
 	waiting := mustProjection(t, publicprofile.Input{
-		Now: now, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+10)},
+		Now: now, Loc: loc, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta)},
 	})
-	if !publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(waiting.snap)) {
-		t.Fatalf("waiting display %s", waiting.snap.Periods.All.Totals.Total.Display)
-	}
 	if got := putProjection(t, h, device, waiting.raw); got["readme"] != "pending" || git.puts != puts {
-		t.Fatalf("during cooldown readme=%v puts %d -> %d", got["readme"], puts, git.puts)
+		t.Fatalf("20:00 should defer %+v puts=%d", got, git.puts)
 	}
-	s := &server{opts: opts, limiter: map[string][]time.Time{}}
-	s.retryFailedReadmes(context.Background())
+	srv := &server{opts: opts, limiter: map[string][]time.Time{}}
+	now = time.Date(2026, 9, 24, 23, 59, 0, 0, loc)
+	srv.retryFailedReadmes(context.Background())
 	if git.puts != puts {
-		t.Fatal("maintenance published before the hour")
+		t.Fatal("published before midnight")
 	}
-	now = early.Add(time.Nanosecond)
-	s.retryFailedReadmes(context.Background())
-	if git.puts == puts {
-		t.Fatal("maintenance did not publish when the hour elapsed")
+	now = time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+	srv.retryFailedReadmes(context.Background())
+	if git.puts != puts {
+		t.Fatal("published yesterday's buffered snapshot at midnight")
+	}
+	rolled := mustProjection(t, publicprofile.Input{
+		Now: now, Loc: loc, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base+publicprofile.RefreshMinDelta)},
+	})
+	if rolled.snap.AsOfDate == waiting.snap.AsOfDate {
+		t.Fatal("rollover fixture dates identical")
+	}
+	if got := putProjection(t, h, device, rolled.raw); got["readme"] != "materialized" || git.puts <= puts {
+		t.Fatalf("new-day update %+v puts=%d", got, git.puts)
+	}
+	after := git.puts
+	srv.retryFailedReadmes(context.Background())
+	if git.puts != after {
+		t.Fatal("maintenance repeated the new-day publication")
 	}
 	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
 	if err != nil {
 		t.Fatal(err)
 	}
 	pres, err := st.Presentation(context.Background(), user.ID)
-	if err != nil || pres.ReadmeSnapshotID != waiting.snap.SnapshotID || !pres.VerifiedTotal.Valid || pres.VerifiedTotal.Int64 != publicprofile.TotalTokens(waiting.snap) {
-		t.Fatalf("verified %+v %v", pres.VerifiedTotal, err)
+	if err != nil || pres.ReadmeSnapshotID != rolled.snap.SnapshotID || !pres.VerifiedTotal.Valid || pres.VerifiedTotal.Int64 != publicprofile.TotalTokens(rolled.snap) {
+		t.Fatalf("verified snapshot was not the rolled day: %s total=%+v err=%v", pres.ReadmeSnapshotID, pres.VerifiedTotal, err)
 	}
 }
 

@@ -165,7 +165,7 @@ func TestCursorPublishChain(t *testing.T) {
 	t.Run("retained cursor lets grok and codex publish", func(t *testing.T) {
 		home := t.TempDir()
 		writeChainCursorDB(t, home, true)
-		writeChainGrok(t, home, 3_000_000)
+		writeChainGrok(t, home, 8_000_000)
 		writeChainCodex(t, home, 2_000_000)
 		seedChainObservation(t, testhome.New(home))
 		res := scanChain(t, home)
@@ -175,7 +175,7 @@ func TestCursorPublishChain(t *testing.T) {
 		}
 		snap := buildChain(t, events, res.Turns, res.Errors, day, loc)
 		assertRetainedCursor(t, snap, chainAgent(t, snap, "cursor"))
-		want := chainObserved + 5_000_000
+		want := chainObserved + 10_000_000
 		if snap.Periods.All.Totals.Total.Value == nil || *snap.Periods.All.Totals.Total.Value != want {
 			t.Fatalf("all=%+v", snap.Periods.All.Totals.Total)
 		}
@@ -213,10 +213,10 @@ func TestCursorPublishChain(t *testing.T) {
 		}
 	})
 
-	t.Run("same day visible growth waits out the hour and then publishes", func(t *testing.T) {
+	t.Run("same day 0.01B growth publishes without hourly cooldown", func(t *testing.T) {
 		home := t.TempDir()
 		writeChainCursorDB(t, home, true)
-		writeChainGrok(t, home, 3_000_000)
+		writeChainGrok(t, home, 8_000_000)
 		writeChainCodex(t, home, 2_000_000)
 		seedChainObservation(t, testhome.New(home))
 		res := scanChain(t, home)
@@ -224,9 +224,9 @@ func TestCursorPublishChain(t *testing.T) {
 		snap := buildChain(t, events, res.Turns, res.Errors, day, loc)
 		prev := buildChain(t, retainedOnly(chainObserved), nil, nil, day, loc)
 		total := chainObserved
-		waiting := decideChain(snap, &prev, &total, "2026-10-31", day.Add(-20*time.Minute), day)
-		if waiting.Code != publicprofile.CodeWaitingCooldown || !waiting.Publish {
-			t.Fatalf("waiting=%+v", waiting)
+		readyBeforeHour := decideChain(snap, &prev, &total, "2026-10-31", day.Add(-20*time.Minute), day)
+		if readyBeforeHour.Code != publicprofile.CodePublished || !readyBeforeHour.Publish {
+			t.Fatalf("qualified 0.01B growth should not wait for one hour: %+v", readyBeforeHour)
 		}
 		ready := decideChain(snap, &prev, &total, "2026-10-31", published, day)
 		if ready.Code != publicprofile.CodePublished || !ready.Publish {

@@ -43,6 +43,8 @@ func Build(in Input) (Snapshot, error) {
 		now = time.Now()
 	}
 	now = now.In(loc)
+	_, zoneOffset := now.Zone()
+	offsetMinutes := zoneOffset / 60
 	owner, err := sanitizeOwner(in.Owner)
 	if err != nil {
 		return Snapshot{}, err
@@ -60,10 +62,11 @@ func Build(in Input) (Snapshot, error) {
 
 	windows := periodWindows(now, loc, allSum.Calendar)
 	snap := Snapshot{
-		Schema:        SchemaName,
-		SchemaVersion: SchemaVersion,
-		GeneratedAt:   now.UTC().Format(time.RFC3339),
-		AsOfDate:      now.Format("2006-01-02"),
+		Schema:                SchemaName,
+		SchemaVersion:         SchemaVersion,
+		GeneratedAt:           now.UTC().Format(time.RFC3339),
+		AsOfDate:              now.Format("2006-01-02"),
+		OwnerUTCOffsetMinutes: &offsetMinutes,
 		Producer: Producer{
 			Name:                   "wheretoken",
 			Version:                version,

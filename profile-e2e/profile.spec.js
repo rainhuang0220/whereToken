@@ -615,6 +615,8 @@ test("replaces the fallback when a newer hosted snapshot is valid", async ({ pag
         asset_revision: "",
         presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
         snapshot: hosted,
+        wall: { phase: "verified", verified_snapshot_id: hosted.snapshot_id,
+          verified_total: 42000000, verified_as_of_date: hosted.as_of_date },
       }),
     });
   });
@@ -622,6 +624,30 @@ test("replaces the fallback when a newer hosted snapshot is valid", async ({ pag
   await expect(page.locator("#hero-value")).toHaveText("42.00M");
   await expect(page.locator("#freshness")).toContainText("hosted");
   await expect(page.locator("#freshness")).toContainText("minutes ago");
+});
+
+test("never replaces GitHub-verified fallback with unverified hosted usage", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const fallback = snapshot.periods.all.totals.total.display;
+  const newer = structuredClone(snapshot);
+  newer.periods.all.totals.total = {value: 99900000000, display: "99.9B", status: "available"};
+  await page.addInitScript(() => {
+    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
+    window.__WT_LIVE_OWNER = "rainhuang0220";
+  });
+  await page.route("https://wheretoken.plainlist.space/**", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      schema: "wheretoken.public-profile-live", schema_version: 1,
+      freshness: {mode: "near_real_time", source: "hosted", updated_at: new Date().toISOString()},
+      snapshot: newer,
+      wall: {phase: "pending", verified_snapshot_id: snapshot.snapshot_id,
+        verified_total: snapshot.periods.all.totals.total.value, verified_as_of_date: snapshot.as_of_date},
+    }),
+  }));
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-value")).toHaveText(fallback);
+  await expect(page.locator("#hero-value")).not.toHaveText("99.9B");
 });
 
 test("keeps the committed snapshot when the hosted profile is unavailable or invalid", async ({ page }) => {

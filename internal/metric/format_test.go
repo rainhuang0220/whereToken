@@ -69,3 +69,19 @@ func TestHitRate(t *testing.T) {
 		t.Fatal("zero denom must not be ok")
 	}
 }
+
+func TestFormatAdaptiveTokens(t *testing.T) {
+	cases := []struct {
+		tokens int64
+		want   string
+	}{
+		{0, "0.00 M"}, {25_000_000, "25.00 M"}, {999_999_999, "1,000.00 M"},
+		{1_000_000_000, "1.00 B"}, {9_011_098_162, "9.01 B"},
+		{19_410_870_000, "19.41 B"}, {-1_000_000_000, "-1.00 B"},
+	}
+	for _, c := range cases {
+		if got := FormatAdaptiveTokens(c.tokens); got != c.want {
+			t.Errorf("%d got %q want %q", c.tokens, got, c.want)
+		}
+	}
+}

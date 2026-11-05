@@ -160,7 +160,7 @@ func decisionAfterPut(d Decision, readme string) Decision {
 	case "pending":
 		d.Publish = true
 		d.Phase = PhaseWaiting
-		d.Label = "间隔未满 1 小时"
+		d.Label = "接近零点，合并更新"
 		d.Code = CodeWaitingCooldown
 		d.Action = ActionWaitUntil
 		return d

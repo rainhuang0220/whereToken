@@ -16,10 +16,13 @@ deployment, and choosing a palette does not publish anything.
 The preview asset revision is a separate hash of the light SVG, the dark SVG,
 and the palette.
 
-The committed `public-profile/` bundle is the fallback. Its current usage
-identity stays `sha256:15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62`
-until a real local scan produces a different public snapshot. This document
-does not treat that file as a live database.
+The committed `public-profile/` bundle is the fallback. The scheduled
+`profile-freshness` GitHub Actions job regenerates it **only** from the hosted
+public API snapshot whose identity, owner-local date and exact total match
+an independently verified GitHub README wall. This repository artifact is a
+point-in-time fallback, not a live database. The browser accepts only the
+GitHub-verified hosted revision, so unverified projections cannot make the
+README and interactive page disagree.
 
 ## Freshness
 
@@ -31,7 +34,7 @@ the existing scan and the existing device sync:
 3. While `wheretoken serve` is running, a paired device repeats that full sync every 15 minutes.
 4. `wheretoken profile refresh` is a separate sanitized PUT. It does not upload the daily batch. The default report and the default install do not run it. `profile refresh on` flushes the switch file with the agent enabled, and only then, on macOS, installs a user launchd agent that runs `profile refresh watch --quiet`. A failed bootstrap leaves the switch on. `off` disables the switch and uninstalls the agent. Linux and Windows do not install a background agent. The bare command is one explicit PUT even while the switch is off; launchd does not run that bare command. `watch` is the only loop. It re-reads the switch on every wake, including the first, and exits when the switch is off. Wakes are the sooner of one hour and the next owner-local midnight. An hourly health agent runs `profile refresh repair` and does not scan. `status` and `doctor` exit non-zero when the scheduler is dead or the last result is blocked. A powered-off Mac does not publish. Catch-up is the next wake of that long-running watch, or RunAtLoad after a graphical login. SSH with no GUI session does not run the agent; `profile refresh status` can show `scheduler=dead`.
 
-The GitHub wall watermark is the last publication whose README and both preview SVGs were read back and matched. That verified snapshot id, raw total, owner-local date, and publication instant are not the same thing as the latest accepted hosted projection. A missing verified total stays unknown and is not treated as zero. Only a strictly later owner-local calendar day is a daily publication, and that day does not wait for the one-hour usage cooldown. Usage growth publishes when the visible two-decimal total changes, and one absolute hour since that verified publication. A smaller total is blocked and is not published. A failed publish stays pending and retries about hourly without that display gate. The watch still checks about every hour and also wakes at the next owner-local midnight.
+The GitHub wall watermark is the last publication whose README and both preview SVGs were read back and matched. That verified snapshot id, raw total, owner-local date, and publication instant are not the same thing as the latest accepted hosted projection. A missing verified total stays unknown and is not treated as zero. A strictly later owner-local calendar date publishes immediately (subject to non-regression). Same-day usage growth publishes after a raw 0.01M increase below 1B or raw 0.01B increase at/above 1B, except changes arriving in the final four owner-local hours before midnight, which are merged with the daily rollover. A smaller total is blocked. A failed publish remains pending and retries about hourly independently of the growth threshold. The watch checks about every hour and also wakes at the next owner-local midnight.
 
 An offline scan does not replace the hosted projection. A snapshot whose public
 status is `unavailable` does not replace it either. The inner snapshot keeps
@@ -83,7 +86,7 @@ rewritten to:
 GitHub Camo caches by the full URL. The content-derived query is what changes
 the image. `Cache-Control` is not treated as invalidation.
 
-The product repository is not written. `wheretoken profile publish` remains
+The hosted README publisher does not write the product repository. Separately, the scheduled GitHub Actions freshness workflow updates only the sanitized product repository `public-profile/` fallback after independent wall verification. `wheretoken profile publish` remains
 the local fallback for an offline or unrecovered owner.
 
 The first README write does not wait for a theme publish. It uses the
@@ -98,9 +101,9 @@ when the projection is accepted. The applied snapshot id, cache key, and
 Automatic GitHub publication uses one rule, `DecidePublication`, on every entry point:
 
 - a strictly later owner-local date publishes immediately, including zero token growth
-- otherwise the raw all-time total must be at least 10,000 above the verified total and one absolute hour must have passed since that verified publication
-- an explicit palette publish still writes immediately and, once verified, becomes the new cooldown anchor
-- a crossing that happens during the hour is stored once and published by the hosted maintenance loop without another client PUT
+- otherwise raw growth relative to the verified wall must be at least 10,000 tokens below 1B or 10,000,000 tokens at/above 1B; do not compare rounded visible labels
+- from 20:00 (inclusive) to local midnight, hold qualifying same-day growth for the rollover; the client may upload the desired projection once without publishing an intermediate README
+- an explicit palette change still publishes immediately; it is separate from usage-triggered refreshes
 
 An earlier date, an empty date, and an invalid date do not publish. A missing verified total is not zero. A failed apply keeps the newest desired snapshot and retries that one snapshot, not every intermediate PUT. A remote conflict leaves the projection in place, does not mark the README verified, and does not report the theme as published. Theme publish still promotes the palette only after GitHub verifies the files.
 
