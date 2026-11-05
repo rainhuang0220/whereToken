@@ -2,12 +2,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 194" width="800" height="194" role="img">
 <title>whereToken public coding-agent usage preview</title>
 <desc>Coding-agent token usage through 2026-11-05. No prompts, paths, or identifiers.</desc>
-<metadata id="wheretoken-snapshot-id">sha256:f1d3685e3b75d86321e90e21927f21a033b1bf6c8b1028275f003aa758652337</metadata>
+<metadata id="wheretoken-snapshot-id">sha256:312dc9d8998c209e86fa91160086d0baba703534e8c03f8c7478c1bf88b81fba</metadata>
 <text x="4.0" y="19.0" fill="#F0F3F6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.0" font-weight="600" text-anchor="start">whereToken</text>
 <text x="86.0" y="19.0" fill="#9EA7B3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.0" font-weight="400" text-anchor="start">my coding-agent token usage</text>
 <text x="796.0" y="19.0" fill="#9EA7B3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.0" font-weight="400" text-anchor="end">updated Nov 5</text>
 <line x1="4" y1="31.5" x2="796" y2="31.5" stroke="#373E47" stroke-width="1"/>
-<text x="4.0" y="65.0" fill="#F0F3F6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30.0" font-weight="600" text-anchor="start">19.65B tokens</text>
+<text x="4.0" y="65.0" fill="#F0F3F6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30.0" font-weight="600" text-anchor="start">19.7B tokens</text>
 <text class="month" x="28.0" y="82.0" fill="#9EA7B3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Nov</text>
 <text class="month" x="86.0" y="82.0" fill="#9EA7B3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Dec</text>
 <text class="month" x="158.5" y="82.0" fill="#9EA7B3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.0" font-weight="500" text-anchor="start">Jan</text>
@@ -391,5 +391,5 @@
 <rect class="day" x="782.0" y="88.0" width="13.0" height="13.0" rx="1.5" fill="#48689E"/>
 <rect class="day" x="782.0" y="102.5" width="13.0" height="13.0" rx="1.5" fill="#5984CB"/>
 <rect class="day" x="782.0" y="117.0" width="13.0" height="13.0" rx="1.5" fill="#5F8BD4"/>
-<rect class="day" x="782.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="#24292F"/>
+<rect class="day" x="782.0" y="131.5" width="13.0" height="13.0" rx="1.5" fill="#4A6EA9"/>
 </svg>
