@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.7.12 — 2026-11-05 (Alpha)
+
+- **Terminal totals are adaptive again.** The human-readable CLI displays 1.00 B and above in billions with two decimal places, while smaller measured amounts remain in millions; machine-readable JSON values and unit contracts are unchanged. Missing token measurements remain unavailable, never zero.
+- **Public wall publication uses raw growth rather than rounded display ticks.** Above 1B, a same-day change must reach 0.01B (10,000,000 tokens) since the last independently verified GitHub README wall; below 1B the raw threshold is 0.01M (10,000 tokens). A strictly later owner-local date still publishes without waiting for Token growth, subject to coverage and regression checks. Changes arising in the final four owner-local hours before midnight are coalesced into the date rollover instead of publishing twice. A pending old-day snapshot is not published by midnight maintenance ahead of the new-day client snapshot.
+- **GitHub Pages `/profile/` now matches the verified README wall.** A hosted snapshot may replace the static fallback only when its revision, owner-local date and raw total match the independently verified wall; newer unverified projections cannot make the two surfaces disagree. The hourly freshness workflow mirrors the entire privacy-safe verified snapshot, manifest and preview SVGs to the static Pages fallback, then dispatches a Pages deployment if changed. The initial fallback was synchronized with the November 5 verified 19.65B wall.
+- Regression coverage includes raw 0.01B boundaries, the 20:00 midnight-merge boundary, no duplicate stale-midnight publication, server-side MySQL integration, and public-profile Chromium browser tests. The hosted server must also run the updated binary for these publication rules to take effect; upgrading only the CLI is insufficient. No stored usage records or Cursor account authorizations are modified by this release.
+- **Still unresolved upstream:** Cursor's undocumented personal account Billing V2 API may return `missing_team_id` with no available team; previously verified Cursor history remains visible but new account tokens are not invented or described as freshly synced.
+
+
 ## 0.7.11 — 2026-11-03 (Alpha)
 
 - **Cursor account history no longer disappears when the upstream API fails.** For a history explicitly linked to the authenticated account via `wheretoken cursor connect`, the CLI can render its verified, retained per-day token total without treating missing remote dates as measured zero. Local request/turn counts stay available and local `tokenCount` is not added a second time. Unbound or declined legacy history is never silently attributed to a new account. Repeated scans preserve historical values and an offline report does not unlock macOS Keychain or make cloud calls.
