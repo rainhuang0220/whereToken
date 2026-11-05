@@ -11,6 +11,7 @@
     "snapshot_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "generated_at": { "type": "string", "format": "date-time" },
     "as_of_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "owner_utc_offset_minutes": { "type": "integer", "minimum": -840, "maximum": 840 },
     "producer": { "$ref": "#/$defs/producer" },
     "owner": { "$ref": "#/$defs/owner" },
     "provenance": { "$ref": "#/$defs/provenance" },

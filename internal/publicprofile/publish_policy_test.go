@@ -29,14 +29,14 @@ func TestDecidePublicationThresholds(t *testing.T) {
 			code:   CodeSkippedDelta,
 		},
 		{
-			name: "plus 10000 one nanosecond early",
+			name: "plus 10000 can publish without a one-hour cooldown",
 			mutate: func(in PublicationInput) PublicationInput {
 				in.Candidate = gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+10_000))
 				in.Now = at.Add(time.Hour - time.Nanosecond)
 				return in
 			},
-			action: ActionWaitUntil,
-			code:   CodeWaitingCooldown,
+			action: ActionPublishNow,
+			code:   CodePublished,
 		},
 		{
 			name: "plus 10000 at exactly one hour",
@@ -107,23 +107,28 @@ func TestDecidePublicationThresholds(t *testing.T) {
 	}
 }
 
-func TestDecidePublicationCooldownRetainsOneIntent(t *testing.T) {
-	at := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
-	verified := wall("sha256:prev", "2026-09-25", 1_000_000, at)
-	early := time.Date(2026, 9, 25, 12, 20, 0, 0, time.UTC)
+func TestDecidePublicationMidnightMergeRetainsOneIntent(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	offset := 480
+	verified := wall("sha256:prev", "2026-09-25", 1_000_000, time.Date(2026, 9, 25, 18, 0, 0, 0, loc))
 	cand := gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_010_000))
-	got := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Now: early})
-	if got.Action != ActionWaitUntil || !got.DueAt.Equal(at.Add(time.Hour)) {
-		t.Fatalf("wait %+v", got)
+	cand.OwnerUTCOffsetMinutes = &offset
+	near := time.Date(2026, 9, 25, 20, 0, 0, 0, loc)
+	due := time.Date(2026, 9, 26, 0, 0, 0, 0, loc)
+	got := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Now: near})
+	if got.Action != ActionWaitUntil || !got.DueAt.Equal(due) {
+		t.Fatalf("hold until midnight: %+v", got)
 	}
 	pending := PendingIntent{SnapshotID: cand.SnapshotID, DueAt: got.DueAt, Reason: ReasonCooldown}
-	again := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Pending: pending, Now: early.Add(time.Minute)})
-	if again.Action != ActionWaitUntil || !again.DueAt.Equal(got.DueAt) {
-		t.Fatalf("second look %+v", again)
+	again := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Pending: pending, Now: near.Add(time.Minute)})
+	if again.Action != ActionWaitUntil || !again.DueAt.Equal(due) {
+		t.Fatalf("coalesce %+v", again)
 	}
-	ready := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Pending: pending, Now: got.DueAt})
-	if ready.Action != ActionPublishNow || ready.Reason != ReasonUsage {
-		t.Fatalf("due %+v", ready)
+	next := gateSnap("sha256:newday", StatusAvailable, "2026-09-26", intPtr(1_010_000))
+	next.OwnerUTCOffsetMinutes = &offset
+	published := DecidePublication(PublicationInput{Candidate: next, Verified: verified, Pending: pending, Now: due})
+	if published.Action != ActionPublishNow || published.Reason != ReasonDate {
+		t.Fatalf("midnight %+v", published)
 	}
 }
 
@@ -168,31 +173,20 @@ func TestDecidePublicationDoesNotPublishEarlierDate(t *testing.T) {
 	}
 }
 
-func TestDecidePublicationDSTCooldownIsAbsolute(t *testing.T) {
+func TestDecidePublicationDSTDoesNotImposeAnUnrelatedHour(t *testing.T) {
 	loc, err := time.LoadLocation("America/New_York")
 	if err != nil {
 		t.Fatal(err)
 	}
 	start := time.Date(2026, 11, 1, 5, 30, 0, 0, time.UTC)
 	verified := wall("sha256:prev", "2026-11-01", 1_000_000, start)
-	early := DecidePublication(PublicationInput{
-		Candidate: gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_010_000)),
-		Verified:  verified,
-		Now:       start.Add(time.Hour - time.Nanosecond),
-	})
-	if early.Action != ActionWaitUntil {
-		t.Fatalf("dst early %+v", early)
-	}
-	ready := DecidePublication(PublicationInput{
-		Candidate: gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_010_000)),
-		Verified:  verified,
-		Now:       start.Add(time.Hour),
-	})
-	if ready.Action != ActionPublishNow {
-		t.Fatalf("dst ready %+v", ready)
+	cand := gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_010_000))
+	got := DecidePublication(PublicationInput{Candidate: cand, Verified: verified, Now: start.Add(time.Hour - time.Nanosecond).In(loc)})
+	if got.Action != ActionPublishNow || got.Reason != ReasonUsage {
+		t.Fatalf("DST transition should not add hourly cooldown %+v", got)
 	}
 	if start.In(loc).Format("15:04") != "01:30" || start.Add(time.Hour).In(loc).Format("15:04") != "01:30" {
-		t.Fatal("fixture did not cross the repeated hour")
+		t.Fatal("invalid DST fixture")
 	}
 }
 
@@ -240,5 +234,49 @@ func TestDecidePublicationFirstSnapshotAndUnknownLegacy(t *testing.T) {
 	})
 	if got.Action != ActionBlocked || got.Reason != ReasonUnknownVerified {
 		t.Fatalf("legacy unknown %+v", got)
+	}
+}
+
+func TestVerifiedRawTokenThresholdAndMidnightWindow(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	offset := 480
+	day := "2026-11-04"
+	baseline := int64(19_097_123_975)
+	at := time.Date(2026, 11, 4, 15, 0, 0, 0, loc)
+	old := wall("sha256:old", day, baseline, at.Add(-2*time.Hour))
+	check := func(name string, at time.Time, delta int64, action string, due time.Time) {
+		t.Helper()
+		candidate := gateSnap("sha256:"+name, StatusPartial, day, intPtr(baseline+delta))
+		candidate.OwnerUTCOffsetMinutes = &offset
+		got := DecidePublication(PublicationInput{Candidate: candidate, Verified: old, Now: at})
+		if got.Action != action {
+			t.Errorf("%s action=%s want=%s", name, got.Action, action)
+		}
+		if !due.IsZero() && !got.DueAt.Equal(due) {
+			t.Errorf("%s due=%s want=%s", name, got.DueAt, due)
+		}
+	}
+	check("sub_0_01B", at, 9_999_999, ActionNoChange, time.Time{})
+	check("exact_0_01B", at, 10_000_000, ActionPublishNow, time.Time{})
+	check("one_after", at, 10_000_001, ActionPublishNow, time.Time{})
+	beforeMidnight := time.Date(2026, 11, 5, 0, 0, 0, 0, loc)
+	check("at_19_59", time.Date(2026, 11, 4, 19, 59, 59, 0, loc), 10_000_000, ActionPublishNow, time.Time{})
+	check("at_20_00", time.Date(2026, 11, 4, 20, 0, 0, 0, loc), 10_000_000, ActionWaitUntil, beforeMidnight)
+	check("at_23_59", time.Date(2026, 11, 4, 23, 59, 59, 0, loc), 30_000_000, ActionWaitUntil, beforeMidnight)
+	// UTC 16:00 is midnight in the owner's +08 zone. Server UTC does not
+	// change the defer logic and new local calendar day wins.
+	midnightNow := time.Date(2026, 11, 4, 16, 0, 0, 0, time.UTC)
+	tomorrow := gateSnap("sha256:tomorrow", StatusPartial, "2026-11-05", intPtr(baseline))
+	tomorrow.OwnerUTCOffsetMinutes = &offset
+	got := DecidePublication(PublicationInput{Candidate: tomorrow, Verified: old, Now: midnightNow})
+	if got.Action != ActionPublishNow || got.Reason != ReasonDate {
+		t.Fatalf("owner-local midnight was missed: %+v", got)
+	}
+	// Crossing 1B switches from 0.01M to 0.01B, without a rounded-tick shortcut.
+	first := wall("sha256:little", "2026-11-04", 999_999_990, at)
+	cross := gateSnap("sha256:cross", StatusAvailable, day, intPtr(1_000_000_010))
+	cross.OwnerUTCOffsetMinutes = &offset
+	if got := DecidePublication(PublicationInput{Candidate: cross, Verified: first, Now: at}); got.Action != ActionNoChange {
+		t.Fatalf("crossing 1B should require raw 10M: %+v", got)
 	}
 }

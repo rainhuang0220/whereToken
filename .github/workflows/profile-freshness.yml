@@ -6,8 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+  actions: write
+
+concurrency:
+  group: verified-profile-fallback
+  cancel-in-progress: false
 
 jobs:
   freshness:
@@ -39,6 +44,41 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
         run: bash scripts/freshness-alert.sh --class "$CLASS"
+
+      # GitHub Pages must still display the most recently *verified* README
+      # snapshot if the visitor's network cannot reach the hosted API.
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: steps.wall.outputs.class != 'check_failed'
+        with:
+          go-version-file: go.mod
+
+      - name: Regenerate fallback only from the verified GitHub wall
+        if: steps.wall.outputs.class != 'check_failed'
+        run: go run ./scripts/syncverifiedprofile --wall "$RUNNER_TEMP/wall.json" --dir public-profile
+
+      - name: Commit the verified static bundle if changed
+        if: steps.wall.outputs.class != 'check_failed'
+        id: mirror
+        run: |
+          set -euo pipefail
+          git add -A -- public-profile
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(profile): mirror verified public wall to Pages fallback'
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # A GITHUB_TOKEN push does not trigger regular push workflows. Explicit
+      # workflow_dispatch is allowed and ensures the new fallback gets deployed.
+      - name: Deploy refreshed fallback to Pages
+        if: steps.mirror.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "${{ github.repository }}" --ref main
 
       - name: Fail when the public wall check is not ok
         if: steps.wall.outputs.class != 'ok'

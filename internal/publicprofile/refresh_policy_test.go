@@ -97,7 +97,7 @@ func TestDecideRefreshTable(t *testing.T) {
 			code:    CodeSkippedDelta,
 		},
 		{
-			name: "delta 10000 before an hour uploads once and waits",
+			name: "delta 10000 before an hour publishes without cooldown",
 			in: RefreshInput{
 				Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-25", intPtr(1_000_000+10_000)),
 				Remote:          &remote,
@@ -105,7 +105,7 @@ func TestDecideRefreshTable(t *testing.T) {
 				Now:             updated.Add(time.Hour - time.Nanosecond),
 			},
 			publish: true,
-			code:    CodeWaitingCooldown,
+			code:    CodePublished,
 		},
 		{
 			name: "delta 10000 at exactly one hour",
@@ -240,11 +240,11 @@ func TestSkipLabelsNameTheReason(t *testing.T) {
 			code:  CodeSkippedDelta,
 		},
 		{
-			name:  "visible tick inside the hour",
+			name:  "visible tick below raw 0.01B is skipped",
 			local: gateSnap("sha256:tick", StatusAvailable, "2026-10-27", intPtr(18_195_000_000)),
 			now:   at.Add(time.Hour - time.Nanosecond),
-			label: "间隔未满 1 小时",
-			code:  CodeWaitingCooldown,
+			label: "增量未到可见刻度",
+			code:  CodeSkippedDelta,
 		},
 	}
 	for _, tc := range cases {
@@ -398,8 +398,8 @@ func TestDecideRefreshMissingUpdatedAtDoesNotPublishUsage(t *testing.T) {
 		RemoteUpdatedAt: time.Time{},
 		Now:             now,
 	})
-	if got.Publish || got.Code != CodeSkippedCooldown {
-		t.Fatalf("missing updated_at must not publish usage: %+v", got)
+	if !got.Publish || got.Code != CodePublished {
+		t.Fatalf("raw threshold should not require a separate cooldown timestamp: %+v", got)
 	}
 	rolled := DecideRefresh(RefreshInput{
 		Local:           gateSnap("sha256:next", StatusAvailable, "2026-09-26", intPtr(1_000_000)),
@@ -472,8 +472,8 @@ func TestDecideRefreshDSTFallbackUsesAbsoluteHour(t *testing.T) {
 		RemoteUpdatedAt: start,
 		Now:             early,
 	})
-	if !cooldown.Publish || cooldown.Code != CodeWaitingCooldown {
-		t.Fatalf("1h-1ns during fallback should wait, not skip the upload: %+v", cooldown)
+	if !cooldown.Publish || cooldown.Code != CodePublished {
+		t.Fatalf("DST fallback should not impose a one-hour cooldown: %+v", cooldown)
 	}
 	small := DecideRefresh(RefreshInput{
 		Local:           gateSnap("sha256:next", StatusAvailable, "2026-11-01", intPtr(1_000_000+4_999)),

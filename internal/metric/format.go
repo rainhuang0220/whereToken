@@ -6,6 +6,16 @@ import (
 	"strings"
 )
 
+// FormatAdaptiveTokens is a human-readable display only. Existing JSON
+// *_m fields deliberately keep their historical million-token contract.
+// At 1 billion tokens, display billions rather than thousands of millions.
+func FormatAdaptiveTokens(tokens int64) string {
+	if tokens >= 1_000_000_000 || tokens <= -1_000_000_000 {
+		return groupFloat(fmt.Sprintf("%.2f", float64(tokens)/1_000_000_000)) + " B"
+	}
+	return FormatM(tokens)
+}
+
 func FormatM(tokens int64) string {
 	m := float64(tokens) / 1_000_000
 	var s string

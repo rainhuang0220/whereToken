@@ -125,10 +125,14 @@ func TestAssemblePlanKeepsSnapshotAndRequiresApproval(t *testing.T) {
 	if !got.Ready || got.Phase != PhaseAwaitingApproval {
 		t.Fatalf("phase %s ready %v blockers %v", got.Phase, got.Ready, got.Blockers)
 	}
-	if got.SnapshotID != "sha256:15c96d356fc90d8073524036f29bef83ef236f76f7b02a11e862b9cbb4c52e62" {
-		t.Fatalf("snapshot %s", got.SnapshotID)
+	loaded, err := LoadFile(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got.LocalPalette != "newsprint" || got.Palette != "magenta" {
+	if got.SnapshotID != loaded.SnapshotID {
+		t.Fatalf("snapshot %s want %s", got.SnapshotID, loaded.SnapshotID)
+	}
+	if got.LocalPalette != "cobalt" || got.Palette != "magenta" {
 		t.Fatalf("palettes local %s selected %s", got.LocalPalette, got.Palette)
 	}
 	if !got.ProductCommit || !got.ReadmeChange {
@@ -141,7 +145,7 @@ func TestAssemblePlanKeepsSnapshotAndRequiresApproval(t *testing.T) {
 		t.Fatal("preflight leaked a token")
 	}
 	same := in
-	same.Palette = "newsprint"
+	same.Palette = "cobalt"
 	same.Readme = mustCurrentReadme(t, dir)
 	again, err := AssemblePlan(same)
 	if err != nil {

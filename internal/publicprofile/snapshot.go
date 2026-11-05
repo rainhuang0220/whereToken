@@ -79,20 +79,23 @@ const emDash = "—"
 
 // Snapshot is the allowlisted public profile contract.
 type Snapshot struct {
-	Schema        string     `json:"schema"`
-	SchemaVersion int        `json:"schema_version"`
-	SnapshotID    string     `json:"snapshot_id"`
-	GeneratedAt   string     `json:"generated_at"`
-	AsOfDate      string     `json:"as_of_date"`
-	Producer      Producer   `json:"producer"`
-	Owner         *Owner     `json:"owner,omitempty"`
-	Provenance    Provenance `json:"provenance"`
-	DataStatus    string     `json:"data_status"`
-	Privacy       Privacy    `json:"privacy"`
-	Periods       Periods    `json:"periods"`
-	Activity      Activity   `json:"activity"`
-	Notices       []string   `json:"notices"`
-	Links         Links      `json:"links"`
+	Schema        string `json:"schema"`
+	SchemaVersion int    `json:"schema_version"`
+	SnapshotID    string `json:"snapshot_id"`
+	GeneratedAt   string `json:"generated_at"`
+	AsOfDate      string `json:"as_of_date"`
+	// UTC offset of the owner's local snapshot date, used to defer a
+	// same-day publication to local midnight without assuming server UTC.
+	OwnerUTCOffsetMinutes *int       `json:"owner_utc_offset_minutes,omitempty"`
+	Producer              Producer   `json:"producer"`
+	Owner                 *Owner     `json:"owner,omitempty"`
+	Provenance            Provenance `json:"provenance"`
+	DataStatus            string     `json:"data_status"`
+	Privacy               Privacy    `json:"privacy"`
+	Periods               Periods    `json:"periods"`
+	Activity              Activity   `json:"activity"`
+	Notices               []string   `json:"notices"`
+	Links                 Links      `json:"links"`
 }
 
 type Producer struct {

@@ -91,9 +91,20 @@ func turnKPI(snap Snapshot) string {
 	return metric.FormatCount(snap.UserTurns)
 }
 
+func displayKPIValue(raw int64, old string) string {
+	if old == "不可用" || old == "—" {
+		return old
+	}
+	return metric.FormatAdaptiveTokens(raw)
+}
+
 func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 	hit := table.PaintHit(snap.HitRateText, color)
-	total := table.Bold(snap.TotalM, color)
+	totalText := snap.TotalM
+	if snap.TokensKnown {
+		totalText = metric.FormatAdaptiveTokens(snap.Total)
+	}
+	total := table.Bold(totalText, color)
 	cost := costKPI(snap)
 	portrait := portraitCell(snap.Portrait)
 	if snap.ShowStreaks {
@@ -102,14 +113,14 @@ func kpiCells(snap Snapshot, color bool) [2][]table.KPI {
 				{Label: "总用量", Value: total},
 				{Label: "命中率", Value: hit},
 				{Label: "最长连烧", Value: days(snap.MaxStreak)},
-				{Label: "当日用量", Value: snap.TodayM},
+				{Label: "当日用量", Value: displayKPIValue(snap.TodayTotal, snap.TodayM)},
 				{Label: "估价", Value: cost},
 			},
 			{
 				{Label: "当前连烧", Value: days(snap.CurrentStreak)},
 				{Label: "请求", Value: metric.FormatCount(snap.Requests)},
 				{Label: "用户回合", Value: turnKPI(snap)},
-				{Label: "单日最高", Value: snap.PeakDayM},
+				{Label: "单日最高", Value: displayKPIValue(snap.PeakDay, snap.PeakDayM)},
 				{Label: "用户画像", Value: portrait},
 			},
 		}
@@ -261,7 +272,11 @@ func ranked(kind string, rows []Row, withTurns bool, style table.BoxStyle, maxWi
 		if share == "" {
 			share = "—"
 		}
-		line := []string{label, r.TotalM, share, table.PaintHit(r.HitRateText, color), r.RequestsText}
+		tokenText := r.TotalM
+		if r.TokensKnown {
+			tokenText = metric.FormatAdaptiveTokens(r.Total)
+		}
+		line := []string{label, tokenText, share, table.PaintHit(r.HitRateText, color), r.RequestsText}
 		if withTurns {
 			line = append(line, r.TurnsText)
 		}

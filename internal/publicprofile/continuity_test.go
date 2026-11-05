@@ -68,7 +68,7 @@ func TestEighteenBillionTickUsesTheDisplayedHundredth(t *testing.T) {
 		Verified:  verified,
 		Now:       at.Add(time.Hour - time.Nanosecond),
 	})
-	if inside.Action != ActionWaitUntil || inside.Code != CodeWaitingCooldown {
+	if inside.Action != ActionNoChange || inside.Code != CodeSkippedDelta {
 		t.Fatalf("visible tick inside the hour %+v", inside)
 	}
 	atHour := DecidePublication(PublicationInput{
@@ -76,7 +76,7 @@ func TestEighteenBillionTickUsesTheDisplayedHundredth(t *testing.T) {
 		Verified:  verified,
 		Now:       at.Add(time.Hour),
 	})
-	if atHour.Action != ActionPublishNow || atHour.Reason != ReasonUsage {
+	if atHour.Action != ActionNoChange || atHour.Reason != ReasonDelta {
 		t.Fatalf("visible tick at one hour %+v", atHour)
 	}
 	sub := DecidePublication(PublicationInput{

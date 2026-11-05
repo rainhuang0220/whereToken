@@ -1007,6 +1007,14 @@
     if (fresh.mode !== "near_real_time" || fresh.source !== "hosted" || !fresh.updated_at) return false;
     const snap = envelope.snapshot;
     if (!snap || snap.schema !== "wheretoken.public-profile") return false;
+    // The GitHub README uses only an independently verified wall snapshot.
+    // Never replace its matching fallback with a newer *unverified* hosted
+    // projection: the two surfaces would show different totals.
+    const wall = envelope.wall || {};
+    const rawTotal = snap.periods && snap.periods.all && snap.periods.all.totals && snap.periods.all.totals.total;
+    if (wall.phase !== "verified" || wall.verified_snapshot_id !== snap.snapshot_id ||
+        wall.verified_as_of_date !== snap.as_of_date || !rawTotal ||
+        wall.verified_total !== rawTotal.value) return false;
     const hostedAt = Date.parse(fresh.updated_at);
     const fallbackAt = Date.parse(fallback.generated_at || "");
     if (Number.isNaN(hostedAt)) return false;

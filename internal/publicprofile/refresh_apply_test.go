@@ -97,45 +97,51 @@ func TestApplyRefreshUnavailableDoesNotPut(t *testing.T) {
 	}
 }
 
-func TestApplyRefreshDeltaWaitsForOneHour(t *testing.T) {
-	start := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
-	remote := mustBuild(t, usageInput(start, time.UTC, 1_000))
+func TestApplyRefreshSameDayDeltaWaitsForMidnight(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	start := time.Date(2026, 9, 25, 19, 0, 0, 0, loc)
+	remote := mustBuild(t, usageInput(start, loc, 1000))
 	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: start}}
-	earlyLocal := mustBuild(t, usageInput(start.Add(time.Hour-time.Nanosecond), time.UTC, 1_000+10_000))
-	early := ApplyRefresh(context.Background(), earlyLocal, start.Add(time.Hour-time.Nanosecond), false, pub)
-	if pub.puts != 1 || !early.Decision.Publish || early.Decision.Code != CodeWaitingCooldown {
-		t.Fatalf("before 1h puts=%d %+v", pub.puts, early.Decision)
+	before := time.Date(2026, 9, 25, 20, 0, 0, 0, loc)
+	cand := mustBuild(t, usageInput(before, loc, 11000))
+	first := ApplyRefresh(context.Background(), cand, before, false, pub)
+	if pub.puts != 1 || first.Decision.Code != CodeWaitingCooldown {
+		t.Fatalf("before midnight puts=%d %+v", pub.puts, first.Decision)
 	}
-	pub.view = RemoteView{Found: true, Snapshot: earlyLocal, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(remote, start), Pending: PendingIntent{SnapshotID: earlyLocal.SnapshotID, DueAt: start.Add(time.Hour)}}
-	held := ApplyRefresh(context.Background(), earlyLocal, start.Add(time.Hour-time.Nanosecond), false, pub)
-	if pub.puts != 1 || held.Decision.Publish {
-		t.Fatalf("stored pending must not put again puts=%d %+v", pub.puts, held.Decision)
+	midnight := time.Date(2026, 9, 26, 0, 0, 0, 0, loc)
+	if !first.Decision.DueAt.Equal(midnight) {
+		t.Fatalf("due %v", first.Decision.DueAt)
 	}
-	local := mustBuild(t, usageInput(start.Add(time.Hour), time.UTC, 1_000+10_000))
-	got := ApplyRefresh(context.Background(), local, start.Add(time.Hour), false, pub)
-	if pub.puts != 1 || got.Decision.Publish || got.Decision.Code != CodePendingGitHub {
-		t.Fatalf("at 1h the stored snapshot must not be uploaded again puts=%d %+v", pub.puts, got.Decision)
+	pub.view = RemoteView{Found: true, Snapshot: cand, UpdatedAt: before, WallKnown: true, Wall: WallFromSnapshot(remote, start), Pending: PendingIntent{SnapshotID: cand.SnapshotID, DueAt: midnight}}
+	again := ApplyRefresh(context.Background(), cand, before.Add(time.Minute), false, pub)
+	if pub.puts != 1 || again.Decision.Publish {
+		t.Fatalf("duplicate pending upload puts=%d %+v", pub.puts, again.Decision)
+	}
+	rolled := mustBuild(t, usageInput(midnight, loc, 11000))
+	last := ApplyRefresh(context.Background(), rolled, midnight, false, pub)
+	if pub.puts != 2 || last.Decision.Code != CodeDateRollover {
+		t.Fatalf("midnight puts=%d %+v", pub.puts, last.Decision)
 	}
 }
 
-func TestApplyRefreshOnePutPerHour(t *testing.T) {
+func TestApplyRefreshQualifiedDeltaDoesNotWaitOneHour(t *testing.T) {
 	start := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
 	pub := &fakePublisher{}
 	first := mustBuild(t, usageInput(start, time.UTC, 100))
 	if got := ApplyRefresh(context.Background(), first, start, false, pub); !got.Decision.Publish || pub.puts != 1 {
-		t.Fatalf("first puts=%d %+v", pub.puts, got.Decision)
+		t.Fatalf("first: %+v puts=%d", got, pub.puts)
 	}
 	pub.view = RemoteView{Found: true, Snapshot: first, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(first, start)}
 	now := start.Add(10 * time.Minute)
-	local := mustBuild(t, usageInput(now, time.UTC, 20_000))
+	local := mustBuild(t, usageInput(now, time.UTC, 20000))
 	got := ApplyRefresh(context.Background(), local, now, false, pub)
-	if pub.puts != 2 || got.Decision.Code != CodeWaitingCooldown {
-		t.Fatalf("growth inside the hour puts=%d %+v", pub.puts, got.Decision)
+	if pub.puts != 2 || got.Decision.Code != CodePublished {
+		t.Fatalf("qualified growth should publish immediately: %+v puts=%d", got, pub.puts)
 	}
-	pub.view = RemoteView{Found: true, Snapshot: local, UpdatedAt: start, WallKnown: true, Wall: WallFromSnapshot(first, start), Pending: PendingIntent{SnapshotID: local.SnapshotID, DueAt: start.Add(time.Hour)}}
+	pub.view = RemoteView{Found: true, Snapshot: local, UpdatedAt: now, WallKnown: true, Wall: WallFromSnapshot(local, now)}
 	again := ApplyRefresh(context.Background(), local, now.Add(time.Minute), false, pub)
-	if pub.puts != 2 || again.Decision.Publish || again.Decision.Code != CodeWaitingCooldown {
-		t.Fatalf("same pending snapshot puts=%d %+v", pub.puts, again.Decision)
+	if pub.puts != 2 || again.Decision.Publish {
+		t.Fatalf("verified unchanged should not repeat PUT: %+v puts=%d", again, pub.puts)
 	}
 }
 

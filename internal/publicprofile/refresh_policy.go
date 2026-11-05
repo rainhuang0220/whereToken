@@ -3,13 +3,15 @@ package publicprofile
 import "time"
 
 const (
-	// RefreshMinDelta is the 0.01 M raw step below 1e9. Same-day publication
-	// compares FormatCompact, because half-up rounding moves the visible
-	// hundredth before this many raw tokens at some magnitudes.
-	RefreshMinDelta int64 = 10_000
-	// RefreshCooldown is the minimum absolute gap since the last verified
-	// GitHub wall publication. A strictly later owner-local date does not
-	// wait for it. time.Time.Sub keeps a DST fall-back from shortening it.
+	// Raw threshold, not the rounded visible number. Below one billion,
+	// a 0.01M step; at or above one billion, a 0.01B step.
+	RefreshMinDelta  int64 = 10_000
+	RefreshMinDeltaB int64 = 10_000_000
+	// In the four hours before the owner's local midnight, postpone usage
+	// publication to that daily rollover. Never postpone a new local date.
+	RefreshMidnightMergeWindow = 4 * time.Hour
+	// Kept for compatibility with earlier policy tests/clients. The new
+	// growth gate no longer adds a separate one-hour cooldown.
 	RefreshCooldown = time.Hour
 )
 
@@ -71,9 +73,9 @@ type RefreshInput struct {
 }
 
 // DecideRefresh chooses whether the client should PUT a sanitized snapshot.
-// GitHub publication is DecidePublication. A growth that is still inside the
-// verified cooldown is uploaded once so the host can publish it later
-// without another PUT. A strictly later owner-local date does not wait.
+// GitHub publication is DecidePublication. Qualifying growth that occurs
+// within four owner-local hours before midnight is uploaded once and the
+// hosted wall waits for the date rollover. A later date does not wait.
 func DecideRefresh(in RefreshInput) Decision {
 	if in.Offline {
 		if in.Remote != nil && in.Remote.SnapshotID != "" {
@@ -111,7 +113,7 @@ func refreshFromPublication(pub PublicationDecision, in RefreshInput) Decision {
 		return Decision{
 			Publish: !already,
 			Phase:   PhaseWaiting,
-			Label:   "间隔未满 1 小时",
+			Label:   "接近零点，合并更新",
 			Code:    CodeWaitingCooldown,
 			Action:  pub.Action,
 			DueAt:   pub.DueAt,
