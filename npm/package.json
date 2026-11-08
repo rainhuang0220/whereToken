@@ -1,6 +1,6 @@
 {
   "name": "wheretoken",
-  "version": "0.7.12",
+  "version": "0.7.13",
   "description": "Local coding-agent token usage as a character table",
   "license": "MIT",
   "bin": {

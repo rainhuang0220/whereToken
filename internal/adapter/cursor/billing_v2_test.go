@@ -58,6 +58,9 @@ func TestBillingV2ParsesFourMetersAndCursorPagination(t *testing.T) {
 	if first.Miss != 1263 || first.CacheRead != 46400 || first.CacheCreate != 0 || first.Output != 312 {
 		t.Fatalf("wrong meter mapping %+v", first)
 	}
+	if first.Source != "cursor" || first.Model != "composer-2.5" || first.Vendor != "cursor" {
+		t.Fatalf("wrong tool/model/vendor attribution %+v", first)
+	}
 	if !strings.HasPrefix(first.RequestID, "cursor-billing-v2:") {
 		t.Fatal("missing stable item id")
 	}

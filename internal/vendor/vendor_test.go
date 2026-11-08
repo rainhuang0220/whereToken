@@ -19,6 +19,14 @@ func TestLookup(t *testing.T) {
 		{"qwen-3.7-plus", "", "alibaba"},
 		{"grok-4", "", "xai"},
 		{"grok-2", "xai", "xai"},
+		{"composer-2.5", "", "cursor"},
+		{"cursor-composer-2", "", "cursor"},
+		{"composer", "", "cursor"},
+		{"auto", "cursor", "unknown"},
+		{"claude-opus-4.6", "cursor", "anthropic"},
+		{"gpt-5", "cursor", "openai"},
+		{"gemini-2.5-pro", "cursor", "google"},
+		{"grok-4.7", "cursor", "xai"},
 		{"maxai-foo", "", "unknown"},
 	}
 	for _, c := range cases {
@@ -47,6 +55,7 @@ func TestLookupName(t *testing.T) {
 		{"alibaba", "alibaba"},
 		{"xai", "xai"},
 		{"xAI", "xai"},
+		{"Cursor", "cursor"},
 		{"unknown", "unknown"},
 		{"Unknown", "unknown"},
 		{"未知厂家", "unknown"},
