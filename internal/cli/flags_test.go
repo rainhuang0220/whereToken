@@ -219,6 +219,43 @@ func TestParseSinceAndFromTo(t *testing.T) {
 	}
 }
 
+func TestParseSingleDateReport(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		date string
+		json bool
+		tool string
+	}{
+		{args: []string{"2026-11-07"}, date: "2026-11-07"},
+		{args: []string{"2024-02-29", "--json", "--cursor"}, date: "2024-02-29", json: true, tool: "cursor"},
+	} {
+		f, err := Parse(tc.args)
+		if err != nil {
+			t.Fatalf("args=%v: %v", tc.args, err)
+		}
+		if f.Command != CommandReport || f.From != tc.date || f.To != tc.date || f.JSON != tc.json || f.Tool != tc.tool {
+			t.Fatalf("args=%v: got %+v", tc.args, f)
+		}
+	}
+}
+
+func TestParseSingleDateRejectsInvalidAndConflictingArgs(t *testing.T) {
+	for _, args := range [][]string{
+		{"2026-02-29"},
+		{"2026-13-01"},
+		{"2026-11-07", "--today"},
+		{"2026-11-07", "--since", "7d"},
+		{"2026-11-07", "--from", "2026-11-01"},
+		{"2026-11-07", "--to", "2026-11-08"},
+		{"2026-11-07", "sources"},
+		{"2026-11-07", "2026-11-08"},
+	} {
+		if _, err := Parse(args); err == nil || !IsUsage(err) {
+			t.Fatalf("args=%v: expected usage error, got %v", args, err)
+		}
+	}
+}
+
 func TestParseTodayJSONVendorModel(t *testing.T) {
 	f, err := Parse([]string{"--today", "--json", "--vendor=MiniMax", "--model=k3", "--ascii"})
 	if err != nil {
