@@ -94,9 +94,18 @@ func Parse(args []string) (Flags, error) {
 	if len(args) == 0 {
 		return f, nil
 	}
+	dateArg := false
 	rest := args
 	if !strings.HasPrefix(args[0], "-") {
-		if !applyCommandWord(&f, args[0]) {
+		if len(args[0]) == 10 && args[0][4] == '-' && args[0][7] == '-' {
+			// A positional calendar date is an alias for --from DATE --to DATE.
+			// It only changes report filtering; scanning and publishing are untouched.
+			if _, err := time.Parse("2006-01-02", args[0]); err != nil {
+				return Flags{}, usageError{msg: fmt.Sprintf("invalid date %q (use a valid YYYY-MM-DD)\ntry `wheretoken --help`", args[0])}
+			}
+			f.From, f.To = args[0], args[0]
+			dateArg = true
+		} else if !applyCommandWord(&f, args[0]) {
 			return Flags{}, usageError{msg: fmt.Sprintf("unknown command %q\ntry `wheretoken --help`", args[0])}
 		}
 		if f.Help || f.Version {
@@ -109,6 +118,9 @@ func Parse(args []string) (Flags, error) {
 	fs := newFlagSet(&f, &tf)
 	if err := parseFlagSet(fs, &f, rest); err != nil {
 		return Flags{}, err
+	}
+	if dateArg && f.saw("today", "since", "from", "to") {
+		return Flags{}, usageError{msg: "positional date cannot be combined with --today, --since, --from, or --to\ntry `wheretoken --help`"}
 	}
 
 	if f.Command == CommandCompletion {
@@ -133,6 +145,9 @@ func Parse(args []string) (Flags, error) {
 		return finishCursor(&f, fs.Args())
 	}
 	if extra := fs.Args(); len(extra) > 0 {
+		if dateArg {
+			return Flags{}, usageError{msg: fmt.Sprintf("unexpected extra argument %q after date\ntry `wheretoken --help`", extra[0])}
+		}
 		if f.Command == CommandCommunity {
 			return finishCommunity(&f, extra)
 		}

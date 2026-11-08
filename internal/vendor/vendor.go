@@ -30,6 +30,9 @@ func Lookup(model, provider string) string {
 		return "google"
 	case strings.Contains(blob, "grok") || p == "xai" || p == "x-ai" || strings.HasPrefix(m, "xai-") || strings.HasPrefix(m, "x-ai-"):
 		return "xai"
+	case m == "composer" || strings.HasPrefix(m, "composer-") || strings.HasPrefix(m, "cursor-composer-"):
+		// Composer is Cursor's own model, not an unknown third-party provider.
+		return "cursor"
 	default:
 		return "unknown"
 	}
@@ -66,13 +69,15 @@ func Label(id string) string {
 		return "Alibaba"
 	case "xai":
 		return "xAI"
+	case "cursor":
+		return "Cursor"
 	default:
 		return "未知厂家"
 	}
 }
 
 func KnownIDs() []string {
-	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "xai", "unknown"}
+	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "xai", "cursor", "unknown"}
 }
 
 func LookupName(name string) (string, bool) {

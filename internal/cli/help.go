@@ -4,6 +4,7 @@ const helpText = `wheretoken — local coding-agent token usage, as a character 
 
 USAGE
   wheretoken [flags]
+  wheretoken YYYY-MM-DD [flags]   report exactly one local calendar day
   wheretoken [flags] serve [--port 8787]
   wheretoken [flags] scan          observatory JSON (not schema 1; no --today/--tool)
   wheretoken [flags] sources

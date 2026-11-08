@@ -15,9 +15,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
-        with:
-          go-version-file: go.mod
+      # Ubuntu runners ship with Go. Avoid an external toolchain download
+      # (actions/go-versions / GCS are currently failing with 504 / 403).
+      - name: Go toolchain
+        run: go version
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:

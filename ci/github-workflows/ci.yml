@@ -18,9 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      # go.mod requests toolchain go1.26.10. Set up that exact version on
+      # macOS/Windows; Linux hosted runners already provide it.
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: runner.os != 'Linux'
         with:
-          go-version-file: go.mod
+          go-version: "1.26.10"
+
+      - name: Runner Go toolchain
+        run: go version
 
       - name: gofmt
         shell: bash

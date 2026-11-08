@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.7.13 — 2026-11-08 (Alpha)
+
+- **Single-day CLI queries:** `wheretoken YYYY-MM-DD` selects exactly one owner-local calendar date using the existing report-window path; `--json`, `--cursor`, and other report filters work as before. Invalid dates and conflicting date-range arguments fail with a usage error.
+- **Model-vendor attribution:** Cursor remains the *tool* for Cursor requests. Recognizable third-party model IDs continue to count toward their actual vendors (e.g. Claude → Anthropic, GPT → OpenAI, Gemini → Google, Grok → xAI); Cursor's own Composer models are now credited to the Cursor model vendor. Auto/unknown routes remain unknown rather than being guessed.
+- **No refresh or publishing-policy changes:** scheduler, background sync, GitHub Profile refresh, GitHub Pages mirroring, raw token accounting, and existing verified history are unchanged. Cursor's upstream personal usage endpoint limitations remain unresolved; this release does not claim to recover missing model metadata.
+- CI and release build workflows use Go 1.26.10 as requested by `go.mod`: Linux CI and release use the runner toolchain; macOS/Windows CI explicitly select Go 1.26.10. This avoids attempted downloads of an older bootstrap toolchain and does not affect runtime behavior.
+
 ## 0.7.12 — 2026-11-05 (Alpha)
 
 - **Terminal totals are adaptive again.** The human-readable CLI displays 1.00 B and above in billions with two decimal places, while smaller measured amounts remain in millions; machine-readable JSON values and unit contracts are unchanged. Missing token measurements remain unavailable, never zero.
