@@ -7,7 +7,7 @@
 - **Single-day CLI queries:** `wheretoken YYYY-MM-DD` selects exactly one owner-local calendar date using the existing report-window path; `--json`, `--cursor`, and other report filters work as before. Invalid dates and conflicting date-range arguments fail with a usage error.
 - **Model-vendor attribution:** Cursor remains the *tool* for Cursor requests. Recognizable third-party model IDs continue to count toward their actual vendors (e.g. Claude → Anthropic, GPT → OpenAI, Gemini → Google, Grok → xAI); Cursor's own Composer models are now credited to the Cursor model vendor. Auto/unknown routes remain unknown rather than being guessed.
 - **No refresh or publishing-policy changes:** scheduler, background sync, GitHub Profile refresh, GitHub Pages mirroring, raw token accounting, and existing verified history are unchanged. Cursor's upstream personal usage endpoint limitations remain unresolved; this release does not claim to recover missing model metadata.
-- CI and release builds avoid broken Go downloads on GitHub-hosted Linux runners by using their bundled toolchain; macOS and Windows CI remain pinned to Go 1.25.7. This affects build workflows only.
+- CI and release builds avoid transient failures in GitHub's Go download endpoints by using the bundled Go toolchain on hosted runners and reporting its version; this affects build workflows only.
 
 ## 0.7.12 — 2026-11-05 (Alpha)
 
