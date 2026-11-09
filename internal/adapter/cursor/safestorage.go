@@ -214,7 +214,7 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 		return value, nil
 	}
 	if a.NoOSKeychain {
-		// SecItemCopyMatching with kSecUseAuthenticationUIFail may still
+		// The macOS keychain query with UI disabled may still
 		// wait indefinitely for SecurityAgent on legacy macOS keychains.
 		// A scheduled refresh must never enter that OS code path.
 		return "", errOSPermission
