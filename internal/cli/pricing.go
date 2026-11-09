@@ -304,17 +304,14 @@ func exactUsageModelEvents(events []event.UsageEvent, query string) []event.Usag
 
 // filterUsageModels keeps the --vendor / --model slice. A priced row matches
 // the normalized card id the same fuzzy way the catalog filter matches card
-// rows. An unpriced measured id matches only its own canonical name, so a
-// shorter family query cannot absorb a different effort variant. The
-// unknown-model bucket matches no query.
+// rows. An unpriced measured id is selected only by exactUsageModelEvents,
+// so a shorter or path-basename query cannot add a different model's tokens.
+// The unknown-model bucket matches no query.
 func usageModelMatches(m metric.ModelSlice, q string) bool {
-	if m.Model == "" {
+	if m.Model == "" || m.Rate == nil {
 		return false
 	}
 	canon := price.Canonical(m.Model)
-	if m.Rate == nil {
-		return canon == q
-	}
 	return strings.Contains(canon, q) || price.MatchModel(q, m.Model)
 }
 func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.ModelSlice {

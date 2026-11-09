@@ -398,7 +398,7 @@ func TestPricingUsageFamilyQueryDoesNotAbsorbUnpricedEffortVariant(t *testing.T)
 	}
 }
 
-func TestPricingUsageShortQueryKeepsPricedCardAndPathModel(t *testing.T) {
+func TestPricingUsageShortQueryKeepsPricedCardOnly(t *testing.T) {
 	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
 	app, out, errb := testApp([]string{"pricing", "--usage", "--model=k3", "--json"})
 	app.Scan = func(adapter.Home) scan.Result {
@@ -414,8 +414,11 @@ func TestPricingUsageShortQueryKeepsPricedCardAndPathModel(t *testing.T) {
 	if e := json.Unmarshal(out.Bytes(), &got); e != nil {
 		t.Fatal(e)
 	}
-	if got.Usage.Total.Total != 1_000_007 || len(got.Usage.Vendors) != 1 || len(got.Usage.Vendors[0].Models) != 2 {
-		t.Fatalf("short query dropped a priced card or a path model: %s", out.String())
+	if got.Usage.Total.Total != 1_000_000 || len(got.Usage.Vendors) != 1 || len(got.Usage.Vendors[0].Models) != 1 {
+		t.Fatalf("short query mixed a path model into the priced card: %s", out.String())
+	}
+	if got.Usage.Vendors[0].Models[0].ID != "kimi-k3" {
+		t.Fatalf("model=%s", got.Usage.Vendors[0].Models[0].ID)
 	}
 }
 

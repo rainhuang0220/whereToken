@@ -88,6 +88,12 @@ type ModelView struct {
 
 func ViewModel(m ModelSlice) ModelView {
 	v := ModelView{SliceView: View(m.Slice), Vendor: m.Vendor}
+	// A partial row still carries the card for the priced events. Publishing
+	// that rate, including a listed 0, would present it as the price of the
+	// unpriced tokens too.
+	if m.UnpricedTokens > 0 {
+		return v
+	}
 	if r := m.Rate; r != nil {
 		v.UnitPrices.Miss = listedRate(r.Miss)
 		v.UnitPrices.CacheRead = listedRate(r.CacheRead)

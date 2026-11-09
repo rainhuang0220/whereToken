@@ -222,6 +222,10 @@ func TestByModelRateAvailabilityDoesNotDependOnEventOrder(t *testing.T) {
 		if m.CostMicro != sum.All.CostMicro || m.PricedTokens+m.UnpricedTokens != m.Total() {
 			t.Fatalf("model price diverged from the event charge: model=%+v all=%+v", m, sum.All)
 		}
+		view := ViewModel(m)
+		if view.UnitPrices.Miss != nil || view.UnitPrices.CacheRead != nil || view.UnitPrices.CacheCreate != nil || view.UnitPrices.Output != nil {
+			t.Fatalf("partial row published a unit price: %+v", view.UnitPrices)
+		}
 	}
 }
 
