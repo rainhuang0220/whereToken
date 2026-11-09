@@ -1,6 +1,6 @@
 {
-  "as_of_date": "2026-11-08",
-  "asset_revision": "sha256:737982a4d689e50f8c4682d6aedf0295db91f498cd2755887f85a518615e13d9",
+  "as_of_date": "2026-11-09",
+  "asset_revision": "sha256:66ec7a069d770b88846baaf832f38355422ff16d661428cbebab1a90c0fae850",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -16,9 +16,9 @@
     "presentation.json",
     "manifest.json"
   ],
-  "generated_at": "2026-11-07T19:17:46Z",
+  "generated_at": "2026-11-09T15:18:45Z",
   "provenance": "local_sanitized_snapshot",
   "public_palette": "cobalt",
   "schema": "wheretoken.public-profile",
-  "snapshot_id": "sha256:e43c06ccd1571cf981075aaeb5810768518ef90e44b7402e37e21f489422d86f"
+  "snapshot_id": "sha256:b82df2aa2ca41cd349e7f2834274b3d812571784a910542975eb9a1733f2fc5f"
 }
