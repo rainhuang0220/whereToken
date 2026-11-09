@@ -312,13 +312,18 @@ func workspaceOf(m *composerMeta) string {
 	return m.workspace
 }
 
-func loadComposers(db *sql.DB) (map[string]*composerMeta, error) {
-	rows, err := db.Query(`
+// Cursor's key column is indexed with BINARY collation. An ASCII LIKE prefix
+// otherwise scans the full KV table on SQLite's default case-insensitive LIKE.
+// GLOB preserves Cursor's canonical case-sensitive keys and enables an index range.
+const composerKVQuery = `
 SELECT key,
   json_extract(value, '$.composerId'),
   json_extract(value, '$.modelConfig.modelName')
 FROM cursorDiskKV
-WHERE key LIKE 'composerData:%'`)
+WHERE key GLOB 'composerData:*'`
+
+func loadComposers(db *sql.DB) (map[string]*composerMeta, error) {
+	rows, err := db.Query(composerKVQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -379,16 +384,18 @@ FROM composerHeaders`)
 // json_extract array instead of one extract per field, and the type filter
 // runs SQL-side so non-usage bubbles never get decoded or cross the wire.
 // The capability (thinking) filter stays in emitLocal; the array carries it.
-func loadBubbles(db *sql.DB) ([]bubbleRow, error) {
-	rows, err := db.Query(`
+const bubbleKVQuery = `
 SELECT key,
   json_extract(value, '$.type', '$.createdAt',
     '$.tokenCount.inputTokens', '$.tokenCount.outputTokens',
     '$.tokenCount.cacheReadTokens', '$.tokenCount.cacheWriteTokens',
     '$.modelInfo.modelName', '$.capabilityType')
 FROM cursorDiskKV
-WHERE key LIKE 'bubbleId:%'
-  AND CAST(json_extract(value, '$.type') AS INTEGER) IN (1, 2)`)
+WHERE key GLOB 'bubbleId:*'
+  AND CAST(json_extract(value, '$.type') AS INTEGER) IN (1, 2)`
+
+func loadBubbles(db *sql.DB) ([]bubbleRow, error) {
+	rows, err := db.Query(bubbleKVQuery)
 	if err != nil {
 		return nil, err
 	}

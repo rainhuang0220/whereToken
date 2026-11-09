@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/credstore"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
@@ -23,11 +24,10 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
-// profileRefreshInterval is the foreground watch period. Launchd does not
-// use StartInterval on the watch job; this timer stays inside watch.
-// A failed attempt is retried on the next wake. Midnight still wakes sooner.
-// Tests shorten it.
-var profileRefreshInterval = time.Hour
+// The macOS LaunchAgent watch is idle between three local wall-clock checks:
+// 00:00, 10:30, 17:00. An explicit interval overrides the calendar only in
+// isolated tests; production uses the fixed calendar (zero).
+var profileRefreshInterval time.Duration
 
 // profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
 // has no timeout; refresh does not use it.
@@ -85,6 +85,10 @@ func (a *App) writeRefreshHealth(home adapter.Home, doctor bool) int {
 	scheduler := a.schedulerStatus(enabled)
 	code := a.lastRefreshCode(home)
 	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
+	if enabled && a.GOOS == "darwin" {
+		fmt.Fprintln(a.Stdout, "schedule=00:00,10:30,17:00")
+		fmt.Fprintf(a.Stdout, "next_check=%s\n", publicprofile.NextScheduledRefreshWake(a.Now(), a.Loc).In(a.Loc).Format(time.RFC3339))
+	}
 	fmt.Fprintf(a.Stdout, "last=%s\n", code)
 	program, _ := a.refreshProgramPath()
 	plist := a.refreshPlistState(enabled, program)
@@ -228,8 +232,17 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 			return ExitOK
 		}
 		a.maybeReexecProfileWatch()
-		a.executeProfileRefresh(ctx, flags, home, rejected)
-		wait := publicprofile.NextRefreshWake(a.Now(), a.Loc, profileRefreshInterval).Sub(a.Now())
+		// RunAtLoad does not imply an extra expensive scan. If today's most
+		// recent scheduled slot was already checked, stay asleep. A laptop
+		// that missed a slot while off gets one catch-up on login/wake.
+		if a.profileRefreshDue(home) {
+			a.executeProfileRefresh(ctx, flags, home, rejected)
+		}
+		nextWake := publicprofile.NextScheduledRefreshWake(a.Now(), a.Loc)
+		if profileRefreshInterval > 0 {
+			nextWake = publicprofile.NextRefreshWake(a.Now(), a.Loc, profileRefreshInterval)
+		}
+		wait := nextWake.Sub(a.Now())
 		if wait < 0 {
 			wait = 0
 		}
@@ -241,6 +254,20 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 		case <-timer.C:
 		}
 	}
+}
+
+// profileRefreshDue prevents RunAtLoad, agent repairs and a same-slot
+// rebootstrap from launching another expensive scan. The state is a timestamp
+// of the last check, not a token total or a publication assertion.
+func (a *App) profileRefreshDue(home adapter.Home) bool {
+	if profileRefreshInterval > 0 {
+		return true // deterministic, fast isolated watch tests
+	}
+	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	if err != nil || st.CheckedAt.IsZero() {
+		return true
+	}
+	return st.CheckedAt.Before(publicprofile.ScheduledRefreshSlot(a.Now(), a.Loc))
 }
 
 func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, rejected map[string]struct{}) int {
@@ -346,7 +373,26 @@ func (a *App) retainAccountObservations(home adapter.Home, events []event.UsageE
 		events = next
 		changed = true
 	}
+	// The Cursor personal API can return no account measurement without an
+	// adapter error. In that case the measured Cursor coverage would disappear
+	// and the public wall correctly rejects the weaker projection. Restore
+	// only a user-confirmed, same-account history, never an unbound or
+	// declined account and never over a fresh provider-API measurement.
+	retainedCursor := false
+	if !hasAccountCursorEvents(events) && confirmedCursorHistoryAccount(lg) {
+		if kept, ok, err := lg.ChainedRetainedEvents("cursor"); err == nil && ok {
+			events = publicprofile.ApplyRetainedEvents(events, kept)
+			changed = true
+			retainedCursor = true
+		}
+	}
 	for _, source := range failedAccountSources(errs) {
+		// Error-driven fallback must respect the same explicit ownership
+		// boundary as silent-failure fallback. No unknown account may inherit
+		// historical Cursor usage even when a scan returns an error.
+		if source == "cursor" && (retainedCursor || !confirmedCursorHistoryAccount(lg)) {
+			continue
+		}
 		if !publicprofile.AccountFetchFailed(events, errs, source) {
 			continue
 		}
@@ -399,6 +445,31 @@ func (a *App) openRefreshLedger(home adapter.Home) (*ledger.Ledger, error) {
 		return nil, err
 	}
 	return ledger.Open(p)
+}
+
+func hasAccountCursorEvents(events []event.UsageEvent) bool {
+	for _, e := range events {
+		if e.Source == "cursor" && (e.Derivation == event.DeriveProviderAPI || e.Derivation == event.DeriveRetained) {
+			return true
+		}
+	}
+	return false
+}
+
+// Never infer ownership of historical Cursor usage from a local SQLite row.
+// Both the active account subject and the recorded explicit consent must
+// match. Older links without a decision_subject cannot be silently adopted.
+func confirmedCursorHistoryAccount(lg *ledger.Ledger) bool {
+	subject, err := lg.Meta(cursor.AccountSubjectMeta)
+	if err != nil || subject == "" {
+		return false
+	}
+	decision, err := lg.Meta(cursor.HistoryDecisionMeta)
+	if err != nil || decision != cursor.HistoryConfirmed {
+		return false
+	}
+	who, err := lg.Meta(cursor.HistoryDecisionSubjectMeta)
+	return err == nil && who != "" && who == subject
 }
 
 func failedAccountSources(errs []string) []string {

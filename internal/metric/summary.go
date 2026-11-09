@@ -217,6 +217,19 @@ func CanonicalEvents(events []event.UsageEvent) []event.UsageEvent {
 
 // AggregateAt is Aggregate with an explicit clock for the calendar window.
 func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Time, loc *time.Location) Summary {
+	return aggregateAt(events, turns, now, loc, true)
+}
+
+// AggregateProjectionAt produces the same totals, calendar, sources, vendors,
+// and models as AggregateAt, but omits drill-by-session maps. Public Profile
+// snapshots never use drill tables: building hundreds of thousands of session
+// maps five times per snapshot can consume minutes of CPU needlessly.
+// Do not use this for terminal reports, which display drill-down information.
+func AggregateProjectionAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Time, loc *time.Location) Summary {
+	return aggregateAt(events, turns, now, loc, false)
+}
+
+func aggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Time, loc *time.Location, withDrill bool) Summary {
 	merged := mergeByRequest(events)
 
 	all := Slice{ID: "all", Label: "合计"}
@@ -306,7 +319,9 @@ func AggregateAt(events []event.UsageEvent, turns []event.TurnEvent, now time.Ti
 	sort.Slice(sum.BySourceVendor, func(i, j int) bool { return sum.BySourceVendor[i].Total() > sum.BySourceVendor[j].Total() })
 	sort.Slice(sum.ByModel, func(i, j int) bool { return sum.ByModel[i].Total() > sum.ByModel[j].Total() })
 	sum.Calendar = BuildCalendar(merged, loc, now)
-	sum.DrillAll, sum.DrillBySource, sum.DrillByVendor = buildDrill(merged, turns)
+	if withDrill {
+		sum.DrillAll, sum.DrillBySource, sum.DrillByVendor = buildDrill(merged, turns)
+	}
 	return sum
 }
 
@@ -463,17 +478,29 @@ func SourceLabel(id string) string { return sourceLabel(id) }
 
 func KnownSourceIDs() []string { return adapter.KnownIDs() }
 
-func LookupSource(name string) (string, bool) {
-	n := compactName(name)
-	if n == "" {
-		return "", false
-	}
-	for _, id := range KnownSourceIDs() {
-		if n == compactName(id) || n == compactName(sourceLabel(id)) {
-			return id, true
+// Source aliases are static catalog data. Resolve them once at startup;
+// otherwise Profile coverage checks would rebuild Catalog and normalize every
+// catalog label for each of hundreds of thousands of usage events.
+var sourceLookup = func() map[string]string {
+	out := map[string]string{}
+	for _, tool := range adapter.Catalog() {
+		for _, alias := range []string{tool.ID, tool.Label} {
+			key := compactName(alias)
+			if key == "" {
+				continue
+			}
+			// Preserve the registry's first-match behavior on collisions.
+			if _, exists := out[key]; !exists {
+				out[key] = tool.ID
+			}
 		}
 	}
-	return "", false
+	return out
+}()
+
+func LookupSource(name string) (string, bool) {
+	id, ok := sourceLookup[compactName(name)]
+	return id, ok
 }
 
 func joinKeys(m map[string]struct{}) string {

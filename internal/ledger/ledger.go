@@ -135,6 +135,22 @@ func Open(path string) (*Ledger, error) {
 	return l, nil
 }
 
+// OpenReadOnly reads an existing ledger without running migrations or writing
+// metadata. It is safe for a cached CLI report running alongside the watcher.
+func OpenReadOnly(path string) (*Ledger, error) {
+	db, err := sql.Open("sqlite", adapter.SQLiteURI(path, "mode=ro"))
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return &Ledger{db: db, path: path}, nil
+}
+
 func (l *Ledger) configure() error {
 	var mode string
 	if err := l.db.QueryRow(`PRAGMA journal_mode=WAL`).Scan(&mode); err != nil {

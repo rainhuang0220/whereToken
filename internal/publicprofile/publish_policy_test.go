@@ -303,3 +303,34 @@ func TestVerifiedRawTokenThresholdAndMidnightWindow(t *testing.T) {
 		t.Fatalf("crossing 1B should require raw 10M: %+v", got)
 	}
 }
+
+// The smallest unit is one whole token. 0.01 token is not measurable, so
+// publication may proceed after one raw token below 1M, not a rounded 0.01M.
+func TestDecidePublicationThreeMagnitudeThresholds(t *testing.T) {
+	at := time.Date(2026, 11, 9, 10, 30, 0, 0, time.UTC)
+	tests := []struct {
+		name        string
+		base, delta int64
+		want        string
+	}{
+		{"token unchanged", 500, 0, ActionNoChange},
+		{"token plus one", 500, 1, ActionPublishNow},
+		{"token base just below million", 999_997, 1, ActionPublishNow},
+		{"million delta 9999", 2_000_000, 9_999, ActionNoChange},
+		{"million delta 10000", 2_000_000, 10_000, ActionPublishNow},
+		{"billion delta below 0.01B", 2_000_000_000, 9_999_999, ActionNoChange},
+		{"billion delta 0.01B", 2_000_000_000, 10_000_000, ActionPublishNow},
+		{"cross million", 999_999, 1, ActionNoChange},
+		{"cross billion", 999_999_999, 1, ActionNoChange},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prev := wall("sha256:prev", "2026-11-09", tc.base, at.Add(-time.Minute))
+			next := gateSnap("sha256:next", StatusAvailable, "2026-11-09", intPtr(tc.base+tc.delta))
+			got := DecidePublication(PublicationInput{Candidate: next, Verified: prev, Now: at})
+			if got.Action != tc.want {
+				t.Fatalf("base=%d delta=%d got=%+v want=%s", tc.base, tc.delta, got, tc.want)
+			}
+		})
+	}
+}

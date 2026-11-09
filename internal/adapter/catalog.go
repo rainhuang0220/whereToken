@@ -65,11 +65,20 @@ func KnownIDs() []string {
 	return out
 }
 
-func Label(id string) string {
+// Label is called on every normalized usage event, potentially millions of
+// times during a Profile projection. Cache the fixed catalog labels instead
+// of allocating all capability structs on every call.
+var labelByID = func() map[string]string {
+	out := map[string]string{}
 	for _, t := range Catalog() {
-		if t.ID == id {
-			return t.Label
-		}
+		out[t.ID] = t.Label
+	}
+	return out
+}()
+
+func Label(id string) string {
+	if name, ok := labelByID[id]; ok {
+		return name
 	}
 	return id
 }

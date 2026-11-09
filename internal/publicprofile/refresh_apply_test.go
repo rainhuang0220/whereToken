@@ -327,14 +327,14 @@ func TestApplyRefreshMorningCatchUpIsNotAMidnightPublish(t *testing.T) {
 	}
 }
 
-func TestApplyRefreshDelta9999AtOneHourDoesNotPublish(t *testing.T) {
+func TestApplyRefreshSubMillionUsesOneTokenMinimum(t *testing.T) {
 	start := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
 	remote := mustBuild(t, usageInput(start, time.UTC, 1_000))
 	pub := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote, UpdatedAt: start}}
 	local := mustBuild(t, usageInput(start.Add(time.Hour), time.UTC, 1_004))
 	got := ApplyRefresh(context.Background(), local, start.Add(time.Hour), false, pub)
-	if pub.puts != 0 || got.Decision.Publish || got.Decision.Code != CodeSkippedDelta {
-		t.Fatalf("unchanged display puts=%d %+v", pub.puts, got.Decision)
+	if pub.puts != 1 || !got.Decision.Publish || got.Decision.Code != CodePublished {
+		t.Fatalf("sub-million uses one-token granularity puts=%d %+v", pub.puts, got.Decision)
 	}
 }
 

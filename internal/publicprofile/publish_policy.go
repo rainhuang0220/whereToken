@@ -154,9 +154,12 @@ func DecidePublication(in PublicationInput) PublicationDecision {
 		validLocalDate(in.Candidate.AsOfDate) && earlierLocalDate(in.Candidate.AsOfDate, ownerNow.Format("2006-01-02")) {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonEarlierDate, Code: CodeSkippedDelta}
 	}
-	minDelta := RefreshMinDelta
-	if *total >= 1_000_000_000 || *in.Verified.Total >= 1_000_000_000 {
+	minDelta := RefreshMinDeltaTokens
+	switch {
+	case *total >= 1_000_000_000 || *in.Verified.Total >= 1_000_000_000:
 		minDelta = RefreshMinDeltaB
+	case *total >= 1_000_000 || *in.Verified.Total >= 1_000_000:
+		minDelta = RefreshMinDelta
 	}
 	if *total-*in.Verified.Total < minDelta {
 		return PublicationDecision{Action: ActionNoChange, Reason: ReasonDelta, Code: CodeSkippedDelta}

@@ -271,7 +271,7 @@ func TestParseDoesNotCreditContextMeter(t *testing.T) {
 	}
 }
 
-func TestProductionSQLIsPrefixOnly(t *testing.T) {
+func TestProductionSQLUsesIndexedPrefixes(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("caller")
@@ -287,17 +287,17 @@ func TestProductionSQLIsPrefixOnly(t *testing.T) {
 	if strings.Contains(body, "$.text") || strings.Contains(body, "`text`") {
 		t.Fatal("must not extract bubble/composer text")
 	}
-	if !strings.Contains(body, "key LIKE 'composerData:%'") {
-		t.Fatal("composerData must be prefix-queried")
+	if !strings.Contains(body, "key GLOB 'composerData:*'") {
+		t.Fatal("composerData must use an indexed prefix query")
 	}
-	if !strings.Contains(body, "key LIKE 'bubbleId:%'") {
-		t.Fatal("bubbleId must be prefix-queried")
+	if !strings.Contains(body, "key GLOB 'bubbleId:*'") {
+		t.Fatal("bubbleId must use an indexed prefix query")
 	}
 	if strings.Contains(body, "SELECT value FROM cursorDiskKV") || strings.Contains(body, "SELECT key, value FROM cursorDiskKV") {
 		t.Fatal("must not load cursorDiskKV value blobs")
 	}
-	if strings.Contains(body, "FROM cursorDiskKV") && !strings.Contains(body, "LIKE") {
-		t.Fatal("cursorDiskKV query without LIKE")
+	if strings.Contains(body, "FROM cursorDiskKV") && !strings.Contains(body, "GLOB") {
+		t.Fatal("cursorDiskKV query without indexed GLOB prefix")
 	}
 	apiSrc, err := os.ReadFile(filepath.Join(filepath.Dir(file), "api.go"))
 	if err != nil {
@@ -305,6 +305,57 @@ func TestProductionSQLIsPrefixOnly(t *testing.T) {
 	}
 	if strings.Contains(string(apiSrc), "log.") {
 		t.Fatal("must not log API traffic")
+	}
+}
+
+// The production Cursor DB can exceed 10 GB. A default SQLite LIKE predicate
+// scans the full KV table; the actual SQL must do a range search on its key index.
+func TestCursorKVQueriesUseKeyIndex(t *testing.T) {
+	dir := t.TempDir()
+	path := writeVscdb(t, dir, []kv{
+		{key: "composerData:sess-a", value: `{"composerId":"sess-a","modelConfig":{"modelName":"claude-opus-4-6"}}`},
+		{key: "bubbleId:sess-a:a1", value: `{"type":2,"createdAt":"2026-11-07T12:00:00Z","tokenCount":{"inputTokens":42,"outputTokens":8}}`},
+		{key: "unrelated:key", value: `{"type":2}`},
+	}, nil)
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, tc := range []struct {
+		name, query string
+	}{
+		{name: "composer", query: composerKVQuery},
+		{name: "bubble", query: bubbleKVQuery},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rows, err := db.Query("EXPLAIN QUERY PLAN " + tc.query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer rows.Close()
+			var found bool
+			for rows.Next() {
+				var id, parent, unused int
+				var detail string
+				if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
+					t.Fatal(err)
+				}
+				if strings.Contains(detail, "SEARCH cursorDiskKV USING INDEX") ||
+					strings.Contains(detail, "SEARCH cursorDiskKV USING COVERING INDEX") {
+					found = true
+				}
+				if strings.Contains(detail, "SCAN cursorDiskKV") {
+					t.Fatalf("full KV scan: %s", detail)
+				}
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
+			}
+			if !found {
+				t.Fatal("query did not use cursorDiskKV key index")
+			}
+		})
 	}
 }
 

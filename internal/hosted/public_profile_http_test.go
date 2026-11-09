@@ -1054,7 +1054,7 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	day := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
 	first := mustProjection(t, publicprofile.Input{
 		Now: day, Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000_000)},
 	})
 	got := putProjection(t, h, device, first.raw)
 	if got["readme"] != "materialized" || got["snapshot_id"] != first.snap.SnapshotID {
@@ -1072,7 +1072,7 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	puts := git.puts
 	sameDay := mustProjection(t, publicprofile.Input{
 		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_004)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000_004)},
 	})
 	if publicprofile.DisplayChanged(publicprofile.TotalTokens(first.snap), publicprofile.TotalTokens(sameDay.snap)) {
 		t.Fatal("fixture display changed on the same day")
@@ -1083,7 +1083,7 @@ func TestPublicProjectionMaterializesOnLocalDateChange(t *testing.T) {
 	}
 	nextDay := mustProjection(t, publicprofile.Input{
 		Now: day.Add(24 * time.Hour), Loc: time.UTC, Version: "test",
-		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_004)},
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 1_000_004)},
 	})
 	if nextDay.snap.AsOfDate != "2026-09-25" || publicprofile.TotalTokens(nextDay.snap) != publicprofile.TotalTokens(sameDay.snap) {
 		t.Fatalf("next as_of=%s totals %d %d", nextDay.snap.AsOfDate, publicprofile.TotalTokens(nextDay.snap), publicprofile.TotalTokens(sameDay.snap))
@@ -1288,7 +1288,7 @@ func TestHostedUsageMergesAtOwnerMidnightWithoutDoublePublish(t *testing.T) {
 	opts.Now = func() time.Time { return now }
 	h := NewMux(opts)
 	device, _, _ := seedOwner(t)
-	const base int64 = 1_000
+	const base int64 = 1_000_000
 	first := mustProjection(t, publicprofile.Input{
 		Now: now, Loc: loc, Version: "test",
 		Events: []event.UsageEvent{authEvent("claude", "anthropic", now.Add(-time.Hour), base)},

@@ -5,7 +5,10 @@
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-rainhuang0220/whereToken}"
-TITLE="profile-freshness alert"
+TITLE_PREFIX="profile-freshness alert"
+# GitHub-hosted workflow time is UTC; this date identifies a unique incident
+# day. The stable prefix, not the full date, deduplicates an ongoing alert.
+TITLE="${TITLE_PREFIX} ($(date -u +%Y-%m-%d))"
 WALL_URL="${WHERETOKEN_WALL_URL:-https://wheretoken.plainlist.space/api/v1/public-profile/rainhuang0220}"
 STATE_FILE="${WHERETOKEN_REFRESH_STATE:-${HOME}/.config/wheretoken/profile-refresh-state.json}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -70,23 +73,35 @@ EOF
 }
 
 open_number() {
-  local title="$1"
-  # List open issues and match the title exactly. GitHub search can lag
-  # behind a create and would open a second issue for the same alert.
+  # Keep the original one-open-issue semantics even across UTC date rollover.
+  # Legacy undated issues remain recognized until recovered.
   gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
     | python3 -c 'import json,sys
-want=sys.argv[1]
+prefix=sys.argv[1]
 for item in json.load(sys.stdin):
-    if item.get("title")==want:
+    title=item.get("title","")
+    if title==prefix or title.startswith(prefix+" ("):
         print(item["number"])
-        break' "$title"
+        break' "$TITLE_PREFIX"
+}
+
+closed_number_today() {
+  # If a check fails again after recovering on the same day, reopen that
+  # issue instead of creating repeated same-date alert tickets.
+  gh issue list --repo "$REPO" --state closed --limit 100 --json number,title \
+    | python3 -c 'import json,sys
+title=sys.argv[1]
+for item in json.load(sys.stdin):
+    if item.get("title")==title:
+        print(item["number"])
+        break' "$TITLE"
 }
 
 notify() {
   local class="$1"
   if [ "$class" = "ok" ]; then
     local number
-    number="$(open_number "$TITLE" || true)"
+    number="$(open_number || true)"
     if [ -n "${number}" ]; then
       gh issue close "$number" --repo "$REPO" --reason completed --comment "Recovered. The freshness check is ok. This is not a new token measurement."
     fi
@@ -94,9 +109,15 @@ notify() {
     return 0
   fi
   local number
-  number="$(open_number "$TITLE")"
+  number="$(open_number)"
   if [ -n "${number}" ]; then
     echo "class=${class} issue=${number} already-open"
+    return 0
+  fi
+  number="$(closed_number_today)"
+  if [ -n "${number}" ]; then
+    gh issue reopen "$number" --repo "$REPO" >/dev/null
+    echo "class=${class} issue=${number} reopened"
     return 0
   fi
   local body

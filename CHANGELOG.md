@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.7.14 — 2026-11-09 (Alpha)
+
+- **Interactive reports no longer block on multi-gigabyte Cursor scans when macOS Profile auto-refresh is enabled.** Bare `wheretoken`, date queries, and their report filters read the latest normalized per-file local index checkpoints, in read-only mode, and explicitly mark the output as cached/not live. They preserve already-confirmed, account-linked Cursor history without treating unmeasured days as zero. An unavailable, corrupt, or empty cache falls back to the existing full scan instead of silently showing zero. `wheretoken scan`, the scan index writer, and the original publication/update pipeline are unchanged.
+- **Fixed local refresh checks:** Profile refresh scans at 00:00, 10:30, and 17:00 owner-local time, plus one catch-up after a missed slot on login/wake. A rebootstrap within an already checked slot does not rescan. The launchd watcher sleeps between checks. The hosted verified-GitHub-wall publication path, coverage/regression gates, and midnight coalescing remain unchanged; only scan frequency is reduced. Below 1M total usage, one token is the smallest measurable 0.01-unit growth; from 1M, use 0.01M, and from 1B, use 0.01B. GitHub freshness alert issues include their UTC incident date and reuse the same-day issue instead of duplicating it.
+- **Cursor local SQLite key-prefix queries now use the existing BINARY key index.** Case-sensitive `GLOB` replaces default `LIKE` for `composerData:*` and `bubbleId:*`; no tokens, model attribution rules, prompts, or history are modified. Tests pin the index-query plan and read-only cache/ledger behavior. This improves full scans as well as interactive fallback but does not claim to make a full 11 GB database parse instantaneous.
+
 ## 0.7.13 — 2026-11-08 (Alpha)
 
 - **Single-day CLI queries:** `wheretoken YYYY-MM-DD` selects exactly one owner-local calendar date using the existing report-window path; `--json`, `--cursor`, and other report filters work as before. Invalid dates and conflicting date-range arguments fail with a usage error.

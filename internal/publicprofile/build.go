@@ -56,7 +56,7 @@ func Build(in Input) (Snapshot, error) {
 
 	canonicalEvents := metric.CanonicalEvents(in.Events)
 	in.Events = canonicalEvents
-	allSum := metric.AggregateAt(canonicalEvents, in.Turns, now, loc)
+	allSum := metric.AggregateProjectionAt(canonicalEvents, in.Turns, now, loc)
 	status := dataStatus(allSum)
 	unavailable := status == StatusUnavailable
 
@@ -243,7 +243,7 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 	if id != PeriodAll {
 		evs, turns := filterWindow(in.Events, in.Turns, w, loc)
 		periodEvents = evs
-		sum = metric.AggregateAt(evs, turns, now, loc)
+		sum = metric.AggregateProjectionAt(evs, turns, now, loc)
 	}
 	from := rangeFrom(w)
 	to := now.Format("2006-01-02")
