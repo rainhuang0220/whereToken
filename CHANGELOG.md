@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Keep measured model identities separate when no public price card exists, including Cursor Grok variants and unresolved `default` routing. Only genuinely missing model names use the unknown-model bucket; prices remain unavailable and token totals do not change. Existing priced aliases still use normalized card identities.
-- Match an exact original model in `pricing --usage --model` before price alias aggregation, preserving precise effort variants. A full raw id wins over a trailing path segment. Family queries retain their existing fallback. Mixed dated usage exposes a listed rate consistently regardless of event order while pre-card usage remains unpriced.
+- Match an exact original model in `pricing --usage --model` before price alias aggregation, preserving precise effort variants. Family queries still match priced card ids. An unpriced id matches only itself, and a partial row does not print a card rate against tokens that have no public price. Mixed dated usage keeps a listed rate regardless of event order while pre-card usage remains unpriced.
 
 ## 0.7.17 — 2026-11-10 (Alpha)
 

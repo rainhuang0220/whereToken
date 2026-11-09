@@ -289,28 +289,34 @@ func exactUsageModelEvents(events []event.UsageEvent, query string) []event.Usag
 	if query == "" {
 		return nil
 	}
-	var full, suffix []event.UsageEvent
+	var full []event.UsageEvent
 	for _, e := range events {
 		raw := strings.TrimSpace(e.Model)
 		if strings.EqualFold(raw, query) {
 			full = append(full, e)
-			continue
-		}
-		if i := strings.LastIndex(raw, "/"); i >= 0 && strings.EqualFold(raw[i+1:], query) {
-			suffix = append(suffix, e)
 		}
 	}
-	// A full raw id is the exact identity. The path segment is only a
-	// fallback so "kimi-code/k3" can be named as k3 when no raw model is k3.
-	if len(full) > 0 {
-		return full
-	}
-	return suffix
+	// Only a full raw id skips alias aggregation. A short query such as
+	// "k3" or "grok-4.6" stays on filterUsageModels so a path-shaped or
+	// longer effort id is not treated as that exact model.
+	return full
 }
 
-// filterUsageModels keeps the --vendor / --model slice. A model query matches
-// the normalized ledger id the same fuzzy way the catalog filter matches card
-// rows; the unknown-model bucket matches no query.
+// filterUsageModels keeps the --vendor / --model slice. A priced row matches
+// the normalized card id the same fuzzy way the catalog filter matches card
+// rows. An unpriced measured id matches only its own canonical name, so a
+// shorter family query cannot absorb a different effort variant. The
+// unknown-model bucket matches no query.
+func usageModelMatches(m metric.ModelSlice, q string) bool {
+	if m.Model == "" {
+		return false
+	}
+	canon := price.Canonical(m.Model)
+	if m.Rate == nil {
+		return canon == q
+	}
+	return strings.Contains(canon, q) || price.MatchModel(q, m.Model)
+}
 func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.ModelSlice {
 	q := price.Canonical(model)
 	var out []metric.ModelSlice
@@ -318,7 +324,7 @@ func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.Mo
 		if vend != "" && m.Vendor != vend {
 			continue
 		}
-		if q != "" && (m.Model == "" || (!strings.Contains(price.Canonical(m.Model), q) && !price.MatchModel(q, m.Model))) {
+		if q != "" && !usageModelMatches(m, q) {
 			continue
 		}
 		out = append(out, m)
@@ -444,7 +450,9 @@ func (a *App) printUsageBreakdown(flags Flags, rows []metric.ModelSlice, period 
 func usageModelRow(m metric.ModelSlice) []string {
 	var miss, cacheRead, cacheCreate, output float64
 	free := false
-	if r := m.Rate; r != nil {
+	// A partial row mixes priced and unpriced events. Showing the card rate
+	// beside the whole component would price tokens the card does not cover.
+	if r := m.Rate; r != nil && m.Slice.UnpricedTokens == 0 {
 		miss, cacheRead, cacheCreate, output = r.Miss, r.CacheRead, r.CacheCreate, r.Output
 		free = r.CreateFree
 	}

@@ -182,4 +182,4 @@ few component rates that snapshots did not re-confirm (MiniMax cache write,
 DeepSeek cache read) were kept unchanged rather than guessed. The CLI prints
 the same metadata: `wheretoken pricing`.
 
-Measured models without a matching public card retain their original names as separate usage rows, with unavailable cost and no inferred rate. Only missing names use the unknown-model bucket. Priced aliases continue to share normalized card identities. An exact original `pricing --usage --model` match filters events before alias aggregation. A full raw id wins over a trailing path segment; otherwise existing family matching applies.
+Measured models without a matching public card retain their original names as separate usage rows, with unavailable cost and no inferred rate. Only missing names use the unknown-model bucket. Priced aliases continue to share normalized card identities. An exact original `pricing --usage --model` match filters events before alias aggregation. Otherwise a priced card id keeps the existing family match, while an unpriced id matches only its own canonical name. A partial row does not display that card rate against unpriced tokens.

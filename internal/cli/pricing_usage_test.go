@@ -378,6 +378,64 @@ func TestPricingUsageRetainsUnpricedModelAndExactPricedAlias(t *testing.T) {
 	}
 }
 
+func TestPricingUsageFamilyQueryDoesNotAbsorbUnpricedEffortVariant(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=grok-4.6", "--json"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "effort", Timestamp: when, Miss: 50},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	var got pricingJSON
+	if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Usage.Total.Total != 0 || len(got.Usage.Vendors) != 0 {
+		t.Fatalf("family query absorbed an unpriced effort variant: %s", out.String())
+	}
+}
+
+func TestPricingUsageShortQueryKeepsPricedCardAndPathModel(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=k3", "--json"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "moonshot", Model: "kimi-k3", RequestID: "card", Timestamp: when, Miss: 1_000_000},
+			{Source: "cursor", Vendor: "moonshot", Model: "kimi-code/k3", RequestID: "path", Timestamp: when, Miss: 7},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	var got pricingJSON
+	if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Usage.Total.Total != 1_000_007 || len(got.Usage.Vendors) != 1 || len(got.Usage.Vendors[0].Models) != 2 {
+		t.Fatalf("short query dropped a priced card or a path model: %s", out.String())
+	}
+}
+
+func TestPricingUsagePartialRowDoesNotApplyRateToUnpricedTokens(t *testing.T) {
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=gpt-5"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "openai", Model: "gpt-5", RequestID: "before", Timestamp: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Miss: 100},
+			{Source: "cursor", Vendor: "openai", Model: "gpt-5", RequestID: "after", Timestamp: time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC), Miss: 100},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	text := out.String()
+	if strings.Contains(text, "$1.25") || !strings.Contains(text, "× —") || !strings.Contains(text, "部分用量无公开价") {
+		t.Fatalf("partial row priced unpriced tokens: %s", text)
+	}
+}
+
 func TestPricingUsageHumanExactModelMatchesJSONScope(t *testing.T) {
 	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
 	events := []event.UsageEvent{
