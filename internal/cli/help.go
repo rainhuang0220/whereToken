@@ -128,6 +128,9 @@ PRIVACY
   card writes a static SVG from this machine's ledgers. It does not
   upload the usage ledger, and it never calls Community Rank.
   The default report does not upload a public snapshot.
+  On macOS with profile refresh enabled, terminal reports use the last
+  completed local scan cache and clearly mark it as non-live. The background
+  refresh and wheretoken scan continue to perform complete scans.
   profile refresh PUTs only the sanitized public snapshot. It is not part
   of wheretoken with no command, and the default install does not enable
   it. profile refresh on enables the switch and, on macOS, installs a

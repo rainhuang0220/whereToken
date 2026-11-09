@@ -283,7 +283,7 @@ func restoreBoundCursorHistoryForReport(home adapter.Home, res *scan.Result) {
 	if err != nil {
 		return
 	}
-	lg, err := ledger.Open(path)
+	lg, err := ledger.OpenReadOnly(path)
 	if err != nil {
 		return
 	}
@@ -322,7 +322,10 @@ func restoreBoundCursorHistoryForReport(home adapter.Home, res *scan.Result) {
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
-	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	res, cached := a.cachedReport(home)
+	if !cached {
+		res = a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	}
 	// A test-provided or embedded scan is self-contained. Never read the
 	// surrounding machine's real ledger to supplement a mock result.
 	if a.Scan == nil {
@@ -352,6 +355,12 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 			return ExitUsage
 		}
 		return ExitFail
+	}
+	if cached {
+		const msg = "缓存报告 · 来自最近一次已完成的后台扫描，未实时采集；最新用量可能滞后（wheretoken scan 可主动完整扫描）"
+		if !slices.Contains(snap.Notes, msg) {
+			snap.Notes = append([]string{msg}, snap.Notes...)
+		}
 	}
 	if a.wantOffline(flags) {
 		const msg = "offline · 只用本机账本，没有请求 Cursor/Trae 云端"

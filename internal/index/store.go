@@ -83,6 +83,21 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
+// OpenReadOnly opens an existing scan cache without migrations or any write.
+// Interactive reports use this to read the last completed scan while a
+// background refresh may be scanning independently.
+func OpenReadOnly(path string) (*Store, error) {
+	db, err := sql.Open("sqlite", adapter.SQLiteURI(path, "mode=ro"))
+	if err != nil {
+		return nil, err
+	}
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return &Store{db: db}, nil
+}
+
 // Wipe deletes the index database so the next scan rebuilds from agent data.
 func Wipe(path string) error {
 	for _, p := range []string{path, path + "-wal", path + "-shm"} {
@@ -324,6 +339,37 @@ func (s *Store) BackupTo(dest string) error {
 		return fmt.Errorf("index backup failed")
 	}
 	return nil
+}
+
+// ExportCached returns the last completed normalized scan records, including
+// turns. It does not stat or reparse any source file, touch credentials, or
+// mutate the cache. Callers must label it historical/cached, never live.
+// A corrupt blob increments gaps; consumers must fail closed on nonzero gaps.
+func (s *Store) ExportCached() ([]event.UsageEvent, []event.TurnEvent, int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rows, err := s.db.Query(`SELECT events, turns FROM blobs`)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	defer rows.Close()
+	var events []event.UsageEvent
+	var turns []event.TurnEvent
+	gaps := 0
+	for rows.Next() {
+		var eb, tb []byte
+		if err := rows.Scan(&eb, &tb); err != nil {
+			return nil, nil, gaps, err
+		}
+		evs, ts, err := decodeBlob(eb, tb)
+		if err != nil {
+			gaps++
+			continue
+		}
+		events = append(events, evs...)
+		turns = append(turns, ts...)
+	}
+	return events, turns, gaps, rows.Err()
 }
 
 // ExportUsage returns every cached usage event, including files that are no
