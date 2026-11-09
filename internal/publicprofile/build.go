@@ -408,7 +408,9 @@ func projectBreakdown(rows []metric.Slice, all int64, asSource, asVendor bool, i
 	var rest metric.Slice
 	out := []Breakdown{}
 	for i, a := range list {
-		if i < maxBreakdown || (asSource && cloudSource(a.id)) {
+		// Vendor ids have already passed a finite allowlist. Preserve each
+		// provider and unknown routing instead of folding measured usage away.
+		if asVendor || i < maxBreakdown || (asSource && cloudSource(a.id)) {
 			out = append(out, breakdownRow(a.id, a.label, a.s, all, asSource, in, loc))
 			continue
 		}
@@ -638,7 +640,7 @@ func mapValues(in map[string]*seriesAcc) []seriesAcc {
 
 func appendSeries(out []Series, dim, metricName string, rows []seriesAcc, dates []string, windowTo string, unavailable bool) []Series {
 	for i, a := range rows {
-		if i >= maxSeries {
+		if dim != "vendor" && i >= maxSeries {
 			break
 		}
 		out = append(out, seriesFromCounts(dim, a.id, a.label, metricName, a.counts, dates, windowTo, unavailable))

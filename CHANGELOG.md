@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.17 — 2026-11-10 (Alpha)
+
+- Preserve every allowlisted vendor in Profile breakdowns and activity series, including low-ranked Cursor Composer and Google. Unknown routing remains `unknown` rather than sharing the sanitized `other` bucket; no duplicate `other` rows are produced. Token components and publication gates are unchanged.
+
 ## 0.7.16 — 2026-11-09 (Alpha)
 
 - Preserve account API model, vendor, original request time and endpoint provenance in the durable ledger. Older day-only observations remain historical unallocated usage. `cursor backfill --from DATE --to DATE` revisits explicit UTC windows with the linked account, validates pagination and token components, and splits only existing daily components. Unmatched history remains unallocated; the verified token baseline does not change. Authenticated dashboard CSV provides compatibility when billing v2 cannot supply rows. Unknown routes are never inferred from request counts.
