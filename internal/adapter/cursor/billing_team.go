@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var errTeamSelectionRequired = fmt.Errorf("%w [reason=team_selection_required]", errEndpointUnavailable)
+
 // uniqueBillingTeamID resolves a team only when the logged-in account has
 // exactly one valid membership. Never infer a team ID from an identity token
 // or probe arbitrary IDs. The credential stays inside this process.
@@ -56,7 +58,7 @@ func (a Adapter) uniqueBillingTeamID(userID, jwt string) (int64, error) {
 		return 0, fmt.Errorf("%w [reason=team_lookup_schema]", errSchemaChanged)
 	}
 	if len(envelope.Teams) != 1 {
-		return 0, fmt.Errorf("%w [reason=team_selection_required team_count=%d]", errEndpointUnavailable, len(envelope.Teams))
+		return 0, fmt.Errorf("%w [team_count=%d]", errTeamSelectionRequired, len(envelope.Teams))
 	}
 	var n int64
 	val := envelope.Teams[0].ID

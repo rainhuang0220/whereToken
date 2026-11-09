@@ -42,7 +42,7 @@ EOF
       cat <<'EOF'
 class: mac_offline
 
-The public wall is older than 48 hours and this Mac has no publisher check in the last 6 hours.
+The public wall is older than 48 hours and this Mac has no publisher check in the last 12 hours.
 The wall was not marked stale just because Actions missed a schedule.
 This is not a new token measurement.
 EOF
@@ -74,15 +74,29 @@ EOF
 
 open_number() {
   # Keep the original one-open-issue semantics even across UTC date rollover.
-  # Legacy undated issues remain recognized until recovered.
-  gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
+  # Date a legacy issue once using its creation date, not the current check.
+  local entry number title
+  entry="$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title,createdAt \
     | python3 -c 'import json,sys
+from datetime import datetime,timezone
 prefix=sys.argv[1]
 for item in json.load(sys.stdin):
     title=item.get("title","")
     if title==prefix or title.startswith(prefix+" ("):
-        print(item["number"])
-        break' "$TITLE_PREFIX"
+        number=item["number"]
+        if title==prefix:
+            created=datetime.fromisoformat(item["createdAt"].replace("Z","+00:00"))
+            day=created.astimezone(timezone.utc).date().isoformat()
+            print(f"{number}\t{prefix} ({day})")
+        else:
+            print(number)
+        break' "$TITLE_PREFIX")"
+  [ -n "$entry" ] || return 0
+  IFS=$'\t' read -r number title <<< "$entry"
+  if [ -n "$title" ]; then
+    gh issue edit "$number" --repo "$REPO" --title "$title" >/dev/null
+  fi
+  printf '%s\n' "$number"
 }
 
 closed_number_today() {

@@ -22,7 +22,7 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community pricing completion card" -l rank -r -a "today all"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion card" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
-complete -c wheretoken -n "__fish_seen_subcommand_from cursor" -a "status connect disconnect"
+complete -c wheretoken -n "__fish_seen_subcommand_from cursor" -a "status connect disconnect backfill"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"

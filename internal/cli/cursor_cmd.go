@@ -21,6 +21,8 @@ func (a *App) runCursor(flags Flags, home adapter.Home) int {
 	switch flags.CursorAction {
 	case "connect":
 		return a.cursorConnect(home)
+	case "backfill":
+		return a.cursorBackfill(flags, home)
 	case "disconnect":
 		return a.cursorDisconnect(home)
 	case "", "status":

@@ -32,11 +32,21 @@ func unsealOS(token, _ string, prompt bool) (string, error) {
 }
 
 func cursorSafeStoragePassword(prompt bool) (string, error) {
+	return cursorSafeStoragePasswordUsing(prompt, readGenericPassword)
+}
+
+func cursorSafeStoragePasswordUsing(prompt bool, read func(string, string, bool) (string, error)) (string, error) {
+	// Interactive authorization must enter the normal Security.framework
+	// query directly. A legacy no-UI lookup can block before any dialog;
+	// macOS decides whether this process already has permission or needs UI.
+	if prompt {
+		return read("Cursor Safe Storage", "", true)
+	}
 	// Cursor 3.27 builds have used both "Cursor" and "Cursor Key".
-	// Try every name without UI first. At most one dialog follows.
+	// Background callers keep the non-UI account fallback and never prompt.
 	var blocked error
 	for _, account := range []string{"", "Cursor", "Cursor Key"} {
-		password, err := readGenericPassword("Cursor Safe Storage", account, false)
+		password, err := read("Cursor Safe Storage", account, false)
 		if err == nil {
 			return password, nil
 		}
@@ -49,14 +59,7 @@ func cursorSafeStoragePassword(prompt bool) (string, error) {
 	if blocked == nil {
 		return "", errSealedCredential
 	}
-	if !prompt {
-		return "", blocked
-	}
-	password, err := readGenericPassword("Cursor Safe Storage", "", true)
-	if err != nil {
-		return "", err
-	}
-	return password, nil
+	return "", blocked
 }
 
 var errKeychainMiss = usageKind("KEYCHAIN_MISS")

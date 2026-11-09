@@ -11,6 +11,8 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
+const cachedReportNotice = "缓存报告 · 本地索引数据（扫描时可能分批更新），非实时；最新用量可能滞后（wheretoken scan 可主动完整扫描）"
+
 // cachedReport is a read-only, non-live report path for owners who already
 // enabled the macOS background refresh. The watcher remains the only automatic
 // refresher; interactive reads should not reparse multi-gigabyte Cursor DBs.

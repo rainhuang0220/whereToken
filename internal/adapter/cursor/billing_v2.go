@@ -349,6 +349,7 @@ func decodeBillingPage(raw []byte, userID string, w usageSpan, queryFrom time.Ti
 			Model:     row.DisplayExtras.Model, Timestamp: stamp,
 			Miss: n[0], CacheRead: n[1], CacheCreate: n[2], Output: n[3],
 			Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI, SkipRequest: true,
+			Provenance: "cursor_billing_v2",
 		})
 	}
 	return events, len(list), pagination.NextCursor, nil

@@ -72,7 +72,10 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--home[fake home]:dir:_files -/' \
-        '1:action:(status connect disconnect)'
+        '--from[inclusive UTC start for backfill]:date:' \
+        '--to[inclusive UTC end for backfill]:date:' \
+        '--json[JSON output]' \
+        '1:action:(status connect disconnect backfill)'
       ;;
     update|upgrade|uninstall)
       _arguments -s \

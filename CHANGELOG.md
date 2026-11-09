@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.7.16 — 2026-11-09 (Alpha)
+
+- Preserve account API model, vendor, original request time and endpoint provenance in the durable ledger. Older day-only observations remain historical unallocated usage. `cursor backfill --from DATE --to DATE` revisits explicit UTC windows with the linked account, validates pagination and token components, and splits only existing daily components. Unmatched history remains unallocated; the verified token baseline does not change. Authenticated dashboard CSV provides compatibility when billing v2 cannot supply rows. Unknown routes are never inferred from request counts.
+- Bound automatic Profile refresh to five minutes in its own process, with at most three attempts per scheduled slot and 30-second/two-minute backoff. Idle clock checks do not scan sources. Homebrew upgrades rebuild agents using maintained command links. Explicit Cursor authorization enters the normal macOS prompt directly; unattended refresh still never opens Keychain.
+- Align local freshness checks with the longest scheduled gap and retain the UTC incident date on legacy alerts without duplicate issues. Reports identify exact unallocated historical tokens and their recorded UTC date range.
+- `pricing --usage` reads the same marked, read-only cache and linked Cursor history as ordinary reports when background refresh is enabled. Xiaomi MiMo model IDs now identify Xiaomi; their API-equivalent price remains unavailable without a public card entry.
+
 ## 0.7.15 — 2026-11-09 (Alpha)
 
 - **Unattended Profile refresh cannot be held hostage by macOS Cursor Keychain prompts.** Some unsigned upgrades cause Security.framework to wait inside `SecItemCopyMatching` even when `kSecUseAuthenticationUIFail` was requested, leaving scheduled scans stalled for minutes. Both `profile refresh watch` and one-shot `profile refresh` now avoid OS Keychain unsealing for sealed Cursor sessions. They still scan local Cursor activity, all other sources and any plain Cursor session; previously verified Cursor account history is reused **only** when the same account has explicit recorded consent. This does not fabricate new Cursor account usage or discard old measurements. An explicit `cursor connect` or standalone `wheretoken scan` retains its original interactive authorization path. The rest of the v0.7.14 timed scheduler, cache, CPU and GitHub publishing changes remain intact.

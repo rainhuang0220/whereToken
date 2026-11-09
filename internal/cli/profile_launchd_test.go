@@ -118,10 +118,16 @@ func TestChooseRefreshProgramSkipsCellarInode(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(link, []byte("bin"), 0o755); err != nil {
+	cellar := filepath.Join(home, "Cellar", "wheretoken", "0.7.5", "bin", "wheretoken")
+	if err := os.MkdirAll(filepath.Dir(cellar), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	cellar := "/opt/homebrew/Cellar/wheretoken/0.7.5/bin/wheretoken"
+	if err := os.WriteFile(cellar, []byte("bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(cellar, link); err != nil {
+		t.Fatal(err)
+	}
 	got, err := chooseRefreshProgram(cellar, []string{link, "/opt/homebrew/bin/wheretoken", "/usr/local/bin/wheretoken"})
 	if err != nil || got != link {
 		t.Fatalf("got %q %v", got, err)
@@ -728,5 +734,66 @@ func TestProfileRefreshWatchReexecsWhenSamePathIsReplaced(t *testing.T) {
 	app.maybeReexecProfileWatch()
 	if len(argv) != 5 || argv[0] != self || argv[4] != "--quiet" {
 		t.Fatalf("argv %v", argv)
+	}
+}
+
+func TestChooseRefreshProgramRejectsUnrelatedAndDanglingCandidates(t *testing.T) {
+	root := t.TempDir()
+	cellar := filepath.Join(root, "Cellar", "wheretoken", "0.7.16", "bin", "wheretoken")
+	stable := filepath.Join(root, "bin", "wheretoken")
+	shadow := filepath.Join(root, "shadow")
+	dangling := filepath.Join(root, "dangling")
+	for _, dir := range []string{filepath.Dir(cellar), filepath.Dir(stable)} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(cellar, []byte("new"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(shadow, []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(cellar, stable); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "missing"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	// brew upgrade may already have removed the running version's path.
+	running := filepath.Join(root, "Cellar", "wheretoken", "0.7.15", "bin", "wheretoken")
+	got, err := chooseRefreshProgram(running, []string{shadow, dangling, stable})
+	if err != nil || got != stable {
+		t.Fatalf("selected %q, err=%v; want upgraded Homebrew entry %q", got, err, stable)
+	}
+}
+
+func TestRefreshProgramPrefersBrewEntryOverOldCellarAlias(t *testing.T) {
+	prefix := t.TempDir()
+	home := t.TempDir()
+	old := filepath.Join(prefix, "Cellar", "wheretoken", "0.7.15", "bin", "wheretoken")
+	next := filepath.Join(prefix, "Cellar", "wheretoken", "0.7.16", "bin", "wheretoken")
+	stable := filepath.Join(prefix, "bin", "wheretoken")
+	alias := filepath.Join(home, ".local", "bin", "wheretoken")
+	for _, p := range []string{old, next, stable, alias} {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, p := range []string{old, next} {
+		if err := os.WriteFile(p, []byte("fixture"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(next, stable); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(old, alias); err != nil {
+		t.Fatal(err)
+	}
+	app := &App{Executable: func() (string, error) { return old, nil }, UserHome: func() (string, error) { return home, nil }}
+	got, err := app.refreshProgramPath()
+	if err != nil || got != stable {
+		t.Fatalf("service retained old Cellar alias: got=%q want=%q err=%v", got, stable, err)
 	}
 }

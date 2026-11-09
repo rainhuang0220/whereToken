@@ -35,7 +35,7 @@ Register-ArgumentCompleter -Native -CommandName wheretoken -ScriptBlock {
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
-    'cursor' { @('status','connect','disconnect','--quiet','--home','--help') }
+    'cursor' { @('status','connect','disconnect','backfill','--from','--to','--json','--quiet','--home','--help') }
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -530,6 +531,10 @@ func TestProfileRefreshWatchRereadsSwitch(t *testing.T) {
 		credstore.KeyLogin:       "rainhuang0220",
 	}}
 	app.Scan = func(adapter.Home) scan.Result { return scan.Result{} }
+	app.RunRefreshChild = func(ctx context.Context, _ string, _ []string) error {
+		app.executeProfileRefresh(ctx, Flags{}, home, nil)
+		return nil
+	}
 	seen := make(chan struct{})
 	app.HTTPDo = func(*http.Request) (*http.Response, error) {
 		select {
@@ -640,5 +645,21 @@ func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
 	if !strings.Contains(out.String(), "schedule=00:00,10:30,17:00\n") ||
 		!strings.Contains(out.String(), "next_check=2026-11-10T00:00:00+08:00\n") {
 		t.Fatalf("status missing next scheduled check: %s", out.String())
+	}
+}
+
+func TestProfileRefreshBusyDoesNotConsumeScheduledSlot(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	app, _, _ := testApp(nil)
+	app.Now = func() time.Time { return time.Date(2026, 11, 9, 10, 31, 0, 0, time.UTC) }
+	app.Loc = time.UTC
+	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
+		Phase: publicprofile.PhaseSkipped, Code: publicprofile.CodeBusy,
+		CheckedAt: time.Date(2026, 11, 9, 10, 30, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !app.profileRefreshDue(home) {
+		t.Fatal("busy check swallowed 10:30 slot instead of allowing its bounded retry")
 	}
 }

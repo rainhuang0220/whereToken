@@ -60,11 +60,20 @@ class ClassifyTest(unittest.TestCase):
         stale = wall(timedelta(hours=-49))
         recent = {"checked_at": "2026-10-28T01:30:00+08:00"}
         self.assertEqual(self.classify("local", stale, state=recent), "publisher_stuck")
-        old = {"checked_at": stamp(timedelta(hours=-10))}
+        old = {"checked_at": stamp(timedelta(hours=-13))}
         self.assertEqual(self.classify("local", stale, state=old), "mac_offline")
         self.assertEqual(self.classify("local", stale), "mac_offline")
-        self.assertEqual(self.classify("local", stale, state={"checked_at": stamp(timedelta(hours=-6))}), "publisher_stuck")
-        self.assertEqual(self.classify("local", stale, state={"checked_at": stamp(timedelta(hours=-6, seconds=-1))}), "mac_offline")
+
+    def test_sleep_between_daily_slots_does_not_imply_mac_offline(self):
+        stale = wall(timedelta(hours=-49))
+        # The 00:00 -> 10:30 slot gap is 10.5 hours. Allow 90 minutes
+        # beyond that for wake-up and a bounded refresh attempt.
+        for age in (timedelta(hours=10, minutes=30), timedelta(hours=12)):
+            with self.subTest(age=age):
+                state = {"checked_at": stamp(-age)}
+                self.assertEqual(self.classify("local", stale, state=state), "publisher_stuck")
+        state = {"checked_at": stamp(timedelta(hours=-12, seconds=-1))}
+        self.assertEqual(self.classify("local", stale, state=state), "mac_offline")
 
     def test_schedule_gap_only_when_the_wall_is_inside_the_local_window(self):
         fresh = wall(timedelta(hours=-2))

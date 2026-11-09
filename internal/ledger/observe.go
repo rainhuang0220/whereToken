@@ -1,11 +1,8 @@
 package ledger
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"sort"
 	"time"
 
@@ -25,6 +22,9 @@ type observationMeta struct {
 
 type dayComp struct {
 	Day                                  string
+	Hash                                 string
+	Details                              []observationDetail
+	Overlay                              bool
 	Miss, CacheRead, CacheCreate, Output int64
 }
 
@@ -93,7 +93,10 @@ func (l *Ledger) ensureObservationColumns() error {
   observed_at TEXT NOT NULL,
   PRIMARY KEY (source, window_from, window_to)
 )`)
-	return err
+	if err != nil {
+		return err
+	}
+	return l.ensureAttributionTables()
 }
 
 // WindowAudit is the desensitized count check for one filtered window.
@@ -182,9 +185,11 @@ func groupDays(events []event.UsageEvent) []dayComp {
 		row.CacheRead += e.CacheRead
 		row.CacheCreate += e.CacheCreate
 		row.Output += e.Output
+		row.Details = append(row.Details, detailFromEvent(e))
 	}
 	out := make([]dayComp, 0, len(by))
 	for _, row := range by {
+		sortDetails(row.Details)
 		out = append(out, *row)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Day < out[j].Day })
@@ -204,7 +209,7 @@ func insertObservation(tx *sql.Tx, source, hash string, tokens int64, n int, met
 		return err
 	}
 	if affected == 0 {
-		return nil
+		return reconfirmObservation(tx, source, hash, meta)
 	}
 	for _, d := range days {
 		if d.Miss+d.CacheRead+d.CacheCreate+d.Output == 0 {
@@ -215,11 +220,48 @@ func insertObservation(tx *sql.Tx, source, hash string, tokens int64, n int, met
 			return err
 		}
 	}
-	return nil
+	return insertObservationDetails(tx, source, hash, meta.Origin, days)
+}
+
+// A repeated current payload stays one unchanged observation. If a later
+// overlapping API response replaced it, a genuinely newer API confirmation
+// can make the earlier payload current again without duplicating its rows.
+// Historical snapshot imports never advance their original confirmation time.
+func reconfirmObservation(tx *sql.Tx, source, hash string, meta observationMeta) error {
+	if meta.Origin != "api" || meta.WindowFrom == "" || meta.WindowTo == "" {
+		return nil
+	}
+	var latestHash, latestAt string
+	err := tx.QueryRow(`SELECT payload_hash,observed_at FROM api_observations
+	 WHERE source=? AND observed_at!='' AND window_from<=? AND window_to>=?
+	 ORDER BY substr(observed_at,1,19) DESC, substr(replace(substr(observed_at,21),'Z','') || '000000000',1,9) DESC, rowid DESC LIMIT 1`,
+		source, meta.WindowTo, meta.WindowFrom).Scan(&latestHash, &latestAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if latestHash == hash {
+		return nil
+	}
+	previous, err := time.Parse(time.RFC3339Nano, latestAt)
+	if err != nil {
+		return errors.New("ledger observation rejected")
+	}
+	confirmed, err := time.Parse(time.RFC3339Nano, meta.ObservedAt)
+	if err != nil {
+		return errors.New("ledger observation rejected")
+	}
+	if !confirmed.After(previous) {
+		return nil
+	}
+	_, err = tx.Exec(`UPDATE api_observations SET observed_at=? WHERE source=? AND payload_hash=? AND origin='api'`, meta.ObservedAt, source, hash)
+	return err
 }
 
 // SaveObservation records one confirmed account observation. The same day
-// vector twice is one row. A non-positive total is not stored and is not
+// components and attribution twice are one row. A non-positive total is not stored and is not
 // turned into a zero event. observedAt is the time the observation was
 // confirmed, not the time it is reused.
 func (l *Ledger) SaveObservation(source, origin, coverage string, observedAt time.Time, events []event.UsageEvent) error {
@@ -231,20 +273,13 @@ func (l *Ledger) SaveObservation(source, origin, coverage string, observedAt tim
 		return nil
 	}
 	var tokens int64
-	lines := make([]string, 0, len(days))
 	for _, d := range days {
 		tokens += d.Miss + d.CacheRead + d.CacheCreate + d.Output
-		lines = append(lines, fmt.Sprintf("%s|%d|%d|%d|%d", d.Day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
 	}
 	if tokens <= 0 {
 		return nil
 	}
-	sum := sha256.New()
-	for _, line := range lines {
-		sum.Write([]byte(line))
-		sum.Write([]byte{'\n'})
-	}
-	hash := hex.EncodeToString(sum.Sum(nil))
+	hash := observationHash("observation-v2|"+safeProvenance(origin)+"|"+coverage, days)
 	meta := observationMeta{
 		ObservedAt: observedAt.UTC().Format(time.RFC3339Nano),
 		WindowFrom: days[0].Day,
@@ -275,35 +310,27 @@ func (l *Ledger) LatestRetainedEvents(source string) ([]event.UsageEvent, bool, 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	var hash string
+	// RFC3339Nano trims fractional trailing zeros. Pad before comparing so
+	// .11592Z sorts before the later instant .115921Z.
 	err := l.db.QueryRow(`SELECT payload_hash FROM api_observations
 		WHERE source=? AND observed_at != '' AND tokens > 0
-		ORDER BY observed_at DESC, rowid DESC LIMIT 1`, source).Scan(&hash)
+		ORDER BY substr(observed_at,1,19) DESC, substr(replace(substr(observed_at,21),'Z','') || '000000000',1,9) DESC, rowid DESC LIMIT 1`, source).Scan(&hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := l.db.Query(`SELECT day, miss, cache_read, cache_create, output FROM api_observation_days
-		WHERE source=? AND payload_hash=? ORDER BY day`, source, hash)
+	days, err := l.observationDays(source, hash)
 	if err != nil {
 		return nil, false, err
 	}
-	defer rows.Close()
 	var out []event.UsageEvent
-	for rows.Next() {
-		var day string
-		var miss, cr, cc, outN int64
-		if err := rows.Scan(&day, &miss, &cr, &cc, &outN); err != nil {
-			return nil, false, err
-		}
-		if miss+cr+cc+outN == 0 {
+	for _, d := range days {
+		if d.Miss+d.CacheRead+d.CacheCreate+d.Output == 0 {
 			continue
 		}
-		out = append(out, retainedEvent(source, day, miss, cr, cc, outN))
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, err
+		out = append(out, retainedDayEvents(source, d)...)
 	}
 	if len(out) == 0 {
 		return nil, false, nil
@@ -366,6 +393,9 @@ func (l *Ledger) daysBeforeFresh(source string, fresh []event.UsageEvent, alread
 		return nil, err
 	}
 	days := chainDayMap(obs)
+	if err := l.hydrateDayMap(source, days); err != nil {
+		return nil, err
+	}
 	var keys []string
 	for day, d := range days {
 		if day >= freshFrom {
@@ -383,7 +413,7 @@ func (l *Ledger) daysBeforeFresh(source string, fresh []event.UsageEvent, alread
 	var out []event.UsageEvent
 	for _, day := range keys {
 		d := days[day]
-		out = append(out, retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
+		out = append(out, retainedDayEvents(source, d)...)
 	}
 	return out, nil
 }
@@ -413,16 +443,7 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 		tokens += sum
 		kept = append(kept, d)
 	}
-	lines := []string{"window|" + from + "|" + to}
-	for _, d := range kept {
-		lines = append(lines, fmt.Sprintf("%s|%d|%d|%d|%d", d.Day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
-	}
-	sum := sha256.New()
-	for _, line := range lines {
-		sum.Write([]byte(line))
-		sum.Write([]byte{'\n'})
-	}
-	hash := hex.EncodeToString(sum.Sum(nil))
+	hash := observationHash("window-v2|"+from+"|"+to, kept)
 	meta := observationMeta{
 		ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		WindowFrom: from,
@@ -488,7 +509,7 @@ func (l *Ledger) finishedWindowsLocked(source string) ([]DayRange, error) {
 	rows, err := l.db.Query(`SELECT window_from, window_to FROM api_observations
 		WHERE source=? AND observed_at != '' AND window_from != '' AND window_to != ''
 		  AND origin='api' AND coverage='window'
-		ORDER BY observed_at, rowid`, source)
+		ORDER BY substr(observed_at,1,19), substr(replace(substr(observed_at,21),'Z','') || '000000000',1,9), rowid`, source)
 	if err != nil {
 		return nil, err
 	}
@@ -530,6 +551,9 @@ func (l *Ledger) DaysOutside(source string, ranges []DayRange, already []event.U
 		return nil, err
 	}
 	days := chainDayMap(obs)
+	if err := l.hydrateDayMap(source, days); err != nil {
+		return nil, err
+	}
 	var keys []string
 	for day, d := range days {
 		if _, ok := have[day]; ok || dayInside(day, ranges) {
@@ -544,7 +568,7 @@ func (l *Ledger) DaysOutside(source string, ranges []DayRange, already []event.U
 	var out []event.UsageEvent
 	for _, day := range keys {
 		d := days[day]
-		out = append(out, retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
+		out = append(out, retainedDayEvents(source, d)...)
 	}
 	return out, nil
 }
@@ -579,6 +603,9 @@ func (l *Ledger) AccountSupplement(source string, lookback DayRange, fetched []D
 		return nil, err
 	}
 	days := chainDayMap(obs)
+	if err := l.hydrateDayMap(source, days); err != nil {
+		return nil, err
+	}
 	var keys []string
 	for day, d := range days {
 		if _, ok := have[day]; ok || dayInside(day, fetched) {
@@ -595,13 +622,14 @@ func (l *Ledger) AccountSupplement(source string, lookback DayRange, fetched []D
 	for _, day := range keys {
 		d := days[day]
 		cached := insideLookback && day >= lookback.From && day <= lookback.To && dayInside(day, finished)
-		ev := retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output)
-		if cached {
-			ev.Derivation = event.DeriveProviderAPI
-			ev.Quality = event.QualityAuthoritative
-			ev.RequestID = "cursor-api:covered:" + day
+		for _, ev := range retainedDayEvents(source, d) {
+			if cached {
+				ev.Derivation = event.DeriveProviderAPI
+				ev.Quality = event.QualityAuthoritative
+				ev.RequestID = "covered:" + ev.RequestID
+			}
+			out = append(out, ev)
 		}
-		out = append(out, ev)
 	}
 	return out, nil
 }
@@ -620,6 +648,9 @@ func (l *Ledger) ChainedRetainedEvents(source string) ([]event.UsageEvent, bool,
 		return nil, false, err
 	}
 	days := chainDayMap(obs)
+	if err := l.hydrateDayMap(source, days); err != nil {
+		return nil, false, err
+	}
 	var keys []string
 	for day, d := range days {
 		if d.Miss+d.CacheRead+d.CacheCreate+d.Output == 0 {
@@ -634,7 +665,7 @@ func (l *Ledger) ChainedRetainedEvents(source string) ([]event.UsageEvent, bool,
 	out := make([]event.UsageEvent, 0, len(keys))
 	for _, day := range keys {
 		d := days[day]
-		out = append(out, retainedEvent(source, day, d.Miss, d.CacheRead, d.CacheCreate, d.Output))
+		out = append(out, retainedDayEvents(source, d)...)
 	}
 	return out, true, nil
 }
@@ -652,7 +683,7 @@ func (l *Ledger) observationsAsc(source, exclude string) ([]storedObservation, e
 		q += ` AND payload_hash != ?`
 		args = append(args, exclude)
 	}
-	q += ` ORDER BY observed_at ASC, rowid ASC`
+	q += ` ORDER BY substr(observed_at,1,19), substr(replace(substr(observed_at,21),'Z','') || '000000000',1,9), rowid`
 	rows, err := l.db.Query(q, args...)
 	if err != nil {
 		return nil, err
@@ -671,12 +702,27 @@ func (l *Ledger) observationsAsc(source, exclude string) ([]storedObservation, e
 		return nil, err
 	}
 	rows.Close()
-	for i := range obs {
-		days, err := l.observationDays(source, obs[i].hash)
-		if err != nil {
+	byHash := map[string][]dayComp{}
+	dayRows, err := l.db.Query(`SELECT payload_hash,day,miss,cache_read,cache_create,output
+	 FROM api_observation_days WHERE source=? ORDER BY payload_hash,day`, source)
+	if err != nil {
+		return nil, err
+	}
+	for dayRows.Next() {
+		var d dayComp
+		if err := dayRows.Scan(&d.Hash, &d.Day, &d.Miss, &d.CacheRead, &d.CacheCreate, &d.Output); err != nil {
+			dayRows.Close()
 			return nil, err
 		}
-		obs[i].days = days
+		byHash[d.Hash] = append(byHash[d.Hash], d)
+	}
+	if err := dayRows.Err(); err != nil {
+		dayRows.Close()
+		return nil, err
+	}
+	dayRows.Close()
+	for i := range obs {
+		obs[i].days = byHash[obs[i].hash]
 	}
 	return obs, nil
 }
@@ -687,16 +733,32 @@ func (l *Ledger) observationDays(source, hash string) ([]dayComp, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []dayComp
 	for rows.Next() {
 		var d dayComp
 		if err := rows.Scan(&d.Day, &d.Miss, &d.CacheRead, &d.CacheCreate, &d.Output); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		out = append(out, d)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+	selected := make(map[string]dayComp, len(out))
+	for _, d := range out {
+		d.Hash = hash
+		selected[d.Day] = d
+	}
+	if err := l.hydrateDayMap(source, selected); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i] = selected[out[i].Day]
+	}
+	return out, nil
 }
 
 func chainDayMap(obs []storedObservation) map[string]dayComp {
@@ -729,20 +791,13 @@ func dayInside(day string, ranges []DayRange) bool {
 }
 
 func apiPayloadHash(events []event.UsageEvent) string {
-	lines := make([]string, 0, len(events))
+	var kept []event.UsageEvent
 	for _, e := range events {
-		if e.Derivation != event.DeriveProviderAPI || e.Source == "" {
-			continue
+		if e.Derivation == event.DeriveProviderAPI && e.Source != "" {
+			kept = append(kept, e)
 		}
-		lines = append(lines, fmt.Sprintf("%s|%d|%d|%d|%d|%d", e.Model, e.Timestamp.UnixNano(), e.Miss, e.CacheRead, e.CacheCreate, e.Output))
 	}
-	sort.Strings(lines)
-	sum := sha256.New()
-	for _, line := range lines {
-		sum.Write([]byte(line))
-		sum.Write([]byte{'\n'})
-	}
-	return hex.EncodeToString(sum.Sum(nil))
+	return observationHash("api-v2", groupDays(kept))
 }
 
 func retainedEvent(source, day string, miss, cacheRead, cacheCreate, output int64) event.UsageEvent {

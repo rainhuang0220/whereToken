@@ -28,6 +28,9 @@ func TestLookup(t *testing.T) {
 		{"gemini-2.5-pro", "cursor", "google"},
 		{"grok-4.7", "cursor", "xai"},
 		{"maxai-foo", "", "unknown"},
+		{"mimo-v2.5-pro", "", "xiaomi"},
+		{"mimo-v2-flash", "", "xiaomi"},
+		{"default", "cursor", "unknown"},
 	}
 	for _, c := range cases {
 		if got := Lookup(c.model, c.provider); got != c.want {

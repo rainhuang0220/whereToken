@@ -100,3 +100,54 @@ func TestCachedReportFailsClosedWithoutCacheOrRefresh(t *testing.T) {
 		t.Fatalf("cached report must not create an index: %v", err)
 	}
 }
+
+func TestPricingUsageReadsSameCacheAsReport(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	st, err := index.Open(index.PathFor(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(t.TempDir(), "cached-only.jsonl")
+	if err := os.WriteFile(source, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = st.LoadOrReplay("claude", source, func(f *os.File) ([]event.UsageEvent, []event.TurnEvent, int64, error) {
+		return []event.UsageEvent{{Source: "claude", Vendor: "anthropic", Model: "claude-opus-4.6", Timestamp: time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC), Miss: 100, Output: 10, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw}}, nil, 7, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+	lp, err := ledger.PathFor(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg, err := ledger.Open(lp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lg.Close()
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"pricing", "--usage", "--json"})
+	app.Scan = nil
+	app.Home = home
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d err=%s", code, errb.String())
+	}
+	var got struct {
+		Usage struct {
+			Total struct {
+				Total int64 `json:"total"`
+			} `json:"total"`
+			Notes []string `json:"notes"`
+		} `json:"usage"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Usage.Total.Total != 110 || !strings.Contains(strings.Join(got.Usage.Notes, " "), "缓存报告") {
+		t.Fatalf("pricing bypassed report cache: %+v", got)
+	}
+}

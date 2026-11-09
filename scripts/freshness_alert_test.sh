@@ -44,7 +44,7 @@ for line in open(sys.argv[1], encoding="utf-8"):
         continue
     number,state,title=line.split("\t",2)
     if state==sys.argv[2]:
-        rows.append({"number":int(number),"title":title})
+        rows.append({"number":int(number),"title":title,"createdAt":"2026-11-09T01:30:58Z"})
 print(json.dumps(rows))' "$store" "$state_filter"
   exit 0
 fi
@@ -100,10 +100,38 @@ for line in open(path,encoding="utf-8"):
 open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number"
   exit 0
 fi
+if [ "$cmd" = "issue" ] && [ "$sub" = "edit" ]; then
+  number="$1"
+  title=""
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--title" ]; then
+      title="$arg"
+    fi
+    prev="$arg"
+  done
+  python3 -c 'import sys
+path,number,title=sys.argv[1:]
+rows=[]
+for line in open(path,encoding="utf-8"):
+    n,state,old_title=line.rstrip("\n").split("\t",2)
+    rows.append("\t".join((n,state,title if n==number else old_title)))
+open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number" "$title"
+  exit 0
+fi
 echo "unexpected gh $cmd $sub" >&2
 exit 1
 EOF
 chmod +x "$tmp/bin/gh"
+
+# Check on a later UTC day than legacy issue #42's creation time. A title
+# migration must retain that original date rather than today's date.
+cat > "$tmp/bin/date" << 'EOF'
+#!/bin/bash
+[ "$*" = '-u +%Y-%m-%d' ] || exit 1
+printf '%s\n' '2026-11-10'
+EOF
+chmod +x "$tmp/bin/date"
 
 export PATH="$tmp/bin:$PATH"
 export GH_FAKE_STORE="$store"
@@ -132,16 +160,27 @@ again_today="$(bash "$ROOT/scripts/freshness-alert.sh" --class publisher_stuck)"
 printf '%s\n' "$again_today" | grep -q 'reopened'
 [ "$(wc -l < "$store" | tr -d ' ')" = "1" ]
 printf '%s\n' "$(bash "$ROOT/scripts/freshness-alert.sh" --class ok)" | grep -q 'class=ok'
-# A legacy undated issue should still deduplicate and close normally.
+# A legacy undated issue gains its original UTC incident date without
+# opening another ticket, then continues to deduplicate and close normally.
 printf '42\topen\tprofile-freshness alert\n' >> "$store"
 legacy="$(bash "$ROOT/scripts/freshness-alert.sh" --class check_failed)"
 printf '%s\n' "$legacy" | grep -q 'issue=42 already-open'
+[ "$(wc -l < "$store" | tr -d ' ')" = "2" ]
+grep -Fxq $'42\topen\tprofile-freshness alert (2026-11-09)' "$store"
+legacy_again="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
+printf '%s\n' "$legacy_again" | grep -q 'issue=42 already-open'
 [ "$(wc -l < "$store" | tr -d ' ')" = "2" ]
 bash "$ROOT/scripts/freshness-alert.sh" --class ok >/dev/null
 if grep -q $'42\topen\t' "$store"; then
   echo "legacy undated alert left open after recovery" >&2
   exit 1
 fi
+# An ongoing incident retains its original date across UTC rollover.
+printf '43\topen\tprofile-freshness alert (2001-01-01)\n' >> "$store"
+cross_day="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
+printf '%s\n' "$cross_day" | grep -q 'issue=43 already-open'
+grep -Fxq $'43\topen\tprofile-freshness alert (2001-01-01)' "$store"
+[ "$(wc -l < "$store" | tr -d ' ')" = "3" ]
 
 yml="$ROOT/.github/workflows/profile-freshness.yml"
 grep -q "issues: write" "$yml"

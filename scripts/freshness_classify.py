@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 
 ACTIONS_WALL_S = 36 * 3600
 LOCAL_WALL_S = 48 * 3600
-RECENT_CHECK_S = 6 * 3600
+# The owner's 00:00 -> 10:30 scheduled gap is 10.5 hours. Include 90
+# minutes for wake-up, the bounded scan, and its limited retries.
+RECENT_CHECK_S = 12 * 3600
 SCHEDULE_GAP_S = 6 * 3600
 
 
