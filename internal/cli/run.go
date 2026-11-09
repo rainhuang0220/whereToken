@@ -198,6 +198,10 @@ func (a *App) doScan(home adapter.Home, quiet, offline, ascii bool) scan.Result 
 }
 
 func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) scan.Result {
+	return a.doScanWithKeychainPolicy(home, quiet, offline, ascii, lock, false)
+}
+
+func (a *App) doScanWithKeychainPolicy(home adapter.Home, quiet, offline, ascii, lock, noOSKeychain bool) scan.Result {
 	if a.envOffline() {
 		offline = true
 	}
@@ -214,6 +218,9 @@ func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) sca
 		defer release()
 	}
 	ads := scan.Adapters(offline)
+	if noOSKeychain {
+		ads = prohibitCursorOSKeychain(ads)
+	}
 	var res scan.Result
 	if quiet || !a.StderrTTY {
 		res = scan.Run(home, ads)
@@ -243,6 +250,21 @@ func (a *App) doScanOpt(home adapter.Home, quiet, offline, ascii, lock bool) sca
 		}
 	}
 	return res
+}
+
+// prohibitCursorOSKeychain is used only for the unattended Profile refresh.
+// Plaintext/previously unsealed API sources and every other tool still scan.
+// A sealed Cursor session stays unopened and the previously verified,
+// explicitly account-bound measurement is restored by Profile's ledger logic.
+func prohibitCursorOSKeychain(ads []adapter.Adapter) []adapter.Adapter {
+	out := append([]adapter.Adapter(nil), ads...)
+	for i, item := range out {
+		if c, ok := item.(cursor.Adapter); ok {
+			c.NoOSKeychain = true
+			out[i] = c
+		}
+	}
+	return out
 }
 
 func (a *App) runRebuild(flags Flags, home adapter.Home) int {

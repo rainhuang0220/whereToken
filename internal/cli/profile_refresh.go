@@ -293,7 +293,7 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		return ExitOK
 	}
 	defer release()
-	res := a.doScanOpt(home, flags.Quiet, flags.Offline, flags.ASCII, false)
+	res := a.doScanWithKeychainPolicy(home, flags.Quiet, flags.Offline, flags.ASCII, false, true)
 	events, restored := a.retainAccountObservations(home, res.Events, res.Errors, nil)
 	snap, err := a.refreshSnapshot(home, res, events)
 	if err != nil {

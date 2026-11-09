@@ -336,3 +336,42 @@ func bytesRepeat(n int, b byte) []byte {
 	}
 	return out
 }
+
+// A macOS unsigned upgrade can block for minutes in SecItemCopyMatching even
+// with authentication UI denied. Unattended Profile refresh must not invoke
+// that API, regardless of a previous explicit connect choice.
+func TestUnattendedSealedCursorNeverUnsealsEvenWithConsent(t *testing.T) {
+	dir := t.TempDir()
+	consent := filepath.Join(dir, "cursor-connect.json")
+	if err := WriteConsent(consent); err != nil {
+		t.Fatal(err)
+	}
+	sealed := sealChromeCBC("fixture-password", fakeJWT)
+	called := false
+	noninteractive := Adapter{
+		ConsentPath:  consent,
+		NoOSKeychain: true,
+		AllowPrompt:  true,
+		Unseal: func(string) (string, error) {
+			called = true
+			return fakeJWT, nil
+		},
+	}
+	opened, err := noninteractive.openSealed(sealed, filepath.Join(dir, "state.vscdb"))
+	if opened != "" || err != errOSPermission || called {
+		t.Fatalf("unattended opened=%t err=%v called=%v", opened != "", err, called)
+	}
+	// Already-plain sessions still work: this guard protects OS access only.
+	opened, err = noninteractive.openSealed(fakeJWT, "")
+	if opened != fakeJWT || err != nil {
+		t.Fatal("unattended mode wrongly blocked already-open JWT")
+	}
+	// An explicit interactive connect/scanner can still use its intended
+	// credential authorization path.
+	interactive := noninteractive
+	interactive.NoOSKeychain = false
+	opened, err = interactive.openSealed(sealed, filepath.Join(dir, "state.vscdb"))
+	if opened != fakeJWT || err != nil || !called {
+		t.Fatalf("explicit connect was disabled: opened=%t err=%v called=%v", opened != "", err, called)
+	}
+}
