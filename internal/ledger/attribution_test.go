@@ -11,6 +11,38 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
 
+func TestUnallocatedHistorySharesCanonicalUnknownVendor(t *testing.T) {
+	lg, err := Open(filepath.Join(t.TempDir(), "ledger.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	stamp := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	base := event.UsageEvent{Source: "cursor", Timestamp: stamp, Miss: 20}
+	if err := lg.SaveObservation("cursor", "verified_snapshot", "retained", stamp, []event.UsageEvent{base}); err != nil {
+		t.Fatal(err)
+	}
+	measured := base
+	measured.Miss = 10
+	measured.Model = "default"
+	measured.Vendor = "unknown"
+	measured.Derivation = event.DeriveProviderAPI
+	if _, err := lg.BackfillAttribution("cursor", []event.UsageEvent{measured}); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := lg.ChainedRetainedEvents("cursor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]int64{}
+	for _, e := range rows {
+		by[e.Vendor] += e.Miss + e.CacheRead + e.CacheCreate + e.Output
+	}
+	if len(by) != 1 || by["unknown"] != 20 {
+		t.Fatalf("unknown vendor split across ids: %v", by)
+	}
+}
+
 // These checks catch restoring a day total without its measured attribution,
 // and assigning every measured request to the synthetic noon UTC timestamp.
 func TestObservationAttributionSurvivesEveryRestore(t *testing.T) {

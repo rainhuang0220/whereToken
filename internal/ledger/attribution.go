@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
+	"github.com/rainhuang0220/whereToken/internal/vendor"
 )
 
 // Detail rows contain only accounting fields. Request identities are hashed
@@ -157,6 +158,9 @@ func retainedDayEvents(source string, d dayComp) []event.UsageEvent {
 		}
 		e := retainedEvent(source, d.Day, row.Miss, row.CacheRead, row.CacheCreate, row.Output)
 		e.Model, e.Vendor = row.Model, row.Vendor
+		if e.Vendor == "" {
+			e.Vendor = vendor.Lookup(e.Model, "")
+		}
 		row.Provenance = storedProvenance(row.Provenance)
 		e.Provenance = row.Provenance
 		e.Timestamp = time.Unix(0, row.TS).UTC()

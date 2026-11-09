@@ -806,6 +806,7 @@ func retainedEvent(source, day string, miss, cacheRead, cacheCreate, output int6
 	ts = ts.Add(12 * time.Hour)
 	return event.UsageEvent{
 		Source:      source,
+		Vendor:      "unknown",
 		RequestID:   "retained:" + day,
 		Timestamp:   ts,
 		Miss:        miss,
