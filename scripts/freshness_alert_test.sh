@@ -28,6 +28,14 @@ if [ "$cmd" = "issue" ] && [ "$sub" = "list" ]; then
     printf '%s\n' '[]'
     exit 0
   fi
+  state_filter="open"
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--state" ]; then
+      state_filter="$arg"
+    fi
+    prev="$arg"
+  done
   python3 -c 'import json,sys
 rows=[]
 for line in open(sys.argv[1], encoding="utf-8"):
@@ -35,9 +43,9 @@ for line in open(sys.argv[1], encoding="utf-8"):
     if not line:
         continue
     number,state,title=line.split("\t",2)
-    if state=="open":
+    if state==sys.argv[2]:
         rows.append({"number":int(number),"title":title})
-print(json.dumps(rows))' "$store"
+print(json.dumps(rows))' "$store" "$state_filter"
   exit 0
 fi
 if [ "$cmd" = "issue" ] && [ "$sub" = "create" ]; then
@@ -79,6 +87,19 @@ if not found:
 open(path,"w",encoding="utf-8").write("\n".join(rows)+("\n" if rows else ""))' "$store" "$number"
   exit 0
 fi
+if [ "$cmd" = "issue" ] && [ "$sub" = "reopen" ]; then
+  number="$1"
+  python3 -c 'import sys
+path,number=sys.argv[1:]
+rows=[]
+for line in open(path,encoding="utf-8"):
+    n,state,title=line.rstrip("\n").split("\t",2)
+    if n==number and state=="closed":
+        state="open"
+    rows.append("\t".join((n,state,title)))
+open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number"
+  exit 0
+fi
 echo "unexpected gh $cmd $sub" >&2
 exit 1
 EOF
@@ -92,7 +113,7 @@ out="$(bash "$ROOT/scripts/freshness-alert.sh" --class check_failed)"
 printf '%s\n' "$out" | grep -q 'class=check_failed opened'
 count="$(grep -c $'\topen\t' "$store" || true)"
 [ "$count" = "1" ]
-grep -q $'\topen\tprofile-freshness alert$' "$store"
+grep -Eq $'\topen\tprofile-freshness alert \([0-9]{4}-[0-9]{2}-[0-9]{2}\)$' "$store"
 
 again="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
 printf '%s\n' "$again" | grep -q 'already-open'
@@ -105,7 +126,22 @@ if grep -q $'\topen\t' "$store"; then
   echo "recovery left an open alert" >&2
   exit 1
 fi
-grep -q $'\tclosed\tprofile-freshness alert$' "$store"
+grep -Eq $'\tclosed\tprofile-freshness alert \([0-9]{4}-[0-9]{2}-[0-9]{2}\)$' "$store"
+
+again_today="$(bash "$ROOT/scripts/freshness-alert.sh" --class publisher_stuck)"
+printf '%s\n' "$again_today" | grep -q 'reopened'
+[ "$(wc -l < "$store" | tr -d ' ')" = "1" ]
+printf '%s\n' "$(bash "$ROOT/scripts/freshness-alert.sh" --class ok)" | grep -q 'class=ok'
+# A legacy undated issue should still deduplicate and close normally.
+printf '42\topen\tprofile-freshness alert\n' >> "$store"
+legacy="$(bash "$ROOT/scripts/freshness-alert.sh" --class check_failed)"
+printf '%s\n' "$legacy" | grep -q 'issue=42 already-open'
+[ "$(wc -l < "$store" | tr -d ' ')" = "2" ]
+bash "$ROOT/scripts/freshness-alert.sh" --class ok >/dev/null
+if grep -q $'42\topen\t' "$store"; then
+  echo "legacy undated alert left open after recovery" >&2
+  exit 1
+fi
 
 yml="$ROOT/.github/workflows/profile-freshness.yml"
 grep -q "issues: write" "$yml"

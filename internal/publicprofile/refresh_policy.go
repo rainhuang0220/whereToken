@@ -3,10 +3,13 @@ package publicprofile
 import "time"
 
 const (
-	// Raw threshold, not the rounded visible number. Below one billion,
-	// a 0.01M step; at or above one billion, a 0.01B step.
-	RefreshMinDelta  int64 = 10_000
-	RefreshMinDeltaB int64 = 10_000_000
+	// Dynamic unit threshold: below 1M, the unit is one token (0.01
+	// token rounds up to the smallest measurable integer, one token); from
+	// 1M to below 1B, 0.01M; from 1B onward, 0.01B. These are raw deltas,
+	// not differences of rounded numbers displayed on the activity wall.
+	RefreshMinDeltaTokens int64 = 1
+	RefreshMinDelta       int64 = 10_000
+	RefreshMinDeltaB      int64 = 10_000_000
 	// In the four hours before the owner's local midnight, postpone usage
 	// publication to that daily rollover. Never postpone a new local date.
 	RefreshMidnightMergeWindow = 4 * time.Hour

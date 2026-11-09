@@ -14,6 +14,8 @@ import (
 // cachedReport is a read-only, non-live report path for owners who already
 // enabled the macOS background refresh. The watcher remains the only automatic
 // refresher; interactive reads should not reparse multi-gigabyte Cursor DBs.
+// The index persists per-source checkpoints, not a globally atomic completed
+// scan; the public note therefore explicitly disclaims live/complete data.
 // Missing/corrupt cache or an incomplete ledger fails closed to the normal scan.
 func (a *App) cachedReport(home adapter.Home) (scan.Result, bool) {
 	if a.Scan != nil || a.GOOS != "darwin" || os.Getenv("WHERETOKEN_NO_INDEX") == "1" {

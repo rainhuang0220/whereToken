@@ -19,6 +19,30 @@ Home (os.UserHomeDir / XDG / Application Support / %APPDATA%)
    metric.Aggregate (merge by Source+RequestID, max per field)
 ```
 
+### Fast terminal reports versus full acquisition
+
+On macOS **when Profile auto-refresh is enabled**, a bare usage report
+(including a single-day positional query) reads the **latest normalized per-file local index checkpoints** and
+retained, explicitly bound Cursor history. The checkpoints are not a globally
+atomic whole-scan snapshot and may lag or update incrementally. It
+does **not** walk every Codex session or read Cursor's multi-GB SQLite source
+on each terminal invocation. Reports label their data as *cached, not live*.
+
+- Normalized usage/turn cache: `~/.cache/wheretoken/index.v1.db`.
+- Durable confirmed facts and account-observation history:
+  `~/Library/Application Support/whereToken/ledger.v1.db`.
+- Raw Cursor source when a **fresh scan** is due:
+  `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`;
+  indexed `bubbleId:*` / `composerData:*` reads, not the entire KV table.
+- Raw Codex sources: `~/.codex/sessions` and related rollout records;
+  the incremental index avoids re-reading unchanged content.
+
+The explicit `wheretoken scan` command and the scheduled Profile refresh
+still perform real acquisition. The cached report **does not claim** that a
+provider's remote bill was freshly fetched. If the cache is absent or corrupt,
+the report falls back to the original scan; no unavailable tokens are set to
+zero. Neither the ledger nor the underlying agent data is deleted.
+
 The scan index (`index.v1.db`) is a cache of offsets and parsed blobs.
 `wheretoken rebuild` deletes that cache. Confirmed facts live in the ledger
 described in [`token-accounting.md`](token-accounting.md). Importing the cache

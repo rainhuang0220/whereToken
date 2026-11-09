@@ -582,3 +582,63 @@ func TestDoScanDoesNotContinueWhenLockFails(t *testing.T) {
 		t.Fatal("lock error included a path")
 	}
 }
+
+// Rebootstrapping the watch after an update must not start a second heavy scan
+// when the most recent scheduled slot was already checked. Missed slots catch up.
+func TestProfileRefreshDueRunsOnlyAtMissedFixedSlot(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	loc := time.FixedZone("owner", 8*3600)
+	now := time.Date(2026, 11, 9, 18, 35, 0, 0, loc)
+	app, _, _ := testApp(nil)
+	app.Home = home
+	app.Now = func() time.Time { return now }
+	app.Loc = loc
+	if !app.profileRefreshDue(home) {
+		t.Fatal("no prior scan should be due")
+	}
+	save := func(at time.Time) {
+		t.Helper()
+		if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
+			Phase:     publicprofile.PhaseSkipped,
+			Code:      publicprofile.CodeBlockedData,
+			CheckedAt: at,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save(time.Date(2026, 11, 9, 17, 1, 0, 0, loc))
+	if app.profileRefreshDue(home) {
+		t.Fatal("already checked 17:00; update/reboot must not rescan")
+	}
+	save(time.Date(2026, 11, 9, 10, 31, 0, 0, loc))
+	if !app.profileRefreshDue(home) {
+		t.Fatal("missed 17:00 must catch up")
+	}
+	save(time.Date(2026, 11, 8, 17, 1, 0, 0, loc))
+	if !app.profileRefreshDue(home) {
+		t.Fatal("missed new day must catch up")
+	}
+}
+
+// Status exposes the owner-local calendar and next check without scanning.
+func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(home), true); err != nil {
+		t.Fatal(err)
+	}
+	loc := time.FixedZone("owner", 8*3600)
+	app, out, errb := testApp([]string{"profile", "refresh", "status"})
+	app.Home = home
+	app.Now = func() time.Time { return time.Date(2026, 11, 9, 18, 35, 0, 0, loc) }
+	app.Loc = loc
+	app.RunCmdOutput = func(name string, args ...string) (string, error) {
+		return "pid = 1234\nstate = running\n", nil
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("status code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "schedule=00:00,10:30,17:00\n") ||
+		!strings.Contains(out.String(), "next_check=2026-11-10T00:00:00+08:00\n") {
+		t.Fatalf("status missing next scheduled check: %s", out.String())
+	}
+}

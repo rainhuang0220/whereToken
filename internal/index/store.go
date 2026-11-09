@@ -341,9 +341,9 @@ func (s *Store) BackupTo(dest string) error {
 	return nil
 }
 
-// ExportCached returns the last completed normalized scan records, including
-// turns. It does not stat or reparse any source file, touch credentials, or
-// mutate the cache. Callers must label it historical/cached, never live.
+// ExportCached returns normalized per-file cache checkpoints, including
+// turns. The index has no global full-scan commit marker. It does not stat
+// or reparse sources, touch credentials, or mutate the cache; label it cached.
 // A corrupt blob increments gaps; consumers must fail closed on nonzero gaps.
 func (s *Store) ExportCached() ([]event.UsageEvent, []event.TurnEvent, int, error) {
 	s.mu.Lock()

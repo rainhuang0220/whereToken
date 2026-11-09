@@ -357,7 +357,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		return ExitFail
 	}
 	if cached {
-		const msg = "缓存报告 · 来自最近一次已完成的后台扫描，未实时采集；最新用量可能滞后（wheretoken scan 可主动完整扫描）"
+		const msg = "缓存报告 · 本地索引数据（扫描时可能分批更新），非实时；最新用量可能滞后（wheretoken scan 可主动完整扫描）"
 		if !slices.Contains(snap.Notes, msg) {
 			snap.Notes = append([]string{msg}, snap.Notes...)
 		}

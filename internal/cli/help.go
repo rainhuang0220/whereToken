@@ -128,14 +128,16 @@ PRIVACY
   card writes a static SVG from this machine's ledgers. It does not
   upload the usage ledger, and it never calls Community Rank.
   The default report does not upload a public snapshot.
-  On macOS with profile refresh enabled, terminal reports use the last
-  completed local scan cache and clearly mark it as non-live. The background
+  On macOS with profile refresh enabled, terminal reports use the local
+  per-file scan cache and clearly mark it as non-live. The background
   refresh and wheretoken scan continue to perform complete scans.
   profile refresh PUTs only the sanitized public snapshot. It is not part
   of wheretoken with no command, and the default install does not enable
   it. profile refresh on enables the switch and, on macOS, installs a
-  user launchd agent that runs profile refresh watch. off disables the
-  switch and uninstalls that agent. Linux and Windows do not install a
+  user launchd agent that runs profile refresh watch. The agent checks at
+  00:00, 10:30, and 17:00 owner-local time (plus one missed-slot catch-up
+  after sleep/login), and otherwise sleeps without scanning. off disables
+  the switch and uninstalls that agent. Linux and Windows do not install a
   background agent; use profile refresh watch in the foreground. The
   bare profile refresh command is one explicit PUT even when the switch
   is off, and it is not what launchd runs. doctor reports scheduler,
