@@ -7,8 +7,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
 
@@ -16,7 +18,7 @@ import (
 //   - claude-opus-4.6 (anthropic): 1.00 M miss × $5.00, 9.00 M cache read ×
 //     $0.50, 0.10 M output × $25.00 → $12.0000, complete.
 //   - MiniMax-M3 (minimax) and k3 (moonshot): no public card row →
-//     (未知模型), 1.58 M unpriced, never $0.
+//     raw model labels, 1.58 M unpriced, never $0.
 //   - Total: 11.68 M, $12.0000, partial.
 
 func TestPricingUsageHumanBreakdown(t *testing.T) {
@@ -35,7 +37,8 @@ func TestPricingUsageHumanBreakdown(t *testing.T) {
 		"$12.0000",
 		"MiniMax（minimax）",
 		"Moonshot（moonshot）",
-		"(未知模型)",
+		"MiniMax-M3",
+		"k3",
 		"0.50 M × —",
 		"0.80 M × —",
 		"部分用量无公开价",
@@ -178,7 +181,7 @@ func TestPricingUsageJSONExtendsCatalog(t *testing.T) {
 			}
 			if v.Vendor == "minimax" {
 				foundUnknown = true
-				if m.Label != "(未知模型)" || m.CostStatus != "unavailable" || m.CostUSD != "" {
+				if m.Label != "MiniMax-M3" || m.CostStatus != "unavailable" || m.CostUSD != "" {
 					t.Fatalf("unpriced row stays unavailable, never $0: %+v", m)
 				}
 				if m.UnitPrices.Miss != nil || m.UnitPrices.Output != nil {
@@ -276,7 +279,7 @@ func TestPricingUsageOnRealFixtureHome(t *testing.T) {
 	for _, want := range []string{
 		"单价单位：美元 / 每百万 tokens",
 		"Moonshot（moonshot）",
-		"(未知模型)",
+		"kimi-code/k3",
 		"总计 0.0012 M · 估价 — · 部分用量无公开价",
 	} {
 		if !strings.Contains(s, want) {
@@ -323,5 +326,217 @@ func TestCompletionPricingOffersUsage(t *testing.T) {
 				t.Fatalf("powershell pricing must offer --usage:\n%s", s)
 			}
 		}
+	}
+}
+
+func TestPricingUsageRetainsUnpricedModelAndExactPricedAlias(t *testing.T) {
+	for _, tc := range []struct {
+		query, wantID string
+		total         int64
+	}{
+		{"GROK-BOT-AUTOMATION", "grok-bot-automation", 111},
+		{"cursor-grok-4.6-xhigh-fast", "cursor-grok-4.6-xhigh-fast", 222},
+		{"claude-4.6-opus-high-thinking", "claude-opus-4.6", 100},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			app, out, errb := testApp([]string{"pricing", "--usage", "--model", tc.query, "--json"})
+			app.Scan = func(adapter.Home) scan.Result {
+				return scan.Result{Events: []event.UsageEvent{
+					{Source: "cursor", Vendor: "xai", Model: "grok-bot-automation", RequestID: "a", Miss: 111},
+					{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "b", Miss: 222},
+					{Source: "cursor", Vendor: "anthropic", Model: "claude-4.6-opus-high-thinking", RequestID: "c", Timestamp: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), Miss: 100},
+					{Source: "cursor", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "d", Timestamp: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), Miss: 200},
+				}}
+			}
+			if code := app.Run(); code != ExitOK {
+				t.Fatalf("exit=%d %s", code, errb.String())
+			}
+			var got pricingJSON
+			if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+				t.Fatal(e)
+			}
+			if got.Usage.Total.Total != tc.total || len(got.Usage.Vendors) != 1 || len(got.Usage.Vendors[0].Models) != 1 {
+				t.Fatalf("wrong exact model scope: %s", out.String())
+			}
+			m := got.Usage.Vendors[0].Models[0]
+			if m.ID != tc.wantID {
+				t.Fatalf("model id=%q want=%q", m.ID, tc.wantID)
+			}
+			switch m.Vendor {
+			case "xai":
+				if m.CostStatus != "unavailable" || m.CostUSD != "" || m.UnpricedTokens != tc.total {
+					t.Fatalf("unpriced model acquired cost: %+v", m)
+				}
+			case "anthropic":
+				if m.CostStatus != "complete" || m.CostUSD == "" || m.UnpricedTokens != 0 || m.Total != tc.total {
+					t.Fatalf("priced alias lost its own total or gained a fake zero: %+v", m)
+				}
+			default:
+				t.Fatalf("vendor %q", m.Vendor)
+			}
+		})
+	}
+}
+
+func TestPricingUsageFamilyQueryDoesNotAbsorbUnpricedEffortVariant(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=grok-4.6", "--json"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "effort", Timestamp: when, Miss: 50},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	var got pricingJSON
+	if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Usage.Total.Total != 0 || len(got.Usage.Vendors) != 0 {
+		t.Fatalf("family query absorbed an unpriced effort variant: %s", out.String())
+	}
+}
+
+func TestPricingUsageShortQueryKeepsPricedCardOnly(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=k3", "--json"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "moonshot", Model: "kimi-k3", RequestID: "card", Timestamp: when, Miss: 1_000_000},
+			{Source: "cursor", Vendor: "moonshot", Model: "kimi-code/k3", RequestID: "path", Timestamp: when, Miss: 7},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	var got pricingJSON
+	if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Usage.Total.Total != 1_000_000 || len(got.Usage.Vendors) != 1 || len(got.Usage.Vendors[0].Models) != 1 {
+		t.Fatalf("short query mixed a path model into the priced card: %s", out.String())
+	}
+	if got.Usage.Vendors[0].Models[0].ID != "kimi-k3" {
+		t.Fatalf("model=%s", got.Usage.Vendors[0].Models[0].ID)
+	}
+}
+
+func TestPricingUsagePartialRowDoesNotApplyRateToUnpricedTokens(t *testing.T) {
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=gpt-5"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{Events: []event.UsageEvent{
+			{Source: "cursor", Vendor: "openai", Model: "gpt-5", RequestID: "before", Timestamp: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Miss: 100},
+			{Source: "cursor", Vendor: "openai", Model: "gpt-5", RequestID: "after", Timestamp: time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC), Miss: 100},
+		}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	text := out.String()
+	if strings.Contains(text, "$1.25") || !strings.Contains(text, "× —") || !strings.Contains(text, "部分用量无公开价") {
+		t.Fatalf("partial row priced unpriced tokens: %s", text)
+	}
+}
+
+func TestPricingUsageHumanExactModelMatchesJSONScope(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	events := []event.UsageEvent{
+		{Source: "cursor", Vendor: "xai", Model: "grok-4.6", RequestID: "priced", Timestamp: when, Miss: 1_000_000},
+		{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "effort", Timestamp: when, Miss: 50},
+	}
+	scan := func(adapter.Home) scan.Result { return scan.Result{Events: events} }
+	app, out, errb := testApp([]string{"pricing", "--usage", "--model=grok-4.6"})
+	app.Scan = scan
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("exit=%d %s", code, errb.String())
+	}
+	text := out.String()
+	if !strings.Contains(text, "grok-4.6") || strings.Contains(text, "cursor-grok-4.6-xhigh-fast") || strings.Contains(text, "未知模型") {
+		t.Fatalf("human scope drifted: %s", text)
+	}
+	if !strings.Contains(text, "$2.0000") {
+		t.Fatalf("human price drifted: %s", text)
+	}
+}
+
+func TestPricingUsageExactScopeDoesNotFoldSiblingOrOtherVendor(t *testing.T) {
+	when := time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	events := []event.UsageEvent{
+		{Source: "cursor", Vendor: "xai", Model: "grok-4.6", RequestID: "priced", Timestamp: when, Miss: 1_000_000},
+		{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "effort", Timestamp: when, Miss: 50},
+		{Source: "cursor", Vendor: "moonshot", Model: "kimi-code/k3", RequestID: "slash", Timestamp: when, Miss: 7},
+		{Source: "cursor", Vendor: "moonshot", Model: "k3", RequestID: "raw-k3", Timestamp: when, Miss: 9},
+		{Source: "cursor", Vendor: "xai", Model: "k3", RequestID: "other-vendor", Timestamp: when, Miss: 11},
+	}
+	for _, tc := range []struct {
+		name, vendor, model string
+		total               int64
+		ids                 []string
+		unpriced            bool
+	}{
+		{name: "priced card excludes effort variant", model: "grok-4.6", total: 1_000_000, ids: []string{"grok-4.6"}},
+		{name: "effort variant stays alone", model: "cursor-grok-4.6-xhigh-fast", total: 50, ids: []string{"cursor-grok-4.6-xhigh-fast"}, unpriced: true},
+		{name: "full path beats short name", model: "kimi-code/k3", total: 7, ids: []string{"kimi-code/k3"}, unpriced: true},
+		{name: "raw k3 does not take the path model", model: "k3", total: 20, ids: []string{"k3", "k3"}, unpriced: true},
+		{name: "vendor narrows same model name", vendor: "xai", model: "k3", total: 11, ids: []string{"k3"}, unpriced: true},
+		{name: "family fallback still folds the priced alias", model: "opus-4.6", total: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := []string{"pricing", "--usage", "--json"}
+			if tc.vendor != "" {
+				args = append(args, "--vendor="+tc.vendor)
+			}
+			if tc.model != "" {
+				args = append(args, "--model="+tc.model)
+			}
+			app, out, errb := testApp(args)
+			app.Scan = func(adapter.Home) scan.Result {
+				ev := append([]event.UsageEvent{}, events...)
+				if tc.model == "opus-4.6" {
+					ev = append(ev,
+						event.UsageEvent{Source: "cursor", Vendor: "anthropic", Model: "claude-4.6-opus-high-thinking", RequestID: "hi", Timestamp: when, Miss: 100},
+						event.UsageEvent{Source: "cursor", Vendor: "anthropic", Model: "claude-opus-4.6", RequestID: "plain", Timestamp: when, Miss: 200},
+					)
+				}
+				return scan.Result{Events: ev}
+			}
+			if code := app.Run(); code != ExitOK {
+				t.Fatalf("exit=%d %s", code, errb.String())
+			}
+			var got pricingJSON
+			if e := json.Unmarshal(out.Bytes(), &got); e != nil {
+				t.Fatal(e)
+			}
+			wantTotal := tc.total
+			wantIDs := tc.ids
+			if tc.model == "opus-4.6" {
+				wantTotal = 300
+				wantIDs = []string{"claude-opus-4.6"}
+			}
+			if got.Usage.Total.Total != wantTotal {
+				t.Fatalf("total=%d want=%d body=%s", got.Usage.Total.Total, wantTotal, out.String())
+			}
+			var ids []string
+			var gotTokens int64
+			for _, v := range got.Usage.Vendors {
+				if tc.vendor != "" && v.Vendor != tc.vendor {
+					t.Fatalf("vendor leaked: %+v", v)
+				}
+				for _, m := range v.Models {
+					ids = append(ids, m.ID)
+					gotTokens += m.Total
+					if tc.unpriced && (m.CostStatus != "unavailable" || m.CostUSD != "" || m.UnpricedTokens != m.Total) {
+						t.Fatalf("unpriced row acquired a price: %+v", m)
+					}
+				}
+			}
+			if gotTokens != wantTotal {
+				t.Fatalf("model tokens %d != total %d", gotTokens, wantTotal)
+			}
+			if strings.Join(ids, ",") != strings.Join(wantIDs, ",") {
+				t.Fatalf("ids=%v want=%v body=%s", ids, wantIDs, out.String())
+			}
+		})
 	}
 }

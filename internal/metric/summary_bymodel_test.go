@@ -2,6 +2,7 @@ package metric
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/event"
 )
@@ -89,11 +90,11 @@ func TestByModelUnknownModelBucket(t *testing.T) {
 		{Source: "claude", Vendor: "anthropic", Model: "claude-sonnet-4.5", RequestID: "b", Miss: 1_000_000},
 	}
 	sum := Aggregate(events, nil)
-	unknown := modelRow(sum.ByModel, "cursor", "")
+	unknown := modelRow(sum.ByModel, "cursor", "auto")
 	if unknown == nil {
 		t.Fatalf("no unknown bucket %+v", sum.ByModel)
 	}
-	if unknown.Label != "(未知模型)" || unknown.Rate != nil {
+	if unknown.Label != "auto" || unknown.Rate != nil {
 		t.Fatalf("unknown bucket %+v", unknown)
 	}
 	if unknown.CostStatus != "unavailable" || unknown.UnpricedTokens != 440_000 || unknown.CostMicro != 0 {
@@ -174,4 +175,110 @@ func TestViewModelUnlistedComponentNil(t *testing.T) {
 	if v.CostUSD != "$2.2500" || v.CostStatus != "complete" {
 		t.Fatalf("view %+v", v)
 	}
+}
+
+func TestByModelKeepsDistinctMeasuredModelsWithoutPrice(t *testing.T) {
+	events := []event.UsageEvent{
+		{Source: "cursor", Vendor: "xai", Model: "grok-bot-automation", RequestID: "measured-a", Miss: 10, CacheRead: 100, Output: 1},
+		{Source: "cursor", Vendor: "xai", Model: "cursor-grok-4.6-xhigh-fast", RequestID: "measured-b", Miss: 20, CacheRead: 200, Output: 2},
+		{Source: "cursor", Vendor: "unknown", Model: "default", RequestID: "unresolved-route", Miss: 30, Output: 3},
+		{Source: "cursor", Vendor: "unknown", RequestID: "history", Miss: 40, Output: 4},
+	}
+	sum := Aggregate(events, nil)
+	want := map[string]int64{"xai\x00grok-bot-automation": 111, "xai\x00cursor-grok-4.6-xhigh-fast": 222, "unknown\x00default": 33, "unknown\x00": 44}
+	for _, m := range sum.ByModel {
+		key := m.Vendor + "\x00" + m.Model
+		n, ok := want[key]
+		if !ok || m.Total() != n {
+			t.Fatalf("lost measured model identity: %+v", m)
+		}
+		if m.Rate != nil || m.CostStatus != "unavailable" || m.UnpricedTokens != n || m.CostMicro != 0 {
+			t.Fatalf("unpriced model must not acquire a rate: %+v", m)
+		}
+		delete(want, key)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing measured model rows: %v", want)
+	}
+	if sum.All.Total() != 410 || sum.All.UnpricedTokens != 410 {
+		t.Fatalf("token accounting changed: %+v", sum.All)
+	}
+}
+
+func TestByModelRateAvailabilityDoesNotDependOnEventOrder(t *testing.T) {
+	before := event.UsageEvent{Source: "cursor", Vendor: "openai", Model: "gpt-5", RequestID: "before-card", Timestamp: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Miss: 100}
+	after := before
+	after.RequestID = "after-card"
+	after.Timestamp = time.Date(2026, 8, 16, 0, 0, 0, 0, time.UTC)
+	for _, events := range [][]event.UsageEvent{{before, after}, {after, before}} {
+		sum := Aggregate(events, nil)
+		if len(sum.ByModel) != 1 {
+			t.Fatalf("same identity duplicated: %+v", sum.ByModel)
+		}
+		m := sum.ByModel[0]
+		if m.Rate == nil || m.PricedTokens != 100 || m.UnpricedTokens != 100 || m.Total() != 200 || m.CostStatus != "partial" {
+			t.Fatalf("order-dependent price metadata: %+v", m)
+		}
+		if m.CostMicro != sum.All.CostMicro || m.PricedTokens+m.UnpricedTokens != m.Total() {
+			t.Fatalf("model price diverged from the event charge: model=%+v all=%+v", m, sum.All)
+		}
+		view := ViewModel(m)
+		if view.UnitPrices.Miss != nil || view.UnitPrices.CacheRead != nil || view.UnitPrices.CacheCreate != nil || view.UnitPrices.Output != nil {
+			t.Fatalf("partial row published a unit price: %+v", view.UnitPrices)
+		}
+	}
+}
+
+func TestByModelAxesConserveTokensAcrossVendorsAndOrder(t *testing.T) {
+	base := []event.UsageEvent{
+		{Source: "cursor", Vendor: "moonshot", Model: "kimi-code/k3", RequestID: "slash", Miss: 7},
+		{Source: "cursor", Vendor: "moonshot", Model: "k3", RequestID: "raw", Miss: 9},
+		{Source: "cursor", Vendor: "xai", Model: "k3", RequestID: "other", Miss: 11},
+		{Source: "cursor", Vendor: "unknown", Model: "default", RequestID: "route", Miss: 3},
+		{Source: "cursor", Vendor: "unknown", RequestID: "blank", Miss: 5},
+		{Source: "cursor", Vendor: "xai", Model: "grok-bot-automation", RequestID: "dup", Miss: 10, Output: 1},
+		{Source: "cursor", Vendor: "xai", Model: "grok-bot-automation", RequestID: "dup", Miss: 10, Output: 4},
+	}
+	orders := [][]event.UsageEvent{base, reverseEvents(base)}
+	var first int64
+	for i, events := range orders {
+		sum := Aggregate(events, nil)
+		var modelSum, vendorSum, priced, unpriced int64
+		seen := map[string]int64{}
+		for _, m := range sum.ByModel {
+			modelSum += m.Total()
+			priced += m.PricedTokens
+			unpriced += m.UnpricedTokens
+			seen[m.Vendor+"\x00"+m.Model] = m.Total()
+			if m.Model == "kimi-code/k3" && (m.Label != "kimi-code/k3" || m.Rate != nil) {
+				t.Fatalf("slash identity lost: %+v", m)
+			}
+		}
+		for _, v := range sum.ByVendor {
+			vendorSum += v.Total()
+		}
+		if modelSum != vendorSum || modelSum != sum.All.Total() || priced+unpriced != sum.All.Total() {
+			t.Fatalf("order %d broke conservation model=%d vendor=%d all=%d priced=%d unpriced=%d", i, modelSum, vendorSum, sum.All.Total(), priced, unpriced)
+		}
+		if seen["moonshot\x00k3"] != 9 || seen["xai\x00k3"] != 11 || seen["moonshot\x00kimi-code/k3"] != 7 || seen["unknown\x00default"] != 3 || seen["unknown\x00"] != 5 {
+			t.Fatalf("identity mix order %d: %+v", i, seen)
+		}
+		// Same request id keeps the max component, not the sum.
+		if seen["xai\x00grok-bot-automation"] != 14 {
+			t.Fatalf("duplicate request counted twice: %d", seen["xai\x00grok-bot-automation"])
+		}
+		if i == 0 {
+			first = modelSum
+		} else if modelSum != first {
+			t.Fatalf("reorder changed total %d -> %d", first, modelSum)
+		}
+	}
+}
+
+func reverseEvents(in []event.UsageEvent) []event.UsageEvent {
+	out := make([]event.UsageEvent, len(in))
+	for i := range in {
+		out[i] = in[len(in)-1-i]
+	}
+	return out
 }

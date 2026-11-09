@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.18 — 2026-11-10 (Alpha)
+
+- Keep measured model identities separate when no public price card exists, including Cursor Grok variants and unresolved `default` routing. Only genuinely missing model names use the unknown-model bucket; prices remain unavailable and token totals do not change. Existing priced aliases still use normalized card identities.
+- Match an exact original model in `pricing --usage --model` before price alias aggregation, preserving precise effort variants. Family queries still match priced card ids. An unpriced id matches only its full raw name, and a partial row does not publish a card rate against tokens that have no public price. Mixed dated usage keeps its priced amount regardless of event order while pre-card usage remains unpriced.
+
 ## 0.7.17 — 2026-11-10 (Alpha)
 
 - Preserve every allowlisted vendor in Profile breakdowns and activity series, including low-ranked Cursor Composer and Google. Unknown routing remains `unknown` rather than sharing the sanitized `other` bucket; no duplicate `other` rows are produced. Token components and publication gates are unchanged.

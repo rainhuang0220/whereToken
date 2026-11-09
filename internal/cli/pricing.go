@@ -253,12 +253,18 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	}
 	var events []event.UsageEvent
 	for _, e := range res.Events {
-		if win.Contains(e.Timestamp, a.Loc) {
+		if win.Contains(e.Timestamp, a.Loc) && (flags.Vendor == "" || e.Vendor == flags.Vendor) {
 			events = append(events, e)
 		}
 	}
+	// Prefer a measured raw identity before alias grouping can erase effort
+	// variants. Family/catalog queries keep the existing normalized lookup.
+	modelQuery := flags.Model
+	if exact := exactUsageModelEvents(events, modelQuery); len(exact) > 0 {
+		events, modelQuery = exact, ""
+	}
 	sum := metric.AggregateAt(events, nil, a.Now(), a.Loc)
-	rows := filterUsageModels(sum.ByModel, flags.Vendor, flags.Model)
+	rows := filterUsageModels(sum.ByModel, flags.Vendor, modelQuery)
 	if flags.JSON {
 		payload := catalogPayload(collectPricing(flags.Vendor, flags.Model))
 		payload.Usage = usagePayload(rows, win.Label)
@@ -278,9 +284,36 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	return ExitOK
 }
 
-// filterUsageModels keeps the --vendor / --model slice. A model query matches
-// the normalized ledger id the same fuzzy way the catalog filter matches card
-// rows; the unknown-model bucket matches no query.
+func exactUsageModelEvents(events []event.UsageEvent, query string) []event.UsageEvent {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil
+	}
+	var full []event.UsageEvent
+	for _, e := range events {
+		raw := strings.TrimSpace(e.Model)
+		if strings.EqualFold(raw, query) {
+			full = append(full, e)
+		}
+	}
+	// Only a full raw id skips alias aggregation. A short query such as
+	// "k3" or "grok-4.6" stays on filterUsageModels so a path-shaped or
+	// longer effort id is not treated as that exact model.
+	return full
+}
+
+// filterUsageModels keeps the --vendor / --model slice. A priced row matches
+// the normalized card id the same fuzzy way the catalog filter matches card
+// rows. An unpriced measured id is selected only by exactUsageModelEvents,
+// so a shorter or path-basename query cannot add a different model's tokens.
+// The unknown-model bucket matches no query.
+func usageModelMatches(m metric.ModelSlice, q string) bool {
+	if m.Model == "" || m.Rate == nil {
+		return false
+	}
+	canon := price.Canonical(m.Model)
+	return strings.Contains(canon, q) || price.MatchModel(q, m.Model)
+}
 func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.ModelSlice {
 	q := price.Canonical(model)
 	var out []metric.ModelSlice
@@ -288,7 +321,7 @@ func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.Mo
 		if vend != "" && m.Vendor != vend {
 			continue
 		}
-		if q != "" && (m.Model == "" || (!strings.Contains(m.Model, q) && !price.MatchModel(q, m.Model))) {
+		if q != "" && !usageModelMatches(m, q) {
 			continue
 		}
 		out = append(out, m)
@@ -414,7 +447,9 @@ func (a *App) printUsageBreakdown(flags Flags, rows []metric.ModelSlice, period 
 func usageModelRow(m metric.ModelSlice) []string {
 	var miss, cacheRead, cacheCreate, output float64
 	free := false
-	if r := m.Rate; r != nil {
+	// A partial row mixes priced and unpriced events. Showing the card rate
+	// beside the whole component would price tokens the card does not cover.
+	if r := m.Rate; r != nil && m.Slice.UnpricedTokens == 0 {
 		miss, cacheRead, cacheCreate, output = r.Miss, r.CacheRead, r.CacheCreate, r.Output
 		free = r.CreateFree
 	}
