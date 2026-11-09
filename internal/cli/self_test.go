@@ -168,8 +168,46 @@ func TestRunUpdateUsesBrewWhenCellar(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d %s", code, errb.String())
 	}
-	if len(got) != 1 || got[0] != "brew upgrade wheretoken" {
+	if len(got) != 2 || got[0] != "brew update --quiet" || got[1] != "brew upgrade wheretoken" {
 		t.Fatalf("got=%v", got)
+	}
+}
+
+func TestBrewUpdateCannotUpgradeWithStaleMetadata(t *testing.T) {
+	for _, failRefresh := range []bool{false, true} {
+		t.Run(fmt.Sprint(failRefresh), func(t *testing.T) {
+			app, _, errb := testApp([]string{"update"})
+			app.Home = testhome.New(t.TempDir())
+			app.UserHome = func() (string, error) { return t.TempDir(), nil }
+			app.Executable = func() (string, error) { return "/opt/homebrew/Cellar/wheretoken/0.7.15/bin/wheretoken", nil }
+			fresh, upgraded := false, false
+			attempted := false
+			app.RunCmd = func(name string, args ...string) error {
+				if name == "brew" && len(args) > 0 && args[0] == "update" {
+					if failRefresh {
+						return fmt.Errorf("fixture metadata offline")
+					}
+					fresh = true
+					return nil
+				}
+				if name == "brew" && len(args) > 0 && args[0] == "upgrade" {
+					attempted = true
+					if !fresh {
+						return fmt.Errorf("fixture stale tap cannot find newer release")
+					}
+					upgraded = true
+					return nil
+				}
+				return nil
+			}
+			want := ExitOK
+			if failRefresh {
+				want = ExitFail
+			}
+			if code := app.Run(); code != want || upgraded == failRefresh || attempted == failRefresh {
+				t.Fatalf("code=%d upgraded=%v stderr=%s", code, upgraded, errb.String())
+			}
+		})
 	}
 }
 

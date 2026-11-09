@@ -35,13 +35,29 @@ func buildVerifiedFallback(raw []byte, current *publicprofile.Snapshot) (map[str
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return nil, false, err
 	}
-	if env.Schema != "wheretoken.public-profile-live" || env.SchemaVersion != 1 || env.Wall.Phase != "verified" ||
+	if env.Schema != "wheretoken.public-profile-live" || env.SchemaVersion != 1 ||
 		env.Wall.VerifiedAt == "" || env.Wall.VerifiedSnapshotID == "" || env.Wall.VerifiedTotal == nil {
 		return nil, false, errors.New("hosted wall is not fully verified")
 	}
 	var snap publicprofile.Snapshot
 	if err := json.Unmarshal(env.Snapshot, &snap); err != nil {
 		return nil, false, fmt.Errorf("snapshot decode: %w", err)
+	}
+	// A normal pending upload (including midnight merging) cannot replace
+	// Pages. If Pages already matches the last verified wall exactly, retain
+	// it successfully rather than treating the waiting candidate as a fault.
+	if env.Wall.Phase == "pending" && current != nil &&
+		current.SnapshotID == env.Wall.VerifiedSnapshotID && current.AsOfDate == env.Wall.VerifiedAsOfDate &&
+		current.Periods.All.Totals.Total.Value != nil && *current.Periods.All.Totals.Total.Value == *env.Wall.VerifiedTotal &&
+		snap.SnapshotID == env.DataRevision && snap.SnapshotID != env.Wall.VerifiedSnapshotID &&
+		snap.Periods.All.Totals.Total.Value != nil && *snap.Periods.All.Totals.Total.Value >= *env.Wall.VerifiedTotal &&
+		snap.AsOfDate >= current.AsOfDate && publicprofile.ValidateProduction(*current, true) == nil &&
+		(snap.Owner == nil || snap.Owner.GitHubLogin == "" || snap.Owner.GitHubLogin == "rainhuang0220") &&
+		publicprofile.ValidateProduction(snap, true) == nil && !publicprofile.Sensitive(string(env.Snapshot)) {
+		return nil, false, nil
+	}
+	if env.Wall.Phase != "verified" {
+		return nil, false, errors.New("hosted wall is not fully verified")
 	}
 	if snap.SnapshotID != env.DataRevision || snap.SnapshotID != env.Wall.VerifiedSnapshotID ||
 		snap.AsOfDate != env.Wall.VerifiedAsOfDate || snap.Periods.All.Totals.Total.Value == nil ||
@@ -143,6 +159,13 @@ func main() {
 	if changed {
 		fmt.Println("VERIFIED_FALLBACK_UPDATED")
 	} else {
-		fmt.Println("VERIFIED_FALLBACK_UNCHANGED")
+		raw, _ := os.ReadFile(*wall)
+		var env wallEnvelope
+		_ = json.Unmarshal(raw, &env)
+		if env.Wall.Phase == "pending" {
+			fmt.Println("VERIFIED_FALLBACK_WAITING")
+		} else {
+			fmt.Println("VERIFIED_FALLBACK_UNCHANGED")
+		}
 	}
 }
