@@ -22,10 +22,14 @@ import (
 const thinkingCapability = 30
 
 type Adapter struct {
-	HTTP             *http.Client
-	APIBase          string
-	Now              func() time.Time
-	Offline          bool
+	HTTP    *http.Client
+	APIBase string
+	Now     func() time.Time
+	Offline bool
+	// NoOSKeychain prevents unattended collectors from entering a blocking
+	// macOS keychain authorization dialog after an unsigned upgrade.
+	// An explicit cursor connect or interactive scan may still unseal.
+	NoOSKeychain     bool
 	ConsentPath      string
 	AllowPrompt      bool
 	Probe            bool

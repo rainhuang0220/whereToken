@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.15 — 2026-11-09 (Alpha)
+
+- **Unattended Profile refresh cannot be held hostage by macOS Cursor Keychain prompts.** Some unsigned upgrades cause Security.framework to wait inside `SecItemCopyMatching` even when `kSecUseAuthenticationUIFail` was requested, leaving scheduled scans stalled for minutes. Both `profile refresh watch` and one-shot `profile refresh` now avoid OS Keychain unsealing for sealed Cursor sessions. They still scan local Cursor activity, all other sources and any plain Cursor session; previously verified Cursor account history is reused **only** when the same account has explicit recorded consent. This does not fabricate new Cursor account usage or discard old measurements. An explicit `cursor connect` or standalone `wheretoken scan` retains its original interactive authorization path. The rest of the v0.7.14 timed scheduler, cache, CPU and GitHub publishing changes remain intact.
+
 ## 0.7.14 — 2026-11-09 (Alpha)
 
 - **Interactive reports no longer block on multi-gigabyte Cursor scans when macOS Profile auto-refresh is enabled.** Bare `wheretoken`, date queries, and their report filters read the latest normalized per-file local index checkpoints, in read-only mode, and explicitly mark the output as cached/not live. They preserve already-confirmed, account-linked Cursor history without treating unmeasured days as zero. An unavailable, corrupt, or empty cache falls back to the existing full scan instead of silently showing zero. `wheretoken scan`, the scan index writer, and the original publication/update pipeline are unchanged.

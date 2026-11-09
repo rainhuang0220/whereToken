@@ -213,6 +213,12 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if value == "" || !strings.HasPrefix(value, sealedStoragePrefix) {
 		return value, nil
 	}
+	if a.NoOSKeychain {
+		// SecItemCopyMatching with kSecUseAuthenticationUIFail may still
+		// wait indefinitely for SecurityAgent on legacy macOS keychains.
+		// A scheduled refresh must never enter that OS code path.
+		return "", errOSPermission
+	}
 	if a.Unseal != nil {
 		return a.Unseal(value)
 	}
