@@ -73,3 +73,5 @@ GitHub renders a README SVG through Camo as one image element. The SVG can keep 
 ## Compatibility
 
 `wheretoken card <path.svg>` still writes the 800×576 Vibe Coding Wall. It now projects from the same `ProfileSnapshot`. Prefer `profile build` for new READMEs.
+
+Vendor projection preserves all allowlisted providers and their activity series, including providers below rank eight. `unknown` means measured usage with unresolved routing or historical allocation; unrecognized identifiers are sanitized into a single `other` bucket. These categories do not overlap.

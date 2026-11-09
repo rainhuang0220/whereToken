@@ -22,9 +22,6 @@ func publicSource(id string) (string, string) {
 func publicVendor(id string) (string, string) {
 	n := strings.ToLower(strings.TrimSpace(id))
 	for _, known := range vendor.KnownIDs() {
-		if known == "unknown" {
-			continue
-		}
 		if n == known || n == strings.ToLower(vendor.Label(known)) {
 			return known, vendor.Label(known)
 		}
