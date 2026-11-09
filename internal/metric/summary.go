@@ -57,11 +57,13 @@ type Summary struct {
 	DrillByVendor  map[string]DrillPack
 }
 
-// ModelSlice aggregates one pricing-normalized model id within one vendor.
-// Model is the id price.Resolve matched (claude-opus-4.6); events no card
-// matches group under Model == "" with Label (未知模型) and a nil Rate.
-// Rate points at the list card from the first successful Resolve for the
-// key; it identifies the card, it does not claim every event was priced.
+// ModelSlice aggregates one model identity within one vendor.
+// A priced event uses the normalized card id from price.Resolve.
+// A measured model with no matching card keeps its raw id and a nil Rate.
+// Only a blank model name uses Model "" and Label (未知模型).
+// Rate is the first successful card for that identity. It names the card;
+// per-event charges still decide which tokens are priced. Cost is never $0
+// just because the rate is missing.
 type ModelSlice struct {
 	Slice
 	Vendor, Model string
@@ -440,33 +442,36 @@ func getSlice(m map[string]*Slice, id, label string) *Slice {
 	return s
 }
 
-// unknownModelLabel labels the per-vendor bucket of events whose model no
-// list card matches. Distinct from drill's (未标模型): here the model id may
-// be present but unpriced, and it stays unavailable — never free.
+// unknownModelLabel is reserved for missing model identity. A measured model
+// without a public price retains its raw id and unavailable cost.
 const unknownModelLabel = "(未知模型)"
 
-// modelSlice returns the ByModel bucket for e. price.Resolve runs once per
-// event (memoized): a resolved event groups under its normalized model id
-// and keeps the first card Resolve matched; an unresolved event groups
-// under Model "" with a nil Rate. Cost comes from the shared per-event
-// charge, so ByModel totals reconcile with All.
+// Resolved aliases share the price card's normalized identity. Unpriced models
+// retain their measured identity; price availability must never erase it.
 func modelSlice(m map[string]*ModelSlice, e event.UsageEvent) *ModelSlice {
-	rate, norm, ok := price.Resolve(e.Vendor, e.Model, e.Timestamp)
-	key := e.Vendor + "\x00" + norm
-	if !ok {
-		key = e.Vendor + "\x00"
+	rate, norm, priced := price.Resolve(e.Vendor, e.Model, e.Timestamp)
+	id := norm
+	if !priced {
+		id = strings.TrimSpace(e.Model)
 	}
+	key := e.Vendor + "\x00" + id
 	if s, ok := m[key]; ok {
+		// The same identity can precede its public card. Keep the first
+		// successful rate even when the unpriced event arrived first.
+		if priced && s.Rate == nil {
+			r := rate
+			s.Rate = &r
+		}
 		return s
 	}
-	s := &ModelSlice{Vendor: e.Vendor}
-	if ok {
+	label := id
+	if label == "" {
+		label = unknownModelLabel
+	}
+	s := &ModelSlice{Vendor: e.Vendor, Model: id, Slice: Slice{ID: id, Label: label}}
+	if priced {
 		r := rate
-		s.Model = norm
-		s.Slice = Slice{ID: norm, Label: norm}
 		s.Rate = &r
-	} else {
-		s.Slice = Slice{ID: "", Label: unknownModelLabel}
 	}
 	m[key] = s
 	return s

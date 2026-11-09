@@ -765,7 +765,7 @@ func TestMarshalSummaryIncludesByModel(t *testing.T) {
 	if opus.UnitPrices.CacheCreate == nil || *opus.UnitPrices.CacheCreate != 6.25 {
 		t.Fatalf("opus cache_create unit %+v", opus.UnitPrices.CacheCreate)
 	}
-	if unknown.Label != "(未知模型)" || unknown.Vendor != "cursor" {
+	if unknown.Label != "auto" || unknown.Vendor != "cursor" {
 		t.Fatalf("unknown row %+v", unknown)
 	}
 	if unknown.CostUSD != "" || unknown.CostStatus != "unavailable" {

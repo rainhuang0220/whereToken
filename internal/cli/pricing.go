@@ -253,12 +253,18 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	}
 	var events []event.UsageEvent
 	for _, e := range res.Events {
-		if win.Contains(e.Timestamp, a.Loc) {
+		if win.Contains(e.Timestamp, a.Loc) && (flags.Vendor == "" || e.Vendor == flags.Vendor) {
 			events = append(events, e)
 		}
 	}
+	// Prefer a measured raw identity before alias grouping can erase effort
+	// variants. Family/catalog queries keep the existing normalized lookup.
+	modelQuery := flags.Model
+	if exact := exactUsageModelEvents(events, modelQuery); len(exact) > 0 {
+		events, modelQuery = exact, ""
+	}
 	sum := metric.AggregateAt(events, nil, a.Now(), a.Loc)
-	rows := filterUsageModels(sum.ByModel, flags.Vendor, flags.Model)
+	rows := filterUsageModels(sum.ByModel, flags.Vendor, modelQuery)
 	if flags.JSON {
 		payload := catalogPayload(collectPricing(flags.Vendor, flags.Model))
 		payload.Usage = usagePayload(rows, win.Label)
@@ -278,6 +284,30 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	return ExitOK
 }
 
+func exactUsageModelEvents(events []event.UsageEvent, query string) []event.UsageEvent {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil
+	}
+	var full, suffix []event.UsageEvent
+	for _, e := range events {
+		raw := strings.TrimSpace(e.Model)
+		if strings.EqualFold(raw, query) {
+			full = append(full, e)
+			continue
+		}
+		if i := strings.LastIndex(raw, "/"); i >= 0 && strings.EqualFold(raw[i+1:], query) {
+			suffix = append(suffix, e)
+		}
+	}
+	// A full raw id is the exact identity. The path segment is only a
+	// fallback so "kimi-code/k3" can be named as k3 when no raw model is k3.
+	if len(full) > 0 {
+		return full
+	}
+	return suffix
+}
+
 // filterUsageModels keeps the --vendor / --model slice. A model query matches
 // the normalized ledger id the same fuzzy way the catalog filter matches card
 // rows; the unknown-model bucket matches no query.
@@ -288,7 +318,7 @@ func filterUsageModels(rows []metric.ModelSlice, vend, model string) []metric.Mo
 		if vend != "" && m.Vendor != vend {
 			continue
 		}
-		if q != "" && (m.Model == "" || (!strings.Contains(m.Model, q) && !price.MatchModel(q, m.Model))) {
+		if q != "" && (m.Model == "" || (!strings.Contains(price.Canonical(m.Model), q) && !price.MatchModel(q, m.Model))) {
 			continue
 		}
 		out = append(out, m)
