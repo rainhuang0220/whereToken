@@ -25,8 +25,8 @@ import (
 )
 
 // The macOS LaunchAgent watch is idle between three local wall-clock checks:
-// 00:00, 10:30, 17:00. An explicit interval overrides the calendar only in
-// isolated tests; production uses the fixed calendar (zero).
+// 00:00, 10:30, 17:00. An explicit timer interval accelerates isolated
+// watch tests; production uses the calendar and a one-minute clock check.
 var profileRefreshInterval time.Duration
 
 // profileRefreshTimeout bounds one refresh GET or PUT. http.DefaultClient
@@ -55,6 +55,16 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	case "repair":
 		return a.profileRefreshRepair(home)
 	case "":
+		if os.Getenv(profileRefreshChildEnv) == "1" {
+			// A replaced or stopped watch may leave its own worker orphaned.
+			// The worker enforces the same total bound independently and only
+			// exits itself; its kernel-held scan lock is released on exit.
+			watchdog := time.AfterFunc(profileRefreshRunTimeout, func() {
+				a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+				os.Exit(ExitFail)
+			})
+			defer watchdog.Stop()
+		}
 		return a.executeProfileRefresh(context.Background(), flags, home, nil)
 	default:
 		fmt.Fprintf(a.Stderr, "unknown profile refresh action %q\ntry `wheretoken --help`\n", flags.ProfileRefreshAction)
@@ -217,7 +227,12 @@ func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
 func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	rejected := map[string]struct{}{}
+	var releaseWatch proclock.Unlock
+	defer func() {
+		if releaseWatch != nil {
+			releaseWatch()
+		}
+	}()
 	for {
 		if ctx.Err() != nil {
 			return ExitOK
@@ -231,20 +246,44 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 			fmt.Fprintln(a.Stdout, "phase=idle 未开启")
 			return ExitOK
 		}
-		a.maybeReexecProfileWatch()
-		// RunAtLoad does not imply an extra expensive scan. If today's most
-		// recent scheduled slot was already checked, stay asleep. A laptop
-		// that missed a slot while off gets one catch-up on login/wake.
-		if a.profileRefreshDue(home) {
-			a.executeProfileRefresh(ctx, flags, home, rejected)
+		if releaseWatch == nil {
+			var ok bool
+			releaseWatch, ok, err = proclock.TryLock(filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(home)), "profile-refresh-watch.lock"))
+			if err != nil {
+				return a.refreshFailed()
+			}
+			if !ok {
+				return ExitOK
+			}
 		}
-		nextWake := publicprofile.NextScheduledRefreshWake(a.Now(), a.Loc)
-		if profileRefreshInterval > 0 {
+		a.maybeReexecProfileWatch()
+		st, nextWake, err := a.refreshSchedule(home, a.Now())
+		if err != nil {
+			return a.refreshFailed()
+		}
+		if !nextWake.After(a.Now()) {
+			if err := a.attemptScheduledProfileRefresh(ctx, flags, home, st); err != nil {
+				return a.refreshFailed()
+			}
+			// Recheck the switch, calendar and durable budget after the child.
+			continue
+		}
+		if profileRefreshInterval > 0 && a.Sleep == nil {
 			nextWake = publicprofile.NextRefreshWake(a.Now(), a.Loc, profileRefreshInterval)
 		}
 		wait := nextWake.Sub(a.Now())
 		if wait < 0 {
 			wait = 0
+		}
+		// A monotonic timer can pause while a laptop sleeps. Recheck only
+		// the switch and calendar at least once a minute so a missed slot
+		// catches up after wake without any idle source scan or API call.
+		if wait > time.Minute {
+			wait = time.Minute
+		}
+		if a.Sleep != nil {
+			a.Sleep(wait)
+			continue
 		}
 		timer := time.NewTimer(wait)
 		select {
@@ -257,17 +296,14 @@ func (a *App) profileRefreshWatch(flags Flags, home adapter.Home) int {
 }
 
 // profileRefreshDue prevents RunAtLoad, agent repairs and a same-slot
-// rebootstrap from launching another expensive scan. The state is a timestamp
-// of the last check, not a token total or a publication assertion.
+// rebootstrap from launching another expensive scan. It uses the durable
+// slot/attempt budget, with migration from the earlier check timestamp.
 func (a *App) profileRefreshDue(home adapter.Home) bool {
 	if profileRefreshInterval > 0 {
 		return true // deterministic, fast isolated watch tests
 	}
-	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
-	if err != nil || st.CheckedAt.IsZero() {
-		return true
-	}
-	return st.CheckedAt.Before(publicprofile.ScheduledRefreshSlot(a.Now(), a.Loc))
+	_, next, err := a.refreshSchedule(home, a.Now())
+	return err == nil && !next.After(a.Now())
 }
 
 func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, rejected map[string]struct{}) int {
@@ -330,7 +366,11 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	}
 	if applied.Transport || applied.Rejected {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
-		return a.refreshFailed()
+		code := a.refreshFailed()
+		if applied.Rejected && os.Getenv(profileRefreshChildEnv) == "1" {
+			return ExitUsage
+		}
+		return code
 	}
 	a.clearPermitIfPublished(home, applied)
 	a.noteRefresh(home, applied.Decision.Phase, applied.Decision.Code)

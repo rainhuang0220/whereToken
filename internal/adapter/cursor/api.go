@@ -486,6 +486,9 @@ func (a Adapter) fetchFiltered(token string, start, end int64) (filteredFetch, e
 		out.raw += rawN
 		out.declared = total
 		if out.raw == total {
+			if total > 0 && len(out.events) == 0 {
+				return filteredFetch{}, fmt.Errorf("%w [reason=missing_token_meters]", errSchemaChanged)
+			}
 			return out, nil
 		}
 		if rawN == 0 || rawN < pageSize {
@@ -688,6 +691,16 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 		if usage == nil {
 			usage = m
 		}
+		known := false
+		for _, field := range []string{"inputTokens", "input_tokens", "cacheReadTokens", "cache_read_tokens", "cacheWriteTokens", "cache_write_tokens", "outputTokens", "output_tokens"} {
+			if value, ok := usage[field]; ok && value != nil {
+				known = true
+				break
+			}
+		}
+		if !known {
+			continue
+		} // a model label without meters is unavailable, not measured zero
 		ev := mapTokens(model, adapter.FlexString(adapter.Pick(m, "conversationId", "conversation_id")), ts, usage, i)
 		if ev.Model != "" || ev.Miss+ev.CacheRead+ev.CacheCreate+ev.Output != 0 {
 			out = append(out, ev)
@@ -744,6 +757,7 @@ func mapTokens(model, session string, ts time.Time, usage map[string]any, i int)
 		Quality:     event.QualityAuthoritative,
 		Derivation:  event.DeriveProviderAPI,
 		SkipRequest: true,
+		Provenance:  "cursor_filtered_usage",
 	}
 }
 

@@ -31,6 +31,7 @@ type UsageEvent struct {
 	Miss, CacheRead, CacheCreate, Output, Reasoning int64
 	Quality                                         Quality
 	Derivation                                      string // raw, provider_api, derived, deduplicated, estimated
+	Provenance                                      string // allowlisted provider endpoint; never response bodies or credentials
 	SkipRequest                                     bool   // token-only rows (Cursor account API) must not inflate request counts
 }
 

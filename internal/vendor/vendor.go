@@ -28,6 +28,9 @@ func Lookup(model, provider string) string {
 		return "openai"
 	case strings.Contains(blob, "gemini"):
 		return "google"
+	case strings.HasPrefix(m, "mimo-") || p == "xiaomi":
+		// Xiaomi's official MiMo family: https://mimo.xiaomi.com/mimo-v2-5
+		return "xiaomi"
 	case strings.Contains(blob, "grok") || p == "xai" || p == "x-ai" || strings.HasPrefix(m, "xai-") || strings.HasPrefix(m, "x-ai-"):
 		return "xai"
 	case m == "composer" || strings.HasPrefix(m, "composer-") || strings.HasPrefix(m, "cursor-composer-"):
@@ -59,6 +62,8 @@ func Label(id string) string {
 		return "MiniMax"
 	case "google":
 		return "Google"
+	case "xiaomi":
+		return "Xiaomi"
 	case "deepseek":
 		return "DeepSeek"
 	case "doubao":
@@ -77,7 +82,7 @@ func Label(id string) string {
 }
 
 func KnownIDs() []string {
-	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "deepseek", "doubao", "zhipu", "alibaba", "xai", "cursor", "unknown"}
+	return []string{"anthropic", "moonshot", "openai", "minimax", "google", "xiaomi", "deepseek", "doubao", "zhipu", "alibaba", "xai", "cursor", "unknown"}
 }
 
 func LookupName(name string) (string, bool) {

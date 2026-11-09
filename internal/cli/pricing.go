@@ -50,6 +50,7 @@ type usageJSON struct {
 	Period  string            `json:"period"`
 	Vendors []usageVendorJSON `json:"vendors"`
 	Total   usageTotalJSON    `json:"total"`
+	Notes   []string          `json:"notes,omitempty"`
 }
 
 type usageVendorJSON struct {
@@ -238,7 +239,13 @@ func (a *App) writePricingJSON(payload pricingJSON) error {
 // prices every normalized model against the same public card the catalog
 // prints. Unpriced usage stays unavailable — it is never rewritten as $0.
 func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
-	res := a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	res, cached := a.cachedReport(home)
+	if !cached {
+		res = a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+	}
+	if a.Scan == nil {
+		restoreBoundCursorHistoryForReport(home, &res)
+	}
 	win, err := metric.ParseWindow(flags.Today, flags.Since, flags.From, flags.To, a.Now(), a.Loc)
 	if err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
@@ -255,11 +262,17 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	if flags.JSON {
 		payload := catalogPayload(collectPricing(flags.Vendor, flags.Model))
 		payload.Usage = usagePayload(rows, win.Label)
+		if cached {
+			payload.Usage.Notes = []string{cachedReportNotice}
+		}
 		if err := a.writePricingJSON(payload); err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())
 			return ExitFail
 		}
 		return ExitOK
+	}
+	if cached {
+		fmt.Fprintln(a.Stdout, cachedReportNotice)
 	}
 	a.printUsageBreakdown(flags, rows, win.Label)
 	return ExitOK

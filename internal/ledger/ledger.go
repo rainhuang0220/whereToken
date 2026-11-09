@@ -27,7 +27,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -383,7 +382,6 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 	type acc struct {
 		tokens int64
 		n      int
-		lines  []string
 		events []event.UsageEvent
 	}
 	by := map[string]*acc{}
@@ -399,7 +397,6 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 		a.n++
 		a.tokens += e.Miss + e.CacheRead + e.CacheCreate + e.Output
 		a.events = append(a.events, e)
-		a.lines = append(a.lines, fmt.Sprintf("%s|%d|%d|%d|%d|%d", e.Model, e.Timestamp.UnixNano(), e.Miss, e.CacheRead, e.CacheCreate, e.Output))
 	}
 	if len(by) == 0 {
 		return nil
@@ -412,13 +409,7 @@ func (l *Ledger) NoteAPI(events []event.UsageEvent) error {
 	}
 	defer tx.Rollback()
 	for source, a := range by {
-		sort.Strings(a.lines)
-		sum := sha256.New()
-		for _, line := range a.lines {
-			sum.Write([]byte(line))
-			sum.Write([]byte{'\n'})
-		}
-		hash := hex.EncodeToString(sum.Sum(nil))
+		hash := apiPayloadHash(a.events)
 		meta, days := observationFromAPI(a.events)
 		if err := insertObservation(tx, source, hash, a.tokens, a.n, meta, days); err != nil {
 			return err

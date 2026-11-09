@@ -461,7 +461,7 @@ func applyCommandWord(f *Flags, word string) bool {
 func finishCursor(f *Flags, extra []string) (Flags, error) {
 	if f.CursorAction == "" && len(extra) > 0 && !strings.HasPrefix(extra[0], "-") {
 		switch extra[0] {
-		case "status", "connect", "disconnect":
+		case "status", "connect", "disconnect", "backfill":
 			f.CursorAction = extra[0]
 			extra = extra[1:]
 		default:

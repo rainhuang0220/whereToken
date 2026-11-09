@@ -56,7 +56,7 @@ _wheretoken() {
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
-    cursor) opts="status connect disconnect --quiet -q --home --help" ;;
+    cursor) opts="status connect disconnect backfill --from --to --json --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     login) opts="--quiet -q --offline --home --help --no-sync" ;;
@@ -144,7 +144,10 @@ _wheretoken() {
         '(-h --help)'{-h,--help}'[help]' \
         '(-q --quiet)'{-q,--quiet}'[no progress on stderr]' \
         '--home[fake home]:dir:_files -/' \
-        '1:action:(status connect disconnect)'
+        '--from[inclusive UTC start for backfill]:date:' \
+        '--to[inclusive UTC end for backfill]:date:' \
+        '--json[JSON output]' \
+        '1:action:(status connect disconnect backfill)'
       ;;
     update|upgrade|uninstall)
       _arguments -s \
@@ -262,7 +265,7 @@ complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources do
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan serve sources doctor community pricing completion card" -l rank -r -a "today all"
 complete -c wheretoken -n "not __fish_seen_subcommand_from scan sources community pricing completion card" -l no-community
 complete -c wheretoken -n "__fish_seen_subcommand_from community" -a "status on off serve"
-complete -c wheretoken -n "__fish_seen_subcommand_from cursor" -a "status connect disconnect"
+complete -c wheretoken -n "__fish_seen_subcommand_from cursor" -a "status connect disconnect backfill"
 complete -c wheretoken -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 complete -c wheretoken -n "__fish_seen_subcommand_from pricing" -l usage
 complete -c wheretoken -n "__fish_seen_subcommand_from card" -k -a "(__fish_complete_suffix svg)"
@@ -318,7 +321,7 @@ const powershellCompletion = `Register-ArgumentCompleter -Native -CommandName wh
     'upgrade' { @('--quiet','--help') }
     'uninstall' { @('--quiet','--help') }
     'community' { @('status','on','off','serve','--port','--offline','--quiet','--home','--help') }
-    'cursor' { @('status','connect','disconnect','--quiet','--home','--help') }
+    'cursor' { @('status','connect','disconnect','backfill','--from','--to','--json','--quiet','--home','--help') }
     'pricing' { @('--vendor','--model','--json','--usage','--width','--ascii','--no-color','--quiet','--help') }
     'completion' { @('bash','zsh','fish','powershell','--quiet','--help') }
     'card' { @('--quiet','--offline','--home','--help','--version') }

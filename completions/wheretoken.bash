@@ -17,7 +17,7 @@ _wheretoken() {
     update|upgrade) opts="--quiet -q --help" ;;
     uninstall) opts="--quiet -q --help" ;;
     community) opts="status on off serve --port --offline --quiet -q --home --help" ;;
-    cursor) opts="status connect disconnect --quiet -q --home --help" ;;
+    cursor) opts="status connect disconnect backfill --from --to --json --quiet -q --home --help" ;;
     pricing) opts="--vendor --model --json --usage --width --ascii --no-color --quiet -q --help" ;;
     completion) opts="bash zsh fish powershell --quiet -q --help" ;;
     login) opts="--quiet -q --offline --home --help --no-sync" ;;

@@ -14,6 +14,7 @@ USAGE
   wheretoken [flags] uninstall   remove this binary
   wheretoken [flags] community [status|on|off|serve]
   wheretoken [flags] cursor [status|connect|disconnect]
+  wheretoken cursor backfill --from DATE --to DATE   measured attribution, inclusive UTC dates
   wheretoken [flags] pricing     built-in model price card with official sources
   wheretoken pricing --usage     your usage priced by the card (--today/--since/--from/--to/--offline)
   wheretoken [flags] login [--no-sync]  pair this device, then sync aggregated usage

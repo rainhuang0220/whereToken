@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -58,6 +59,8 @@ type App struct {
 	Sleep            func(time.Duration)
 	Creds            credstore.Store
 	RunCmd           func(name string, args ...string) error
+	// RunRefreshChild overrides the owned, deadline-bound refresh subprocess.
+	RunRefreshChild func(context.Context, string, []string) error
 	// RunCmdOutput is the stdout-capable command seam. Profile refresh
 	// uses it for launchctl so unit tests never spawn a real launchctl.
 	// When it is nil and RunCmd is set, RunCmd runs and stdout is empty.
@@ -379,7 +382,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		return ExitFail
 	}
 	if cached {
-		const msg = "缓存报告 · 本地索引数据（扫描时可能分批更新），非实时；最新用量可能滞后（wheretoken scan 可主动完整扫描）"
+		const msg = cachedReportNotice
 		if !slices.Contains(snap.Notes, msg) {
 			snap.Notes = append([]string{msg}, snap.Notes...)
 		}

@@ -70,8 +70,14 @@ func (a *App) refreshProgramPath() (string, error) {
 	if !brewManaged(exe) {
 		return exe, nil
 	}
+	prefix := strings.SplitN(filepath.ToSlash(exe), "/Cellar/wheretoken/", 2)[0]
+	// Prefer Homebrew's maintained entry points over a user alias that may
+	// still resolve to an installed older Cellar version after an upgrade.
+	candidates := []string{
+		filepath.Join(prefix, "bin", "wheretoken"),
+		filepath.Join(prefix, "opt", "wheretoken", "bin", "wheretoken"),
+	}
 	home, err := a.userHome()
-	var candidates []string
 	if err == nil && home != "" {
 		candidates = append(candidates, filepath.Join(home, ".local", "bin", "wheretoken"))
 	}
@@ -88,9 +94,21 @@ func chooseRefreshProgram(resolved string, candidates []string) (string, error) 
 		}
 		return resolved, nil
 	}
+	// A stale manual install can shadow brew on PATH. Resolve candidates
+	// to this Homebrew prefix and formula, allowing the version to change
+	// after brew upgrade has removed the running process's old Cellar path.
+	formulaRoot := strings.SplitN(filepath.ToSlash(resolved), "/Cellar/wheretoken/", 2)[0] + "/Cellar/wheretoken"
+	if canonical, err := filepath.EvalSymlinks(formulaRoot); err == nil {
+		formulaRoot = filepath.ToSlash(canonical)
+	}
+	formulaRoot += "/"
 	for _, c := range candidates {
-		fi, err := os.Lstat(c)
-		if err != nil || fi.IsDir() {
+		target, err := filepath.EvalSymlinks(c)
+		if err != nil || !strings.HasPrefix(filepath.ToSlash(target), formulaRoot) {
+			continue
+		}
+		fi, err := os.Stat(target)
+		if err != nil || !fi.Mode().IsRegular() {
 			continue
 		}
 		return c, nil

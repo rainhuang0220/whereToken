@@ -62,6 +62,21 @@ the previous observation's earlier days and uses the new response inside
 the new window. A successful empty response is not a license to delete
 the previous positive observation during an outage.
 
+API observations now retain model-level accounting rows alongside the compatible
+daily component table. Recovery preserves original request timestamps, model,
+vendor, hashed request identity when provided, and a fixed endpoint provenance.
+Observations written by older versions remain readable without a migration;
+their missing model attribution is historical unallocated usage.
+
+`wheretoken cursor backfill --from YYYY-MM-DD --to YYYY-MM-DD` revisits inclusive
+UTC dates using the already linked account. Only complete API windows enter the
+backfill. Each day's four measured components must fit within that day's stored
+components. The remainder stays unallocated. A larger component or missing
+baseline day is rejected, not estimated. The overlay is bound to the exact
+baseline payload and checksum, repeated imports replace it, and new measured
+observations take precedence. Backfill does not change token totals, mark old
+windows newly complete, or grant a correction permit.
+
 The ledger stores counts, time, model, vendor, quality, derivation, and the
 stable identity. It does not store prompts, transcripts, paths, or credentials.
 A path-scoped request id is reduced to the source session id plus the suffix
