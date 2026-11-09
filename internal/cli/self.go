@@ -32,7 +32,13 @@ func (a *App) runUpdate(quiet bool) int {
 	}
 	if brewManaged(exe) {
 		if !quiet {
-			fmt.Fprintln(a.Stderr, "Homebrew install; running brew upgrade wheretoken")
+			fmt.Fprintln(a.Stderr, "Homebrew install; refreshing metadata, then running brew upgrade wheretoken")
+		}
+		// brew upgrade may skip automatic metadata refresh for up to a day.
+		// An explicit application update must see the current tap revision.
+		if err := a.runCmd("brew", "update", "--quiet"); err != nil {
+			fmt.Fprintln(a.Stderr, err.Error())
+			return ExitFail
 		}
 		if err := a.runCmd("brew", "upgrade", "wheretoken"); err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())

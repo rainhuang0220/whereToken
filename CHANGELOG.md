@@ -8,6 +8,9 @@
 - Bound automatic Profile refresh to five minutes in its own process, with at most three attempts per scheduled slot and 30-second/two-minute backoff. Idle clock checks do not scan sources. Homebrew upgrades rebuild agents using maintained command links. Explicit Cursor authorization enters the normal macOS prompt directly; unattended refresh still never opens Keychain.
 - Align local freshness checks with the longest scheduled gap and retain the UTC incident date on legacy alerts without duplicate issues. Reports identify exact unallocated historical tokens and their recorded UTC date range.
 - `pricing --usage` reads the same marked, read-only cache and linked Cursor history as ordinary reports when background refresh is enabled. Xiaomi MiMo model IDs now identify Xiaomi; their API-equivalent price remains unavailable without a public card entry.
+- Homebrew updates explicitly refresh metadata before upgrading whereToken; a failed refresh stops the update instead of silently using a stale tap.
+- Pages keeps its exact last verified snapshot while a newer hosted snapshot is pending, reporting a waiting state without publishing the pending data or falsely failing a normal midnight merge.
+- A timed-out upload confirmed as stored remains pending until the hosted response proves GitHub verified the same snapshot, date and total; storage alone no longer reports publication.
 
 ## 0.7.15 — 2026-11-09 (Alpha)
 

@@ -61,7 +61,8 @@ type ApplyResult struct {
 
 // ApplyRefresh fetches the hosted envelope, applies DecideRefresh, and
 // PUTs at most once. A transport error reads the envelope again: if that
-// snapshot id is already the local one, the attempt counts as published.
+// snapshot id is already local, the upload is confirmed as stored. GitHub
+// publication still requires the matching verified wall.
 func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bool, pub RefreshPublisher) ApplyResult {
 	if ctx.Err() != nil {
 		return ApplyResult{Decision: FailedRefresh(), Transport: true}
@@ -122,8 +123,17 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 	}
 	res, err := pub.Put(ctx, raw)
 	if err != nil || res.Status == 429 || res.Status >= 500 {
-		if stored(ctx, pub, local.SnapshotID) {
-			return attach(ApplyResult{Decision: d, Already: true})
+		if confirmed, ok := stored(ctx, pub, local.SnapshotID); ok {
+			wall := confirmed.Wall
+			verified := confirmed.WallKnown && wall.Proven && wall.SnapshotID == local.SnapshotID && !wall.PublishedAt.IsZero() &&
+				wall.AsOfDate == local.AsOfDate && wall.Total != nil && local.Periods.All.Totals.Total.Value != nil &&
+				*wall.Total == *local.Periods.All.Totals.Total.Value
+			if verified {
+				d = Decision{Phase: PhasePublished, Label: "主页已验证", Code: CodeVerified, Action: ActionNoChange}
+			} else if d.Action == ActionPublishNow {
+				d = Decision{Phase: PhaseWaiting, Label: "主页更新将重试", Code: CodePendingGitHub, Action: ActionRetryPending}
+			}
+			return ApplyResult{Decision: d, Already: true, Remote: &confirmed.Snapshot}
 		}
 		return attach(ApplyResult{Decision: FailedRefresh(), Transport: true})
 	}
@@ -180,12 +190,12 @@ func decisionAfterPut(d Decision, readme string) Decision {
 	}
 }
 
-func stored(ctx context.Context, pub RefreshPublisher, id string) bool {
+func stored(ctx context.Context, pub RefreshPublisher, id string) (RemoteView, bool) {
 	if id == "" || ctx.Err() != nil {
-		return false
+		return RemoteView{}, false
 	}
 	view, err := pub.Fetch(ctx)
-	return err == nil && view.Found && view.Snapshot.SnapshotID == id
+	return view, err == nil && view.Found && view.Snapshot.SnapshotID == id
 }
 
 // ParseLiveEnvelope reads the public profile GET body. Unknown fields are
