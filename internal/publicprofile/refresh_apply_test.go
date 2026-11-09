@@ -199,6 +199,9 @@ func TestApplyRefreshTransportRetriesOnceAndDoesNotRepostAStoredSnapshot(t *test
 	if done.Transport || !done.Already || committed.puts != 1 {
 		t.Fatalf("committed puts=%d already=%v transport=%v", committed.puts, done.Already, done.Transport)
 	}
+	if done.Decision.Phase != PhaseWaiting || done.Decision.Code != CodePendingGitHub {
+		t.Fatalf("stored projection is not proof of GitHub publication: %+v", done.Decision)
+	}
 	if committed.view.Snapshot.SnapshotID != local.SnapshotID {
 		t.Fatal("remote id did not advance on the committed put")
 	}
@@ -215,6 +218,24 @@ func TestApplyRefreshDoesNotPutWhenRemoteAlreadyHasTheSnapshot(t *testing.T) {
 	got := ApplyRefresh(context.Background(), local, now, false, pub)
 	if pub.puts != 0 || got.Decision.Publish {
 		t.Fatalf("puts=%d publish=%v %+v", pub.puts, got.Decision.Publish, got.Decision)
+	}
+}
+
+func TestStoredUploadCanConfirmTheMatchingVerifiedWall(t *testing.T) {
+	now := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)
+	remote := mustBuild(t, usageInput(now.Add(-2*time.Hour), time.UTC, 1000))
+	local := mustBuild(t, usageInput(now, time.UTC, 11000))
+	p := &fakePublisher{view: RemoteView{Found: true, Snapshot: remote}, putErr: errors.New("lost response"), commit: true}
+	p.fetchErr = func(n int) error {
+		if n == 2 {
+			p.view.WallKnown = true
+			p.view.Wall = WallFromSnapshot(p.view.Snapshot, now)
+		}
+		return nil
+	}
+	got := ApplyRefresh(context.Background(), local, now, false, p)
+	if !got.Already || got.Transport || got.Decision.Code != CodeVerified || got.Decision.Phase != PhasePublished {
+		t.Fatalf("verified wall ignored: %+v", got)
 	}
 }
 
