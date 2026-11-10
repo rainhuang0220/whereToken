@@ -77,7 +77,9 @@ No commit message records a rejected design. This paragraph is not a claim about
 
 `cachedReport` calls `metric.Aggregate` before it returns. `runReport` then calls `report.Build`, which aggregates the same events again for the table, calendar, and portrait. Both stay on the interactive path. The resident set is the decoded event slice, not a few index pages.
 
-The mascot added in the cached-report HUD does not do this work. It paints the existing sprite on stderr after 140ms, on a timer, and erases itself before stdout is written. `--json`, `--quiet`, a pipe, and `TERM=dumb` do not arm it.
+The mascot on a cached report is the same `scanHUD` sprite used during a full scan. `beginWait` arms it 140ms after the command starts. If the report finishes first, nothing is drawn. Otherwise the ticker repaints every 120ms with the caption `正在整理用量…` and no fake percentage. `finish` erases those rows before the table or JSON is written, so cursor-up cannot eat the result. `--json`, `--quiet`, a non-TTY stdout (a pipe), and `TERM=dumb` do not arm it. A full scan still uses the per-source captions (`正在读 …`) and is not replaced by the generic caption.
+
+`wheretoken scan` remains the command that parses sources. A cached report that misses the index falls back to that scan. The cache is not the live cloud total.
 
 ## Measurements
 
@@ -91,7 +93,12 @@ Each figure is 7 back-to-back runs. Median is the 4th sorted sample. With 7 samp
 | v0.7.18 `--json --quiet` | 4734 ms median, max 8478 ms | same as first byte | not separately sampled | not separately sampled | no |
 | v0.7.18 `wheretoken 2026-11-09 --quiet` | 2571 ms median, max 2696 ms | same as first byte | not separately sampled | not separately sampled | no |
 | Full scan of this machine's Cursor DB | 未测 | 未测 | 未测 | 未测 | would scan; not run |
-| Cached report after the mascot change | 见后续提交的复测 | | | | no |
+| Cached report with the mascot, interactive TTY, `TERM=xterm-256color` | 173 ms median first byte (5 runs: 166, 169, 173, 174, 192) | 5401 ms median total (max 8105 ms) | not sampled separately; quiet non-TTY of the same binary is below | not sampled | no |
+| Same binary, `--quiet`, stdout not a TTY | 4802 ms median total, which is also the first byte | 4802 ms | not sampled | not sampled | no |
+
+The mascot runs are a PTY with both stdout and stderr attached, so the first byte is the sprite, not the table. Those five runs painted the caption 36, 43, 44, 65, and 66 times, then printed the report. `--quiet` on the same binary, with no TTY, stays in the same multi-second band as v0.7.18. The mascot does not remove the aggregate. It moves the first visible byte from the end of the run to about 140ms plus scheduling.
+
+These two series were not paired against the v0.7.18 series on a quiet machine. Do not subtract 4583 from 5401 and call the difference the cost of the sprite.
 
 First stdout byte equals total time on v0.7.18 because `--quiet` prints nothing until aggregation finishes. That is the blank wait. A single idle sample earlier the same night, not part of this 7-run series, printed a human report in 2.27 s. The 7-run series is slower. Treat them as different conditions: the series allocates about 1.2 GiB, seven times, back to back. During the series the 17:00 local refresh slot was also due. After the series the Cursor total was still 9,136,507,911 and the unallocated line was still 1,184,162,802. The ledger file's size changed; the checked token anchors did not.
 
