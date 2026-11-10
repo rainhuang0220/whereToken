@@ -260,7 +260,7 @@ Normalized usage data
 CLI / Dashboard / JSON
 ```
 
-whereToken discovers usage information from supported coding agents, normalizes source-specific records into a common representation, and exposes the result through the CLI, dashboard, and JSON output. Later scans reuse a local file index as a cache only; `wheretoken rebuild` deletes that index and reads the agents again.
+whereToken discovers usage information from supported coding agents, normalizes source-specific records into a common representation, and exposes the result through the CLI, dashboard, and JSON output. When macOS Profile refresh is on, an ordinary report reads that normalized index instead of parsing every source again. The output is marked cached and is not a live cloud total. `wheretoken scan` is the full read. `wheretoken rebuild` deletes the index and reads the agents again. See [`docs/performance.md`](docs/performance.md).
 
 It distinguishes the **coding agent** you use from the **provider** that served the model.
 
@@ -306,6 +306,7 @@ whereToken is currently in **alpha**.
 ## Documentation
 
 - CLI reference: [`docs/wheretoken.1`](docs/wheretoken.1)
+- Performance: [`docs/performance.md`](docs/performance.md)
 - Data sources: [`docs/data-sources.md`](docs/data-sources.md)
 - Token accounting: [`docs/token-accounting.md`](docs/token-accounting.md)
 - Cost estimate: [`docs/cost.md`](docs/cost.md)

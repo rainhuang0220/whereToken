@@ -120,6 +120,41 @@ func TestScanHUDShowsChargeBar(t *testing.T) {
 	h.Clear()
 }
 
+func TestWaitHUDStaysHiddenWhenWorkFinishesFirst(t *testing.T) {
+	var buf bytes.Buffer
+	h := &scanHUD{w: &buf}
+	h.arm(200*time.Millisecond, scan.Progress{Label: reportWaitLabel, Status: scan.ProgressReading})
+	h.finish()
+	time.Sleep(280 * time.Millisecond)
+	if buf.Len() != 0 {
+		t.Fatalf("fast command flashed a mascot: %q", buf.String())
+	}
+}
+
+func TestWaitHUDAnimatesBeforeFinish(t *testing.T) {
+	var buf bytes.Buffer
+	h := &scanHUD{w: &buf}
+	h.arm(30*time.Millisecond, scan.Progress{Label: reportWaitLabel, Status: scan.ProgressReading})
+	time.Sleep(700 * time.Millisecond)
+	h.finish()
+	// The ticker writes this buffer. Read it only after finish returns.
+	got := buf.String()
+	if !strings.Contains(got, reportWaitLabel) || !strings.Contains(got, "▄██████▄") {
+		t.Fatalf("mascot missing:\n%s", got)
+	}
+	if strings.Count(got, reportWaitLabel) < 2 {
+		t.Fatalf("expected several frames, got %d", strings.Count(got, reportWaitLabel))
+	}
+	if !strings.Contains(got, "挠头中") || !strings.Contains(got, "拨珠中") {
+		t.Fatalf("mood did not advance:\n%s", got)
+	}
+	n := buf.Len()
+	time.Sleep(250 * time.Millisecond)
+	if buf.Len() != n {
+		t.Fatal("HUD wrote after finish")
+	}
+}
+
 func TestScanHUDClearIsIdempotent(t *testing.T) {
 	var buf bytes.Buffer
 	h := &scanHUD{w: &buf}
