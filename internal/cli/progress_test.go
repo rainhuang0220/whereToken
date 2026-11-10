@@ -136,8 +136,9 @@ func TestWaitHUDAnimatesBeforeFinish(t *testing.T) {
 	h := &scanHUD{w: &buf}
 	h.arm(30*time.Millisecond, scan.Progress{Label: reportWaitLabel, Status: scan.ProgressReading})
 	time.Sleep(700 * time.Millisecond)
-	got := buf.String()
 	h.finish()
+	// The ticker writes this buffer. Read it only after finish returns.
+	got := buf.String()
 	if !strings.Contains(got, reportWaitLabel) || !strings.Contains(got, "▄██████▄") {
 		t.Fatalf("mascot missing:\n%s", got)
 	}
