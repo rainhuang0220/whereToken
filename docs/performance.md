@@ -104,6 +104,21 @@ First stdout byte equals total time on v0.7.18 because `--quiet` prints nothing 
 
 Do not read the missing full-scan row as "the cache is N times faster than parsing." Those are different operations. The cache avoids the parse. It does not make the parse that `wheretoken scan` still does any cheaper except for the v0.7.14 `GLOB` plan, which was not re-benchmarked here.
 
+## Paired check on the release candidate
+
+Same Apple M4, same local ledger, same afternoon. Five runs of the candidate binary built from `1cfc2b2`, through a PTY with `TERM=xterm-256color`. Quiet runs are the same binary with `--quiet` (no mascot). Median is the middle of five. P95 is the highest of five. Cursor's reported total stayed 9,136,507,911.
+
+| Path | First byte median / P95 | Total median / P95 | Mascot frames | Scans Cursor? |
+|---|---|---|---|---|
+| `wheretoken` | 161 ms / 196 ms | 4564 ms / 5246 ms | 36–42 | no |
+| `wheretoken --quiet` | 4538 ms / 4864 ms | 4570 ms / 4890 ms | 0 | no |
+| `wheretoken 2026-11-09` | 161 ms / 161 ms | 2655 ms / 2747 ms | 20–22 | no |
+| `wheretoken 2026-11-09 --quiet` | 2808 ms / 2944 ms | 2853 ms / 2980 ms | 0 | no |
+| `wheretoken pricing --usage` | 161 ms / 165 ms | 4307 ms / 4434 ms | 34–36 | no |
+| `wheretoken pricing --usage --quiet` | 4247 ms / 4302 ms | 4271 ms / 4338 ms | 0 | no |
+
+The animated default total (4564 ms) matches the quiet total (4570 ms). The sprite changes when the first byte appears. It does not shorten the aggregate. CPU and RSS were not sampled again in this pair; the earlier v0.7.18 `--quiet` series remains the RSS figure (1.18 GiB median).
+
 ## Remaining bottlenecks
 
 - Two aggregates per cached report (`cachedReport` and `report.Build`).
