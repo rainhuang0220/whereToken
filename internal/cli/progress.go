@@ -13,6 +13,12 @@ import (
 
 const hudTick = 120 * time.Millisecond
 
+// hudAppearAfter skips the mascot when the command finishes almost
+// immediately. It is not a sleep added to the report.
+const hudAppearAfter = 140 * time.Millisecond
+
+const reportWaitLabel = "正在整理用量…"
+
 type scanHUD struct {
 	w     io.Writer
 	lines int
@@ -26,6 +32,12 @@ type scanHUD struct {
 	hasLast bool
 	stop    chan struct{}
 	ticking bool
+
+	closed bool
+	armed  bool
+	early  chan struct{}
+	wg     sync.WaitGroup
+	done   sync.Once
 }
 
 func (h *scanHUD) clock() time.Time {
@@ -41,6 +53,9 @@ func (h *scanHUD) Show(p scan.Progress) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.closed {
+		return
+	}
 	if h.start.IsZero() {
 		h.start = h.clock()
 	}
@@ -51,9 +66,51 @@ func (h *scanHUD) Show(p scan.Progress) {
 }
 
 func (h *scanHUD) Clear() {
+	h.finish()
+}
+
+// arm shows p after delay unless finish runs first. A fast command therefore
+// does not flash a one-frame mascot. The ticker keeps the existing sprite
+// moving until finish.
+func (h *scanHUD) arm(delay time.Duration, p scan.Progress) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.stopTickerLocked()
+	if h.armed || h.closed {
+		return
+	}
+	h.armed = true
+	h.early = make(chan struct{})
+	early := h.early
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-early:
+		case <-timer.C:
+			h.Show(p)
+		}
+	}()
+}
+
+// finish stops the ticker, erases any painted rows, and waits until the
+// delayed first frame can no longer write. A second call does nothing.
+func (h *scanHUD) finish() {
+	h.done.Do(func() {
+		h.mu.Lock()
+		if h.early != nil {
+			close(h.early)
+		}
+		h.closed = true
+		h.stopTickerLocked()
+		h.eraseLocked()
+		h.mu.Unlock()
+		h.wg.Wait()
+	})
+}
+
+func (h *scanHUD) eraseLocked() {
 	if h.lines <= 0 {
 		return
 	}
@@ -116,6 +173,27 @@ func (h *scanHUD) paintLocked() {
 	}
 	block := table.SpriteHUD(table.SpriteTick(elapsed), table.SpriteMoodTick(elapsed), cap, h.last.Index, h.last.Total, h.ascii, h.color)
 	h.writeBlockLocked(block)
+}
+
+// beginWait arms the existing scan mascot for a cached report or a price
+// table. Quiet, JSON, dumb terminals, and any non-interactive stdout stay
+// silent. The returned stop is idempotent.
+func (a *App) beginWait(flags Flags, label string) func() {
+	if flags.Quiet || flags.JSON || !a.StderrTTY || !a.StdoutTTY {
+		return func() {}
+	}
+	if a.LookupEnv != nil && a.LookupEnv("TERM") == "dumb" {
+		return func() {}
+	}
+	ascii := flags.ASCII || table.UseASCII(false, a.GOOS, a.LookupEnv)
+	h := &scanHUD{
+		w:     a.Stderr,
+		ascii: ascii,
+		color: table.UseColor(flags.NoColor, a.StderrTTY, a.LookupEnv),
+		now:   a.Now,
+	}
+	h.arm(hudAppearAfter, scan.Progress{Label: label, Status: scan.ProgressReading})
+	return h.finish
 }
 
 func (h *scanHUD) writeBlockLocked(block string) {

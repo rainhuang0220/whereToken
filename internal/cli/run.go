@@ -86,10 +86,13 @@ type App struct {
 	// deterministic usage portrait. Defaults to profile.IdentityFor; tests
 	// pin a constant so runs stay hermetic.
 	PortraitSeed func(adapter.Home) string
-	GOOS         string
-	GOARCH       string
-	StdoutTTY    bool
-	StderrTTY    bool
+	// Hold runs after usage is loaded and before the report is rendered.
+	// Tests use it to observe the mascot. Production leaves it nil.
+	Hold      func()
+	GOOS      string
+	GOARCH    string
+	StdoutTTY bool
+	StderrTTY bool
 }
 
 func (a *App) Run() int {
@@ -347,9 +350,13 @@ func restoreBoundCursorHistoryForReport(home adapter.Home, res *scan.Result) {
 }
 
 func (a *App) runReport(flags Flags, home adapter.Home) int {
+	stop := a.beginWait(flags, reportWaitLabel)
+	defer func() { stop() }()
 	res, cached := a.cachedReport(home)
 	if !cached {
+		stop()
 		res = a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+		stop = a.beginWait(flags, reportWaitLabel)
 	}
 	// A test-provided or embedded scan is self-contained. Never read the
 	// surrounding machine's real ledger to supplement a mock result.
@@ -373,6 +380,9 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		Discovered: res.Summary.BySource,
 		Seed:       a.PortraitSeed(home),
 	}
+	if a.Hold != nil {
+		a.Hold()
+	}
 	snap, err := report.Build(res.Events, res.Turns, res.Errors, fil, a.Now(), a.Loc)
 	if err != nil {
 		fmt.Fprintln(a.Stderr, err.Error())
@@ -394,6 +404,7 @@ func (a *App) runReport(flags Flags, home adapter.Home) int {
 		}
 	}
 	a.attachCommunity(&snap, flags, home, res.Events)
+	stop()
 	if flags.JSON {
 		if err := report.WriteJSON(a.Stdout, snap); err != nil {
 			fmt.Fprintln(a.Stderr, err.Error())

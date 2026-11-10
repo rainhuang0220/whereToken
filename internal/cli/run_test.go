@@ -658,6 +658,73 @@ func TestRunASCIIMascotOnProgress(t *testing.T) {
 	}
 }
 
+func TestCachedReportShowsMascotWhileRendering(t *testing.T) {
+	app, out, errb := testApp(nil)
+	app.StdoutTTY = true
+	app.StderrTTY = true
+	app.Hold = func() { time.Sleep(450 * time.Millisecond) }
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("code=%d %s", code, errb.String())
+	}
+	if !strings.Contains(errb.String(), reportWaitLabel) || !strings.Contains(errb.String(), "▄██████▄") {
+		t.Fatalf("stderr:\n%s", errb.String())
+	}
+	if strings.Contains(out.String(), reportWaitLabel) {
+		t.Fatal("animation leaked into the report")
+	}
+	if !strings.Contains(out.String(), "whereToken") {
+		t.Fatal("report missing")
+	}
+}
+
+func TestCachedReportMascotStaysOffForMachineOutput(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		out  bool
+		err  bool
+	}{
+		{args: []string{"--quiet"}, err: true, out: true},
+		{args: []string{"--json"}, err: true, out: true},
+	} {
+		app, stdout, stderr := testApp(tc.args)
+		app.StdoutTTY = tc.out
+		app.StderrTTY = tc.err
+		app.Hold = func() { time.Sleep(220 * time.Millisecond) }
+		if code := app.Run(); code != ExitOK {
+			t.Fatalf("%v code=%d %s", tc.args, code, stderr.String())
+		}
+		if strings.Contains(stderr.String(), reportWaitLabel) || strings.Contains(stdout.String(), reportWaitLabel) {
+			t.Fatalf("%v leaked animation\nstderr=%s", tc.args, stderr.String())
+		}
+		if len(tc.args) == 1 && tc.args[0] == "--json" && !strings.HasPrefix(stdout.String(), "{") {
+			t.Fatalf("json stdout: %s", stdout.String())
+		}
+	}
+	app, stdout, stderr := testApp(nil)
+	app.StderrTTY = true
+	app.StdoutTTY = false
+	app.Hold = func() { time.Sleep(220 * time.Millisecond) }
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("pipe code=%d %s", code, stderr.String())
+	}
+	if strings.Contains(stderr.String(), reportWaitLabel) || strings.Contains(stdout.String(), reportWaitLabel) {
+		t.Fatal("piped stdout still showed the mascot")
+	}
+	app, _, stderr = testApp([]string{"--ascii"})
+	app.StdoutTTY = true
+	app.StderrTTY = true
+	app.Hold = func() { time.Sleep(300 * time.Millisecond) }
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("ascii code=%d %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "+------+") {
+		t.Fatalf("ascii mascot:\n%s", stderr.String())
+	}
+	if strings.ContainsAny(stderr.String(), "▄█▀▌") {
+		t.Fatal("ascii mascot leaked unicode")
+	}
+}
+
 func TestRunSilentProgressWhenNotTTY(t *testing.T) {
 	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
 	app, _, errb := testApp(nil)

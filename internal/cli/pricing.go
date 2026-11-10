@@ -239,9 +239,13 @@ func (a *App) writePricingJSON(payload pricingJSON) error {
 // prices every normalized model against the same public card the catalog
 // prints. Unpriced usage stays unavailable — it is never rewritten as $0.
 func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
+	stop := a.beginWait(flags, reportWaitLabel)
+	defer func() { stop() }()
 	res, cached := a.cachedReport(home)
 	if !cached {
+		stop()
 		res = a.doScan(home, flags.Quiet, flags.Offline, flags.ASCII)
+		stop = a.beginWait(flags, reportWaitLabel)
 	}
 	if a.Scan == nil {
 		restoreBoundCursorHistoryForReport(home, &res)
@@ -265,6 +269,7 @@ func (a *App) runPricingUsage(flags Flags, home adapter.Home) int {
 	}
 	sum := metric.AggregateAt(events, nil, a.Now(), a.Loc)
 	rows := filterUsageModels(sum.ByModel, flags.Vendor, modelQuery)
+	stop()
 	if flags.JSON {
 		payload := catalogPayload(collectPricing(flags.Vendor, flags.Model))
 		payload.Usage = usagePayload(rows, win.Label)
