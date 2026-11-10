@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.19 — 2026-11-10 (Alpha)
+
 - Interactive reports and `pricing --usage` show the existing mascot on stderr while a cached read is still running. The first frame waits 140ms so a fast command does not flash. `--json`, `--quiet`, pipes, and `TERM=dumb` stay clean. The mascot does not change token totals or avoid a full scan when the cache is missing.
 
 ## 0.7.18 — 2026-11-10 (Alpha)
