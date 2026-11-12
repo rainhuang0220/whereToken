@@ -1,8 +1,8 @@
 {
   "schema": "wheretoken.public-profile",
   "schema_version": 2,
-  "snapshot_id": "sha256:af4c42aaa60b59e7cc92aa7abfc4aa46d27982b2e2892984c40c482c51d336e2",
-  "generated_at": "2026-11-12T02:32:19Z",
+  "snapshot_id": "sha256:bea5f9269d432b1a1a77e46b7b09b934498e057e344496c8d3ca1715faad48d5",
+  "generated_at": "2026-11-12T09:02:42Z",
   "as_of_date": "2026-11-12",
   "owner_utc_offset_minutes": 480,
   "producer": {
@@ -35,13 +35,13 @@
       },
       "totals": {
         "miss": {
-          "value": 1495640608,
+          "value": 1500213636,
           "display": "1.5B",
           "status": "partial"
         },
         "cache_read": {
-          "value": 18589387519,
-          "display": "18.59B",
+          "value": 18635231743,
+          "display": "18.64B",
           "status": "partial"
         },
         "cache_create": {
@@ -50,28 +50,28 @@
           "status": "partial"
         },
         "output": {
-          "value": 155059685,
-          "display": "155.06M",
+          "value": 156586743,
+          "display": "156.59M",
           "status": "partial"
         },
         "total": {
-          "value": 20348116165,
-          "display": "20.35B",
+          "value": 20400060475,
+          "display": "20.4B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 92.05831488369115,
+        "value": 92.0555038611888,
         "display": "92.1%"
       },
       "requests": {
-        "value": 331263,
-        "display": "331263",
+        "value": 331424,
+        "display": "331424",
         "status": "available"
       },
       "user_turns": {
-        "value": 6579,
-        "display": "6579",
+        "value": 6600,
+        "display": "6600",
         "status": "available"
       },
       "active_days": {
@@ -137,14 +137,14 @@
               "status": "partial"
             }
           },
-          "share": "44.9%",
+          "share": "44.8%",
           "hit_rate": {
             "value": 90.28741750368977,
             "display": "90.3%"
           },
           "requests": {
-            "value": 302409,
-            "display": "302409",
+            "value": 302418,
+            "display": "302418",
             "status": "available"
           },
           "quality": "degraded",
@@ -164,13 +164,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 515540032,
-              "display": "515.54M",
+              "value": 519515545,
+              "display": "519.52M",
               "status": "available"
             },
             "cache_read": {
-              "value": 6283903104,
-              "display": "6.28B",
+              "value": 6316090752,
+              "display": "6.32B",
               "status": "available"
             },
             "cache_create": {
@@ -179,24 +179,24 @@
               "status": "available"
             },
             "output": {
-              "value": 56302145,
-              "display": "56.3M",
+              "value": 57698974,
+              "display": "57.7M",
               "status": "available"
             },
             "total": {
-              "value": 6855745281,
-              "display": "6.86B",
+              "value": 6893305271,
+              "display": "6.89B",
               "status": "available"
             }
           },
-          "share": "33.7%",
+          "share": "33.8%",
           "hit_rate": {
-            "value": 92.4179080302849,
+            "value": 92.3998615129721,
             "display": "92.4%"
           },
           "requests": {
-            "value": 1738,
-            "display": "1738",
+            "value": 1749,
+            "display": "1749",
             "status": "available"
           },
           "quality": "authoritative",
@@ -212,13 +212,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 66826504,
-              "display": "66.83M",
+              "value": 67218186,
+              "display": "67.22M",
               "status": "available"
             },
             "cache_read": {
-              "value": 2799702184,
-              "display": "2.8B",
+              "value": 2808352424,
+              "display": "2.81B",
               "status": "available"
             },
             "cache_create": {
@@ -227,24 +227,24 @@
               "status": "available"
             },
             "output": {
-              "value": 16229164,
-              "display": "16.23M",
+              "value": 16315106,
+              "display": "16.32M",
               "status": "available"
             },
             "total": {
-              "value": 2882757852,
-              "display": "2.88B",
+              "value": 2891885716,
+              "display": "2.89B",
               "status": "available"
             }
           },
           "share": "14.2%",
           "hit_rate": {
-            "value": 97.66873067484892,
+            "value": 97.66244008176172,
             "display": "97.7%"
           },
           "requests": {
-            "value": 16750,
-            "display": "16750",
+            "value": 16856,
+            "display": "16856",
             "status": "available"
           },
           "quality": "authoritative",
@@ -260,13 +260,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 13857747,
-              "display": "13.86M",
+              "value": 14063580,
+              "display": "14.06M",
               "status": "available"
             },
             "cache_read": {
-              "value": 977775709,
-              "display": "977.78M",
+              "value": 982782045,
+              "display": "982.78M",
               "status": "available"
             },
             "cache_create": {
@@ -275,24 +275,24 @@
               "status": "available"
             },
             "output": {
-              "value": 3186199,
-              "display": "3.19M",
+              "value": 3230486,
+              "display": "3.23M",
               "status": "available"
             },
             "total": {
-              "value": 994819655,
-              "display": "994.82M",
+              "value": 1000076111,
+              "display": "1B",
               "status": "available"
             }
           },
           "share": "4.9%",
           "hit_rate": {
-            "value": 98.60253333364743,
+            "value": 98.5891917818268,
             "display": "98.6%"
           },
           "requests": {
-            "value": 5029,
-            "display": "5029",
+            "value": 5064,
+            "display": "5064",
             "status": "available"
           },
           "quality": "authoritative",
@@ -503,13 +503,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 1105644726,
+              "value": 1109620239,
               "display": "1.11B",
               "status": "partial"
             },
             "cache_read": {
-              "value": 11389446612,
-              "display": "11.39B",
+              "value": 11421634260,
+              "display": "11.42B",
               "status": "partial"
             },
             "cache_create": {
@@ -518,24 +518,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 107066995,
-              "display": "107.07M",
+              "value": 108463824,
+              "display": "108.46M",
               "status": "partial"
             },
             "total": {
-              "value": 12618656442,
-              "display": "12.62B",
+              "value": 12656216432,
+              "display": "12.66B",
               "status": "partial"
             }
           },
           "share": "62.0%",
           "hit_rate": {
-            "value": 91.03117281978058,
+            "value": 91.025338296182,
             "display": "91.0%"
           },
           "requests": {
-            "value": 230608,
-            "display": "230608",
+            "value": 230619,
+            "display": "230619",
             "status": "available"
           },
           "quality": "degraded",
@@ -551,13 +551,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 71267898,
-              "display": "71.27M",
+              "value": 71659580,
+              "display": "71.66M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 2902472310,
-              "display": "2.9B",
+              "value": 2911122550,
+              "display": "2.91B",
               "status": "partial"
             },
             "cache_create": {
@@ -566,24 +566,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 16821624,
-              "display": "16.82M",
+              "value": 16907566,
+              "display": "16.91M",
               "status": "partial"
             },
             "total": {
-              "value": 2994504386,
-              "display": "2.99B",
+              "value": 3003632250,
+              "display": "3B",
               "status": "partial"
             }
           },
           "share": "14.7%",
           "hit_rate": {
-            "value": 97.4741952715781,
+            "value": 97.46872772020122,
             "display": "97.5%"
           },
           "requests": {
-            "value": 17302,
-            "display": "17302",
+            "value": 17408,
+            "display": "17408",
             "status": "available"
           },
           "quality": "degraded",
@@ -624,7 +624,7 @@
               "status": "partial"
             }
           },
-          "share": "11.4%",
+          "share": "11.3%",
           "hit_rate": {
             "value": 91.23756315312586,
             "display": "91.2%"
@@ -647,13 +647,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 18613903,
-              "display": "18.61M",
+              "value": 18819736,
+              "display": "18.82M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 1024856648,
-              "display": "1.02B",
+              "value": 1029862984,
+              "display": "1.03B",
               "status": "partial"
             },
             "cache_create": {
@@ -662,24 +662,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 3764029,
-              "display": "3.76M",
+              "value": 3808316,
+              "display": "3.81M",
               "status": "partial"
             },
             "total": {
-              "value": 1054678670,
-              "display": "1.05B",
+              "value": 1059935126,
+              "display": "1.06B",
               "status": "partial"
             }
           },
           "share": "5.2%",
           "hit_rate": {
-            "value": 97.52044628713095,
+            "value": 97.51319389382796,
             "display": "97.5%"
           },
           "requests": {
-            "value": 6094,
-            "display": "6094",
+            "value": 6129,
+            "display": "6129",
             "status": "available"
           },
           "quality": "degraded",
@@ -720,14 +720,14 @@
               "status": "partial"
             }
           },
-          "share": "4.9%",
+          "share": "4.8%",
           "hit_rate": {
             "value": 88.30111525331036,
             "display": "88.3%"
           },
           "requests": {
-            "value": 11401,
-            "display": "11401",
+            "value": 11410,
+            "display": "11410",
             "status": "available"
           },
           "quality": "degraded",
@@ -988,13 +988,13 @@
       },
       "totals": {
         "miss": {
-          "value": 805922,
-          "display": "805.92K",
+          "value": 5378950,
+          "display": "5.38M",
           "status": "available"
         },
         "cache_read": {
-          "value": 23129472,
-          "display": "23.13M",
+          "value": 68973696,
+          "display": "68.97M",
           "status": "available"
         },
         "cache_create": {
@@ -1003,28 +1003,28 @@
           "status": "available"
         },
         "output": {
-          "value": 179646,
-          "display": "179.65K",
+          "value": 1706704,
+          "display": "1.71M",
           "status": "available"
         },
         "total": {
-          "value": 24115040,
-          "display": "24.12M",
+          "value": 76059350,
+          "display": "76.06M",
           "status": "available"
         }
       },
       "hit_rate": {
-        "value": 96.63292778886364,
-        "display": "96.6%"
+        "value": 92.76562396985845,
+        "display": "92.8%"
       },
       "requests": {
-        "value": 300,
-        "display": "300",
+        "value": 461,
+        "display": "461",
         "status": "available"
       },
       "user_turns": {
-        "value": 6,
-        "display": "6",
+        "value": 27,
+        "display": "27",
         "status": "available"
       },
       "active_days": {
@@ -1045,32 +1045,33 @@
       "peak": {
         "date": "2026-11-12",
         "total": {
-          "value": 24115040,
-          "display": "24.12M",
+          "value": 76059350,
+          "display": "76.06M",
           "status": "available"
         },
         "scope": "today"
       },
       "portrait": {
         "state": "ok",
-        "primary": "高频请求节奏",
+        "primary": "主力生产工具",
         "tags": [
-          "缓存读取为主"
+          "多平台实践",
+          "缓存命中拉满"
         ]
       },
       "by_agent": [
         {
-          "id": "kimi",
-          "label": "Kimi Code",
+          "id": "grok",
+          "label": "Grok",
           "totals": {
             "miss": {
-              "value": 716036,
-              "display": "716.04K",
+              "value": 3975513,
+              "display": "3.98M",
               "status": "available"
             },
             "cache_read": {
-              "value": 19665152,
-              "display": "19.67M",
+              "value": 32187648,
+              "display": "32.19M",
               "status": "available"
             },
             "cache_create": {
@@ -1079,24 +1080,72 @@
               "status": "available"
             },
             "output": {
-              "value": 151659,
-              "display": "151.66K",
+              "value": 1396829,
+              "display": "1.4M",
               "status": "available"
             },
             "total": {
-              "value": 20532847,
-              "display": "20.53M",
+              "value": 37559990,
+              "display": "37.56M",
               "status": "available"
             }
           },
-          "share": "85.1%",
+          "share": "49.4%",
           "hit_rate": {
-            "value": 96.48677986778789,
-            "display": "96.5%"
+            "value": 89.00673256964456,
+            "display": "89.0%"
           },
           "requests": {
-            "value": 153,
-            "display": "153",
+            "value": 11,
+            "display": "11",
+            "status": "available"
+          },
+          "quality": "authoritative",
+          "coverage": {
+            "tokens": "available",
+            "requests": "available",
+            "token_source": "derived",
+            "token_window": null
+          }
+        },
+        {
+          "id": "kimi",
+          "label": "Kimi Code",
+          "totals": {
+            "miss": {
+              "value": 921869,
+              "display": "921.87K",
+              "status": "available"
+            },
+            "cache_read": {
+              "value": 24671488,
+              "display": "24.67M",
+              "status": "available"
+            },
+            "cache_create": {
+              "value": 0,
+              "display": "0",
+              "status": "available"
+            },
+            "output": {
+              "value": 195946,
+              "display": "195.95K",
+              "status": "available"
+            },
+            "total": {
+              "value": 25789303,
+              "display": "25.79M",
+              "status": "available"
+            }
+          },
+          "share": "33.9%",
+          "hit_rate": {
+            "value": 96.39801453166147,
+            "display": "96.4%"
+          },
+          "requests": {
+            "value": 188,
+            "display": "188",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1112,13 +1161,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 89886,
-              "display": "89.89K",
+              "value": 481568,
+              "display": "481.57K",
               "status": "available"
             },
             "cache_read": {
-              "value": 3464320,
-              "display": "3.46M",
+              "value": 12114560,
+              "display": "12.11M",
               "status": "available"
             },
             "cache_create": {
@@ -1127,24 +1176,24 @@
               "status": "available"
             },
             "output": {
-              "value": 27987,
-              "display": "27.99K",
+              "value": 113929,
+              "display": "113.93K",
               "status": "available"
             },
             "total": {
-              "value": 3582193,
-              "display": "3.58M",
+              "value": 12710057,
+              "display": "12.71M",
               "status": "available"
             }
           },
-          "share": "14.9%",
+          "share": "16.7%",
           "hit_rate": {
-            "value": 97.47099633504642,
-            "display": "97.5%"
+            "value": 96.17685688808497,
+            "display": "96.2%"
           },
           "requests": {
-            "value": 41,
-            "display": "41",
+            "value": 147,
+            "display": "147",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1191,8 +1240,8 @@
             "display": "—"
           },
           "requests": {
-            "value": 106,
-            "display": "106",
+            "value": 115,
+            "display": "115",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1210,17 +1259,17 @@
       ],
       "by_vendor": [
         {
-          "id": "moonshot",
-          "label": "Moonshot",
+          "id": "xai",
+          "label": "xAI",
           "totals": {
             "miss": {
-              "value": 716036,
-              "display": "716.04K",
+              "value": 3975513,
+              "display": "3.98M",
               "status": "available"
             },
             "cache_read": {
-              "value": 19665152,
-              "display": "19.67M",
+              "value": 32187648,
+              "display": "32.19M",
               "status": "available"
             },
             "cache_create": {
@@ -1229,24 +1278,72 @@
               "status": "available"
             },
             "output": {
-              "value": 151659,
-              "display": "151.66K",
+              "value": 1396829,
+              "display": "1.4M",
               "status": "available"
             },
             "total": {
-              "value": 20532847,
-              "display": "20.53M",
+              "value": 37559990,
+              "display": "37.56M",
               "status": "available"
             }
           },
-          "share": "85.1%",
+          "share": "49.4%",
           "hit_rate": {
-            "value": 96.48677986778789,
-            "display": "96.5%"
+            "value": 89.00673256964456,
+            "display": "89.0%"
           },
           "requests": {
-            "value": 153,
-            "display": "153",
+            "value": 11,
+            "display": "11",
+            "status": "available"
+          },
+          "quality": "authoritative",
+          "coverage": {
+            "tokens": "available",
+            "requests": "available",
+            "token_source": "local",
+            "token_window": null
+          }
+        },
+        {
+          "id": "moonshot",
+          "label": "Moonshot",
+          "totals": {
+            "miss": {
+              "value": 921869,
+              "display": "921.87K",
+              "status": "available"
+            },
+            "cache_read": {
+              "value": 24671488,
+              "display": "24.67M",
+              "status": "available"
+            },
+            "cache_create": {
+              "value": 0,
+              "display": "0",
+              "status": "available"
+            },
+            "output": {
+              "value": 195946,
+              "display": "195.95K",
+              "status": "available"
+            },
+            "total": {
+              "value": 25789303,
+              "display": "25.79M",
+              "status": "available"
+            }
+          },
+          "share": "33.9%",
+          "hit_rate": {
+            "value": 96.39801453166147,
+            "display": "96.4%"
+          },
+          "requests": {
+            "value": 188,
+            "display": "188",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1262,13 +1359,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 89886,
-              "display": "89.89K",
+              "value": 481568,
+              "display": "481.57K",
               "status": "available"
             },
             "cache_read": {
-              "value": 3464320,
-              "display": "3.46M",
+              "value": 12114560,
+              "display": "12.11M",
               "status": "available"
             },
             "cache_create": {
@@ -1277,24 +1374,24 @@
               "status": "available"
             },
             "output": {
-              "value": 27987,
-              "display": "27.99K",
+              "value": 113929,
+              "display": "113.93K",
               "status": "available"
             },
             "total": {
-              "value": 3582193,
-              "display": "3.58M",
+              "value": 12710057,
+              "display": "12.71M",
               "status": "available"
             }
           },
-          "share": "14.9%",
+          "share": "16.7%",
           "hit_rate": {
-            "value": 97.47099633504642,
-            "display": "97.5%"
+            "value": 96.17685688808497,
+            "display": "96.2%"
           },
           "requests": {
-            "value": 41,
-            "display": "41",
+            "value": 147,
+            "display": "147",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1341,8 +1438,8 @@
             "display": "—"
           },
           "requests": {
-            "value": 106,
-            "display": "106",
+            "value": 115,
+            "display": "115",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1364,13 +1461,13 @@
       },
       "totals": {
         "miss": {
-          "value": 12346699,
-          "display": "12.35M",
+          "value": 16919727,
+          "display": "16.92M",
           "status": "partial"
         },
         "cache_read": {
-          "value": 564551342,
-          "display": "564.55M",
+          "value": 610395566,
+          "display": "610.4M",
           "status": "partial"
         },
         "cache_create": {
@@ -1379,28 +1476,28 @@
           "status": "partial"
         },
         "output": {
-          "value": 4315580,
-          "display": "4.32M",
+          "value": 5842638,
+          "display": "5.84M",
           "status": "partial"
         },
         "total": {
-          "value": 583375234,
-          "display": "583.38M",
+          "value": 635319544,
+          "display": "635.32M",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 97.49450477169663,
-        "display": "97.5%"
+        "value": 96.96869895970417,
+        "display": "97.0%"
       },
       "requests": {
-        "value": 4045,
-        "display": "4045",
+        "value": 4206,
+        "display": "4206",
         "status": "available"
       },
       "user_turns": {
-        "value": 108,
-        "display": "108",
+        "value": 129,
+        "display": "129",
         "status": "available"
       },
       "active_days": {
@@ -1441,13 +1538,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 4642359,
-              "display": "4.64M",
+              "value": 5034041,
+              "display": "5.03M",
               "status": "available"
             },
             "cache_read": {
-              "value": 359627648,
-              "display": "359.63M",
+              "value": 368277888,
+              "display": "368.28M",
               "status": "available"
             },
             "cache_create": {
@@ -1456,24 +1553,72 @@
               "status": "available"
             },
             "output": {
-              "value": 2663406,
-              "display": "2.66M",
+              "value": 2749348,
+              "display": "2.75M",
               "status": "available"
             },
             "total": {
-              "value": 366933413,
-              "display": "366.93M",
+              "value": 376061277,
+              "display": "376.06M",
               "status": "available"
             }
           },
-          "share": "62.9%",
+          "share": "59.2%",
           "hit_rate": {
-            "value": 98.72557199033957,
+            "value": 98.65151884819625,
             "display": "98.7%"
           },
           "requests": {
-            "value": 1449,
-            "display": "1449",
+            "value": 1555,
+            "display": "1555",
+            "status": "available"
+          },
+          "quality": "authoritative",
+          "coverage": {
+            "tokens": "available",
+            "requests": "available",
+            "token_source": "derived",
+            "token_window": null
+          }
+        },
+        {
+          "id": "grok",
+          "label": "Grok",
+          "totals": {
+            "miss": {
+              "value": 6806750,
+              "display": "6.81M",
+              "status": "available"
+            },
+            "cache_read": {
+              "value": 97191552,
+              "display": "97.19M",
+              "status": "available"
+            },
+            "cache_create": {
+              "value": 0,
+              "display": "0",
+              "status": "available"
+            },
+            "output": {
+              "value": 2247828,
+              "display": "2.25M",
+              "status": "available"
+            },
+            "total": {
+              "value": 106246130,
+              "display": "106.25M",
+              "status": "available"
+            }
+          },
+          "share": "16.7%",
+          "hit_rate": {
+            "value": 93.45494121625178,
+            "display": "93.5%"
+          },
+          "requests": {
+            "value": 24,
+            "display": "24",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1489,13 +1634,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 2040169,
-              "display": "2.04M",
+              "value": 2246002,
+              "display": "2.25M",
               "status": "available"
             },
             "cache_read": {
-              "value": 84440576,
-              "display": "84.44M",
+              "value": 89446912,
+              "display": "89.45M",
               "status": "available"
             },
             "cache_create": {
@@ -1504,24 +1649,24 @@
               "status": "available"
             },
             "output": {
-              "value": 388611,
-              "display": "388.61K",
+              "value": 432898,
+              "display": "432.9K",
               "status": "available"
             },
             "total": {
-              "value": 86869356,
-              "display": "86.87M",
+              "value": 92125812,
+              "display": "92.13M",
               "status": "available"
             }
           },
-          "share": "14.9%",
+          "share": "14.5%",
           "hit_rate": {
-            "value": 97.64089798255091,
+            "value": 97.55051737149503,
             "display": "97.6%"
           },
           "requests": {
-            "value": 379,
-            "display": "379",
+            "value": 414,
+            "display": "414",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1529,54 +1674,6 @@
             "tokens": "available",
             "requests": "available",
             "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "grok",
-          "label": "Grok",
-          "totals": {
-            "miss": {
-              "value": 2831237,
-              "display": "2.83M",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 65003904,
-              "display": "65M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 850999,
-              "display": "851K",
-              "status": "available"
-            },
-            "total": {
-              "value": 68686140,
-              "display": "68.69M",
-              "status": "available"
-            }
-          },
-          "share": "11.8%",
-          "hit_rate": {
-            "value": 95.82629746431869,
-            "display": "95.8%"
-          },
-          "requests": {
-            "value": 13,
-            "display": "13",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "derived",
             "token_window": null
           }
         },
@@ -1610,14 +1707,14 @@
               "status": "partial"
             }
           },
-          "share": "10.4%",
+          "share": "9.6%",
           "hit_rate": {
             "value": 91.7409684507633,
             "display": "91.7%"
           },
           "requests": {
-            "value": 2204,
-            "display": "2204",
+            "value": 2213,
+            "display": "2213",
             "status": "available"
           },
           "quality": "degraded",
@@ -1639,13 +1736,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 4642359,
-              "display": "4.64M",
+              "value": 5034041,
+              "display": "5.03M",
               "status": "available"
             },
             "cache_read": {
-              "value": 359627648,
-              "display": "359.63M",
+              "value": 368277888,
+              "display": "368.28M",
               "status": "available"
             },
             "cache_create": {
@@ -1654,24 +1751,24 @@
               "status": "available"
             },
             "output": {
-              "value": 2663406,
-              "display": "2.66M",
+              "value": 2749348,
+              "display": "2.75M",
               "status": "available"
             },
             "total": {
-              "value": 366933413,
-              "display": "366.93M",
+              "value": 376061277,
+              "display": "376.06M",
               "status": "available"
             }
           },
-          "share": "62.9%",
+          "share": "59.2%",
           "hit_rate": {
-            "value": 98.72557199033957,
+            "value": 98.65151884819625,
             "display": "98.7%"
           },
           "requests": {
-            "value": 1449,
-            "display": "1449",
+            "value": 1555,
+            "display": "1555",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1687,13 +1784,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 5572868,
-              "display": "5.57M",
+              "value": 9548381,
+              "display": "9.55M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 114610498,
-              "display": "114.61M",
+              "value": 146798146,
+              "display": "146.8M",
               "status": "partial"
             },
             "cache_create": {
@@ -1702,24 +1799,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 1224960,
-              "display": "1.22M",
+              "value": 2621789,
+              "display": "2.62M",
               "status": "partial"
             },
             "total": {
-              "value": 122992976,
-              "display": "122.99M",
+              "value": 160552966,
+              "display": "160.55M",
               "status": "partial"
             }
           },
-          "share": "21.1%",
+          "share": "25.3%",
           "hit_rate": {
-            "value": 94.1220049113718,
-            "display": "94.1%"
+            "value": 92.95070725649059,
+            "display": "93.0%"
           },
           "requests": {
-            "value": 1796,
-            "display": "1796",
+            "value": 1807,
+            "display": "1807",
             "status": "available"
           },
           "quality": "degraded",
@@ -1735,13 +1832,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 2040169,
-              "display": "2.04M",
+              "value": 2246002,
+              "display": "2.25M",
               "status": "available"
             },
             "cache_read": {
-              "value": 84440576,
-              "display": "84.44M",
+              "value": 89446912,
+              "display": "89.45M",
               "status": "available"
             },
             "cache_create": {
@@ -1750,24 +1847,24 @@
               "status": "available"
             },
             "output": {
-              "value": 388611,
-              "display": "388.61K",
+              "value": 432898,
+              "display": "432.9K",
               "status": "available"
             },
             "total": {
-              "value": 86869356,
-              "display": "86.87M",
+              "value": 92125812,
+              "display": "92.13M",
               "status": "available"
             }
           },
-          "share": "14.9%",
+          "share": "14.5%",
           "hit_rate": {
-            "value": 97.64089798255091,
+            "value": 97.55051737149503,
             "display": "97.6%"
           },
           "requests": {
-            "value": 379,
-            "display": "379",
+            "value": 414,
+            "display": "414",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1808,7 +1905,7 @@
               "status": "partial"
             }
           },
-          "share": "1.1%",
+          "share": "1.0%",
           "hit_rate": {
             "value": 89.78324954753836,
             "display": "89.8%"
@@ -1862,8 +1959,8 @@
             "display": "—"
           },
           "requests": {
-            "value": 421,
-            "display": "421",
+            "value": 430,
+            "display": "430",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1885,13 +1982,13 @@
       },
       "totals": {
         "miss": {
-          "value": 138522356,
-          "display": "138.52M",
+          "value": 143095384,
+          "display": "143.1M",
           "status": "partial"
         },
         "cache_read": {
-          "value": 3641938244,
-          "display": "3.64B",
+          "value": 3687782468,
+          "display": "3.69B",
           "status": "partial"
         },
         "cache_create": {
@@ -1900,28 +1997,28 @@
           "status": "partial"
         },
         "output": {
-          "value": 26616279,
-          "display": "26.62M",
+          "value": 28143337,
+          "display": "28.14M",
           "status": "partial"
         },
         "total": {
-          "value": 3835102854,
-          "display": "3.84B",
+          "value": 3887047164,
+          "display": "3.89B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 95.62691563380396,
+        "value": 95.56554486269657,
         "display": "95.6%"
       },
       "requests": {
-        "value": 29642,
-        "display": "29642",
+        "value": 29803,
+        "display": "29803",
         "status": "available"
       },
       "user_turns": {
-        "value": 1040,
-        "display": "1040",
+        "value": 1061,
+        "display": "1061",
         "status": "available"
       },
       "active_days": {
@@ -1962,13 +2059,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 22498899,
-              "display": "22.5M",
+              "value": 22890581,
+              "display": "22.89M",
               "status": "available"
             },
             "cache_read": {
-              "value": 1430230528,
-              "display": "1.43B",
+              "value": 1438880768,
+              "display": "1.44B",
               "status": "available"
             },
             "cache_create": {
@@ -1977,24 +2074,24 @@
               "status": "available"
             },
             "output": {
-              "value": 8937878,
-              "display": "8.94M",
+              "value": 9023820,
+              "display": "9.02M",
               "status": "available"
             },
             "total": {
-              "value": 1461667305,
-              "display": "1.46B",
+              "value": 1470795169,
+              "display": "1.47B",
               "status": "available"
             }
           },
-          "share": "38.1%",
+          "share": "37.8%",
           "hit_rate": {
-            "value": 98.45126707135947,
-            "display": "98.5%"
+            "value": 98.43405187715169,
+            "display": "98.4%"
           },
           "requests": {
-            "value": 5725,
-            "display": "5725",
+            "value": 5831,
+            "display": "5831",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2035,14 +2132,14 @@
               "status": "partial"
             }
           },
-          "share": "33.1%",
+          "share": "32.7%",
           "hit_rate": {
             "value": 91.17302528445637,
             "display": "91.2%"
           },
           "requests": {
-            "value": 22474,
-            "display": "22474",
+            "value": 22483,
+            "display": "22483",
             "status": "available"
           },
           "quality": "degraded",
@@ -2062,13 +2159,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 28672556,
-              "display": "28.67M",
+              "value": 32648069,
+              "display": "32.65M",
               "status": "available"
             },
             "cache_read": {
-              "value": 642152448,
-              "display": "642.15M",
+              "value": 674340096,
+              "display": "674.34M",
               "status": "available"
             },
             "cache_create": {
@@ -2077,24 +2174,24 @@
               "status": "available"
             },
             "output": {
-              "value": 6736390,
-              "display": "6.74M",
+              "value": 8133219,
+              "display": "8.13M",
               "status": "available"
             },
             "total": {
-              "value": 677561394,
-              "display": "677.56M",
+              "value": 715121384,
+              "display": "715.12M",
               "status": "available"
             }
           },
-          "share": "17.7%",
+          "share": "18.4%",
           "hit_rate": {
-            "value": 95.72577709103997,
-            "display": "95.7%"
+            "value": 95.38209115565606,
+            "display": "95.4%"
           },
           "requests": {
-            "value": 152,
-            "display": "152",
+            "value": 163,
+            "display": "163",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2110,13 +2207,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 4074794,
-              "display": "4.07M",
+              "value": 4280627,
+              "display": "4.28M",
               "status": "available"
             },
             "cache_read": {
-              "value": 419926107,
-              "display": "419.93M",
+              "value": 424932443,
+              "display": "424.93M",
               "status": "available"
             },
             "cache_create": {
@@ -2125,24 +2222,24 @@
               "status": "available"
             },
             "output": {
-              "value": 907165,
-              "display": "907.17K",
+              "value": 951452,
+              "display": "951.45K",
               "status": "available"
             },
             "total": {
-              "value": 424908066,
-              "display": "424.91M",
+              "value": 430164522,
+              "display": "430.16M",
               "status": "available"
             }
           },
           "share": "11.1%",
           "hit_rate": {
-            "value": 99.03896572144312,
+            "value": 99.00268018399346,
             "display": "99.0%"
           },
           "requests": {
-            "value": 1291,
-            "display": "1291",
+            "value": 1326,
+            "display": "1326",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2160,13 +2257,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 22498899,
-              "display": "22.5M",
+              "value": 22890581,
+              "display": "22.89M",
               "status": "available"
             },
             "cache_read": {
-              "value": 1430230528,
-              "display": "1.43B",
+              "value": 1438880768,
+              "display": "1.44B",
               "status": "available"
             },
             "cache_create": {
@@ -2175,24 +2272,24 @@
               "status": "available"
             },
             "output": {
-              "value": 8937878,
-              "display": "8.94M",
+              "value": 9023820,
+              "display": "9.02M",
               "status": "available"
             },
             "total": {
-              "value": 1461667305,
-              "display": "1.46B",
+              "value": 1470795169,
+              "display": "1.47B",
               "status": "available"
             }
           },
-          "share": "38.1%",
+          "share": "37.8%",
           "hit_rate": {
-            "value": 98.45126707135947,
-            "display": "98.5%"
+            "value": 98.43405187715169,
+            "display": "98.4%"
           },
           "requests": {
-            "value": 5725,
-            "display": "5725",
+            "value": 5831,
+            "display": "5831",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2208,13 +2305,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 37960869,
-              "display": "37.96M",
+              "value": 41936382,
+              "display": "41.94M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 960986454,
-              "display": "960.99M",
+              "value": 993174102,
+              "display": "993.17M",
               "status": "partial"
             },
             "cache_create": {
@@ -2223,24 +2320,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 8841920,
-              "display": "8.84M",
+              "value": 10238749,
+              "display": "10.24M",
               "status": "partial"
             },
             "total": {
-              "value": 1023843267,
-              "display": "1.02B",
+              "value": 1061403257,
+              "display": "1.06B",
               "status": "partial"
             }
           },
-          "share": "26.7%",
+          "share": "27.3%",
           "hit_rate": {
-            "value": 94.67834272736192,
-            "display": "94.7%"
+            "value": 94.48322260134758,
+            "display": "94.5%"
           },
           "requests": {
-            "value": 19416,
-            "display": "19416",
+            "value": 19427,
+            "display": "19427",
             "status": "available"
           },
           "quality": "degraded",
@@ -2281,7 +2378,7 @@
               "status": "partial"
             }
           },
-          "share": "22.9%",
+          "share": "22.5%",
           "hit_rate": {
             "value": 90.20037663631719,
             "display": "90.2%"
@@ -2304,13 +2401,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 4074794,
-              "display": "4.07M",
+              "value": 4280627,
+              "display": "4.28M",
               "status": "available"
             },
             "cache_read": {
-              "value": 419926107,
-              "display": "419.93M",
+              "value": 424932443,
+              "display": "424.93M",
               "status": "available"
             },
             "cache_create": {
@@ -2319,24 +2416,24 @@
               "status": "available"
             },
             "output": {
-              "value": 907165,
-              "display": "907.17K",
+              "value": 951452,
+              "display": "951.45K",
               "status": "available"
             },
             "total": {
-              "value": 424908066,
-              "display": "424.91M",
+              "value": 430164522,
+              "display": "430.16M",
               "status": "available"
             }
           },
           "share": "11.1%",
           "hit_rate": {
-            "value": 99.03896572144312,
+            "value": 99.00268018399346,
             "display": "99.0%"
           },
           "requests": {
-            "value": 1291,
-            "display": "1291",
+            "value": 1326,
+            "display": "1326",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2377,14 +2474,14 @@
               "status": "partial"
             }
           },
-          "share": "1.3%",
+          "share": "1.2%",
           "hit_rate": {
             "value": 98.26651823357018,
             "display": "98.3%"
           },
           "requests": {
-            "value": 1557,
-            "display": "1557",
+            "value": 1566,
+            "display": "1566",
             "status": "available"
           },
           "quality": "degraded",
@@ -2454,13 +2551,13 @@
       },
       "totals": {
         "miss": {
-          "value": 1493912032,
-          "display": "1.49B",
+          "value": 1498485060,
+          "display": "1.5B",
           "status": "partial"
         },
         "cache_read": {
-          "value": 18571193663,
-          "display": "18.57B",
+          "value": 18617037887,
+          "display": "18.62B",
           "status": "partial"
         },
         "cache_create": {
@@ -2469,28 +2566,28 @@
           "status": "partial"
         },
         "output": {
-          "value": 154881486,
-          "display": "154.88M",
+          "value": 156408544,
+          "display": "156.41M",
           "status": "partial"
         },
         "total": {
-          "value": 20327768430,
-          "display": "20.33B",
+          "value": 20379712740,
+          "display": "20.38B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 92.06016825729354,
+        "value": 92.0573498107312,
         "display": "92.1%"
       },
       "requests": {
-        "value": 235405,
-        "display": "235405",
+        "value": 235566,
+        "display": "235566",
         "status": "available"
       },
       "user_turns": {
-        "value": 6579,
-        "display": "6579",
+        "value": 6600,
+        "display": "6600",
         "status": "available"
       },
       "active_days": {
@@ -2556,14 +2653,14 @@
               "status": "partial"
             }
           },
-          "share": "44.8%",
+          "share": "44.7%",
           "hit_rate": {
             "value": 90.28760222089244,
             "display": "90.3%"
           },
           "requests": {
-            "value": 206551,
-            "display": "206551",
+            "value": 206560,
+            "display": "206560",
             "status": "available"
           },
           "quality": "degraded",
@@ -2583,13 +2680,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 515540032,
-              "display": "515.54M",
+              "value": 519515545,
+              "display": "519.52M",
               "status": "available"
             },
             "cache_read": {
-              "value": 6283903104,
-              "display": "6.28B",
+              "value": 6316090752,
+              "display": "6.32B",
               "status": "available"
             },
             "cache_create": {
@@ -2598,24 +2695,24 @@
               "status": "available"
             },
             "output": {
-              "value": 56302145,
-              "display": "56.3M",
+              "value": 57698974,
+              "display": "57.7M",
               "status": "available"
             },
             "total": {
-              "value": 6855745281,
-              "display": "6.86B",
+              "value": 6893305271,
+              "display": "6.89B",
               "status": "available"
             }
           },
-          "share": "33.7%",
+          "share": "33.8%",
           "hit_rate": {
-            "value": 92.4179080302849,
+            "value": 92.3998615129721,
             "display": "92.4%"
           },
           "requests": {
-            "value": 1738,
-            "display": "1738",
+            "value": 1749,
+            "display": "1749",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2631,13 +2728,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 66826504,
-              "display": "66.83M",
+              "value": 67218186,
+              "display": "67.22M",
               "status": "available"
             },
             "cache_read": {
-              "value": 2799702184,
-              "display": "2.8B",
+              "value": 2808352424,
+              "display": "2.81B",
               "status": "available"
             },
             "cache_create": {
@@ -2646,24 +2743,24 @@
               "status": "available"
             },
             "output": {
-              "value": 16229164,
-              "display": "16.23M",
+              "value": 16315106,
+              "display": "16.32M",
               "status": "available"
             },
             "total": {
-              "value": 2882757852,
-              "display": "2.88B",
+              "value": 2891885716,
+              "display": "2.89B",
               "status": "available"
             }
           },
           "share": "14.2%",
           "hit_rate": {
-            "value": 97.66873067484892,
+            "value": 97.66244008176172,
             "display": "97.7%"
           },
           "requests": {
-            "value": 16750,
-            "display": "16750",
+            "value": 16856,
+            "display": "16856",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2679,13 +2776,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 13857747,
-              "display": "13.86M",
+              "value": 14063580,
+              "display": "14.06M",
               "status": "available"
             },
             "cache_read": {
-              "value": 977775709,
-              "display": "977.78M",
+              "value": 982782045,
+              "display": "982.78M",
               "status": "available"
             },
             "cache_create": {
@@ -2694,24 +2791,24 @@
               "status": "available"
             },
             "output": {
-              "value": 3186199,
-              "display": "3.19M",
+              "value": 3230486,
+              "display": "3.23M",
               "status": "available"
             },
             "total": {
-              "value": 994819655,
-              "display": "994.82M",
+              "value": 1000076111,
+              "display": "1B",
               "status": "available"
             }
           },
           "share": "4.9%",
           "hit_rate": {
-            "value": 98.60253333364743,
+            "value": 98.5891917818268,
             "display": "98.6%"
           },
           "requests": {
-            "value": 5029,
-            "display": "5029",
+            "value": 5064,
+            "display": "5064",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2922,13 +3019,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 1105644726,
+              "value": 1109620239,
               "display": "1.11B",
               "status": "partial"
             },
             "cache_read": {
-              "value": 11389446612,
-              "display": "11.39B",
+              "value": 11421634260,
+              "display": "11.42B",
               "status": "partial"
             },
             "cache_create": {
@@ -2937,24 +3034,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 107066995,
-              "display": "107.07M",
+              "value": 108463824,
+              "display": "108.46M",
               "status": "partial"
             },
             "total": {
-              "value": 12618656442,
-              "display": "12.62B",
+              "value": 12656216432,
+              "display": "12.66B",
               "status": "partial"
             }
           },
           "share": "62.1%",
           "hit_rate": {
-            "value": 91.03117281978058,
+            "value": 91.025338296182,
             "display": "91.0%"
           },
           "requests": {
-            "value": 134750,
-            "display": "134750",
+            "value": 134761,
+            "display": "134761",
             "status": "available"
           },
           "quality": "degraded",
@@ -2970,13 +3067,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 71267898,
-              "display": "71.27M",
+              "value": 71659580,
+              "display": "71.66M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 2902472310,
-              "display": "2.9B",
+              "value": 2911122550,
+              "display": "2.91B",
               "status": "partial"
             },
             "cache_create": {
@@ -2985,24 +3082,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 16821624,
-              "display": "16.82M",
+              "value": 16907566,
+              "display": "16.91M",
               "status": "partial"
             },
             "total": {
-              "value": 2994504386,
-              "display": "2.99B",
+              "value": 3003632250,
+              "display": "3B",
               "status": "partial"
             }
           },
           "share": "14.7%",
           "hit_rate": {
-            "value": 97.4741952715781,
+            "value": 97.46872772020122,
             "display": "97.5%"
           },
           "requests": {
-            "value": 17302,
-            "display": "17302",
+            "value": 17408,
+            "display": "17408",
             "status": "available"
           },
           "quality": "degraded",
@@ -3043,7 +3140,7 @@
               "status": "partial"
             }
           },
-          "share": "11.3%",
+          "share": "11.2%",
           "hit_rate": {
             "value": 91.24673152065168,
             "display": "91.2%"
@@ -3066,13 +3163,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 18613903,
-              "display": "18.61M",
+              "value": 18819736,
+              "display": "18.82M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 1024856648,
-              "display": "1.02B",
+              "value": 1029862984,
+              "display": "1.03B",
               "status": "partial"
             },
             "cache_create": {
@@ -3081,24 +3178,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 3764029,
-              "display": "3.76M",
+              "value": 3808316,
+              "display": "3.81M",
               "status": "partial"
             },
             "total": {
-              "value": 1054678670,
-              "display": "1.05B",
+              "value": 1059935126,
+              "display": "1.06B",
               "status": "partial"
             }
           },
           "share": "5.2%",
           "hit_rate": {
-            "value": 97.52044628713095,
+            "value": 97.51319389382796,
             "display": "97.5%"
           },
           "requests": {
-            "value": 6094,
-            "display": "6094",
+            "value": 6129,
+            "display": "6129",
             "status": "available"
           },
           "quality": "degraded",
@@ -3145,8 +3242,8 @@
             "display": "88.3%"
           },
           "requests": {
-            "value": 11401,
-            "display": "11401",
+            "value": 11410,
+            "display": "11410",
             "status": "available"
           },
           "quality": "degraded",
@@ -4151,7 +4248,7 @@
           113670604,
           93382235,
           66336509,
-          24115040,
+          76059350,
           0,
           0,
           0
@@ -4432,7 +4529,7 @@
           4,
           4,
           4,
-          4,
+          3,
           2,
           5,
           4,
@@ -4524,7 +4621,7 @@
           4,
           4,
           4,
-          3,
+          4,
           0,
           0,
           0
@@ -5276,7 +5373,7 @@
           557,
           427,
           1822,
-          300,
+          461,
           0,
           0,
           0
@@ -7526,7 +7623,7 @@
           0,
           68686140,
           0,
-          0,
+          37559990,
           0,
           0,
           0
@@ -7832,7 +7929,7 @@
           5,
           5,
           2,
-          3,
+          4,
           0,
           0,
           0,
@@ -7899,7 +7996,7 @@
           0,
           3,
           0,
-          0,
+          2,
           0,
           0,
           0
@@ -8272,7 +8369,7 @@
           "empty",
           "active",
           "empty",
-          "empty",
+          "active",
           "future",
           "future",
           "future"
@@ -8651,7 +8748,7 @@
           106978065,
           24696095,
           0,
-          3582193,
+          12710057,
           0,
           0,
           0
@@ -8959,7 +9056,7 @@
           0,
           0,
           0,
-          2,
+          1,
           0,
           0,
           2,
@@ -9024,7 +9121,7 @@
           5,
           2,
           0,
-          1,
+          2,
           0,
           0,
           0
@@ -9776,7 +9873,7 @@
           0,
           0,
           66336509,
-          20532847,
+          25789303,
           0,
           0,
           0
@@ -15401,7 +15498,7 @@
           0,
           224,
           1596,
-          106,
+          115,
           0,
           0,
           0
@@ -16526,7 +16623,7 @@
           557,
           190,
           0,
-          41,
+          147,
           0,
           0,
           0
@@ -16834,72 +16931,72 @@
           0,
           0,
           0,
-          2,
-          0,
-          0,
-          2,
-          5,
-          3,
-          4,
-          4,
-          5,
-          2,
-          0,
-          0,
-          0,
-          0,
-          4,
           1,
-          3,
-          3,
-          3,
+          0,
+          0,
           2,
           5,
-          5,
-          0,
-          0,
-          0,
-          3,
-          5,
-          5,
-          0,
-          1,
-          0,
-          0,
-          4,
-          4,
-          1,
-          0,
-          4,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          1,
           3,
           4,
-          3,
-          4,
-          5,
-          3,
-          3,
-          3,
-          0,
-          1,
-          0,
-          1,
-          3,
-          5,
-          2,
-          0,
-          2,
           4,
           5,
           2,
           0,
+          0,
+          0,
+          0,
+          4,
           1,
+          3,
+          3,
+          3,
+          2,
+          5,
+          5,
+          0,
+          0,
+          0,
+          3,
+          5,
+          5,
+          0,
+          1,
+          0,
+          0,
+          4,
+          4,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          3,
+          4,
+          3,
+          4,
+          5,
+          3,
+          3,
+          3,
+          0,
+          1,
+          0,
+          1,
+          3,
+          5,
+          2,
+          0,
+          2,
+          4,
+          5,
+          2,
+          0,
+          2,
           0,
           0,
           0
@@ -17651,7 +17748,7 @@
           0,
           0,
           226,
-          153,
+          188,
           0,
           0,
           0
@@ -21026,7 +21123,7 @@
           0,
           13,
           0,
-          0,
+          11,
           0,
           0,
           0
@@ -21358,7 +21455,7 @@
           1,
           1,
           1,
-          3,
+          4,
           2,
           5,
           1,
@@ -21399,7 +21496,7 @@
           0,
           3,
           0,
-          0,
+          3,
           0,
           0,
           0
@@ -21772,7 +21869,7 @@
           "empty",
           "active",
           "empty",
-          "empty",
+          "active",
           "future",
           "future",
           "future"
@@ -24401,7 +24498,7 @@
           113050,
           68686140,
           0,
-          0,
+          37559990,
           0,
           0,
           0
@@ -24759,7 +24856,7 @@
           2,
           2,
           3,
-          2,
+          1,
           2,
           2,
           4,
@@ -24774,7 +24871,7 @@
           1,
           3,
           0,
-          0,
+          2,
           0,
           0,
           0
@@ -25147,7 +25244,7 @@
           "active",
           "active",
           "empty",
-          "empty",
+          "active",
           "future",
           "future",
           "future"
@@ -25526,7 +25623,7 @@
           106978065,
           24696095,
           0,
-          3582193,
+          12710057,
           0,
           0,
           0
@@ -25798,86 +25895,86 @@
           0,
           1,
           0,
-          2,
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          3,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          3,
-          4,
-          4,
-          5,
-          4,
-          0,
-          0,
-          0,
-          0,
-          0,
-          2,
-          0,
-          0,
-          2,
-          5,
-          2,
-          4,
-          4,
-          5,
-          4,
-          0,
-          0,
-          0,
-          0,
-          3,
-          2,
-          3,
-          3,
-          3,
-          2,
-          5,
-          5,
-          0,
-          0,
-          0,
-          3,
-          5,
-          4,
-          0,
-          2,
-          0,
-          0,
-          4,
-          4,
-          2,
-          0,
-          4,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          4,
+          4,
+          5,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          2,
+          5,
+          2,
+          4,
+          4,
+          5,
+          4,
+          0,
+          0,
+          0,
+          0,
+          3,
+          2,
+          3,
+          3,
+          3,
+          2,
+          5,
+          5,
+          0,
+          0,
+          0,
+          3,
+          5,
+          4,
+          0,
+          2,
+          0,
+          0,
+          4,
+          4,
+          2,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
           3,
           5,
           4,
@@ -25899,7 +25996,7 @@
           5,
           3,
           0,
-          1,
+          2,
           0,
           0,
           0
@@ -27776,7 +27873,7 @@
           0,
           0,
           66336509,
-          20532847,
+          25789303,
           0,
           0,
           0
@@ -35651,7 +35748,7 @@
           0,
           13,
           1505,
-          0,
+          11,
           0,
           0,
           0
@@ -36024,7 +36121,7 @@
           0,
           1,
           5,
-          0,
+          1,
           0,
           0,
           0
@@ -36397,7 +36494,7 @@
           "empty",
           "active",
           "active",
-          "empty",
+          "active",
           "future",
           "future",
           "future"
@@ -37901,7 +37998,7 @@
           557,
           190,
           0,
-          41,
+          147,
           0,
           0,
           0
@@ -38031,7 +38128,7 @@
           0,
           0,
           0,
-          2,
+          1,
           0,
           1,
           0,
@@ -38274,7 +38371,7 @@
           5,
           3,
           0,
-          1,
+          2,
           0,
           0,
           0
@@ -39026,7 +39123,7 @@
           0,
           224,
           91,
-          106,
+          115,
           0,
           0,
           0
@@ -42401,7 +42498,7 @@
           0,
           0,
           226,
-          153,
+          188,
           0,
           0,
           0
