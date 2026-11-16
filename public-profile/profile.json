@@ -1,9 +1,9 @@
 {
   "schema": "wheretoken.public-profile",
   "schema_version": 2,
-  "snapshot_id": "sha256:bea5f9269d432b1a1a77e46b7b09b934498e057e344496c8d3ca1715faad48d5",
-  "generated_at": "2026-11-12T09:02:42Z",
-  "as_of_date": "2026-11-12",
+  "snapshot_id": "sha256:6d41bff42de0e1ea402312012269f2d880813521f8cf0627db0be1c98c398fe3",
+  "generated_at": "2026-11-16T02:32:07Z",
+  "as_of_date": "2026-11-16",
   "owner_utc_offset_minutes": 480,
   "producer": {
     "name": "wheretoken",
@@ -30,18 +30,18 @@
     "all": {
       "range": {
         "from": null,
-        "to": "2026-11-12",
+        "to": "2026-11-16",
         "label": "有账本以来"
       },
       "totals": {
         "miss": {
-          "value": 1500213636,
+          "value": 1502905997,
           "display": "1.5B",
           "status": "partial"
         },
         "cache_read": {
-          "value": 18635231743,
-          "display": "18.64B",
+          "value": 18668677759,
+          "display": "18.67B",
           "status": "partial"
         },
         "cache_create": {
@@ -50,43 +50,43 @@
           "status": "partial"
         },
         "output": {
-          "value": 156586743,
-          "display": "156.59M",
+          "value": 157311026,
+          "display": "157.31M",
           "status": "partial"
         },
         "total": {
-          "value": 20400060475,
-          "display": "20.4B",
+          "value": 20436923135,
+          "display": "20.44B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 92.0555038611888,
+        "value": 92.05638479995841,
         "display": "92.1%"
       },
       "requests": {
-        "value": 331424,
-        "display": "331424",
+        "value": 331635,
+        "display": "331635",
         "status": "available"
       },
       "user_turns": {
-        "value": 6600,
-        "display": "6600",
+        "value": 6615,
+        "display": "6615",
         "status": "available"
       },
       "active_days": {
-        "value": 209,
-        "display": "209",
+        "value": 210,
+        "display": "210",
         "status": "available"
       },
       "current_streak": {
-        "value": 83,
-        "display": "83",
+        "value": 0,
+        "display": "0",
         "status": "available"
       },
       "longest_streak": {
-        "value": 83,
-        "display": "83",
+        "value": 84,
+        "display": "84",
         "status": "available"
       },
       "peak": {
@@ -137,14 +137,14 @@
               "status": "partial"
             }
           },
-          "share": "44.8%",
+          "share": "44.7%",
           "hit_rate": {
             "value": 90.28741750368977,
             "display": "90.3%"
           },
           "requests": {
-            "value": 302418,
-            "display": "302418",
+            "value": 302435,
+            "display": "302435",
             "status": "available"
           },
           "quality": "degraded",
@@ -164,13 +164,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 519515545,
-              "display": "519.52M",
+              "value": 521547543,
+              "display": "521.55M",
               "status": "available"
             },
             "cache_read": {
-              "value": 6316090752,
-              "display": "6.32B",
+              "value": 6328291840,
+              "display": "6.33B",
               "status": "available"
             },
             "cache_create": {
@@ -179,24 +179,24 @@
               "status": "available"
             },
             "output": {
-              "value": 57698974,
-              "display": "57.7M",
+              "value": 58261831,
+              "display": "58.26M",
               "status": "available"
             },
             "total": {
-              "value": 6893305271,
-              "display": "6.89B",
+              "value": 6908101214,
+              "display": "6.91B",
               "status": "available"
             }
           },
           "share": "33.8%",
           "hit_rate": {
-            "value": 92.3998615129721,
+            "value": 92.38598872413881,
             "display": "92.4%"
           },
           "requests": {
-            "value": 1749,
-            "display": "1749",
+            "value": 1757,
+            "display": "1757",
             "status": "available"
           },
           "quality": "authoritative",
@@ -212,13 +212,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 67218186,
-              "display": "67.22M",
+              "value": 67664012,
+              "display": "67.66M",
               "status": "available"
             },
             "cache_read": {
-              "value": 2808352424,
-              "display": "2.81B",
+              "value": 2826560680,
+              "display": "2.83B",
               "status": "available"
             },
             "cache_create": {
@@ -227,24 +227,24 @@
               "status": "available"
             },
             "output": {
-              "value": 16315106,
-              "display": "16.32M",
+              "value": 16444906,
+              "display": "16.44M",
               "status": "available"
             },
             "total": {
-              "value": 2891885716,
-              "display": "2.89B",
+              "value": 2910669598,
+              "display": "2.91B",
               "status": "available"
             }
           },
           "share": "14.2%",
           "hit_rate": {
-            "value": 97.66244008176172,
+            "value": 97.6621023175211,
             "display": "97.7%"
           },
           "requests": {
-            "value": 16856,
-            "display": "16856",
+            "value": 17014,
+            "display": "17014",
             "status": "available"
           },
           "quality": "authoritative",
@@ -260,13 +260,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 14063580,
-              "display": "14.06M",
+              "value": 14278117,
+              "display": "14.28M",
               "status": "available"
             },
             "cache_read": {
-              "value": 982782045,
-              "display": "982.78M",
+              "value": 985818717,
+              "display": "985.82M",
               "status": "available"
             },
             "cache_create": {
@@ -275,24 +275,24 @@
               "status": "available"
             },
             "output": {
-              "value": 3230486,
-              "display": "3.23M",
+              "value": 3262112,
+              "display": "3.26M",
               "status": "available"
             },
             "total": {
-              "value": 1000076111,
+              "value": 1003358946,
               "display": "1B",
               "status": "available"
             }
           },
           "share": "4.9%",
           "hit_rate": {
-            "value": 98.5891917818268,
+            "value": 98.57232654733112,
             "display": "98.6%"
           },
           "requests": {
-            "value": 5064,
-            "display": "5064",
+            "value": 5092,
+            "display": "5092",
             "status": "available"
           },
           "quality": "authoritative",
@@ -503,13 +503,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 1109620239,
+              "value": 1111652237,
               "display": "1.11B",
               "status": "partial"
             },
             "cache_read": {
-              "value": 11421634260,
-              "display": "11.42B",
+              "value": 11433835348,
+              "display": "11.43B",
               "status": "partial"
             },
             "cache_create": {
@@ -518,24 +518,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 108463824,
-              "display": "108.46M",
+              "value": 109026681,
+              "display": "109.03M",
               "status": "partial"
             },
             "total": {
-              "value": 12656216432,
-              "display": "12.66B",
+              "value": 12671012375,
+              "display": "12.67B",
               "status": "partial"
             }
           },
           "share": "62.0%",
           "hit_rate": {
-            "value": 91.025338296182,
+            "value": 91.01933107168846,
             "display": "91.0%"
           },
           "requests": {
-            "value": 230619,
-            "display": "230619",
+            "value": 230627,
+            "display": "230627",
             "status": "available"
           },
           "quality": "degraded",
@@ -551,13 +551,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 71659580,
-              "display": "71.66M",
+              "value": 72105406,
+              "display": "72.11M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 2911122550,
-              "display": "2.91B",
+              "value": 2929330806,
+              "display": "2.93B",
               "status": "partial"
             },
             "cache_create": {
@@ -566,24 +566,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 16907566,
-              "display": "16.91M",
+              "value": 17037366,
+              "display": "17.04M",
               "status": "partial"
             },
             "total": {
-              "value": 3003632250,
-              "display": "3B",
+              "value": 3022416132,
+              "display": "3.02B",
               "status": "partial"
             }
           },
-          "share": "14.7%",
+          "share": "14.8%",
           "hit_rate": {
-            "value": 97.46872772020122,
+            "value": 97.46960480122058,
             "display": "97.5%"
           },
           "requests": {
-            "value": 17408,
-            "display": "17408",
+            "value": 17566,
+            "display": "17566",
             "status": "available"
           },
           "quality": "degraded",
@@ -647,12 +647,12 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 18819736,
-              "display": "18.82M",
+              "value": 19034273,
+              "display": "19.03M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 1029862984,
+              "value": 1032899656,
               "display": "1.03B",
               "status": "partial"
             },
@@ -662,24 +662,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 3808316,
-              "display": "3.81M",
+              "value": 3839942,
+              "display": "3.84M",
               "status": "partial"
             },
             "total": {
-              "value": 1059935126,
+              "value": 1063217961,
               "display": "1.06B",
               "status": "partial"
             }
           },
           "share": "5.2%",
           "hit_rate": {
-            "value": 97.51319389382796,
+            "value": 97.50057462727098,
             "display": "97.5%"
           },
           "requests": {
-            "value": 6129,
-            "display": "6129",
+            "value": 6157,
+            "display": "6157",
             "status": "available"
           },
           "quality": "degraded",
@@ -726,8 +726,8 @@
             "display": "88.3%"
           },
           "requests": {
-            "value": 11410,
-            "display": "11410",
+            "value": 11427,
+            "display": "11427",
             "status": "available"
           },
           "quality": "degraded",
@@ -982,19 +982,98 @@
     },
     "today": {
       "range": {
-        "from": "2026-11-12",
-        "to": "2026-11-12",
-        "label": "今天 2026-11-12"
+        "from": "2026-11-16",
+        "to": "2026-11-16",
+        "label": "今天 2026-11-16"
       },
       "totals": {
         "miss": {
-          "value": 5378950,
-          "display": "5.38M",
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        },
+        "cache_read": {
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        },
+        "cache_create": {
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        },
+        "output": {
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        },
+        "total": {
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        }
+      },
+      "hit_rate": {
+        "value": null,
+        "display": "—"
+      },
+      "requests": {
+        "value": 0,
+        "display": "0",
+        "status": "available"
+      },
+      "user_turns": {
+        "value": 0,
+        "display": "0",
+        "status": "available"
+      },
+      "active_days": {
+        "value": 0,
+        "display": "0",
+        "status": "available"
+      },
+      "current_streak": {
+        "value": 0,
+        "display": "0",
+        "status": "available"
+      },
+      "longest_streak": {
+        "value": 0,
+        "display": "0",
+        "status": "available"
+      },
+      "peak": {
+        "date": "",
+        "total": {
+          "value": null,
+          "display": "—",
+          "status": "unavailable"
+        },
+        "scope": "today"
+      },
+      "portrait": {
+        "state": "none",
+        "primary": "—",
+        "tags": []
+      },
+      "by_agent": [],
+      "by_vendor": []
+    },
+    "7d": {
+      "range": {
+        "from": "2026-11-10",
+        "to": "2026-11-16",
+        "label": "近 7 天"
+      },
+      "totals": {
+        "miss": {
+          "value": 12560286,
+          "display": "12.56M",
           "status": "available"
         },
         "cache_read": {
-          "value": 68973696,
-          "display": "68.97M",
+          "value": 256433920,
+          "display": "256.43M",
           "status": "available"
         },
         "cache_create": {
@@ -1003,523 +1082,50 @@
           "status": "available"
         },
         "output": {
-          "value": 1706704,
-          "display": "1.71M",
+          "value": 3646548,
+          "display": "3.65M",
           "status": "available"
         },
         "total": {
-          "value": 76059350,
-          "display": "76.06M",
+          "value": 272640754,
+          "display": "272.64M",
           "status": "available"
         }
       },
       "hit_rate": {
-        "value": 92.76562396985845,
-        "display": "92.8%"
+        "value": 95.33064812555851,
+        "display": "95.3%"
       },
       "requests": {
-        "value": 461,
-        "display": "461",
+        "value": 2921,
+        "display": "2921",
         "status": "available"
       },
       "user_turns": {
-        "value": 27,
-        "display": "27",
+        "value": 76,
+        "display": "76",
         "status": "available"
       },
       "active_days": {
-        "value": 1,
-        "display": "1",
+        "value": 4,
+        "display": "4",
         "status": "available"
       },
       "current_streak": {
-        "value": 1,
-        "display": "1",
+        "value": 0,
+        "display": "0",
         "status": "available"
       },
       "longest_streak": {
-        "value": 1,
-        "display": "1",
+        "value": 4,
+        "display": "4",
         "status": "available"
       },
       "peak": {
         "date": "2026-11-12",
         "total": {
-          "value": 76059350,
-          "display": "76.06M",
-          "status": "available"
-        },
-        "scope": "today"
-      },
-      "portrait": {
-        "state": "ok",
-        "primary": "主力生产工具",
-        "tags": [
-          "多平台实践",
-          "缓存命中拉满"
-        ]
-      },
-      "by_agent": [
-        {
-          "id": "grok",
-          "label": "Grok",
-          "totals": {
-            "miss": {
-              "value": 3975513,
-              "display": "3.98M",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 32187648,
-              "display": "32.19M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 1396829,
-              "display": "1.4M",
-              "status": "available"
-            },
-            "total": {
-              "value": 37559990,
-              "display": "37.56M",
-              "status": "available"
-            }
-          },
-          "share": "49.4%",
-          "hit_rate": {
-            "value": 89.00673256964456,
-            "display": "89.0%"
-          },
-          "requests": {
-            "value": 11,
-            "display": "11",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "derived",
-            "token_window": null
-          }
-        },
-        {
-          "id": "kimi",
-          "label": "Kimi Code",
-          "totals": {
-            "miss": {
-              "value": 921869,
-              "display": "921.87K",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 24671488,
-              "display": "24.67M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 195946,
-              "display": "195.95K",
-              "status": "available"
-            },
-            "total": {
-              "value": 25789303,
-              "display": "25.79M",
-              "status": "available"
-            }
-          },
-          "share": "33.9%",
-          "hit_rate": {
-            "value": 96.39801453166147,
-            "display": "96.4%"
-          },
-          "requests": {
-            "value": 188,
-            "display": "188",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "codex",
-          "label": "Codex",
-          "totals": {
-            "miss": {
-              "value": 481568,
-              "display": "481.57K",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 12114560,
-              "display": "12.11M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 113929,
-              "display": "113.93K",
-              "status": "available"
-            },
-            "total": {
-              "value": 12710057,
-              "display": "12.71M",
-              "status": "available"
-            }
-          },
-          "share": "16.7%",
-          "hit_rate": {
-            "value": 96.17685688808497,
-            "display": "96.2%"
-          },
-          "requests": {
-            "value": 147,
-            "display": "147",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "derived",
-            "token_window": null
-          }
-        },
-        {
-          "id": "cursor",
-          "label": "Cursor",
-          "totals": {
-            "miss": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "cache_read": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "cache_create": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "output": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "total": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            }
-          },
-          "share": "—",
-          "hit_rate": {
-            "value": null,
-            "display": "—"
-          },
-          "requests": {
-            "value": 115,
-            "display": "115",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "unavailable",
-            "requests": "available",
-            "token_source": "account_api",
-            "token_window": {
-              "from": "2025-10-21",
-              "to": "2026-11-09",
-              "label": "account usage"
-            }
-          }
-        }
-      ],
-      "by_vendor": [
-        {
-          "id": "xai",
-          "label": "xAI",
-          "totals": {
-            "miss": {
-              "value": 3975513,
-              "display": "3.98M",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 32187648,
-              "display": "32.19M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 1396829,
-              "display": "1.4M",
-              "status": "available"
-            },
-            "total": {
-              "value": 37559990,
-              "display": "37.56M",
-              "status": "available"
-            }
-          },
-          "share": "49.4%",
-          "hit_rate": {
-            "value": 89.00673256964456,
-            "display": "89.0%"
-          },
-          "requests": {
-            "value": 11,
-            "display": "11",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "moonshot",
-          "label": "Moonshot",
-          "totals": {
-            "miss": {
-              "value": 921869,
-              "display": "921.87K",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 24671488,
-              "display": "24.67M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 195946,
-              "display": "195.95K",
-              "status": "available"
-            },
-            "total": {
-              "value": 25789303,
-              "display": "25.79M",
-              "status": "available"
-            }
-          },
-          "share": "33.9%",
-          "hit_rate": {
-            "value": 96.39801453166147,
-            "display": "96.4%"
-          },
-          "requests": {
-            "value": 188,
-            "display": "188",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "openai",
-          "label": "OpenAI",
-          "totals": {
-            "miss": {
-              "value": 481568,
-              "display": "481.57K",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 12114560,
-              "display": "12.11M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 113929,
-              "display": "113.93K",
-              "status": "available"
-            },
-            "total": {
-              "value": 12710057,
-              "display": "12.71M",
-              "status": "available"
-            }
-          },
-          "share": "16.7%",
-          "hit_rate": {
-            "value": 96.17685688808497,
-            "display": "96.2%"
-          },
-          "requests": {
-            "value": 147,
-            "display": "147",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "anthropic",
-          "label": "Anthropic",
-          "totals": {
-            "miss": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "cache_read": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "cache_create": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "output": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            },
-            "total": {
-              "value": null,
-              "display": "—",
-              "status": "unavailable"
-            }
-          },
-          "share": "—",
-          "hit_rate": {
-            "value": null,
-            "display": "—"
-          },
-          "requests": {
-            "value": 115,
-            "display": "115",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "unavailable",
-            "requests": "available",
-            "token_source": "unknown",
-            "token_window": null,
-            "reason": "local_tokens_missing"
-          }
-        }
-      ]
-    },
-    "7d": {
-      "range": {
-        "from": "2026-11-06",
-        "to": "2026-11-12",
-        "label": "近 7 天"
-      },
-      "totals": {
-        "miss": {
-          "value": 16919727,
-          "display": "16.92M",
-          "status": "partial"
-        },
-        "cache_read": {
-          "value": 610395566,
-          "display": "610.4M",
-          "status": "partial"
-        },
-        "cache_create": {
-          "value": 2161613,
-          "display": "2.16M",
-          "status": "partial"
-        },
-        "output": {
-          "value": 5842638,
-          "display": "5.84M",
-          "status": "partial"
-        },
-        "total": {
-          "value": 635319544,
-          "display": "635.32M",
-          "status": "partial"
-        }
-      },
-      "hit_rate": {
-        "value": 96.96869895970417,
-        "display": "97.0%"
-      },
-      "requests": {
-        "value": 4206,
-        "display": "4206",
-        "status": "available"
-      },
-      "user_turns": {
-        "value": 129,
-        "display": "129",
-        "status": "available"
-      },
-      "active_days": {
-        "value": 7,
-        "display": "7",
-        "status": "available"
-      },
-      "current_streak": {
-        "value": 7,
-        "display": "7",
-        "status": "available"
-      },
-      "longest_streak": {
-        "value": 7,
-        "display": "7",
-        "status": "available"
-      },
-      "peak": {
-        "date": "2026-11-08",
-        "total": {
-          "value": 230684341,
-          "display": "230.68M",
+          "value": 109639175,
+          "display": "109.64M",
           "status": "available"
         },
         "scope": "7d"
@@ -1534,65 +1140,17 @@
       },
       "by_agent": [
         {
-          "id": "codex",
-          "label": "Codex",
-          "totals": {
-            "miss": {
-              "value": 5034041,
-              "display": "5.03M",
-              "status": "available"
-            },
-            "cache_read": {
-              "value": 368277888,
-              "display": "368.28M",
-              "status": "available"
-            },
-            "cache_create": {
-              "value": 0,
-              "display": "0",
-              "status": "available"
-            },
-            "output": {
-              "value": 2749348,
-              "display": "2.75M",
-              "status": "available"
-            },
-            "total": {
-              "value": 376061277,
-              "display": "376.06M",
-              "status": "available"
-            }
-          },
-          "share": "59.2%",
-          "hit_rate": {
-            "value": 98.65151884819625,
-            "display": "98.7%"
-          },
-          "requests": {
-            "value": 1555,
-            "display": "1555",
-            "status": "available"
-          },
-          "quality": "authoritative",
-          "coverage": {
-            "tokens": "available",
-            "requests": "available",
-            "token_source": "derived",
-            "token_window": null
-          }
-        },
-        {
           "id": "grok",
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 6806750,
-              "display": "6.81M",
+              "value": 8838748,
+              "display": "8.84M",
               "status": "available"
             },
             "cache_read": {
-              "value": 97191552,
-              "display": "97.19M",
+              "value": 109392640,
+              "display": "109.39M",
               "status": "available"
             },
             "cache_create": {
@@ -1601,24 +1159,24 @@
               "status": "available"
             },
             "output": {
-              "value": 2247828,
-              "display": "2.25M",
+              "value": 2810685,
+              "display": "2.81M",
               "status": "available"
             },
             "total": {
-              "value": 106246130,
-              "display": "106.25M",
+              "value": 121042073,
+              "display": "121.04M",
               "status": "available"
             }
           },
-          "share": "16.7%",
+          "share": "44.4%",
           "hit_rate": {
-            "value": 93.45494121625178,
-            "display": "93.5%"
+            "value": 92.52419501325654,
+            "display": "92.5%"
           },
           "requests": {
-            "value": 24,
-            "display": "24",
+            "value": 32,
+            "display": "32",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1634,13 +1192,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 2246002,
-              "display": "2.25M",
+              "value": 2460539,
+              "display": "2.46M",
               "status": "available"
             },
             "cache_read": {
-              "value": 89446912,
-              "display": "89.45M",
+              "value": 92483584,
+              "display": "92.48M",
               "status": "available"
             },
             "cache_create": {
@@ -1649,24 +1207,24 @@
               "status": "available"
             },
             "output": {
-              "value": 432898,
-              "display": "432.9K",
+              "value": 464524,
+              "display": "464.52K",
               "status": "available"
             },
             "total": {
-              "value": 92125812,
-              "display": "92.13M",
+              "value": 95408647,
+              "display": "95.41M",
               "status": "available"
             }
           },
-          "share": "14.5%",
+          "share": "35.0%",
           "hit_rate": {
-            "value": 97.55051737149503,
-            "display": "97.6%"
+            "value": 97.40843464318482,
+            "display": "97.4%"
           },
           "requests": {
-            "value": 414,
-            "display": "414",
+            "value": 442,
+            "display": "442",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1678,48 +1236,96 @@
           }
         },
         {
+          "id": "codex",
+          "label": "Codex",
+          "totals": {
+            "miss": {
+              "value": 1260999,
+              "display": "1.26M",
+              "status": "available"
+            },
+            "cache_read": {
+              "value": 54557696,
+              "display": "54.56M",
+              "status": "available"
+            },
+            "cache_create": {
+              "value": 0,
+              "display": "0",
+              "status": "available"
+            },
+            "output": {
+              "value": 371339,
+              "display": "371.34K",
+              "status": "available"
+            },
+            "total": {
+              "value": 56190034,
+              "display": "56.19M",
+              "status": "available"
+            }
+          },
+          "share": "20.6%",
+          "hit_rate": {
+            "value": 97.74090204007815,
+            "display": "97.7%"
+          },
+          "requests": {
+            "value": 495,
+            "display": "495",
+            "status": "available"
+          },
+          "quality": "authoritative",
+          "coverage": {
+            "tokens": "available",
+            "requests": "available",
+            "token_source": "derived",
+            "token_window": null
+          }
+        },
+        {
           "id": "cursor",
           "label": "Cursor",
           "totals": {
             "miss": {
-              "value": 2832934,
-              "display": "2.83M",
-              "status": "partial"
+              "value": null,
+              "display": "—",
+              "status": "unavailable"
             },
             "cache_read": {
-              "value": 55479214,
-              "display": "55.48M",
-              "status": "partial"
+              "value": null,
+              "display": "—",
+              "status": "unavailable"
             },
             "cache_create": {
-              "value": 2161613,
-              "display": "2.16M",
-              "status": "partial"
+              "value": null,
+              "display": "—",
+              "status": "unavailable"
             },
             "output": {
-              "value": 412564,
-              "display": "412.56K",
-              "status": "partial"
+              "value": null,
+              "display": "—",
+              "status": "unavailable"
             },
             "total": {
-              "value": 60886325,
-              "display": "60.89M",
-              "status": "partial"
+              "value": null,
+              "display": "—",
+              "status": "unavailable"
             }
           },
-          "share": "9.6%",
+          "share": "—",
           "hit_rate": {
-            "value": 91.7409684507633,
-            "display": "91.7%"
+            "value": null,
+            "display": "—"
           },
           "requests": {
-            "value": 2213,
-            "display": "2213",
+            "value": 1952,
+            "display": "1952",
             "status": "available"
           },
-          "quality": "degraded",
+          "quality": "authoritative",
           "coverage": {
-            "tokens": "partial",
+            "tokens": "unavailable",
             "requests": "available",
             "token_source": "account_api",
             "token_window": {
@@ -1732,17 +1338,17 @@
       ],
       "by_vendor": [
         {
-          "id": "openai",
-          "label": "OpenAI",
+          "id": "xai",
+          "label": "xAI",
           "totals": {
             "miss": {
-              "value": 5034041,
-              "display": "5.03M",
+              "value": 8838748,
+              "display": "8.84M",
               "status": "available"
             },
             "cache_read": {
-              "value": 368277888,
-              "display": "368.28M",
+              "value": 109392640,
+              "display": "109.39M",
               "status": "available"
             },
             "cache_create": {
@@ -1751,77 +1357,29 @@
               "status": "available"
             },
             "output": {
-              "value": 2749348,
-              "display": "2.75M",
+              "value": 2810685,
+              "display": "2.81M",
               "status": "available"
             },
             "total": {
-              "value": 376061277,
-              "display": "376.06M",
+              "value": 121042073,
+              "display": "121.04M",
               "status": "available"
             }
           },
-          "share": "59.2%",
+          "share": "44.4%",
           "hit_rate": {
-            "value": 98.65151884819625,
-            "display": "98.7%"
+            "value": 92.52419501325654,
+            "display": "92.5%"
           },
           "requests": {
-            "value": 1555,
-            "display": "1555",
+            "value": 1537,
+            "display": "1537",
             "status": "available"
           },
           "quality": "authoritative",
           "coverage": {
             "tokens": "available",
-            "requests": "available",
-            "token_source": "local",
-            "token_window": null
-          }
-        },
-        {
-          "id": "xai",
-          "label": "xAI",
-          "totals": {
-            "miss": {
-              "value": 9548381,
-              "display": "9.55M",
-              "status": "partial"
-            },
-            "cache_read": {
-              "value": 146798146,
-              "display": "146.8M",
-              "status": "partial"
-            },
-            "cache_create": {
-              "value": 1584650,
-              "display": "1.58M",
-              "status": "partial"
-            },
-            "output": {
-              "value": 2621789,
-              "display": "2.62M",
-              "status": "partial"
-            },
-            "total": {
-              "value": 160552966,
-              "display": "160.55M",
-              "status": "partial"
-            }
-          },
-          "share": "25.3%",
-          "hit_rate": {
-            "value": 92.95070725649059,
-            "display": "93.0%"
-          },
-          "requests": {
-            "value": 1807,
-            "display": "1807",
-            "status": "available"
-          },
-          "quality": "degraded",
-          "coverage": {
-            "tokens": "partial",
             "requests": "available",
             "token_source": "local",
             "token_window": null
@@ -1832,13 +1390,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 2246002,
-              "display": "2.25M",
+              "value": 2460539,
+              "display": "2.46M",
               "status": "available"
             },
             "cache_read": {
-              "value": 89446912,
-              "display": "89.45M",
+              "value": 92483584,
+              "display": "92.48M",
               "status": "available"
             },
             "cache_create": {
@@ -1847,24 +1405,24 @@
               "status": "available"
             },
             "output": {
-              "value": 432898,
-              "display": "432.9K",
+              "value": 464524,
+              "display": "464.52K",
               "status": "available"
             },
             "total": {
-              "value": 92125812,
-              "display": "92.13M",
+              "value": 95408647,
+              "display": "95.41M",
               "status": "available"
             }
           },
-          "share": "14.5%",
+          "share": "35.0%",
           "hit_rate": {
-            "value": 97.55051737149503,
-            "display": "97.6%"
+            "value": 97.40843464318482,
+            "display": "97.4%"
           },
           "requests": {
-            "value": 414,
-            "display": "414",
+            "value": 442,
+            "display": "442",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1876,48 +1434,48 @@
           }
         },
         {
-          "id": "unknown",
-          "label": "未知厂家",
+          "id": "openai",
+          "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 91303,
-              "display": "91.3K",
-              "status": "partial"
+              "value": 1260999,
+              "display": "1.26M",
+              "status": "available"
             },
             "cache_read": {
-              "value": 5872620,
-              "display": "5.87M",
-              "status": "partial"
+              "value": 54557696,
+              "display": "54.56M",
+              "status": "available"
             },
             "cache_create": {
-              "value": 576963,
-              "display": "576.96K",
-              "status": "partial"
+              "value": 0,
+              "display": "0",
+              "status": "available"
             },
             "output": {
-              "value": 38603,
-              "display": "38.6K",
-              "status": "partial"
+              "value": 371339,
+              "display": "371.34K",
+              "status": "available"
             },
             "total": {
-              "value": 6579489,
-              "display": "6.58M",
-              "status": "partial"
+              "value": 56190034,
+              "display": "56.19M",
+              "status": "available"
             }
           },
-          "share": "1.0%",
+          "share": "20.6%",
           "hit_rate": {
-            "value": 89.78324954753836,
-            "display": "89.8%"
+            "value": 97.74090204007815,
+            "display": "97.7%"
           },
           "requests": {
-            "value": 0,
-            "display": "0",
+            "value": 495,
+            "display": "495",
             "status": "available"
           },
-          "quality": "degraded",
+          "quality": "authoritative",
           "coverage": {
-            "tokens": "partial",
+            "tokens": "available",
             "requests": "available",
             "token_source": "local",
             "token_window": null
@@ -1959,8 +1517,8 @@
             "display": "—"
           },
           "requests": {
-            "value": 430,
-            "display": "430",
+            "value": 447,
+            "display": "447",
             "status": "available"
           },
           "quality": "authoritative",
@@ -1976,64 +1534,64 @@
     },
     "30d": {
       "range": {
-        "from": "2026-10-14",
-        "to": "2026-11-12",
+        "from": "2026-10-18",
+        "to": "2026-11-16",
         "label": "近 30 天"
       },
       "totals": {
         "miss": {
-          "value": 143095384,
-          "display": "143.1M",
+          "value": 126938089,
+          "display": "126.94M",
           "status": "partial"
         },
         "cache_read": {
-          "value": 3687782468,
-          "display": "3.69B",
+          "value": 3488988646,
+          "display": "3.49B",
           "status": "partial"
         },
         "cache_create": {
-          "value": 28025975,
-          "display": "28.03M",
+          "value": 25659063,
+          "display": "25.66M",
           "status": "partial"
         },
         "output": {
-          "value": 28143337,
-          "display": "28.14M",
+          "value": 26783446,
+          "display": "26.78M",
           "status": "partial"
         },
         "total": {
-          "value": 3887047164,
-          "display": "3.89B",
+          "value": 3668369244,
+          "display": "3.67B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 95.56554486269657,
-        "display": "95.6%"
+        "value": 95.80959613573273,
+        "display": "95.8%"
       },
       "requests": {
-        "value": 29803,
-        "display": "29803",
+        "value": 26447,
+        "display": "26447",
         "status": "available"
       },
       "user_turns": {
-        "value": 1061,
-        "display": "1061",
+        "value": 935,
+        "display": "935",
         "status": "available"
       },
       "active_days": {
-        "value": 30,
-        "display": "30",
+        "value": 27,
+        "display": "27",
         "status": "available"
       },
       "current_streak": {
-        "value": 30,
-        "display": "30",
+        "value": 0,
+        "display": "0",
         "status": "available"
       },
       "longest_streak": {
-        "value": 30,
-        "display": "30",
+        "value": 27,
+        "display": "27",
         "status": "available"
       },
       "peak": {
@@ -2059,13 +1617,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 22890581,
-              "display": "22.89M",
+              "value": 21454937,
+              "display": "21.45M",
               "status": "available"
             },
             "cache_read": {
-              "value": 1438880768,
-              "display": "1.44B",
+              "value": 1405299072,
+              "display": "1.41B",
               "status": "available"
             },
             "cache_create": {
@@ -2074,24 +1632,24 @@
               "status": "available"
             },
             "output": {
-              "value": 9023820,
-              "display": "9.02M",
+              "value": 8822087,
+              "display": "8.82M",
               "status": "available"
             },
             "total": {
-              "value": 1470795169,
-              "display": "1.47B",
+              "value": 1435576096,
+              "display": "1.44B",
               "status": "available"
             }
           },
-          "share": "37.8%",
+          "share": "39.1%",
           "hit_rate": {
-            "value": 98.43405187715169,
-            "display": "98.4%"
+            "value": 98.49624133770351,
+            "display": "98.5%"
           },
           "requests": {
-            "value": 5831,
-            "display": "5831",
+            "value": 5636,
+            "display": "5636",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2107,39 +1665,39 @@
           "label": "Cursor",
           "totals": {
             "miss": {
-              "value": 83276107,
-              "display": "83.28M",
+              "value": 66718855,
+              "display": "66.72M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 1149629161,
-              "display": "1.15B",
+              "value": 975358347,
+              "display": "975.36M",
               "status": "partial"
             },
             "cache_create": {
-              "value": 28025975,
-              "display": "28.03M",
+              "value": 25659063,
+              "display": "25.66M",
               "status": "partial"
             },
             "output": {
-              "value": 10034846,
-              "display": "10.03M",
+              "value": 8327961,
+              "display": "8.33M",
               "status": "partial"
             },
             "total": {
-              "value": 1270966089,
-              "display": "1.27B",
+              "value": 1076064226,
+              "display": "1.08B",
               "status": "partial"
             }
           },
-          "share": "32.7%",
+          "share": "29.3%",
           "hit_rate": {
-            "value": 91.17302528445637,
-            "display": "91.2%"
+            "value": 91.34824572058531,
+            "display": "91.3%"
           },
           "requests": {
-            "value": 22483,
-            "display": "22483",
+            "value": 19287,
+            "display": "19287",
             "status": "available"
           },
           "quality": "degraded",
@@ -2159,13 +1717,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 32648069,
-              "display": "32.65M",
+              "value": 34269133,
+              "display": "34.27M",
               "status": "available"
             },
             "cache_read": {
-              "value": 674340096,
-              "display": "674.34M",
+              "value": 680362112,
+              "display": "680.36M",
               "status": "available"
             },
             "cache_create": {
@@ -2174,24 +1732,24 @@
               "status": "available"
             },
             "output": {
-              "value": 8133219,
-              "display": "8.13M",
+              "value": 8650320,
+              "display": "8.65M",
               "status": "available"
             },
             "total": {
-              "value": 715121384,
-              "display": "715.12M",
+              "value": 723281565,
+              "display": "723.28M",
               "status": "available"
             }
           },
-          "share": "18.4%",
+          "share": "19.7%",
           "hit_rate": {
-            "value": 95.38209115565606,
-            "display": "95.4%"
+            "value": 95.20464110129973,
+            "display": "95.2%"
           },
           "requests": {
-            "value": 163,
-            "display": "163",
+            "value": 170,
+            "display": "170",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2207,13 +1765,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 4280627,
-              "display": "4.28M",
+              "value": 4495164,
+              "display": "4.5M",
               "status": "available"
             },
             "cache_read": {
-              "value": 424932443,
-              "display": "424.93M",
+              "value": 427969115,
+              "display": "427.97M",
               "status": "available"
             },
             "cache_create": {
@@ -2222,24 +1780,24 @@
               "status": "available"
             },
             "output": {
-              "value": 951452,
-              "display": "951.45K",
+              "value": 983078,
+              "display": "983.08K",
               "status": "available"
             },
             "total": {
-              "value": 430164522,
-              "display": "430.16M",
+              "value": 433447357,
+              "display": "433.45M",
               "status": "available"
             }
           },
-          "share": "11.1%",
+          "share": "11.8%",
           "hit_rate": {
-            "value": 99.00268018399346,
+            "value": 98.96056987402652,
             "display": "99.0%"
           },
           "requests": {
-            "value": 1326,
-            "display": "1326",
+            "value": 1354,
+            "display": "1354",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2257,13 +1815,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 22890581,
-              "display": "22.89M",
+              "value": 21454937,
+              "display": "21.45M",
               "status": "available"
             },
             "cache_read": {
-              "value": 1438880768,
-              "display": "1.44B",
+              "value": 1405299072,
+              "display": "1.41B",
               "status": "available"
             },
             "cache_create": {
@@ -2272,24 +1830,24 @@
               "status": "available"
             },
             "output": {
-              "value": 9023820,
-              "display": "9.02M",
+              "value": 8822087,
+              "display": "8.82M",
               "status": "available"
             },
             "total": {
-              "value": 1470795169,
-              "display": "1.47B",
+              "value": 1435576096,
+              "display": "1.44B",
               "status": "available"
             }
           },
-          "share": "37.8%",
+          "share": "39.1%",
           "hit_rate": {
-            "value": 98.43405187715169,
-            "display": "98.4%"
+            "value": 98.49624133770351,
+            "display": "98.5%"
           },
           "requests": {
-            "value": 5831,
-            "display": "5831",
+            "value": 5636,
+            "display": "5636",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2305,13 +1863,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 41936382,
-              "display": "41.94M",
+              "value": 43557446,
+              "display": "43.56M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 993174102,
-              "display": "993.17M",
+              "value": 999196118,
+              "display": "999.2M",
               "status": "partial"
             },
             "cache_create": {
@@ -2320,24 +1878,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 10238749,
-              "display": "10.24M",
+              "value": 10755850,
+              "display": "10.76M",
               "status": "partial"
             },
             "total": {
-              "value": 1061403257,
-              "display": "1.06B",
+              "value": 1069563438,
+              "display": "1.07B",
               "status": "partial"
             }
           },
-          "share": "27.3%",
+          "share": "29.2%",
           "hit_rate": {
-            "value": 94.48322260134758,
-            "display": "94.5%"
+            "value": 94.3699430684473,
+            "display": "94.4%"
           },
           "requests": {
-            "value": 19427,
-            "display": "19427",
+            "value": 17522,
+            "display": "17522",
             "status": "available"
           },
           "quality": "degraded",
@@ -2353,34 +1911,34 @@
           "label": "未知厂家",
           "totals": {
             "miss": {
-              "value": 73987162,
-              "display": "73.99M",
+              "value": 57429910,
+              "display": "57.43M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 783541529,
-              "display": "783.54M",
+              "value": 609270715,
+              "display": "609.27M",
               "status": "partial"
             },
             "cache_create": {
-              "value": 11139000,
-              "display": "11.14M",
+              "value": 8772088,
+              "display": "8.77M",
               "status": "partial"
             },
             "output": {
-              "value": 7655894,
-              "display": "7.66M",
+              "value": 5949009,
+              "display": "5.95M",
               "status": "partial"
             },
             "total": {
-              "value": 876323585,
-              "display": "876.32M",
+              "value": 681421722,
+              "display": "681.42M",
               "status": "partial"
             }
           },
-          "share": "22.5%",
+          "share": "18.6%",
           "hit_rate": {
-            "value": 90.20037663631719,
+            "value": 90.19916027311083,
             "display": "90.2%"
           },
           "requests": {
@@ -2401,13 +1959,13 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 4280627,
-              "display": "4.28M",
+              "value": 4495164,
+              "display": "4.5M",
               "status": "available"
             },
             "cache_read": {
-              "value": 424932443,
-              "display": "424.93M",
+              "value": 427969115,
+              "display": "427.97M",
               "status": "available"
             },
             "cache_create": {
@@ -2416,24 +1974,24 @@
               "status": "available"
             },
             "output": {
-              "value": 951452,
-              "display": "951.45K",
+              "value": 983078,
+              "display": "983.08K",
               "status": "available"
             },
             "total": {
-              "value": 430164522,
-              "display": "430.16M",
+              "value": 433447357,
+              "display": "433.45M",
               "status": "available"
             }
           },
-          "share": "11.1%",
+          "share": "11.8%",
           "hit_rate": {
-            "value": 99.00268018399346,
+            "value": 98.96056987402652,
             "display": "99.0%"
           },
           "requests": {
-            "value": 1326,
-            "display": "1326",
+            "value": 1354,
+            "display": "1354",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2474,14 +2032,14 @@
               "status": "partial"
             }
           },
-          "share": "1.2%",
+          "share": "1.3%",
           "hit_rate": {
             "value": 98.26651823357018,
             "display": "98.3%"
           },
           "requests": {
-            "value": 1566,
-            "display": "1566",
+            "value": 917,
+            "display": "917",
             "status": "available"
           },
           "quality": "degraded",
@@ -2528,8 +2086,8 @@
             "display": "—"
           },
           "requests": {
-            "value": 1072,
-            "display": "1072",
+            "value": 437,
+            "display": "437",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2545,19 +2103,19 @@
     },
     "53w": {
       "range": {
-        "from": "2025-11-10",
-        "to": "2026-11-12",
+        "from": "2025-11-17",
+        "to": "2026-11-16",
         "label": "近 53 周"
       },
       "totals": {
         "miss": {
-          "value": 1498485060,
+          "value": 1501177421,
           "display": "1.5B",
           "status": "partial"
         },
         "cache_read": {
-          "value": 18617037887,
-          "display": "18.62B",
+          "value": 18650483903,
+          "display": "18.65B",
           "status": "partial"
         },
         "cache_create": {
@@ -2566,43 +2124,43 @@
           "status": "partial"
         },
         "output": {
-          "value": 156408544,
-          "display": "156.41M",
+          "value": 157132827,
+          "display": "157.13M",
           "status": "partial"
         },
         "total": {
-          "value": 20379712740,
-          "display": "20.38B",
+          "value": 20416575400,
+          "display": "20.42B",
           "status": "partial"
         }
       },
       "hit_rate": {
-        "value": 92.0573498107312,
+        "value": 92.05822833376335,
         "display": "92.1%"
       },
       "requests": {
-        "value": 235566,
-        "display": "235566",
+        "value": 235777,
+        "display": "235777",
         "status": "available"
       },
       "user_turns": {
-        "value": 6600,
-        "display": "6600",
+        "value": 6615,
+        "display": "6615",
         "status": "available"
       },
       "active_days": {
-        "value": 206,
-        "display": "206",
+        "value": 207,
+        "display": "207",
         "status": "available"
       },
       "current_streak": {
-        "value": 83,
-        "display": "83",
+        "value": 0,
+        "display": "0",
         "status": "available"
       },
       "longest_streak": {
-        "value": 83,
-        "display": "83",
+        "value": 84,
+        "display": "84",
         "status": "available"
       },
       "peak": {
@@ -2659,8 +2217,8 @@
             "display": "90.3%"
           },
           "requests": {
-            "value": 206560,
-            "display": "206560",
+            "value": 206577,
+            "display": "206577",
             "status": "available"
           },
           "quality": "degraded",
@@ -2680,13 +2238,13 @@
           "label": "Grok",
           "totals": {
             "miss": {
-              "value": 519515545,
-              "display": "519.52M",
+              "value": 521547543,
+              "display": "521.55M",
               "status": "available"
             },
             "cache_read": {
-              "value": 6316090752,
-              "display": "6.32B",
+              "value": 6328291840,
+              "display": "6.33B",
               "status": "available"
             },
             "cache_create": {
@@ -2695,24 +2253,24 @@
               "status": "available"
             },
             "output": {
-              "value": 57698974,
-              "display": "57.7M",
+              "value": 58261831,
+              "display": "58.26M",
               "status": "available"
             },
             "total": {
-              "value": 6893305271,
-              "display": "6.89B",
+              "value": 6908101214,
+              "display": "6.91B",
               "status": "available"
             }
           },
           "share": "33.8%",
           "hit_rate": {
-            "value": 92.3998615129721,
+            "value": 92.38598872413881,
             "display": "92.4%"
           },
           "requests": {
-            "value": 1749,
-            "display": "1749",
+            "value": 1757,
+            "display": "1757",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2728,13 +2286,13 @@
           "label": "Codex",
           "totals": {
             "miss": {
-              "value": 67218186,
-              "display": "67.22M",
+              "value": 67664012,
+              "display": "67.66M",
               "status": "available"
             },
             "cache_read": {
-              "value": 2808352424,
-              "display": "2.81B",
+              "value": 2826560680,
+              "display": "2.83B",
               "status": "available"
             },
             "cache_create": {
@@ -2743,24 +2301,24 @@
               "status": "available"
             },
             "output": {
-              "value": 16315106,
-              "display": "16.32M",
+              "value": 16444906,
+              "display": "16.44M",
               "status": "available"
             },
             "total": {
-              "value": 2891885716,
-              "display": "2.89B",
+              "value": 2910669598,
+              "display": "2.91B",
               "status": "available"
             }
           },
-          "share": "14.2%",
+          "share": "14.3%",
           "hit_rate": {
-            "value": 97.66244008176172,
+            "value": 97.6621023175211,
             "display": "97.7%"
           },
           "requests": {
-            "value": 16856,
-            "display": "16856",
+            "value": 17014,
+            "display": "17014",
             "status": "available"
           },
           "quality": "authoritative",
@@ -2776,13 +2334,13 @@
           "label": "Kimi Code",
           "totals": {
             "miss": {
-              "value": 14063580,
-              "display": "14.06M",
+              "value": 14278117,
+              "display": "14.28M",
               "status": "available"
             },
             "cache_read": {
-              "value": 982782045,
-              "display": "982.78M",
+              "value": 985818717,
+              "display": "985.82M",
               "status": "available"
             },
             "cache_create": {
@@ -2791,24 +2349,24 @@
               "status": "available"
             },
             "output": {
-              "value": 3230486,
-              "display": "3.23M",
+              "value": 3262112,
+              "display": "3.26M",
               "status": "available"
             },
             "total": {
-              "value": 1000076111,
+              "value": 1003358946,
               "display": "1B",
               "status": "available"
             }
           },
           "share": "4.9%",
           "hit_rate": {
-            "value": 98.5891917818268,
+            "value": 98.57232654733112,
             "display": "98.6%"
           },
           "requests": {
-            "value": 5064,
-            "display": "5064",
+            "value": 5092,
+            "display": "5092",
             "status": "available"
           },
           "quality": "authoritative",
@@ -3019,13 +2577,13 @@
           "label": "xAI",
           "totals": {
             "miss": {
-              "value": 1109620239,
+              "value": 1111652237,
               "display": "1.11B",
               "status": "partial"
             },
             "cache_read": {
-              "value": 11421634260,
-              "display": "11.42B",
+              "value": 11433835348,
+              "display": "11.43B",
               "status": "partial"
             },
             "cache_create": {
@@ -3034,24 +2592,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 108463824,
-              "display": "108.46M",
+              "value": 109026681,
+              "display": "109.03M",
               "status": "partial"
             },
             "total": {
-              "value": 12656216432,
-              "display": "12.66B",
+              "value": 12671012375,
+              "display": "12.67B",
               "status": "partial"
             }
           },
           "share": "62.1%",
           "hit_rate": {
-            "value": 91.025338296182,
+            "value": 91.01933107168846,
             "display": "91.0%"
           },
           "requests": {
-            "value": 134761,
-            "display": "134761",
+            "value": 134769,
+            "display": "134769",
             "status": "available"
           },
           "quality": "degraded",
@@ -3067,13 +2625,13 @@
           "label": "OpenAI",
           "totals": {
             "miss": {
-              "value": 71659580,
-              "display": "71.66M",
+              "value": 72105406,
+              "display": "72.11M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 2911122550,
-              "display": "2.91B",
+              "value": 2929330806,
+              "display": "2.93B",
               "status": "partial"
             },
             "cache_create": {
@@ -3082,24 +2640,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 16907566,
-              "display": "16.91M",
+              "value": 17037366,
+              "display": "17.04M",
               "status": "partial"
             },
             "total": {
-              "value": 3003632250,
-              "display": "3B",
+              "value": 3022416132,
+              "display": "3.02B",
               "status": "partial"
             }
           },
-          "share": "14.7%",
+          "share": "14.8%",
           "hit_rate": {
-            "value": 97.46872772020122,
+            "value": 97.46960480122058,
             "display": "97.5%"
           },
           "requests": {
-            "value": 17408,
-            "display": "17408",
+            "value": 17566,
+            "display": "17566",
             "status": "available"
           },
           "quality": "degraded",
@@ -3163,12 +2721,12 @@
           "label": "Moonshot",
           "totals": {
             "miss": {
-              "value": 18819736,
-              "display": "18.82M",
+              "value": 19034273,
+              "display": "19.03M",
               "status": "partial"
             },
             "cache_read": {
-              "value": 1029862984,
+              "value": 1032899656,
               "display": "1.03B",
               "status": "partial"
             },
@@ -3178,24 +2736,24 @@
               "status": "partial"
             },
             "output": {
-              "value": 3808316,
-              "display": "3.81M",
+              "value": 3839942,
+              "display": "3.84M",
               "status": "partial"
             },
             "total": {
-              "value": 1059935126,
+              "value": 1063217961,
               "display": "1.06B",
               "status": "partial"
             }
           },
           "share": "5.2%",
           "hit_rate": {
-            "value": 97.51319389382796,
+            "value": 97.50057462727098,
             "display": "97.5%"
           },
           "requests": {
-            "value": 6129,
-            "display": "6129",
+            "value": 6157,
+            "display": "6157",
             "status": "available"
           },
           "quality": "degraded",
@@ -3236,14 +2794,14 @@
               "status": "partial"
             }
           },
-          "share": "4.9%",
+          "share": "4.8%",
           "hit_rate": {
             "value": 88.30111525331036,
             "display": "88.3%"
           },
           "requests": {
-            "value": 11410,
-            "display": "11410",
+            "value": 11427,
+            "display": "11427",
             "status": "available"
           },
           "quality": "degraded",
@@ -3499,16 +3057,9 @@
   },
   "activity": {
     "week_start": "monday",
-    "from": "2025-11-10",
-    "to": "2026-11-12",
+    "from": "2025-11-17",
+    "to": "2026-11-16",
     "dates": [
-      "2025-11-10",
-      "2025-11-11",
-      "2025-11-12",
-      "2025-11-13",
-      "2025-11-14",
-      "2025-11-15",
-      "2025-11-16",
       "2025-11-17",
       "2025-11-18",
       "2025-11-19",
@@ -3872,7 +3423,14 @@
       "2026-11-12",
       "2026-11-13",
       "2026-11-14",
-      "2026-11-15"
+      "2026-11-15",
+      "2026-11-16",
+      "2026-11-17",
+      "2026-11-18",
+      "2026-11-19",
+      "2026-11-20",
+      "2026-11-21",
+      "2026-11-22"
     ],
     "series": [
       {
@@ -3881,13 +3439,6 @@
         "label": "All",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -4248,7 +3799,14 @@
           113670604,
           93382235,
           66336509,
-          76059350,
+          109639175,
+          3282835,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -4264,13 +3822,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           2,
           2,
           0,
@@ -4386,7 +3937,7 @@
           1,
           1,
           3,
-          2,
+          3,
           3,
           2,
           2,
@@ -4473,7 +4024,7 @@
           0,
           0,
           0,
-          1,
+          2,
           0,
           0,
           0,
@@ -4622,6 +4173,13 @@
           4,
           4,
           4,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -4637,13 +4195,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -4912,6 +4463,7 @@
           "active",
           "active",
           "empty",
+          "active",
           "active",
           "active",
           "active",
@@ -4995,6 +4547,12 @@
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -5006,13 +4564,6 @@
         "label": "All",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -5373,7 +4924,14 @@
           557,
           427,
           1822,
-          461,
+          644,
+          28,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -5424,13 +4982,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -5736,7 +5287,7 @@
           2,
           1,
           2,
-          1,
+          2,
           3,
           4,
           2,
@@ -5746,7 +5297,14 @@
           4,
           3,
           5,
-          3,
+          4,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -5797,13 +5355,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -6114,12 +5665,19 @@
           "active",
           "active",
           "empty",
+          "active",
           "active",
           "active",
           "active",
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -6131,13 +5689,6 @@
         "label": "Cursor",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -6501,6 +6052,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -6514,13 +6072,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           2,
           0,
@@ -6869,6 +6420,13 @@
           3,
           4,
           2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -6887,13 +6445,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -7242,9 +6793,16 @@
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
           "empty",
           "empty",
           "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -7256,13 +6814,6 @@
         "label": "Grok",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -7623,7 +7174,14 @@
           0,
           68686140,
           0,
-          37559990,
+          52355933,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -7902,13 +7460,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           4,
           5,
           5,
@@ -7950,7 +7501,7 @@
           5,
           5,
           2,
-          3,
+          2,
           1,
           2,
           1,
@@ -7996,7 +7547,14 @@
           0,
           3,
           0,
-          2,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -8275,13 +7833,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -8370,6 +7921,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -8381,13 +7939,6 @@
         "label": "Codex",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -8748,7 +8299,14 @@
           106978065,
           24696095,
           0,
-          12710057,
+          31493939,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -8799,13 +8357,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -9081,7 +8632,7 @@
           0,
           0,
           0,
-          3,
+          2,
           5,
           4,
           0,
@@ -9121,7 +8672,14 @@
           5,
           2,
           0,
-          2,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -9172,13 +8730,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -9495,6 +9046,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -9506,13 +9064,6 @@
         "label": "Kimi Code",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -9874,6 +9425,13 @@
           0,
           66336509,
           25789303,
+          3282835,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -10148,16 +9706,9 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
+          2,
           5,
-          3,
+          4,
           0,
           0,
           0,
@@ -10233,7 +9784,7 @@
           0,
           0,
           5,
-          4,
+          5,
           0,
           1,
           0,
@@ -10246,7 +9797,14 @@
           0,
           0,
           3,
-          2,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -10521,13 +10079,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -10620,6 +10171,13 @@
           "empty",
           "active",
           "active",
+          "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -10631,13 +10189,6 @@
         "label": "Claude Code",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -11001,6 +10552,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -11261,15 +10819,15 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -11634,13 +11192,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -11745,6 +11296,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -11756,13 +11314,6 @@
         "label": "OpenClaw",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -12126,6 +11677,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -12214,13 +11772,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           5,
           5,
@@ -12392,6 +11943,13 @@
           0,
           3,
           1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -12587,13 +12145,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -12870,6 +12421,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -12881,13 +12439,6 @@
         "label": "MiniMax Agent",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -13251,16 +12802,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -13624,6 +13175,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -13892,13 +13450,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -13995,6 +13546,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -14006,13 +13564,6 @@
         "label": "OpenCode",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -14376,6 +13927,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -14646,14 +14204,14 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -15019,13 +14577,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -15120,6 +14671,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -15131,13 +14689,6 @@
         "label": "Cursor",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -15498,7 +15049,14 @@
           0,
           224,
           1596,
-          115,
+          132,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -15588,13 +15146,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           2,
           3,
           0,
@@ -15872,6 +15423,13 @@
           2,
           4,
           2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -15961,13 +15519,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -16245,6 +15796,13 @@
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -16256,13 +15814,6 @@
         "label": "Codex",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -16623,7 +16174,14 @@
           557,
           190,
           0,
-          147,
+          305,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -16674,13 +16232,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -16936,7 +16487,7 @@
           0,
           2,
           5,
-          3,
+          2,
           4,
           4,
           5,
@@ -16996,7 +16547,14 @@
           5,
           2,
           0,
-          2,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -17047,13 +16605,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -17370,6 +16921,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -17381,13 +16939,6 @@
         "label": "Kimi Code",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -17749,6 +17300,13 @@
           0,
           226,
           188,
+          28,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -18023,16 +17581,9 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           2,
           5,
-          3,
+          4,
           0,
           0,
           0,
@@ -18048,7 +17599,7 @@
           0,
           0,
           0,
-          1,
+          2,
           4,
           0,
           3,
@@ -18107,8 +17658,8 @@
           0,
           0,
           0,
-          4,
-          2,
+          5,
+          3,
           0,
           1,
           0,
@@ -18122,6 +17673,13 @@
           0,
           3,
           2,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -18396,13 +17954,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -18495,6 +18046,13 @@
           "empty",
           "active",
           "active",
+          "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -18506,13 +18064,6 @@
         "label": "Claude Code",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -18876,16 +18427,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -19249,6 +18800,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -19509,13 +19067,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -19620,6 +19171,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -19631,13 +19189,6 @@
         "label": "OpenClaw",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -20001,6 +19552,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -20089,13 +19647,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           2,
           5,
           5,
@@ -20267,6 +19818,13 @@
           0,
           3,
           1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -20462,13 +20020,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -20745,6 +20296,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -20756,13 +20314,6 @@
         "label": "Grok",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -21123,7 +20674,14 @@
           0,
           13,
           0,
-          11,
+          19,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -21402,13 +20960,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           4,
           5,
           5,
@@ -21497,6 +21048,13 @@
           3,
           0,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -21775,13 +21333,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -21870,6 +21421,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -21881,13 +21439,6 @@
         "label": "MiniMax Agent",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -22251,16 +21802,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -22624,6 +22175,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -22892,13 +22450,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -22995,6 +22546,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -23006,13 +22564,6 @@
         "label": "OpenCode",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -23376,6 +22927,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -23646,14 +23204,14 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -24019,13 +23577,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -24120,6 +23671,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -24131,13 +23689,6 @@
         "label": "xAI",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -24498,7 +24049,14 @@
           113050,
           68686140,
           0,
-          37559990,
+          52355933,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -24514,13 +24072,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           1,
           0,
@@ -24872,6 +24423,13 @@
           3,
           0,
           2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -24887,13 +24445,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -25245,6 +24796,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -25256,13 +24814,6 @@
         "label": "OpenAI",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -25623,7 +25174,14 @@
           106978065,
           24696095,
           0,
-          12710057,
+          31493939,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -25674,13 +25232,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -25829,7 +25380,7 @@
           0,
           0,
           0,
-          3,
+          2,
           1,
           0,
           0,
@@ -25996,7 +25547,14 @@
           5,
           3,
           0,
-          2,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -26047,13 +25605,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -26370,6 +25921,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -26381,13 +25939,6 @@
         "label": "未知厂家",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -26751,6 +26302,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -26764,13 +26322,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           3,
           0,
@@ -27119,6 +26670,13 @@
           0,
           0,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -27137,13 +26695,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -27492,9 +27043,16 @@
           "empty",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
           "empty",
           "empty",
           "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -27506,13 +27064,6 @@
         "label": "Moonshot",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -27874,6 +27425,13 @@
           0,
           66336509,
           25789303,
+          3282835,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -27963,13 +27521,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           2,
           0,
@@ -28159,7 +27710,7 @@
           5,
           4,
           0,
-          2,
+          3,
           0,
           0,
           0,
@@ -28177,7 +27728,7 @@
           4,
           0,
           3,
-          4,
+          5,
           0,
           0,
           0,
@@ -28246,7 +27797,14 @@
           0,
           0,
           4,
-          3,
+          4,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -28336,13 +27894,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -28620,6 +28171,13 @@
           "empty",
           "active",
           "active",
+          "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -28631,13 +28189,6 @@
         "label": "Anthropic",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -29001,6 +28552,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -29092,13 +28650,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           4,
           0,
           0,
@@ -29353,6 +28904,13 @@
           0,
           0,
           5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -29465,13 +29023,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -29745,6 +29296,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -29756,13 +29314,6 @@
         "label": "MiniMax",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -30126,6 +29677,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -30216,13 +29774,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           5,
           1,
           2,
@@ -30402,6 +29953,13 @@
           0,
           0,
           5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -30589,13 +30147,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -30870,6 +30421,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -30881,13 +30439,6 @@
         "label": "Xiaomi",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -31251,16 +30802,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -31624,6 +31175,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -31818,13 +31376,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -31995,6 +31546,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -32006,13 +31564,6 @@
         "label": "DeepSeek",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -32376,16 +31927,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -32749,6 +32300,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -33012,13 +32570,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -33120,6 +32671,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -33131,13 +32689,6 @@
         "label": "Cursor",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -33501,6 +33052,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -33589,13 +33147,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           5,
           0,
           0,
@@ -33827,6 +33378,13 @@
           5,
           3,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -33962,13 +33520,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -34245,6 +33796,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -34256,13 +33814,6 @@
         "label": "Google",
         "metric": "tokens",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -34626,16 +34177,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -34999,6 +34550,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -35121,13 +34679,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -35370,6 +34921,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -35381,13 +34939,6 @@
         "label": "xAI",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -35748,7 +35299,14 @@
           0,
           13,
           1505,
-          11,
+          19,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -35839,13 +35397,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           3,
           0,
@@ -36121,7 +35672,14 @@
           0,
           1,
           5,
-          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -36212,13 +35770,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -36495,6 +36046,13 @@
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -36506,13 +36064,6 @@
         "label": "未知厂家",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -36876,6 +36427,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -36963,13 +36521,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           3,
           2,
           0,
@@ -37233,6 +36784,13 @@
           1,
           0,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -37336,13 +36894,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -37606,6 +37157,10 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
           "empty",
           "empty",
           "empty",
@@ -37620,6 +37175,9 @@
           "empty",
           "empty",
           "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -37631,13 +37189,6 @@
         "label": "OpenAI",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -37998,7 +37549,14 @@
           557,
           190,
           0,
-          147,
+          305,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -38049,13 +37607,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           0,
           0,
@@ -38356,7 +37907,7 @@
           4,
           5,
           4,
-          4,
+          3,
           3,
           0,
           1,
@@ -38364,14 +37915,21 @@
           2,
           3,
           5,
-          3,
+          2,
           0,
           2,
           4,
           5,
           3,
           0,
-          2,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -38422,13 +37980,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -38745,6 +38296,13 @@
           "active",
           "empty",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -38756,13 +38314,6 @@
         "label": "Anthropic",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -39123,7 +38674,14 @@
           0,
           224,
           91,
-          115,
+          132,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -39213,13 +38771,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           2,
           0,
@@ -39497,6 +39048,13 @@
           4,
           2,
           3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -39586,13 +39144,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -39870,6 +39421,13 @@
           "active",
           "active",
           "active",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -39881,13 +39439,6 @@
         "label": "MiniMax",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -40251,6 +39802,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -40341,13 +39899,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           5,
           1,
           5,
@@ -40527,6 +40078,13 @@
           0,
           0,
           4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -40714,13 +40272,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -40995,6 +40546,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -41006,13 +40564,6 @@
         "label": "Cursor",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -41376,6 +40927,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
@@ -41464,13 +41022,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           4,
           0,
           0,
@@ -41725,6 +41276,13 @@
           4,
           0,
           2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -41837,13 +41395,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -42120,6 +41671,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -42131,13 +41689,6 @@
         "label": "Moonshot",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -42499,6 +42050,13 @@
           0,
           226,
           188,
+          28,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -42588,13 +42146,6 @@
           0,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           1,
           2,
           0,
@@ -42798,7 +42349,7 @@
           0,
           0,
           0,
-          2,
+          3,
           4,
           0,
           4,
@@ -42872,6 +42423,13 @@
           0,
           4,
           3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0,
           0,
           0
@@ -42961,13 +42519,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "empty",
@@ -43245,6 +42796,13 @@
           "empty",
           "active",
           "active",
+          "active",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -43256,13 +42814,6 @@
         "label": "DeepSeek",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -43626,16 +43177,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -43999,6 +43550,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -44262,13 +43820,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -44370,6 +43921,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -44381,13 +43939,6 @@
         "label": "Google",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -44751,16 +44302,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -45124,6 +44675,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -45246,13 +44804,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "empty",
           "empty",
@@ -45495,6 +45046,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
@@ -45506,13 +45064,6 @@
         "label": "Xiaomi",
         "metric": "requests",
         "values": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -45876,16 +45427,16 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "levels": [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
           0,
           0,
           0,
@@ -46249,6 +45800,13 @@
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0
         ],
         "states": [
@@ -46443,13 +46001,6 @@
           "empty",
           "empty",
           "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
-          "empty",
           "active",
           "active",
           "active",
@@ -46620,6 +46171,13 @@
           "empty",
           "empty",
           "empty",
+          "empty",
+          "empty",
+          "empty",
+          "empty",
+          "future",
+          "future",
+          "future",
           "future",
           "future",
           "future"
