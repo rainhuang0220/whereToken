@@ -16,10 +16,11 @@ var profileRefreshRunTimeout = 5 * time.Minute
 const profileRefreshChildEnv = "WHERETOKEN_PROFILE_REFRESH_CHILD"
 
 type profileRefreshOutcome struct {
-	phase  string
-	code   string
-	reason string
-	retry  bool
+	phase         string
+	code          string
+	reason        string
+	retry         bool
+	cursorAuthDue bool
 }
 
 // runProfileRefreshChild bounds the complete automatic scan and upload. A
@@ -63,16 +64,16 @@ func (a *App) runProfileRefreshChild(ctx context.Context, flags Flags, home adap
 		}
 		return failure("TIMED_OUT")
 	}
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) && exitErr.ExitCode() == ExitUsage {
-		// A rejected upload is permanent for these bytes. It must not enter
-		// the transient-error retry loop. Only owned children use this exit code.
-		return profileRefreshOutcome{phase: publicprofile.PhaseFailed, reason: "PUBLISH_REJECTED"}
-	}
 	st, stateErr := publicprofile.LoadRefreshState(path)
 	after := refreshResultFileInfo(path)
 	freshResult := stateErr == nil && after != nil && !st.CheckedAt.Before(start) &&
 		(before == nil || !os.SameFile(before, after))
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == ExitUsage {
+		// Report a verified collection fault even when publication rejects it.
+		return profileRefreshOutcome{phase: publicprofile.PhaseFailed, reason: "PUBLISH_REJECTED",
+			cursorAuthDue: freshResult && cursorAuthReminderDue(st.Collection, a.Now())}
+	}
 	if !freshResult {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		if err != nil {
@@ -80,7 +81,8 @@ func (a *App) runProfileRefreshChild(ctx context.Context, flags Flags, home adap
 		}
 		return failure("RESULT_MISSING")
 	}
-	outcome := profileRefreshOutcome{phase: st.Phase, code: st.Code}
+	outcome := profileRefreshOutcome{phase: st.Phase, code: st.Code,
+		cursorAuthDue: cursorAuthReminderDue(st.Collection, a.Now())}
 	switch st.Code {
 	case publicprofile.CodeBusy:
 		outcome.reason, outcome.retry = "LOCK_BUSY", true

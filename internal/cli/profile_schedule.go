@@ -16,16 +16,17 @@ import (
 // The reservation is durable before starting a child. A restart or calendar
 // slot change keeps the deadline and escalation for an unresolved outage.
 type profileRefreshSchedule struct {
-	Slot            time.Time `json:"slot"`
-	Attempts        int       `json:"attempts"`
-	RetryAt         time.Time `json:"retry_at,omitzero"`
-	Done            bool      `json:"done"`
-	Failures        int       `json:"failures,omitempty"`
-	LastAttemptAt   time.Time `json:"last_attempt_at,omitzero"`
-	LastDurationMS  int64     `json:"last_duration_ms"`
-	LastPhase       string    `json:"last_phase,omitempty"`
-	LastCode        string    `json:"last_code,omitempty"`
-	LastRetryReason string    `json:"last_retry_reason,omitempty"`
+	Slot               time.Time `json:"slot"`
+	Attempts           int       `json:"attempts"`
+	RetryAt            time.Time `json:"retry_at,omitzero"`
+	Done               bool      `json:"done"`
+	Failures           int       `json:"failures,omitempty"`
+	LastAttemptAt      time.Time `json:"last_attempt_at,omitzero"`
+	LastDurationMS     int64     `json:"last_duration_ms"`
+	LastPhase          string    `json:"last_phase,omitempty"`
+	LastCode           string    `json:"last_code,omitempty"`
+	CursorAuthNoticeAt time.Time `json:"cursor_auth_notice_at,omitzero"`
+	LastRetryReason    string    `json:"last_retry_reason,omitempty"`
 }
 
 var profileRefreshBackoff = [...]time.Duration{30 * time.Second, 2 * time.Minute, 2 * time.Hour, 4 * time.Hour}
@@ -125,6 +126,14 @@ func (a *App) attemptScheduledProfileRefresh(ctx context.Context, flags Flags, h
 		return err
 	}
 	appendProfileRefreshScheduleLog(home, st)
+	now := a.Now()
+	if a.GOOS == "darwin" && outcome.cursorAuthDue &&
+		(st.CursorAuthNoticeAt.IsZero() || now.Sub(st.CursorAuthNoticeAt) >= publicprofile.CollectionMaxAge) {
+		if a.notifyCursorAuth(ctx) == nil {
+			st.CursorAuthNoticeAt = now
+			return saveProfileRefreshSchedule(home, st)
+		}
+	}
 	return nil
 }
 

@@ -3,6 +3,7 @@ package cursor
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -790,7 +791,7 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 		}
 		e := mapTokens(model, adapter.FlexString(adapter.Pick(m, "conversationId", "conversation_id")), ts, usage, 0)
 		if id := adapter.FlexString(adapter.Pick(m, "usageEventId", "usage_event_id", "requestId", "request_id")); id != "" {
-			e.RequestID = filteredEventIDPrefix + id
+			e.RequestID = fmt.Sprintf("%s%x", filteredEventIDPrefix, sha256.Sum256([]byte(id)))
 		}
 		out = append(out, e)
 	}

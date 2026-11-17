@@ -195,3 +195,20 @@ func TestFilteredUsesProviderEventIdentity(t *testing.T) {
 		t.Fatalf("repeat changed observation identity: %v", err)
 	}
 }
+
+func TestFilteredProviderIdentityIsStableWithoutCopyingRawFields(t *testing.T) {
+	const opaqueID = "/fixture/private/path/provider-id"
+	row := func(id string) []byte {
+		return []byte(fmt.Sprintf(`{"totalUsageEventsCount":1,"usageEventsDisplay":[{"requestId":%q,"tokenUsage":{"inputTokens":10}}]}`, id))
+	}
+	first, _, _, _, firstErr := parseFiltered(row(opaqueID))
+	replay, _, _, _, replayErr := parseFiltered(row(opaqueID))
+	other, _, _, _, otherErr := parseFiltered(row(opaqueID + "-other"))
+	if firstErr != nil || replayErr != nil || otherErr != nil || len(first) != 1 || len(replay) != 1 || len(other) != 1 {
+		t.Fatal("provider row did not parse")
+	}
+	if strings.Contains(first[0].RequestID, opaqueID) || first[0].RequestID == "" ||
+		first[0].RequestID != replay[0].RequestID || first[0].RequestID == other[0].RequestID {
+		t.Fatal("normalized request ID lost privacy or stable identity")
+	}
+}

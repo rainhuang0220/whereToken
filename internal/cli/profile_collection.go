@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
-
+	"github.com/rainhuang0220/whereToken/internal/adapter/cursor"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 )
@@ -28,7 +28,7 @@ func mergeRefreshCollection(res scan.Result, prev *publicprofile.CollectionEvide
 			status, category := publicprofile.SourceUnavailable, "SOURCE_UNAVAILABLE"
 			if id == "cursor" {
 				for _, failure := range res.Errors {
-					if failure == "cursor: OS_PERMISSION" {
+					if failure == "cursor: "+cursor.KindOSPermission || failure == "cursor: OS_PERMISSION" {
 						status, category = publicprofile.SourceAuthRequired, "AUTH"
 					}
 				}
@@ -120,6 +120,7 @@ type refreshHealth struct {
 	Attempts            int                               `json:"slot_attempts,omitempty"`
 	ConsecutiveFailures int                               `json:"failure_backoff_level,omitempty"`
 	RetryCategory       string                            `json:"retry_category,omitempty"`
+	CursorAuthNoticeAt  time.Time                         `json:"cursor_auth_notice_at,omitzero"`
 	DurationMS          int64                             `json:"last_duration_ms,omitempty"`
 }
 

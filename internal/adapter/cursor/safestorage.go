@@ -214,22 +214,22 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if value == "" || !strings.HasPrefix(value, sealedStoragePrefix) {
 		return value, nil
 	}
-	if a.NoOSKeychain {
-		// The macOS keychain query with UI disabled may still
-		// wait indefinitely for SecurityAgent on legacy macOS keychains.
-		// A scheduled refresh must never enter that OS code path.
-		return "", errOSPermission
-	}
-	if a.Unseal != nil {
+	if a.Unseal != nil && !a.NoOSKeychain {
 		return a.Unseal(value)
 	}
-	if plain, ok := rememberedOpened(dbPath, value); ok {
-		return plain, nil
+	authorized := consentAllows(a.ConsentPath)
+	if authorized {
+		if plain, ok := rememberedOpened(dbPath, value); ok {
+			return plain, nil
+		}
 	}
-	if !consentAllows(a.ConsentPath) {
-		return "", errAccountUsageUnavailable
+	if a.NoOSKeychain {
+		// A legacy macOS query can wait for SecurityAgent even with UI
+		// disabled. A scheduled or locked scan only uses the exact session
+		// already authorized and opened in this process, if any.
+		return "", errOSPermission
 	}
-	if flag.Lookup("test.v") != nil {
+	if !authorized || flag.Lookup("test.v") != nil {
 		return "", errAccountUsageUnavailable
 	}
 	plain, err := unsealOS(value, dbPath, a.AllowPrompt)

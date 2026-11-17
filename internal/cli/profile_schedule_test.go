@@ -447,3 +447,60 @@ func TestProfileRefreshHealthyCadenceStaysAtThreeChecksDaily(t *testing.T) {
 		t.Fatalf("healthy scans=%d; want 9 across three days", attempts)
 	}
 }
+
+func TestScheduledCursorAuthReminderSurvivesSlotsAndRestart(t *testing.T) {
+	home := testhome.New(t.TempDir())
+	start := time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)
+	now := start
+	observed := start.Add(-48 * time.Hour)
+	notices := 0
+	run := func() {
+		t.Helper()
+		app := failingScheduleApp(t, home, &now)
+		app.GOOS = "darwin"
+		app.RunRefreshChild = func(context.Context, string, []string) error {
+			return publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
+				Phase: publicprofile.PhaseFailed, Code: publicprofile.CodeWillRetry, CheckedAt: now,
+				Collection: &publicprofile.CollectionEvidence{Sources: []publicprofile.SourceCheck{{
+					SourceCoverage: publicprofile.SourceCoverage{Source: "cursor", Status: publicprofile.SourceAuthRequired},
+					Category:       "AUTH", LastAttemptAt: now, LastObservationAt: &observed,
+				}}},
+			})
+		}
+		app.RunCmd = func(name string, args ...string) error {
+			if name != "/usr/bin/osascript" || len(args) != 2 || args[0] != "-e" ||
+				!strings.Contains(args[1], "wheretoken cursor connect") {
+				t.Fatalf("unexpected reminder %q %v", name, args)
+			}
+			notices++
+			return nil
+		}
+		st, _, err := app.refreshSchedule(home, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := app.attemptScheduledProfileRefresh(context.Background(), Flags{}, home, st); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run()
+	if notices != 1 {
+		t.Fatalf("first stale auth failure sent %d reminders", notices)
+	}
+	now = start.Add(10*time.Hour + 30*time.Minute)
+	run()
+	if notices != 1 {
+		t.Fatal("restarting in the next slot repeated the reminder")
+	}
+	now = start.Add(24 * time.Hour)
+	observed = now.Add(-time.Hour)
+	run()
+	if notices != 1 {
+		t.Fatal("recent foreground observation still sent a reminder")
+	}
+	now = start.Add(48 * time.Hour)
+	run()
+	if notices != 2 {
+		t.Fatal("an ongoing auth gap did not get a reminder after cooldown")
+	}
+}

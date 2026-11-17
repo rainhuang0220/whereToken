@@ -375,3 +375,38 @@ func TestUnattendedSealedCursorNeverUnsealsEvenWithConsent(t *testing.T) {
 		t.Fatalf("explicit connect was disabled: opened=%t err=%v called=%v", opened != "", err, called)
 	}
 }
+
+func TestNoOSKeychainCanReuseOnlyCurrentAuthorizedInProcessSession(t *testing.T) {
+	dir := t.TempDir()
+	db := filepath.Join(dir, "state.vscdb")
+	consent := filepath.Join(dir, "connect.json")
+	if err := WriteConsent(consent); err != nil {
+		t.Fatal(err)
+	}
+	sealed := sealChromeCBC("fixture-password", fakeJWT)
+	rememberOpened(db, sealed, fakeJWT)
+	t.Cleanup(func() {
+		openedMu.Lock()
+		delete(openedPlain, db)
+		openedMu.Unlock()
+	})
+
+	a := Adapter{ConsentPath: consent, NoOSKeychain: true, Unseal: func(string) (string, error) {
+		t.Fatal("cached-only read invoked the unseal mechanism")
+		return "", errOSPermission
+	}}
+	opened, err := a.openSealed(sealed, db)
+	if opened != fakeJWT || err != nil {
+		t.Fatalf("foreground grant was not reusable within the same process: err=%v", err)
+	}
+	replacement := sealChromeCBC("fixture-replacement-password", fakeJWT)
+	if opened, err := a.openSealed(replacement, db); opened != "" || err != errOSPermission {
+		t.Fatalf("a distinct sealed row bypassed cached-only access: err=%v", err)
+	}
+	if err := RemoveConsent(consent); err != nil {
+		t.Fatal(err)
+	}
+	if opened, err := a.openSealed(sealed, db); opened != "" || err != errOSPermission {
+		t.Fatalf("revoked consent reused the session: err=%v", err)
+	}
+}

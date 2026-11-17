@@ -13,6 +13,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 
@@ -276,5 +277,40 @@ func TestCursorConnectDoesNotPrintUnobservedTokensAsZero(t *testing.T) {
 	if code := app.Run(); code != ExitFail || !strings.Contains(out.String(), "collection: AUTH_REQUIRED") ||
 		!strings.Contains(out.String(), "total: unavailable") || strings.Contains(out.String()+errb.String(), "fake-sensitive-provider-text") {
 		t.Fatalf("connect reported unobserved usage: code=%d out=%s err=%s", code, out, errb)
+	}
+}
+
+type connectInput func([]byte) (int, error)
+
+func (read connectInput) Read(p []byte) (int, error) { return read(p) }
+
+func TestCursorConnectHoldsScanLockOnlyDuringCollection(t *testing.T) {
+	dir := t.TempDir()
+	home := testhome.New(dir)
+	writeCursorFixtureDB(t, dir, cursorFixtureJWT)
+	seedCursorFixtureHistory(t, dir)
+	app, out, stderr := testApp([]string{"--home", dir, "cursor", "connect"})
+	app.Stdin = connectInput(func(p []byte) (int, error) {
+		release, ok, err := proclock.TryLock(app.scanLockPath(home))
+		if err != nil || !ok {
+			t.Fatalf("waiting for confirmation blocked an unrelated scan: ok=%v err=%v", ok, err)
+		}
+		release()
+		return copy(p, "yes\n"), nil
+	})
+	app.Scan = func(adapter.Home) scan.Result {
+		release, ok, err := proclock.TryLock(app.scanLockPath(home))
+		if ok {
+			release()
+		}
+		if err != nil || ok {
+			t.Fatalf("collection was not serialized by the scan lock: ok=%v err=%v", ok, err)
+		}
+		return scan.Result{Events: []event.UsageEvent{{
+			Source: "cursor", Timestamp: app.Now(), Miss: 10, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI,
+		}}}
+	}
+	if code := app.Run(); code != ExitOK {
+		t.Fatalf("cursor connect code=%d out=%s stderr=%s", code, out, stderr)
 	}
 }

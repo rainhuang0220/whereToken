@@ -65,12 +65,6 @@ func (a *App) cursorDisconnect(home adapter.Home) int {
 }
 
 func (a *App) cursorConnect(home adapter.Home) int {
-	release, ok, err := proclock.TryLock(a.scanLockPath(home))
-	if err != nil || !ok {
-		fmt.Fprintln(a.Stderr, "已有扫描或扫描锁不可用，请稍后重试。")
-		return ExitFail
-	}
-	defer release()
 	path := cursor.ConsentPath(home)
 	fmt.Fprintln(a.Stderr, "这一步会申请系统授权，读取操作系统保护的 Cursor 会话以采集账号用量。密封会话需要在前台采集。系统可能在重启或升级后再次询问。")
 	if runtime.GOOS == "linux" {
@@ -203,6 +197,16 @@ func (a *App) readHistoryAnswer() (string, bool) {
 }
 
 func (a *App) finishCursorConnect(home adapter.Home, ad cursor.Adapter) int {
+	release, ok, err := proclock.TryLock(a.scanLockPath(home))
+	if err != nil || !ok {
+		fmt.Fprintln(a.Stderr, "已有扫描或扫描锁不可用，请稍后重试。")
+		return ExitFail
+	}
+	defer release()
+	// Subject already offered system authorization outside the scan lock.
+	// The scan can reuse that exact in-memory session. Another sealed row
+	// must wait for explicit foreground authorization.
+	ad.NoOSKeychain = true
 	var res scan.Result
 	if a.Scan != nil {
 		res = a.Scan(home)

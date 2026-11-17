@@ -38,3 +38,22 @@ func TestCursorCoverageClosesOldOpenDaysAfterRecovery(t *testing.T) {
 		t.Fatalf("validated coverage was not restored: %+v", fresh)
 	}
 }
+
+func TestKnownHistoricalGapUsesTheRegularSchedule(t *testing.T) {
+	lg, err := ledger.Open(filepath.Join(t.TempDir(), "ledger.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	if err := lg.NoteAuditedWindow("cursor", ledger.WindowAudit{
+		From: "2026-11-01", To: "2026-11-18", Validation: "open",
+	}, now, nil); err != nil {
+		t.Fatal(err)
+	}
+	check := cursorCheck(now, now, lg, "cursor", "", true)
+	state := &publicprofile.CollectionEvidence{Sources: []publicprofile.SourceCheck{check}}
+	if check.Status != publicprofile.SourceCoverageGap || state.RetryCategory() != "" {
+		t.Fatalf("a previously known gap spent the immediate retry budget: %+v", check)
+	}
+}

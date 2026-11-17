@@ -107,6 +107,7 @@ func (a *App) writeRefreshHealth(home adapter.Home, doctor, machine bool) int {
 			h.NextCheck = next.In(a.Loc)
 			h.Attempts, h.ConsecutiveFailures = schedule.Attempts, schedule.Failures
 			h.DurationMS, h.RetryCategory = schedule.LastDurationMS, schedule.LastRetryReason
+			h.CursorAuthNoticeAt = schedule.CursorAuthNoticeAt
 		}
 	}
 	h.Sources, h.CollectionHealthy = st.Collection.At(now)
@@ -166,6 +167,9 @@ func (a *App) printRefreshHealth(home adapter.Home, h refreshHealth, doctor bool
 	}
 	if h.Publication.VerifiedAt != nil {
 		print("publication_verified_at=%s\npublication_date=%s\n", h.Publication.VerifiedAt.Format(time.RFC3339), h.Publication.VerifiedAsOfDate)
+	}
+	if doctor && !h.CursorAuthNoticeAt.IsZero() {
+		print("cursor_auth_notice_at=%s\n", h.CursorAuthNoticeAt.Format(time.RFC3339))
 	}
 	if doctor {
 		print("plist=%s\nslot_attempts=%d\nlast_duration_ms=%d\nretry_category=%s\n", h.Plist, h.Attempts, h.DurationMS, h.RetryCategory)

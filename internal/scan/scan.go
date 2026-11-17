@@ -270,7 +270,10 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		if collection != nil {
 			if c, ok := a.(cursor.Adapter); ok {
 				cursorExpected = cursorCollectionExpected(c, lg, cursorSource) || haveCursorLookback
-				if cursorExpected && len(roots) == rootCount {
+				if c.Scheduled && lg == nil && (cursorExpected || len(roots) > rootCount) {
+					cursorExpected = true
+					cursorCategory = "LEDGER"
+				} else if cursorExpected && len(roots) == rootCount {
 					cursorCategory = "AUTH"
 				}
 			} else {
@@ -404,6 +407,12 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 			c.ConsentPath = cursor.ConsentPath(home)
 		}
 		c.AllowPrompt = false
+		if c.Scheduled && lg == nil {
+			// Account rows require an available ledger for identity binding.
+			// Keep local facts and turns available if that store fails.
+			c.Offline = true
+			c.NoOSKeychain = true
+		}
 		if lg != nil && len(c.Covered) == 0 {
 			source := "cursor"
 			prev, _ := lg.Meta(cursor.AccountSubjectMeta)

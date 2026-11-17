@@ -82,9 +82,8 @@ func cursorCheck(at, now time.Time, lg *ledger.Ledger, namespace, category strin
 	case "COVERAGE":
 		check.Status = publicprofile.SourceCoverageGap
 	case "":
-		if check.Status == publicprofile.SourceCoverageGap {
-			check.Category = "COVERAGE"
-		}
+		// A detected historical gap still rotates through the normal slots.
+		// Only a failed API attempt supplies a retryable category.
 	default:
 		check.Status = publicprofile.SourceUnavailable
 	}
