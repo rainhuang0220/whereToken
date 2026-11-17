@@ -314,3 +314,22 @@ func TestCursorConnectHoldsScanLockOnlyDuringCollection(t *testing.T) {
 		t.Fatalf("cursor connect code=%d out=%s stderr=%s", code, out, stderr)
 	}
 }
+
+func TestCursorConnectPrintsAuditedZero(t *testing.T) {
+	dir := t.TempDir()
+	writeCursorFixtureDB(t, dir, cursorFixtureJWT)
+	app, out, errb := testApp([]string{"--home", dir, "cursor", "connect"})
+	app.Scan = func(adapter.Home) scan.Result {
+		now := app.Now()
+		return scan.Result{
+			Events: []event.UsageEvent{{Source: "cursor", Timestamp: now, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI}},
+			Collection: &publicprofile.CollectionEvidence{Sources: []publicprofile.SourceCheck{{
+				SourceCoverage:    publicprofile.SourceCoverage{Source: "cursor", Status: publicprofile.SourceConfirmedZero},
+				LastObservationAt: &now,
+			}}},
+		}
+	}
+	if code := app.Run(); code != ExitOK || !strings.Contains(out.String(), "total: 0\n") {
+		t.Fatalf("audited zero unavailable: code=%d out=%s err=%s", code, out, errb)
+	}
+}

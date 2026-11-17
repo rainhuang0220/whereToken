@@ -22,7 +22,10 @@ type AuditedWindow struct {
 func (l *Ledger) AuditedWindows(source, since string) ([]AuditedWindow, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	rows, err := l.db.Query(`SELECT a.window_from, a.window_to, a.observed_at, a.validation, a.declared, a.raw_rows
+	rows, err := l.db.Query(`SELECT a.window_from, a.window_to, a.observed_at, a.validation, a.declared, a.raw_rows,
+		       (a.miss = 0 AND a.cache_read = 0 AND a.cache_create = 0 AND a.output = 0
+		         AND a.days > 0 AND a.deduped > 0 AND a.deduped <= a.raw_rows
+		         AND (a.declared = a.raw_rows OR a.declared = -1))
 		FROM api_window_audits a
 		WHERE a.source=? AND a.window_to>=? AND a.validation IN ('ok','open')
 		AND EXISTS (SELECT 1 FROM api_observations o WHERE o.source=a.source AND o.window_from=a.window_from
@@ -37,7 +40,8 @@ func (l *Ledger) AuditedWindows(source, since string) ([]AuditedWindow, error) {
 		var w AuditedWindow
 		var observed, validation string
 		var declared, raw int
-		if err := rows.Scan(&w.From, &w.To, &observed, &validation, &declared, &raw); err != nil {
+		var measuredZero bool
+		if err := rows.Scan(&w.From, &w.To, &observed, &validation, &declared, &raw, &measuredZero); err != nil {
 			return nil, err
 		}
 		w.ObservedAt, err = time.Parse(time.RFC3339Nano, observed)
@@ -45,7 +49,7 @@ func (l *Ledger) AuditedWindows(source, since string) ([]AuditedWindow, error) {
 			return nil, err
 		}
 		w.Open = validation == "open"
-		w.Zero = declared == 0 && raw == 0
+		w.Zero = (declared == 0 && raw == 0) || measuredZero
 		windows = append(windows, w)
 	}
 	return windows, rows.Err()

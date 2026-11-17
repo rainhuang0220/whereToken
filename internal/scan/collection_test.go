@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
@@ -55,5 +56,30 @@ func TestKnownHistoricalGapUsesTheRegularSchedule(t *testing.T) {
 	state := &publicprofile.CollectionEvidence{Sources: []publicprofile.SourceCheck{check}}
 	if check.Status != publicprofile.SourceCoverageGap || state.RetryCategory() != "" {
 		t.Fatalf("a previously known gap spent the immediate retry budget: %+v", check)
+	}
+}
+
+func TestAuditedZeroMeterRowsStayConfirmedZero(t *testing.T) {
+	lg, err := ledger.Open(filepath.Join(t.TempDir(), "ledger.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lg.Close()
+	now := time.Date(2026, 11, 18, 12, 0, 0, 0, time.UTC)
+	at := now.Add(-time.Hour)
+	audit := ledger.WindowAudit{
+		From: "2025-11-12", To: "2026-11-18", Validation: "open",
+		Declared: 1, RawRows: 1, Deduped: 1, Days: 1,
+	}
+	row := event.UsageEvent{
+		Source: "cursor", RequestID: "fixture", Timestamp: at,
+		Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI,
+	}
+	if err := lg.NoteAuditedWindow("cursor", audit, now, []event.UsageEvent{row}); err != nil {
+		t.Fatal(err)
+	}
+	check := cursorCheck(now, now, lg, "cursor", "", true)
+	if check.Status != publicprofile.SourceConfirmedZero {
+		t.Fatalf("audited zero meter was treated as %s", check.Status)
 	}
 }

@@ -234,15 +234,16 @@ func (a *App) finishCursorConnect(home adapter.Home, ad cursor.Adapter) int {
 	fmt.Fprintln(a.Stdout, "cursor connect: on")
 	fmt.Fprintf(a.Stdout, "session: %s\n", cursor.StoredSessionKind(home))
 	checks, _ := res.Collection.At(a.Now())
+	confirmedZero := false
 	for _, check := range checks {
 		if check.Source == "cursor" {
+			confirmedZero = check.Status == publicprofile.SourceConfirmedZero
 			fmt.Fprintf(a.Stdout, "collection: %s\n", check.Status)
 			if check.Category != "" {
 				fmt.Fprintf(a.Stdout, "category: %s\n", check.Category)
 			}
 		}
 	}
-	confirmedZero := false
 	for _, e := range api {
 		confirmedZero = confirmedZero || e.RequestID == "cursor-api:measured-zero"
 	}

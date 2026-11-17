@@ -35,7 +35,7 @@ Legacy refresh state still loads. It has unknown collection health until the
 new worker records evidence. Local log readers can confirm a successful scan
 without proving a continuous date range. An empty directory or a quiet calendar
 day cannot establish measured zero. A complete usage window with an explicit
-zero count can report `CONFIRMED_ZERO`. An ambiguous or failed response leaves
+zero count or explicit zero-meter rows can report `CONFIRMED_ZERO`. An ambiguous or failed response leaves
 coverage unknown. UTC windows and owner-local calendar cells use different day
 boundaries, so a gap can affect two displayed dates.
 
