@@ -636,6 +636,44 @@ test("replaces the fallback when a newer hosted snapshot is valid", async ({ pag
   await expect(page.locator("#freshness")).toHaveAttribute("data-as-of-date", "2026-09-10");
 });
 
+test("retains the newest verified snapshot across reload and hosted failure", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.snapshot_id = "sha256:" + "6".repeat(64);
+  hosted.generated_at = "2026-09-11T07:00:00Z";
+  hosted.as_of_date = "2026-09-11";
+  hosted.periods.all.totals.total = { value: 420000000, display: "420.00M", status: "available" };
+  await serveHostedProfile(page, verifiedEnvelope(hosted));
+  await page.goto(baseURL);
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
+
+  const stale = structuredClone(hosted);
+  stale.snapshot_id = "sha256:" + "5".repeat(64);
+  stale.as_of_date = "2026-09-10";
+  stale.generated_at = "2026-09-10T07:00:00Z";
+  stale.periods.all.totals.total = { value: 410000000, display: "410.00M", status: "available" };
+  await page.unroute(hostedRoute);
+  await page.route(hostedRoute, (route) => route.fulfill({ json: verifiedEnvelope(stale) }));
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("420.00M");
+  await expect(page.locator("#freshness")).toContainText("saved snapshot");
+
+  await page.unroute(hostedRoute);
+  await page.route(hostedRoute, (route) => route.fulfill({ status: 503, json: {} }));
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("420.00M");
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
+
+  snapshot.snapshot_id = "sha256:" + "7".repeat(64);
+  snapshot.as_of_date = "2026-09-12";
+  snapshot.generated_at = "2026-09-12T07:00:00Z";
+  snapshot.periods.all.totals.total = { value: 430000000, display: "430.00M", status: "available" };
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("430.00M");
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", snapshot.snapshot_id);
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
+});
+
 for (const [caseName, asOfDate, total] of [
   ["an older owner-local date with a higher total", "2026-11-12", 22000000000],
   ["a later owner-local date with a lower total", "2026-11-17", 20000000000],

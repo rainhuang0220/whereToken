@@ -187,6 +187,12 @@ grep -q "issues: write" "$yml"
 grep -q "steps.wall.outcome == 'failure'" "$yml"
 grep -q "steps.wall.outputs.class || 'check_failed'" "$yml"
 grep -q 'GH_TOKEN: ${{ github.token }}' "$yml"
+mirror_line="$(grep -n 'name: Verify and repair the deployed Pages fallback' "$yml" | cut -d: -f1)"
+alert_line="$(grep -n 'name: Open or close one alert issue' "$yml" | cut -d: -f1)"
+if ! [ "$mirror_line" -lt "$alert_line" ]; then
+  echo "alert failure must not prevent Pages regeneration or repair" >&2
+  exit 1
+fi
 if grep -E '^[[:space:]]*pull_request' "$yml"; then
   echo "profile-freshness must not run on pull_request" >&2
   exit 1

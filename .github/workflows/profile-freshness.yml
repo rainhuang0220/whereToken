@@ -38,13 +38,6 @@ jobs:
           class="$(python3 scripts/freshness_classify.py --surface actions --wall "$RUNNER_TEMP/wall.json")"
           echo "class=${class}" >> "$GITHUB_OUTPUT"
 
-      - name: Open or close one alert issue
-        if: always() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
-        run: bash scripts/freshness-alert.sh --class "$CLASS"
-
       # GitHub Pages must still display the most recently *verified* README
       # snapshot if the visitor's network cannot reach the hosted API.
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -84,10 +77,17 @@ jobs:
           python3 scripts/profile_pages.py --dir "$RUNNER_TEMP/public-profile" \
             --url 'https://rainhuang0220.github.io/whereToken/profile' --repair
 
-      - name: Fail when the public wall check is not ok
-        if: steps.wall.outputs.class != 'ok'
+      - name: Open or close one alert issue
+        if: always() && !cancelled() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
         env:
-          CLASS: ${{ steps.wall.outputs.class }}
+          GH_TOKEN: ${{ github.token }}
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
+        run: bash scripts/freshness-alert.sh --class "$CLASS"
+
+      - name: Fail when the public wall check is not ok
+        if: always() && !cancelled() && steps.wall.outputs.class != 'ok'
+        env:
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
         run: |
           echo "profile freshness class=$CLASS"
           exit 1
