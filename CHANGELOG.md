@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Remind Mac users when scheduled Cursor collection requires authorization and usage evidence is stale. Keep foreground authorization outside the shared scan lock.
+- Require a ledger for account-bound Cursor refresh and keep verified browser data across a reload in the same tab.
+
 - Build with Go 1.26.11 to pick up the standard-library HTTP security fix.
 
 - Report source freshness, UTC gaps, hosted acceptance, GitHub verification and Pages diagnostics independently. A refresh can retain trusted usage and display an incomplete activity wall.

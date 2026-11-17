@@ -50,10 +50,12 @@ reboot can change whether the system grants access. A previous interactive
 collection does not enable unattended access to a sealed session.
 
 The project ships no Keychain helper. A stable signature can preserve an
-existing grant, but cannot guarantee that a login Keychain is unlocked or that
-a provider session is available. The rollout uses normal foreground
-authorization and the existing no-Keychain boundary in the background. Cursor
-credentials stay in process memory during a pull. [Apple Keychain APIs](https://developer.apple.com/documentation/technotes/tn3137-on-mac-keychains)
+existing grant. The login Keychain must still be unlocked and the provider
+session must still be valid. The rollout uses normal foreground authorization
+and the no-Keychain boundary in the background. A foreground connection
+prompts before acquiring the scan lock and then uses only the exact session it
+authorized within that process. Cursor credentials stay in process memory
+during a pull. [Apple Keychain APIs](https://developer.apple.com/documentation/technotes/tn3137-on-mac-keychains)
 
 The scheduled reader prioritizes the open UTC month and the previous month
 when it needs a refresh. It rotates older gaps through the lookback. An open
@@ -84,12 +86,18 @@ minutes. The kernel releases its scan lock on exit.
 - `STALE` means the observation is at least 24 hours old. Check the scheduler
   and retry deadline. A power-off or absent graphical login delays recovery.
 - `AUTH_REQUIRED` needs an interactive Cursor collection or login renewal.
-  An unrelated publication sign-in failure does not stop collection.
+  A scheduled macOS check submits a local notification when the last Cursor
+  observation is at least 24 hours old or missing, at most once per 24 hours.
+  The checkpoint records the last successful submission as
+  `cursor_auth_notice_at`. Banner visibility follows macOS Notification
+  settings and Focus. An unrelated publication sign-in failure does not stop
+  collection or suppress this reminder.
 - `SOURCE_UNAVAILABLE` identifies a provider, local read or ledger failure.
   Doctor and JSON status show fixed categories such as `NETWORK`,
   `RATE_LIMIT`, `SCHEMA`, `LOCAL_READ` and `LEDGER`.
-- `COVERAGE_GAP` lists unverified UTC ranges. Retry with the same account and
-  keep the existing ledger and its backup.
+- `COVERAGE_GAP` lists unverified UTC ranges. Known historical gaps rotate
+  through the regular slots. A failed provider attempt can also use the retry
+  budget. Keep the existing ledger and its backup.
 - `RECONCILIATION` indicates a candidate account window that would lower a
   recorded UTC day. Keep the prior observation and investigate upstream
   changes before applying a verified correction.
@@ -118,3 +126,71 @@ can dispatch repair for a missing or stale deployment even when the mirror
 commit is already present. The browser uses a verified hosted snapshot when
 its date and cumulative total preserve the accepted baseline, and keeps the
 static bundle available when the hosted API cannot be reached.
+
+
+### Hosted-first compatibility gate
+
+In staging, submit an ordinary v2 snapshot from the old CLI, then submit a
+candidate v2 snapshot carrying `source_status` for the same test owner and a
+later local date. Keep the cumulative total monotonic. Require the hosted PUT
+and subsequent GET to agree on snapshot ID and date. Compare the returned
+source evidence with the candidate and verify the ID on both README previews.
+Only then allow the candidate CLI to upload. The hosted integration test
+covers both payloads and rejects an attempt to reuse the candidate ID after
+stripping its source metadata.
+
+For rollback after the first candidate write, keep a schema-aware hosted
+reader in service and stop rolling out the candidate CLI or pause the test
+watch. Stored candidate revisions include source evidence in the ID. Keep the
+existing live projection, verified wall and backup intact.
+
+### macOS pilot over two scheduled slots
+
+Use a separate macOS GUI test account, its own ledger, a test Cursor account
+and a staging publish target. Record the candidate binary digest, signature
+status, owner time zone, each surface's snapshot ID, and the ledger's last
+Cursor observation and coverage. The pilot operator owns any real account
+login, Keychain prompt, scheduler setup and external publication.
+
+1. **Slot A at 10:30 local.** In the test Cursor account, create a small amount
+   of measurable usage after the baseline. Let the candidate watch run under
+   launchd. Require a newer trusted API observation with nonzero incremental
+   usage, account continuity and a complete audit for the requested interval.
+   Record separate collection and publication timestamps. For a sealed
+   session, classify a foreground collection separately. The unattended
+   requirement passes only if the scheduled worker acquires the new usage
+   without an operator, prompt or credential in plaintext storage.
+2. **Slot B at 17:00 local.** Before the slot, have the staging operator
+   introduce a reversible provider outage or use an expired test session.
+   Require the collection to report degradation, retain the baseline
+   observations and avoid zeros for unobserved dates. Restore the staging
+   provider or renew the test session. Let the bounded retry run or use
+   the next scheduled check. Require new verified coverage and match the
+   accepted, verified and displayed snapshot IDs. An auth-required case
+   with stale or missing evidence should submit one local notification.
+   Verify the banner in the test GUI and repeat a failed check within
+   24 hours to confirm cooldown persists across a worker restart.
+3. **Check Pages separately.** Leave the staging Git mirror bytes unchanged
+   while the site serves an older bundle. Require the scheduled job to
+   request deployment and the next read-back to match the committed
+   manifest, JSON and preview SVGs. Confirm a browser that already saw
+   newer verified data keeps it on reload in the same tab during a hosted
+   failure.
+
+### Signed Bridge decision
+
+The earlier macOS isolation test exercised a disposable Keychain item:
+stable signing and a fixed designated requirement survived a rebuild. The
+separately approved one-time Cursor prototype read succeeded, and a later
+ACL audit recorded unexpected persistent trust entries. Those results establish
+that signature continuity and per-item authorization are separate controls.
+The installed v0.7.19 binary inspected for this review has an ad-hoc signature.
+The former prototype is outside the deployment plan. A new pilot would require
+an exact reviewed signing identity, a fresh authorization scope, and before/after
+access-control evidence from a disposable GUI account.
+
+The current release gate for sealed-session unattended acquisition remains
+**NO-GO**. The local reminder and foreground acquisition provide a fallback.
+A genuinely unattended design needs a provider-supported scoped credential
+or a separately accepted OS authorization with documented revocation,
+signed-upgrade continuity and repeatable two-slot evidence.
