@@ -86,16 +86,17 @@ type Snapshot struct {
 	AsOfDate      string `json:"as_of_date"`
 	// UTC offset of the owner's local snapshot date, used to defer a
 	// same-day publication to local midnight without assuming server UTC.
-	OwnerUTCOffsetMinutes *int       `json:"owner_utc_offset_minutes,omitempty"`
-	Producer              Producer   `json:"producer"`
-	Owner                 *Owner     `json:"owner,omitempty"`
-	Provenance            Provenance `json:"provenance"`
-	DataStatus            string     `json:"data_status"`
-	Privacy               Privacy    `json:"privacy"`
-	Periods               Periods    `json:"periods"`
-	Activity              Activity   `json:"activity"`
-	Notices               []string   `json:"notices"`
-	Links                 Links      `json:"links"`
+	OwnerUTCOffsetMinutes *int             `json:"owner_utc_offset_minutes,omitempty"`
+	Producer              Producer         `json:"producer"`
+	Owner                 *Owner           `json:"owner,omitempty"`
+	Provenance            Provenance       `json:"provenance"`
+	DataStatus            string           `json:"data_status"`
+	SourceStatus          []SourceCoverage `json:"source_status,omitempty"`
+	Privacy               Privacy          `json:"privacy"`
+	Periods               Periods          `json:"periods"`
+	Activity              Activity         `json:"activity"`
+	Notices               []string         `json:"notices"`
+	Links                 Links            `json:"links"`
 }
 
 type Producer struct {
@@ -275,4 +276,5 @@ type Input struct {
 	PortraitSeed  string
 	Offline       bool
 	Errors        []string
+	SourceStatus  []SourceCoverage
 }

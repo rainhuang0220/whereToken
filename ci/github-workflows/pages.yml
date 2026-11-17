@@ -11,6 +11,7 @@ on:
       - "web/**"
       - "scripts/gendemo/**"
       - "scripts/genprofiledemo/**"
+      - "scripts/profile_pages.py"
       - "docs/media/public-profile-demo/**"
       - "public-profile/**"
       - "profile-e2e/**"
@@ -20,18 +21,27 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ steps.revision.outputs.commit }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refs/heads/main
+
+      - name: Record the assembled revision
+        id: revision
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -85,6 +95,26 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.build.outputs.revision }}
+
+      - name: Check for a superseding fallback
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/main
+          git diff --exit-code HEAD FETCH_HEAD -- public-profile
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+      - name: Verify deployed snapshot and preview identities
+        if: success()
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          if [ -f public-profile/profile.json ]; then
+            python3 scripts/profile_pages.py --dir public-profile \
+              --url "${PAGES_URL%/}/profile" --attempts 5
+          fi

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
@@ -75,8 +76,14 @@ func buildVerifiedFallback(raw []byte, current *publicprofile.Snapshot) (map[str
 	}
 	if current != nil {
 		ctotal := current.Periods.All.Totals.Total.Value
-		if snap.AsOfDate < current.AsOfDate || (ctotal != nil && *env.Wall.VerifiedTotal < *ctotal) {
+		incoming, _ := time.Parse(time.RFC3339, snap.GeneratedAt)
+		stored, _ := time.Parse(time.RFC3339, current.GeneratedAt)
+		olderRevision := snap.AsOfDate == current.AsOfDate && snap.SnapshotID != current.SnapshotID && incoming.Before(stored)
+		if olderRevision || snap.AsOfDate < current.AsOfDate || (ctotal != nil && *env.Wall.VerifiedTotal < *ctotal) {
 			return nil, false, errors.New("verified wall regressed behind checked-in static profile")
+		}
+		if snap.SnapshotID == current.SnapshotID {
+			snap.GeneratedAt = current.GeneratedAt
 		}
 	}
 	files, err := publicprofile.BundleWith(snap, env.Presentation)

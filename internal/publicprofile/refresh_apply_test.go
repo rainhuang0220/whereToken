@@ -369,3 +369,22 @@ func TestApplyRefreshRejectsValidationWithoutAnotherPut(t *testing.T) {
 		t.Fatalf("puts=%d fetches=%d rejected=%v", pub.puts, pub.fetches, got.Rejected)
 	}
 }
+
+type racedMaterialization struct{ candidate string }
+
+func (p racedMaterialization) Fetch(context.Context) (RemoteView, error) {
+	return RemoteView{}, nil
+}
+
+func (p racedMaterialization) Put(context.Context, []byte) (PutResult, error) {
+	return PutResult{Status: 200, Readme: "materialized", AcceptedSnapshotID: p.candidate}, nil
+}
+
+func TestMaterializedReplyCannotFabricateVerification(t *testing.T) {
+	now := time.Date(2026, 11, 16, 2, 32, 0, 0, time.UTC)
+	snap := mustBuild(t, usageInput(now, time.UTC, 18_000))
+	got := ApplyRefresh(context.Background(), snap, now, false, racedMaterialization{snap.SnapshotID})
+	if got.Decision.Code != CodePendingGitHub || got.VerifiedWall.Proven || !got.HostedAcceptedAt.Equal(now) {
+		t.Fatalf("materialization acknowledgement fabricated GitHub proof: %+v", got)
+	}
+}

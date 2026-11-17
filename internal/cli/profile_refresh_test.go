@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -164,6 +165,7 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 	}}
 	puts := 0
 	var sawBatch bool
+	var uploaded publicprofile.Snapshot
 	app, out, errb := testApp([]string{"profile", "refresh", "--quiet"})
 	app.Home = home
 	app.Creds = creds
@@ -178,6 +180,9 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 			sawBatch = true
 		}
 		if req.Method == http.MethodGet {
+			if uploaded.SnapshotID != "" {
+				return verifiedResponse(uploaded, now)
+			}
 			return jsonRes(http.StatusNotFound, nil)
 		}
 		if req.Method == http.MethodPut && strings.HasSuffix(req.URL.Path, "/sync/public-profile") {
@@ -186,7 +191,10 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 			if strings.Contains(string(body), `"live_sync": true`) {
 				t.Fatal("refresh set live_sync")
 			}
-			return jsonRes(200, map[string]any{"ok": true, "readme": "materialized"})
+			if err := json.Unmarshal(body, &uploaded); err != nil {
+				t.Fatal(err)
+			}
+			return jsonRes(200, map[string]any{"ok": true, "readme": "materialized", "snapshot_id": uploaded.SnapshotID})
 		}
 		t.Errorf("unexpected %s %s", req.Method, req.URL.Path)
 		return jsonRes(500, nil)
@@ -507,7 +515,7 @@ func TestProfileRefreshStateCheckedAtIsTheRunInstant(t *testing.T) {
 	if !strings.Contains(text, "2026-09-25T08:00:00Z") || !strings.Contains(text, `"code": "PUBLISHED"`) {
 		t.Fatalf("state %s", text)
 	}
-	for _, bad := range []string{"total", "snapshot", "0.00 M", "$0", "#0"} {
+	for _, bad := range []string{"total", "wtd_1.tok", "0.00 M", "$0", "#0"} {
 		if strings.Contains(text, bad) {
 			t.Fatalf("state contains %q: %s", bad, text)
 		}

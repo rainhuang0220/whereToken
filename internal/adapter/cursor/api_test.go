@@ -343,7 +343,7 @@ func TestFetchFilteredTurnsPageWhenParsedRowsAreFewerThanRaw(t *testing.T) {
 			  "totalUsageEventsCount": 4,
 			  "usageEventsDisplay": [
 			    {"model":"k3","tokenUsage":{"inputTokens":1,"outputTokens":1}},
-			    {"timestamp":"1"}
+			    {"timestamp":"1","isTokenBasedCall":false}
 			  ]
 			}`)
 			return
@@ -352,7 +352,7 @@ func TestFetchFilteredTurnsPageWhenParsedRowsAreFewerThanRaw(t *testing.T) {
 		  "totalUsageEventsCount": 4,
 		  "usageEventsDisplay": [
 		    {"model":"k3","tokenUsage":{"inputTokens":2,"outputTokens":2}},
-		    {"timestamp":"2"}
+		    {"timestamp":"2","isTokenBasedCall":false}
 		  ]
 		}`)
 	}))
@@ -554,10 +554,10 @@ func TestWindowAuditCountsAndMarksTheOpenUTCDay(t *testing.T) {
 		open := start.Year() == 2026 && start.Month() == time.March
 		if open {
 			if body.Page <= 1 {
-				_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
+				_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","usageEventId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
 				return
 			}
-			_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
+			_, _ = io.WriteString(w, `{"totalUsageEventsCount":2,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"same","usageEventId":"same","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)
 			return
 		}
 		_, _ = io.WriteString(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"`+day+`T00:00:00Z","model":"gpt-5","conversationId":"`+day+`","tokenUsage":{"inputTokens":10,"outputTokens":2,"cacheReadTokens":3,"cacheWriteTokens":4}}]}`)

@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -222,7 +223,7 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if a.Unseal != nil {
 		return a.Unseal(value)
 	}
-	if plain, ok := rememberedOpened(dbPath); ok {
+	if plain, ok := rememberedOpened(dbPath, value); ok {
 		return plain, nil
 	}
 	if !consentAllows(a.ConsentPath) {
@@ -235,7 +236,7 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rememberOpened(dbPath, plain)
+	rememberOpened(dbPath, value, plain)
 	return plain, nil
 }
 
@@ -243,27 +244,35 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 // cursor connect reads the subject once, then the same command collects
 // usage without a second system dialog. The value is not written to the
 // ledger, a log, or an error.
+type openedSession struct {
+	sealedHash [32]byte
+	plain      string
+}
+
 var (
 	openedMu    sync.Mutex
-	openedPlain = map[string]string{}
+	openedPlain = map[string]openedSession{}
 )
 
-func rememberedOpened(dbPath string) (string, bool) {
+func rememberedOpened(dbPath, sealed string) (string, bool) {
 	if dbPath == "" {
 		return "", false
 	}
 	openedMu.Lock()
 	defer openedMu.Unlock()
-	plain, ok := openedPlain[dbPath]
-	return plain, ok && plain != ""
+	session, ok := openedPlain[dbPath]
+	if !ok || session.sealedHash != sha256.Sum256([]byte(sealed)) {
+		return "", false
+	}
+	return session.plain, true
 }
 
-func rememberOpened(dbPath, plain string) {
+func rememberOpened(dbPath, sealed, plain string) {
 	if dbPath == "" || plain == "" {
 		return
 	}
 	openedMu.Lock()
-	openedPlain[dbPath] = plain
+	openedPlain[dbPath] = openedSession{sealedHash: sha256.Sum256([]byte(sealed)), plain: plain}
 	openedMu.Unlock()
 }
 

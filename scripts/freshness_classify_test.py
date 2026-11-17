@@ -48,6 +48,19 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(self.classify("actions", wall(timedelta(hours=-1)), state=state), "ok")
         self.assertEqual(self.classify("actions", wall(timedelta(hours=-40)), state=state), "wall_stale")
 
+    def test_actions_reports_collection_degradation_separately_from_publication(self):
+        doc = wall(timedelta(hours=-1))
+        doc["snapshot"] = {"source_status": [
+            {"source": "cursor", "status": "AUTH_REQUIRED"},
+            {"source": "kimi", "status": "CONFIRMED_ZERO"},
+        ]}
+        self.assertEqual(self.classify("actions", doc), "collection_stale")
+        doc["wall"]["verified_at"] = stamp(timedelta(hours=-40))
+        self.assertEqual(self.classify("actions", doc), "wall_stale")
+        doc["wall"]["verified_at"] = stamp(timedelta(hours=-1))
+        doc["snapshot"]["source_status"][0]["status"] = "FRESH"
+        self.assertEqual(self.classify("actions", doc), "ok")
+
     def test_broken_wall_is_a_failed_check(self):
         self.assertEqual(self.classify("actions", {}), "check_failed")
         self.assertEqual(self.classify("actions", {"wall": {"verified_at": "yesterday"}}), "check_failed")

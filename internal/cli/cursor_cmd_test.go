@@ -13,6 +13,7 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 
 	_ "modernc.org/sqlite"
@@ -72,7 +73,7 @@ func TestCursorConnectConfirmsUnboundHistoryBeforeCollecting(t *testing.T) {
 		if got, err := lg.Meta(cursor.AccountSubjectMeta); err != nil || got != "test-user" {
 			t.Fatalf("collection started before the bind subject=%q err=%v", got, err)
 		}
-		return scan.Result{}
+		return scan.Result{Events: []event.UsageEvent{{Source: "cursor", Timestamp: app.Now(), Miss: 10, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI}}}
 	}
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("code=%d out=%s err=%s", code, out.String(), errb.String())
@@ -102,7 +103,7 @@ func TestCursorConnectConfirmsUnboundHistoryBeforeCollecting(t *testing.T) {
 	app.Stdin = strings.NewReader("no\n")
 	app.Scan = func(adapter.Home) scan.Result {
 		scanned++
-		return scan.Result{}
+		return scan.Result{Events: []event.UsageEvent{{Source: "cursor", Timestamp: app.Now(), Miss: 10, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI}}}
 	}
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("second code=%d err=%s", code, errb.String())
@@ -160,7 +161,7 @@ func TestCursorConnectDeclineAndAmbiguousAnswerDoNotClaimHistory(t *testing.T) {
 	app.Stdin = strings.NewReader("no\n")
 	app.Scan = func(adapter.Home) scan.Result {
 		scanned++
-		return scan.Result{}
+		return scan.Result{Events: []event.UsageEvent{{Source: "cursor", Timestamp: app.Now(), Miss: 10, Quality: event.QualityAuthoritative, Derivation: event.DeriveProviderAPI}}}
 	}
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("decline code=%d err=%s", code, errb.String())
@@ -242,5 +243,38 @@ func assertCLIHistoryUnbound(t *testing.T, home string) {
 	}
 	if got, err := lg.Meta(cursor.HistoryDecisionMeta); err != nil || got != "" {
 		t.Fatalf("decision=%q err=%v", got, err)
+	}
+}
+
+func TestCursorConnectOfflineDoesNotAuthorizeOrCollect(t *testing.T) {
+	dir := t.TempDir()
+	writeCursorFixtureDB(t, dir, cursorFixtureJWT)
+	app, out, errb := testApp([]string{"--home", dir, "cursor", "connect", "--offline"})
+	scanned := false
+	app.Scan = func(adapter.Home) scan.Result {
+		scanned = true
+		return scan.Result{}
+	}
+	if code := app.Run(); code == ExitOK || scanned || cursor.ConsentOn(cursor.ConsentPath(testhome.New(dir))) {
+		t.Fatalf("offline connect had side effects: code=%d scanned=%v out=%s err=%s", code, scanned, out, errb)
+	}
+}
+
+func TestCursorConnectDoesNotPrintUnobservedTokensAsZero(t *testing.T) {
+	dir := t.TempDir()
+	writeCursorFixtureDB(t, dir, cursorFixtureJWT)
+	app, out, errb := testApp([]string{"--home", dir, "cursor", "connect"})
+	app.Scan = func(adapter.Home) scan.Result {
+		return scan.Result{
+			Errors: []string{"cursor: fake-sensitive-provider-text"},
+			Collection: &publicprofile.CollectionEvidence{Sources: []publicprofile.SourceCheck{{
+				SourceCoverage: publicprofile.SourceCoverage{Source: "cursor", Status: publicprofile.SourceAuthRequired},
+				Category:       "AUTH",
+			}}},
+		}
+	}
+	if code := app.Run(); code != ExitFail || !strings.Contains(out.String(), "collection: AUTH_REQUIRED") ||
+		!strings.Contains(out.String(), "total: unavailable") || strings.Contains(out.String()+errb.String(), "fake-sensitive-provider-text") {
+		t.Fatalf("connect reported unobserved usage: code=%d out=%s err=%s", code, out, errb)
 	}
 }

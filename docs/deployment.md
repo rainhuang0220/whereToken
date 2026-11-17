@@ -71,3 +71,6 @@ Build the hosted API and SPA with `scripts/build-hosted.sh`. The SPA must be
 compiled with `VITE_HOSTED=1` and **not** `VITE_DEMO=1`. nginx serves the SPA
 at `/` and reverse-proxies `/api/` to `127.0.0.1:3400`. Environment lives in
 `/home/ubuntu/wheretoken/shared/.env` (mode 0600).
+
+Deploy the hosted schema update before enabling a refresh candidate that emits
+source coverage metadata. See [Profile refresh reliability](profile-refresh-reliability.md).

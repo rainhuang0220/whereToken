@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Build with Go 1.26.11 to pick up the standard-library HTTP security fix.
+
+- Report source freshness, UTC gaps, hosted acceptance, GitHub verification and Pages diagnostics independently. A refresh can retain trusted usage and display an incomplete activity wall.
+- Recover audited Cursor windows in bounded UTC batches. Keep sealed macOS sessions on the foreground authorization path and reject account observations that lower confirmed daily totals.
+- Keep refresh retries across sleep, restart and calendar slots. Repair stale Pages deployments independently of mirror commits and keep newer verified snapshots in the browser.
+
 ## 0.7.19 — 2026-11-10 (Alpha)
 
 - Interactive reports and `pricing --usage` show the existing mascot on stderr while a cached read is still running. The first frame waits 140ms so a fast command does not flash. `--json`, `--quiet`, pipes, and `TERM=dumb` stay clean. The mascot does not change token totals or avoid a full scan when the cache is missing.

@@ -2,9 +2,11 @@ package cursor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,18 +38,22 @@ func (a Adapter) fetchAccountUsage(sourceRoot, access, refresh string) ([]event.
 	token := access
 	events, err := a.fetchUsageWithToken(sourceRoot, token)
 	if err != nil && adapter.IsUnauthorized(err) && compatibleRefreshToken(refresh) && refresh != access {
-		next, rerr := a.refreshAccessToken(refresh)
-		if rerr != nil || !usableSessionToken(next) {
-			if len(events) > 0 {
-				return events, errExpiredAuth
-			}
-			return nil, errExpiredAuth
+		if len(events) > 0 {
+			// Keep the completed dated windows and retry from their persisted
+			// checkpoint on the next run. A second fetch would reset them.
+			return events, err
 		}
-		retried, rerr := a.fetchUsageWithToken(sourceRoot, next)
-		if rerr != nil && len(retried) == 0 && len(events) > 0 {
+		next, rerr := a.refreshAccessToken(refresh)
+		if rerr != nil {
 			return events, rerr
 		}
-		return retried, rerr
+		if !usableSessionToken(next) {
+			return events, errExpiredAuth
+		}
+		if subject := JWTSubject(access); subject == "" || JWTSubject(next) != subject {
+			return events, errAccountMismatch
+		}
+		return a.fetchUsageWithToken(sourceRoot, next)
 	}
 	return events, err
 }
@@ -81,7 +87,8 @@ func (a Adapter) allUsageWindows() []usageSpan {
 		}
 		return []usageSpan{{start: start, end: now, inclusive: true}}
 	}
-	earliest := now.AddDate(0, 0, -53*7)
+	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	earliest := day.AddDate(0, 0, -53*7)
 	cur := time.Date(earliest.Year(), earliest.Month(), 1, 0, 0, 0, 0, time.UTC)
 	var out []usageSpan
 	for cur.Before(now) {
@@ -134,7 +141,7 @@ func (a Adapter) uncoveredWindows(all []usageSpan) []usageSpan {
 		current := i == len(all)-1
 		// Keep revisiting the just-closed month during the first two UTC
 		// days so late-finishing requests around midnight can settle.
-		boundaryRecheck := i == len(all)-2 && (a.ProtectedThrough == "" || now.Day() <= 2)
+		boundaryRecheck := i == len(all)-2 && ((!a.Scheduled && a.ProtectedThrough == "") || now.Day() <= 2)
 		if current || boundaryRecheck || !windowCovered(coverage, a.Covered) {
 			out = append(out, w)
 		}
@@ -159,8 +166,16 @@ func windowCovered(w CoverageWindow, covered []CoverageWindow) bool {
 
 func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEvent, error) {
 	clearCoverage(sourceRoot)
+	now := a.now().UTC()
+	a.Now = func() time.Time { return now }
 	all := a.allUsageWindows()
 	windows := a.uncoveredWindows(all)
+	if a.Scheduled {
+		windows = scheduledWindows(windows, all, now)
+		var cancel context.CancelFunc
+		a.collectionContext, cancel = context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
+	}
 	if len(all) > 0 {
 		setLookback(sourceRoot, CoverageWindow{
 			From: all[0].coverage().From,
@@ -178,10 +193,12 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	recordMissing := func(w usageSpan) {
 		missing++
 		cov := w.coverage()
-		if firstMissing == "" {
+		if firstMissing == "" || cov.From < firstMissing {
 			firstMissing = cov.From
 		}
-		lastMissing = cov.To
+		if lastMissing == "" || cov.To > lastMissing {
+			lastMissing = cov.To
+		}
 	}
 	var failed error
 	useBilling := false
@@ -226,6 +243,9 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 				got, err = a.fetchBillingWindow(token, w)
 			}
 		}
+		if err == nil && !useBilling {
+			got.events, err = dedupeFilteredWindow(got.events)
+		}
 		if err == nil && useBilling && len(got.events) == 0 {
 			// An empty response is not proof of historical retention.
 			emptyBilling++
@@ -236,7 +256,11 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			var added []event.UsageEvent
 			out, added = dedupeUsage(out, seen, got.events)
 			cov := w.coverage()
-			cov.Audit = auditWindow(cov, got.declared, got.raw, added, w.inclusive && cov.To == a.now().UTC().Format("2006-01-02"))
+			// Billing v2's accepted closed-month bound ends at 23:59:59.
+			// Keep the measured rows. The final fractional second has
+			// no coverage proof, so treat that trailing day as open.
+			open := useBilling || (w.inclusive && cov.To == now.Format("2006-01-02"))
+			cov.Audit = auditWindow(cov, got.declared, got.raw, added, open)
 			covered = append(covered, cov)
 			continue
 		}
@@ -253,13 +277,23 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 		}
 		// Dates and page counts are safe diagnostics. Never include the raw
 		// response, credentials, conversation IDs or event bodies.
-		failed = err
 		if errors.Is(err, errSchemaChanged) {
-			failed = fmt.Errorf("%w [utc_window=%s..%s]", err, w.coverage().From, w.coverage().To)
+			err = fmt.Errorf("%w [utc_window=%s..%s]", err, w.coverage().From, w.coverage().To)
+		}
+		switch kind := CollectionFailure(err); {
+		case a.Scheduled && (kind == "SCHEMA" || kind == "COVERAGE" || kind == "SOURCE_UNAVAILABLE"):
+			if failed == nil {
+				failed = err
+			}
+			// A broken month must not prevent the other planned windows
+			// from completing. Global auth/rate/network failures stop below.
+			continue
+		default:
+			failed = err
 		}
 		break
 	}
-	if !useBilling && len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
+	if !a.Scheduled && !useBilling && len(covered) == 0 && missing == len(windows) && failed == nil && len(windows) > 0 {
 		// Never retry a dead legacy aggregate endpoint after switching to billing v2.
 		start := windows[0].start.UnixMilli()
 		end := windows[len(windows)-1].end.UnixMilli()
@@ -274,6 +308,19 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	}
 	if len(covered) > 0 {
 		setCoverage(sourceRoot, covered)
+		if len(out) == 0 {
+			latest := covered[0].To
+			for _, w := range covered[1:] {
+				if w.To > latest {
+					latest = w.To
+				}
+			}
+			day, _ := time.Parse("2006-01-02", latest)
+			if latest == now.Format("2006-01-02") {
+				day = now
+			}
+			out = completeAccountUsage(nil, day)
+		}
 	}
 	if failed != nil {
 		if len(out) == 0 {
@@ -285,7 +332,7 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 	if missing > 0 {
 		// Dates and enumerated failure counts are safe to print; raw response,
 		// cookies, account IDs and tokens must never appear in diagnostics.
-		partialErr := fmt.Errorf("%w [reason=incomplete_billing_windows missing=%d first_utc=%s last_utc=%s availability_only=%d empty=%d]", errEndpointUnavailable, missing, firstMissing, lastMissing, availabilityOnly, emptyBilling)
+		partialErr := fmt.Errorf("%w [reason=incomplete_billing_windows missing=%d first_utc=%s last_utc=%s availability_only=%d empty=%d]", errCoverage, missing, firstMissing, lastMissing, availabilityOnly, emptyBilling)
 		if availabilityDetails != "" {
 			partialErr = fmt.Errorf("%w [availability_detail=%s]", partialErr, availabilityDetails)
 		}
@@ -293,9 +340,6 @@ func (a Adapter) fetchUsageWithToken(sourceRoot, token string) ([]event.UsageEve
 			return nil, partialErr
 		}
 		return tagged(sourceRoot, degradeAPI(out)), partialErr
-	}
-	if len(covered) == len(windows) && len(out) == 0 {
-		return tagged(sourceRoot, completeAccountUsage(nil, a.now())), nil
 	}
 	return tagged(sourceRoot, out), nil
 }
@@ -311,6 +355,13 @@ func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filt
 		endMs--
 	}
 	got, err := a.fetchFiltered(token, w.start.UnixMilli(), endMs)
+	if err == nil && a.Scheduled {
+		for _, e := range got.events {
+			if e.Timestamp.IsZero() || e.Timestamp.UnixMilli() < w.start.UnixMilli() || e.Timestamp.UnixMilli() > endMs {
+				return filteredFetch{}, fmt.Errorf("%w [reason=filtered_event_outside_window]", errCoverage)
+			}
+		}
+	}
 	// In a live period Cursor can add usage between pages, changing its
 	// declared total. Re-query a smaller complete time slice rather than
 	// accepting an unverifiable partial page or giving up the entire scan.
@@ -335,6 +386,24 @@ func (a Adapter) fetchFilteredWindow(token string, w usageSpan, depth int) (filt
 	left.declared += right.declared
 	left.raw += right.raw
 	return left, nil
+}
+
+const filteredEventIDPrefix = "cursor-filtered-event:"
+
+func dedupeFilteredWindow(events []event.UsageEvent) ([]event.UsageEvent, error) {
+	out := events[:0]
+	seen := make(map[string]int, len(events))
+	for _, e := range events {
+		if i, ok := seen[e.RequestID]; ok {
+			if !strings.HasPrefix(e.RequestID, filteredEventIDPrefix) || out[i] != e {
+				return nil, fmt.Errorf("%w [reason=ambiguous_filtered_duplicate]", errPaginationIncomplete)
+			}
+			continue
+		}
+		seen[e.RequestID] = len(out)
+		out = append(out, e)
+	}
+	return out, nil
 }
 
 func dedupeUsage(dst []event.UsageEvent, seen map[string]struct{}, add []event.UsageEvent) (out, added []event.UsageEvent) {
@@ -513,7 +582,7 @@ func (a Adapter) fetchAggregated(token string, start, end int64) ([]event.UsageE
 	}
 	events, ok := parseAggregated(raw, a.now())
 	if !ok {
-		return nil, fmt.Errorf("账号用量接口返回无法解析")
+		return nil, fmt.Errorf("%w [reason=invalid_aggregate_json]", errSchemaChanged)
 	}
 	return events, nil
 }
@@ -557,7 +626,7 @@ func (a Adapter) postJSONOnce(path, token string, payload any, retry bool) ([]by
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(buf))
+	req, err := http.NewRequestWithContext(a.requestContext(), http.MethodPost, u.String(), bytes.NewReader(buf))
 	if err != nil {
 		return nil, err
 	}
@@ -568,27 +637,31 @@ func (a Adapter) postJSONOnce(path, token string, payload any, retry bool) ([]by
 	}
 	resp, err := a.client().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("账号用量接口请求失败")
+		return nil, fmt.Errorf("%w [phase=request]", errNetwork)
 	}
 	defer resp.Body.Close()
-	raw, _ := adapter.ReadHTTPBody(resp.Body)
-	if resp.StatusCode == http.StatusTooManyRequests {
-		if retry {
-			if d, ok := retryAfterWait(resp.Header); ok {
-				time.Sleep(d)
-				return a.postJSONOnce(path, token, payload, false)
+	if resp.StatusCode == http.StatusTooManyRequests && retry {
+		if d, ok := retryAfterWait(resp.Header); ok {
+			resp.Body.Close()
+			timer := time.NewTimer(d)
+			defer timer.Stop()
+			select {
+			case <-a.requestContext().Done():
+				return nil, errNetwork
+			case <-timer.C:
 			}
+			return a.postJSONOnce(path, token, payload, false)
 		}
-		return nil, adapter.ErrStatus{Code: resp.StatusCode}
-	}
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return nil, adapter.ErrStatus{Code: resp.StatusCode}
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, adapter.ErrStatus{Code: resp.StatusCode}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, adapter.ErrStatus{Code: resp.StatusCode}
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, adapter.MaxHTTPBody+1))
+	if err != nil {
+		return nil, fmt.Errorf("%w [phase=body_read]", errNetwork)
+	}
+	if len(raw) > adapter.MaxHTTPBody {
+		return nil, fmt.Errorf("%w [reason=filtered_body_limit]", errSchemaChanged)
 	}
 	return raw, nil
 }
@@ -666,12 +739,20 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 	var top map[string]any
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
-	if err := dec.Decode(&top); err != nil {
-		return nil, 0, 0, false, fmt.Errorf("账号用量接口返回无法解析")
+	if err := dec.Decode(&top); err != nil || dec.Decode(new(any)) != io.EOF {
+		return nil, 0, 0, false, fmt.Errorf("%w [reason=invalid_filtered_json]", errSchemaChanged)
 	}
-	_, hasCamel := top["totalUsageEventsCount"]
-	_, hasSnake := top["total_usage_events_count"]
-	total := int(adapter.FlexInt(adapter.Pick(top, "totalUsageEventsCount", "total_usage_events_count")))
+	var total int
+	hasCount := false
+	for _, field := range []string{"totalUsageEventsCount", "total_usage_events_count"} {
+		if value, present := top[field]; present {
+			n, err := strconv.ParseInt(adapter.FlexString(value), 10, strconv.IntSize)
+			if err != nil || n < 0 || hasCount && int(n) != total {
+				return nil, 0, 0, false, fmt.Errorf("%w [reason=invalid_declared_count]", errSchemaChanged)
+			}
+			total, hasCount = int(n), true
+		}
+	}
 	listValue := adapter.Pick(top, "usageEventsDisplay", "usage_events_display", "usageEvents", "usage_events")
 	list, listOK := listValue.([]any)
 	if !listOK {
@@ -680,10 +761,10 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 		return nil, 0, 0, false, fmt.Errorf("%w [reason=missing_usage_events_array]", errSchemaChanged)
 	}
 	out := make([]event.UsageEvent, 0, len(list))
-	for i, item := range list {
+	for _, item := range list {
 		m := adapter.AsMap(item)
 		if m == nil {
-			continue
+			return nil, 0, 0, false, fmt.Errorf("%w [reason=invalid_filtered_item]", errSchemaChanged)
 		}
 		model := adapter.FlexString(adapter.Pick(m, "model", "modelIntent", "model_intent"))
 		ts := parseAPITime(adapter.Pick(m, "timestamp"))
@@ -694,19 +775,26 @@ func parseFiltered(raw []byte) ([]event.UsageEvent, int, int, bool, error) {
 		known := false
 		for _, field := range []string{"inputTokens", "input_tokens", "cacheReadTokens", "cache_read_tokens", "cacheWriteTokens", "cache_write_tokens", "outputTokens", "output_tokens"} {
 			if value, ok := usage[field]; ok && value != nil {
+				n, err := strconv.ParseInt(adapter.FlexString(value), 10, 64)
+				if err != nil || n < 0 {
+					return nil, 0, 0, false, fmt.Errorf("%w [reason=invalid_filtered_meter]", errSchemaChanged)
+				}
 				known = true
-				break
 			}
 		}
 		if !known {
-			continue
-		} // a model label without meters is unavailable, not measured zero
-		ev := mapTokens(model, adapter.FlexString(adapter.Pick(m, "conversationId", "conversation_id")), ts, usage, i)
-		if ev.Model != "" || ev.Miss+ev.CacheRead+ev.CacheCreate+ev.Output != 0 {
-			out = append(out, ev)
+			if metered, ok := adapter.Pick(m, "isTokenBasedCall", "is_token_based_call").(bool); ok && !metered {
+				continue
+			}
+			return nil, 0, 0, false, fmt.Errorf("%w [reason=missing_filtered_meter]", errSchemaChanged)
 		}
+		e := mapTokens(model, adapter.FlexString(adapter.Pick(m, "conversationId", "conversation_id")), ts, usage, 0)
+		if id := adapter.FlexString(adapter.Pick(m, "usageEventId", "usage_event_id", "requestId", "request_id")); id != "" {
+			e.RequestID = filteredEventIDPrefix + id
+		}
+		out = append(out, e)
 	}
-	return out, len(list), total, hasCamel || hasSnake, nil
+	return out, len(list), total, hasCount, nil
 }
 
 func parseAggregated(raw []byte, now time.Time) ([]event.UsageEvent, bool) {

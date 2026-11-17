@@ -435,13 +435,13 @@ func TestRateLimitPublishesNothing(t *testing.T) {
 	}
 }
 
-func TestDuplicateRowsInsideDeclaredTotalStayComplete(t *testing.T) {
+func TestDistinctProviderIDsWithIdenticalMetersStaySeparate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, `{
 		  "totalUsageEventsCount": 2,
 		  "usageEventsDisplay": [
-		    {"timestamp":"1770000000000","model":"gpt-5","conversationId":"c","tokenUsage":{"inputTokens":10,"outputTokens":1}},
-		    {"timestamp":"1770000000000","model":"gpt-5","conversationId":"c","tokenUsage":{"inputTokens":10,"outputTokens":1}}
+		    {"usageEventId":"event-1","timestamp":"1770000000000","model":"gpt-5","conversationId":"c","tokenUsage":{"inputTokens":10,"outputTokens":1}},
+		    {"usageEventId":"event-2","timestamp":"1770000000000","model":"gpt-5","conversationId":"c","tokenUsage":{"inputTokens":10,"outputTokens":1}}
 		  ]
 		}`)
 	}))

@@ -120,13 +120,21 @@ func (l *Ledger) NoteWindowAudit(source string, a WindowAudit) error {
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	_, err := l.db.Exec(`INSERT OR REPLACE INTO api_window_audits(
+	return writeWindowAudit(l.db, source, a, time.Now())
+}
+
+type auditWriter interface {
+	Exec(string, ...any) (sql.Result, error)
+}
+
+func writeWindowAudit(w auditWriter, source string, a WindowAudit, observedAt time.Time) error {
+	_, err := w.Exec(`INSERT OR REPLACE INTO api_window_audits(
 		source,window_from,window_to,declared,raw_rows,deduped,days,
 		miss,cache_read,cache_create,output,validation,observed_at
 	) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		source, a.From, a.To, a.Declared, a.RawRows, a.Deduped, a.Days,
 		a.Miss, a.CacheRead, a.CacheCreate, a.Output, a.Validation,
-		time.Now().UTC().Format(time.RFC3339Nano))
+		observedAt.UTC().Format(time.RFC3339Nano))
 	return err
 }
 
@@ -430,8 +438,13 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 	if source == "" || from == "" || to == "" || from > to {
 		return errors.New("ledger observation rejected")
 	}
+	return l.noteAccountWindow(source, from, to, time.Now(), events, nil)
+}
+
+func (l *Ledger) noteAccountWindow(source, from, to string, at time.Time, events []event.UsageEvent, audit *WindowAudit) error {
 	var kept []dayComp
 	var tokens int64
+	var measured [4]int64
 	for _, d := range groupDays(events) {
 		if d.Day < from || d.Day > to {
 			continue
@@ -441,11 +454,18 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 			continue
 		}
 		tokens += sum
+		measured[0] += d.Miss
+		measured[1] += d.CacheRead
+		measured[2] += d.CacheCreate
+		measured[3] += d.Output
 		kept = append(kept, d)
+	}
+	if audit != nil && measured != [4]int64{audit.Miss, audit.CacheRead, audit.CacheCreate, audit.Output} {
+		return errors.New("ledger observation differs from window audit")
 	}
 	hash := observationHash("window-v2|"+from+"|"+to, kept)
 	meta := observationMeta{
-		ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		ObservedAt: at.UTC().Format(time.RFC3339Nano),
 		WindowFrom: from,
 		WindowTo:   to,
 		Coverage:   "window",
@@ -458,6 +478,14 @@ func (l *Ledger) NoteCoveredWindow(source, from, to string, events []event.Usage
 		return err
 	}
 	defer tx.Rollback()
+	if audit != nil {
+		if err := checkWindowTotals(tx, source, from, to, kept); err != nil {
+			return err
+		}
+		if err := writeWindowAudit(tx, source, *audit, at); err != nil {
+			return err
+		}
+	}
 	if err := insertObservation(tx, source, hash, tokens, len(kept), meta, kept); err != nil {
 		return err
 	}

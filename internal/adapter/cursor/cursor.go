@@ -1,6 +1,7 @@
 package cursor
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -29,16 +30,20 @@ type Adapter struct {
 	// NoOSKeychain prevents unattended collectors from entering a blocking
 	// macOS keychain authorization dialog after an unsigned upgrade.
 	// An explicit cursor connect or interactive scan may still unseal.
-	NoOSKeychain     bool
-	ConsentPath      string
-	AllowPrompt      bool
-	Probe            bool
-	PageSize         int
-	PageCap          int
-	Covered          []CoverageWindow
-	ProtectedThrough string // UTC day of the last verified legacy snapshot
-	Unseal           func(string) (string, error)
-	AcceptSubject    func(string) error
+	NoOSKeychain bool
+	// Scheduled keeps the current UTC month ahead of a rotating, bounded
+	// historical recovery batch.
+	Scheduled         bool
+	ConsentPath       string
+	AllowPrompt       bool
+	Probe             bool
+	PageSize          int
+	PageCap           int
+	Covered           []CoverageWindow
+	ProtectedThrough  string // UTC day of the last verified legacy snapshot
+	Unseal            func(string) (string, error)
+	AcceptSubject     func(string) error
+	collectionContext context.Context
 }
 
 func (Adapter) ID() string { return "cursor" }
@@ -132,7 +137,12 @@ func (a Adapter) parseDB(path string, root adapter.SourceRoot, emit func(event.U
 		apiErr = errAccountUsageUnavailable
 	case !a.Offline:
 		if a.AcceptSubject != nil {
-			if err := a.AcceptSubject(JWTSubject(token)); err != nil {
+			sub := JWTSubject(token)
+			if a.Scheduled && sub == "" {
+				apiErr = errTokenRejected
+				break
+			}
+			if err := a.AcceptSubject(sub); err != nil {
 				apiErr = err
 				break
 			}

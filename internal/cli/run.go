@@ -225,11 +225,17 @@ func (a *App) doScanWithKeychainPolicy(home adapter.Home, quiet, offline, ascii,
 	}
 	ads := scan.Adapters(offline)
 	if noOSKeychain {
-		ads = prohibitCursorOSKeychain(ads)
+		ads = prohibitCursorOSKeychain(ads, a.Now)
+	}
+	scanSources := func(progress func(scan.Progress)) scan.Result {
+		if noOSKeychain {
+			return scan.RunWithCollection(home, ads, progress, a.Now)
+		}
+		return scan.RunWithProgress(home, ads, progress)
 	}
 	var res scan.Result
 	if quiet || !a.StderrTTY {
-		res = scan.Run(home, ads)
+		res = scanSources(nil)
 	} else {
 		asciiHUD := ascii || table.UseASCII(false, a.GOOS, a.LookupEnv)
 		hud := scanHUD{
@@ -238,7 +244,7 @@ func (a *App) doScanWithKeychainPolicy(home adapter.Home, quiet, offline, ascii,
 			color: table.UseColor(false, a.StderrTTY, a.LookupEnv),
 			now:   a.Now,
 		}
-		res = scan.RunWithProgress(home, ads, func(p scan.Progress) {
+		res = scanSources(func(p scan.Progress) {
 			if p.Status == scan.ProgressReading {
 				hud.Show(p)
 				return
@@ -262,11 +268,13 @@ func (a *App) doScanWithKeychainPolicy(home adapter.Home, quiet, offline, ascii,
 // Plaintext/previously unsealed API sources and every other tool still scan.
 // A sealed Cursor session stays unopened and the previously verified,
 // explicitly account-bound measurement is restored by Profile's ledger logic.
-func prohibitCursorOSKeychain(ads []adapter.Adapter) []adapter.Adapter {
+func prohibitCursorOSKeychain(ads []adapter.Adapter, now func() time.Time) []adapter.Adapter {
 	out := append([]adapter.Adapter(nil), ads...)
 	for i, item := range out {
 		if c, ok := item.(cursor.Adapter); ok {
 			c.NoOSKeychain = true
+			c.Scheduled = true
+			c.Now = now
 			out[i] = c
 		}
 	}

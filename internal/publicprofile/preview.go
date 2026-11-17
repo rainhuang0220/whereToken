@@ -195,6 +195,9 @@ func writePreview(b *strings.Builder, s Snapshot, th Theme) {
 	text(b, 4, 19, 13, th.Text, "start", "600", "whereToken")
 	text(b, 86, 19, 12, th.Secondary, "start", "400", "my coding-agent token usage")
 	updated := "updated " + previewDate(s.AsOfDate)
+	if incompleteCollection(s.SourceStatus) {
+		updated = "partial coverage · " + updated
+	}
 	if s.Provenance.Kind == ProvenanceSyntheticDemo {
 		updated = "DEMO DATA · " + updated
 	}
@@ -369,7 +372,11 @@ func weekdayTicks() []weekdayTick {
 }
 
 func previewDesc(s Snapshot) string {
-	return "Coding-agent token usage through " + s.AsOfDate + ". No prompts, paths, or identifiers."
+	desc := "Coding-agent token usage through " + s.AsOfDate + "."
+	if incompleteCollection(s.SourceStatus) {
+		desc += " Partial source coverage."
+	}
+	return desc + " No prompts, paths, or identifiers."
 }
 
 func previewDate(iso string) string {

@@ -29,6 +29,14 @@ This check sees only the public profile. It cannot tell whether the Mac was offl
 This is not a new token measurement.
 EOF
       ;;
+    collection_stale)
+      cat <<'EOF'
+class: collection_stale
+
+The hosted projection or local refresh reports incomplete source coverage.
+Check `wheretoken profile refresh doctor` for the affected sources, UTC gaps and recovery steps.
+EOF
+      ;;
     check_failed)
       cat <<'EOF'
 class: check_failed

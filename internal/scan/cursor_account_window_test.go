@@ -364,7 +364,7 @@ func TestRetainedSnapshotDoesNotSkipTheBackfill(t *testing.T) {
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
 		starts = append(starts, day)
-		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":1}}]}`, body.Start, day)
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":7}}]}`, body.Start, day)
 	}))
 	t.Cleanup(srv.Close)
 	res := Run(testhome.New(home), []adapter.Adapter{cursor.Adapter{

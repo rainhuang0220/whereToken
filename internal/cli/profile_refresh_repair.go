@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
@@ -13,7 +12,7 @@ import (
 func (a *App) profileRefreshRepair(home adapter.Home) int {
 	if a.GOOS != "darwin" {
 		fmt.Fprintln(a.Stdout, "scheduler=unsupported")
-		fmt.Fprintln(a.Stdout, "healthy=yes")
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=unavailable")
 		return ExitOK
 	}
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
@@ -23,7 +22,7 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	}
 	if err != nil || !on {
 		fmt.Fprintln(a.Stdout, "scheduler=off")
-		fmt.Fprintln(a.Stdout, "healthy=yes")
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=off")
 		return ExitOK
 	}
 	if a.euid() == 0 {
@@ -42,10 +41,10 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	scheduler := a.schedulerStatus(true)
 	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
 	if scheduler != "running" {
-		fmt.Fprintln(a.Stdout, "healthy=no")
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=no")
 		return ExitFail
 	}
-	fmt.Fprintln(a.Stdout, "healthy=yes")
+	fmt.Fprintln(a.Stdout, "scheduler_healthy=yes")
 	return ExitOK
 }
 
@@ -56,22 +55,19 @@ func (a *App) repairProfileRefreshAgents(program string) error {
 	if err != nil || home == "" {
 		return errors.New("profile refresh agent is incomplete")
 	}
-	watchPlist, watchLog, err := a.profileRefreshPaths()
+	watchPlist, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return err
 	}
-	healthPlist, healthLog, err := a.profileRefreshHealthPaths()
+	healthPlist, err := a.profileRefreshPlistPath(profileRefreshHealthLabel)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(watchLog), 0o755); err != nil {
-		return err
-	}
-	watchBody, err := profileRefreshPlist(program, home, watchLog)
+	watchBody, err := profileRefreshPlist(program, home)
 	if err != nil {
 		return err
 	}
-	healthBody, err := profileRefreshHealthPlist(program, healthLog)
+	healthBody, err := profileRefreshHealthPlist(program)
 	if err != nil {
 		return err
 	}
@@ -97,17 +93,15 @@ func (a *App) agentNeedsBootstrap(label, plistPath, program string) bool {
 		return true
 	}
 	out, err := a.launchctl("print", fmt.Sprintf("gui/%d/%s", a.uid(), label))
-	if err != nil || !launchctlHasPID(out) {
-		return true
-	}
-	return false
+	// The hourly repair is one-shot and normally has no PID between runs.
+	return err != nil || (label == profileRefreshLabel && !launchctlHasPID(out))
 }
 
 func (a *App) refreshPlistState(enabled bool, program string) string {
 	if a.GOOS != "darwin" {
 		return "unsupported"
 	}
-	plistPath, _, err := a.profileRefreshPaths()
+	plistPath, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return "missing"
 	}

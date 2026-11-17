@@ -2,6 +2,7 @@ package scan
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,21 +35,23 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/metric"
 	"github.com/rainhuang0220/whereToken/internal/profile"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/report"
 )
 
 type Result struct {
-	Summary   metric.Summary
-	Roots     []adapter.SourceRoot
-	Errors    []string
-	Events    []event.UsageEvent
-	Turns     []event.TurnEvent
-	ScannedAt time.Time
-	Offline   bool
-	Scanning  bool
-	Deltas    []index.Delta
-	Compare   *metric.Compare
-	Community *community.View
+	Summary    metric.Summary
+	Roots      []adapter.SourceRoot
+	Errors     []string
+	Events     []event.UsageEvent
+	Turns      []event.TurnEvent
+	ScannedAt  time.Time
+	Offline    bool
+	Scanning   bool
+	Deltas     []index.Delta
+	Compare    *metric.Compare
+	Community  *community.View
+	Collection *publicprofile.CollectionEvidence
 
 	// home is the scanned home, carried so buildSummaryJSON can seed the
 	// portrait with the install identity. Unexported: it identifies the
@@ -162,6 +165,15 @@ func Run(home adapter.Home, adapters []adapter.Adapter) Result {
 }
 
 func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(Progress)) Result {
+	return runWithProgress(home, adapters, report, nil)
+}
+
+// RunWithCollection records collection evidence only on the refresh path.
+func RunWithCollection(home adapter.Home, adapters []adapter.Adapter, report func(Progress), now func() time.Time) Result {
+	return runWithProgress(home, adapters, report, &collectionRun{at: now(), now: now})
+}
+
+func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(Progress), collection *collectionRun) Result {
 	index.ResetDeltas()
 	var st *index.Store
 	if os.Getenv("WHERETOKEN_NO_INDEX") != "1" {
@@ -179,6 +191,8 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 	adapters = prepareCursor(home, adapters, lg, &cursorSource)
 	var events []event.UsageEvent
 	var cursorWindows []cursor.CoverageWindow
+	var cursorExpected, cursorObserved bool
+	var cursorCategory string
 	var cursorLookback cursor.CoverageWindow
 	var haveCursorLookback bool
 	var complete []event.UsageEvent
@@ -200,9 +214,16 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 			})
 		}
 		hadErr := false
+		rootCount := len(roots)
 		for _, h := range homes {
 			found := a.Discover(h)
 			for _, root := range found {
+				// Profile collection audits one Cursor account against the
+				// primary discovered root. Extra source homes can contain
+				// another copy or a different account's session.
+				if c, ok := a.(cursor.Adapter); ok && c.Scheduled && len(roots) > rootCount {
+					break
+				}
 				if _, ok := seenPath[root.Path]; ok {
 					continue
 				}
@@ -234,6 +255,9 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 						haveCursorLookback = true
 					}
 					cursorWindows = append(cursorWindows, cursor.TakeAccountCoverage(root.Path)...)
+					if collection != nil && err != nil {
+						cursorCategory = cursor.CollectionFailure(err)
+					}
 				}
 				if err != nil {
 					hadErr = true
@@ -241,6 +265,20 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 				} else {
 					complete = append(complete, rootEvents...)
 				}
+			}
+		}
+		if collection != nil {
+			if c, ok := a.(cursor.Adapter); ok {
+				cursorExpected = cursorCollectionExpected(c, lg, cursorSource) || haveCursorLookback
+				if cursorExpected && len(roots) == rootCount {
+					cursorCategory = "AUTH"
+				}
+			} else {
+				category := ""
+				if hadErr {
+					category = "LOCAL_READ"
+				}
+				collection.add(a.ID(), len(roots)-rootCount, category)
 			}
 		}
 		if report != nil {
@@ -265,30 +303,48 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		// scan index still persists. Commit is idempotent with the per-file
 		// commit inside index.put. Unseen then adds facts whose source file
 		// was not in this scan. Provider API authority suppresses that source.
-		_ = lg.CommitUsage(events)
+		if err := lg.CommitUsage(events); err != nil {
+			collection.ledgerFailure()
+		}
 		if len(cursorWindows) > 0 {
 			store := cursorSource
 			if store == "" {
 				store = "cursor"
 			}
+			ranges := make([]ledger.DayRange, 0, len(cursorWindows))
+			var rejected []ledger.DayRange
 			for _, w := range cursorWindows {
-				_ = lg.NoteCoveredWindow(store, w.From, w.To, cursorWindowEvents(events, w))
+				r := ledger.DayRange{From: w.From, To: w.To}
+				windowEvents := cursorWindowEvents(events, w)
+				var err error
 				if w.Audit.Validation == "ok" || w.Audit.Validation == "open" {
-					_ = lg.NoteWindowAudit(store, ledger.WindowAudit{
+					err = lg.NoteAuditedWindow(store, ledger.WindowAudit{
 						From: w.From, To: w.To,
 						Declared: w.Audit.Declared, RawRows: w.Audit.RawRows,
 						Deduped: w.Audit.Deduped, Days: w.Audit.Days,
 						Miss: w.Audit.Miss, CacheRead: w.Audit.CacheRead,
 						CacheCreate: w.Audit.CacheCreate, Output: w.Audit.Output,
 						Validation: w.Audit.Validation,
-					})
+					}, observedAt(collection), windowEvents)
+					cursorObserved = cursorObserved || err == nil
+				} else {
+					err = lg.NoteCoveredWindow(store, w.From, w.To, windowEvents)
+				}
+				if err == nil {
+					ranges = append(ranges, r)
+					continue
+				}
+				rejected = append(rejected, r)
+				cursorCategory = "LEDGER"
+				if errors.Is(err, ledger.ErrObservationRegression) {
+					cursorCategory = "RECONCILIATION"
 				}
 			}
-			_ = lg.NoteAPI(withoutCursorProviderAPI(events))
-			ranges := make([]ledger.DayRange, 0, len(cursorWindows))
-			for _, w := range cursorWindows {
-				ranges = append(ranges, ledger.DayRange{From: w.From, To: w.To})
+			if len(rejected) > 0 {
+				errs = append(errs, "cursor: "+cursorCategory)
+				events = withoutRejectedCursorWindows(events, rejected)
 			}
+			_ = lg.NoteAPI(withoutCursorProviderAPI(events))
 			var extra []event.UsageEvent
 			var extraErr error
 			if haveCursorLookback {
@@ -312,22 +368,27 @@ func RunWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 		}
 		// complete is the successful rereads only. A parse error must not
 		// omit facts that this scan did not see.
-		_ = lg.NoteComplete(complete)
-		if extra, err := lg.Unseen(events); err == nil && len(extra) > 0 {
+		if err := lg.NoteComplete(complete); err != nil {
+			collection.ledgerFailure()
+		}
+		if extra, err := lg.Unseen(events); err != nil {
+			collection.ledgerFailure()
+		} else {
 			events = append(events, extra...)
 		}
 	}
 	sum := metric.Aggregate(events, turns)
 	fillMissingSources(&sum, roots, errs, events)
 	return Result{
-		Summary:   sum,
-		Roots:     roots,
-		Errors:    errs,
-		Events:    events,
-		Turns:     turns,
-		ScannedAt: time.Now(),
-		Deltas:    index.Deltas(),
-		home:      home,
+		Summary:    sum,
+		Roots:      roots,
+		Errors:     errs,
+		Events:     events,
+		Turns:      turns,
+		ScannedAt:  time.Now(),
+		Collection: collection.finish(lg, cursorSource, cursorCategory, cursorExpected, cursorObserved),
+		Deltas:     index.Deltas(),
+		home:       home,
 	}
 }
 
@@ -353,8 +414,9 @@ func prepareCursor(home adapter.Home, adapters []adapter.Adapter, lg *ledger.Led
 			if prev == "" && decision == cursor.HistoryDeclined && who != "" {
 				source = cursor.AccountNamespace(who)
 			}
-			ranges, err := lg.CoveredRanges(source)
-			if err == nil {
+			if c.Scheduled {
+				c.Covered = closedCursorWindows(lg, source)
+			} else if ranges, err := lg.CoveredRanges(source); err == nil {
 				for _, r := range ranges {
 					c.Covered = append(c.Covered, cursor.CoverageWindow{From: r.From, To: r.To})
 				}

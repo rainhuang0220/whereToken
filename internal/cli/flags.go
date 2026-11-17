@@ -694,8 +694,8 @@ func refreshAction(s string) bool {
 }
 
 func finishProfileRefresh(f *Flags) (Flags, error) {
-	if f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Production || f.AllowPartial || f.IncludeModels || f.IncludeCost || f.PublishYes || f.PublishDryRun || f.PublicPalette != "" || f.ProfilePath != "" || f.JSON || f.Tool != "" || f.Vendor != "" || f.Model != "" ||
-		f.saw("json", "tool", "vendor", "model", "today", "since", "from", "to") {
+	if f.Today || f.Since != "" || f.From != "" || f.To != "" || f.Production || f.AllowPartial || f.IncludeModels || f.IncludeCost || f.PublishYes || f.PublishDryRun || f.PublicPalette != "" || f.ProfilePath != "" || (f.JSON && f.ProfileRefreshAction != "status" && f.ProfileRefreshAction != "doctor") || f.Tool != "" || f.Vendor != "" || f.Model != "" ||
+		f.saw("tool", "vendor", "model", "today", "since", "from", "to") {
 		return Flags{}, usageError{msg: "profile refresh does not take a path, palette, window, or filter\ntry `wheretoken --help`"}
 	}
 	for _, id := range shorthandIDs {

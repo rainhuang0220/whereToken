@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Classify public-profile freshness. Prints one class and exits 0.
 
-Classes: ok, wall_stale, mac_offline, publisher_stuck, workflow_silent, check_failed.
+Classes: ok, collection_stale, wall_stale, mac_offline, publisher_stuck, workflow_silent, check_failed.
 
 The actions surface sees only the public wall. The local surface can also
 see the publisher state file and the last Actions run time.
@@ -49,6 +49,13 @@ def age_seconds(now, stamp):
     return (now - stamp).total_seconds()
 
 
+def collection_degraded(checks):
+    if not isinstance(checks, list):
+        return False
+    return any(isinstance(s, dict) and s.get("status") not in ("FRESH", "CONFIRMED_ZERO")
+               for s in checks)
+
+
 def classify(surface, wall, state, workflow_at, now):
     if surface not in ("actions", "local"):
         return "check_failed"
@@ -63,6 +70,10 @@ def classify(surface, wall, state, workflow_at, now):
     if surface == "actions":
         if wall_age > ACTIONS_WALL_S:
             return "wall_stale"
+        snap = wall.get("snapshot")
+        if isinstance(snap, dict):
+            if collection_degraded(snap.get("source_status")):
+                return "collection_stale"
         return "ok"
     if wall_age > LOCAL_WALL_S:
         checked = None
@@ -72,6 +83,17 @@ def classify(surface, wall, state, workflow_at, now):
         if check_age is not None and check_age <= RECENT_CHECK_S:
             return "publisher_stuck"
         return "mac_offline"
+    if isinstance(state, dict):
+        collection = state.get("collection")
+        if isinstance(collection, dict):
+            checks = collection.get("sources")
+            if collection_degraded(checks):
+                return "collection_stale"
+            if isinstance(checks, list):
+                for check in checks:
+                    stamp = parse_time(check.get("last_successful_observation_at")) if isinstance(check, dict) else None
+                    if stamp is None or not 0 <= age_seconds(now, stamp) < 24 * 3600:
+                        return "collection_stale"
     run_age = age_seconds(now, parse_time(workflow_at) if isinstance(workflow_at, str) else workflow_at)
     if run_age is not None and run_age > SCHEDULE_GAP_S:
         return "workflow_silent"

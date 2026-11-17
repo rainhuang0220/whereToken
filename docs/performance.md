@@ -126,3 +126,6 @@ The animated default total (4564 ms) matches the quiet total (4570 ms). The spri
 - A cache miss, `WHERETOKEN_NO_INDEX=1`, refresh switched off, or a gapped index still takes the full scan, including Cursor `state.vscdb` when that file is present.
 - `wheretoken scan` and the three daily refresh slots still do that scan. Fewer times, not zero times.
 - The mascot does not reduce any of the above. It only fills the quiet interval on an interactive terminal.
+
+Profile freshness reads the bounded local checkpoint. The account window
+audit query runs in the collector. See [Profile refresh reliability](profile-refresh-reliability.md).

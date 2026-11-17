@@ -26,7 +26,7 @@ USAGE
   wheretoken profile palette [cobalt|magenta|newsprint]  save the public Profile default
   wheretoken profile publish [cobalt|magenta|newsprint]   dry-run the GitHub profile publish
   wheretoken profile publish --yes                       push only after the dry-run is accepted
-  wheretoken profile refresh [status|on|off|watch|doctor|repair]  sanitized public snapshot (default off; macOS agent)
+  wheretoken profile refresh [status|on|off|watch|doctor|repair]  sanitized snapshot (default off, macOS agent)
   wheretoken profile validate <path> --production   fail incomplete cloud token coverage
   wheretoken profile validate <path> --production --allow-partial
   wheretoken [flags] card <path.svg>         compatibility: legacy 800×576 SVG
@@ -141,11 +141,12 @@ PRIVACY
   the switch and uninstalls that agent. Linux and Windows do not install a
   background agent; use profile refresh watch in the foreground. The
   bare profile refresh command is one explicit PUT even when the switch
-  is off, and it is not what launchd runs. doctor reports scheduler,
-  plist, and healthy. repair reloads a missing agent and does not scan.
-  status and doctor exit non-zero when the agent is dead or the last
-  result is blocked. It does not upload events,
-  prompts, paths, or the daily batch. A powered-off Mac does not publish.
+  is off. status and doctor accept --json. They report scheduler,
+  source coverage, hosted acceptance and GitHub verification independently.
+  doctor checks UTC gaps and any configured Pages mirror. repair reloads
+  a missing agent. An unhealthy refresh exits non-zero in status or doctor.
+  The refresh uploads a sanitized snapshot and keeps raw events,
+  prompts, paths and the daily batch private. A powered-off Mac cannot publish.
   Catch-up is the next wake of watch, or RunAtLoad after a graphical
   login. An SSH session with no GUI login leaves status scheduler=dead.
   The GitHub README can update with the default newsprint palette before

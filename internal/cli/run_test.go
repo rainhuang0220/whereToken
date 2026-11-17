@@ -63,6 +63,7 @@ func testApp(args []string) (*App, *bytes.Buffer, *bytes.Buffer) {
 			return fixtureResult()
 		},
 		PortraitSeed: func(adapter.Home) string { return "test-seed" },
+		Creds:        &memCreds{m: map[string]string{}},
 	}
 	return app, out, errb
 }
