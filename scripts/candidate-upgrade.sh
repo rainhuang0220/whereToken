@@ -1,5 +1,5 @@
 #!/bin/bash
-# Exercise wheretoken update from the published v0.7.18 binary to a
+# Exercise wheretoken update from the published v0.7.19 binary to a
 # locally built candidate. Does not tag, publish, or touch a Homebrew Cellar.
 # WHERETOKEN_HOME is an empty temp directory so macOS refresh rebootstrap
 # does not rewrite the owner's LaunchAgent.
@@ -30,14 +30,15 @@ else
   asset="wheretoken_${goos}_${goarch}.tar.gz"
   binname=wheretoken
 fi
-ver=0.7.19-rc
-old_url="https://github.com/rainhuang0220/whereToken/releases/download/v0.7.18/${asset}"
+old_ver=0.7.19
+ver=0.7.20-rc.1
+old_url="https://github.com/rainhuang0220/whereToken/releases/download/v${old_ver}/${asset}"
 
 py() {
   if command -v python3 >/dev/null 2>&1; then python3 "$@"; else python "$@"; fi
 }
 
-echo "candidate upgrade: ${goos}/${goarch} from v0.7.18 to ${ver}"
+echo "candidate upgrade: ${goos}/${goarch} from v${old_ver} to ${ver}"
 curl -fsSL "$old_url" -o "$work/old.pkg"
 if [[ "$goos" == windows ]]; then
   py -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$work/old.pkg" "$work"
@@ -46,7 +47,7 @@ else
 fi
 old="$work/$binname"
 chmod +x "$old"
-"$old" --version | grep -q "0.7.18"
+"$old" --version | grep -Fqx "wheretoken ${old_ver}"
 
 mkdir -p "$work/dist"
 ( cd "$root" && go build -o "$work/dist/$binname" -ldflags "-X main.version=${ver}" ./cmd/wheretoken )
@@ -59,7 +60,7 @@ sum=$(openssl dgst -sha256 "$work/dist/${asset}" | awk '{print $NF}')
 printf '%s  %s\n' "$sum" "$asset" > "$work/dist/checksums.txt"
 
 port=18765
-py -m http.server "$port" --directory "$work/dist" >/tmp/wheretoken-candidate-http.log 2>&1 &
+py -m http.server "$port" --bind 127.0.0.1 --directory "$work/dist" >"$work/http.log" 2>&1 &
 srv=$!
 trap 'kill "$srv" 2>/dev/null || true; rm -rf "$work"' EXIT
 ready=0
@@ -88,13 +89,13 @@ if [[ "$code" -ne 0 ]]; then
   echo "update failed: $code" >&2
   exit 1
 fi
-"$old" --version | grep -q "$ver"
+"$old" --version | grep -Fqx "wheretoken ${ver}"
 "$old" --json --quiet >"$work/report.json"
 grep -q '"schema"' "$work/report.json"
 
 # Idempotent second update.
 "$old" update --quiet
-"$old" --version | grep -q "$ver"
+"$old" --version | grep -Fqx "wheretoken ${ver}"
 
 # A bad checksum must leave the candidate in place and return non-zero.
 printf '0000000000000000000000000000000000000000000000000000000000000000  %s\n' "$asset" > "$work/dist/checksums.txt"
@@ -106,6 +107,6 @@ if [[ "$bad" -eq 0 ]]; then
   echo "bad checksum was accepted" >&2
   exit 1
 fi
-"$old" --version | grep -q "$ver"
+"$old" --version | grep -Fqx "wheretoken ${ver}"
 
 echo "candidate upgrade PASS ${goos}/${goarch}"

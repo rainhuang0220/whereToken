@@ -32,7 +32,9 @@ partial coverage and displays uncovered empty Token cells as unknown.
 | `publication_verified_at` | When the GitHub wall was verified |
 
 Legacy refresh state still loads. It has unknown collection health until the
-new worker records evidence. Local log readers can confirm a successful scan
+new worker records evidence. A public snapshot without source evidence displays
+unverified collection coverage even when its publication has been verified.
+Local log readers can confirm a successful scan
 without proving a continuous date range. An empty directory or a quiet calendar
 day cannot establish measured zero. A complete usage window with an explicit
 zero count or explicit zero-meter rows can report `CONFIRMED_ZERO`. An ambiguous or failed response leaves
@@ -109,7 +111,12 @@ schedule log is `profile-refresh-schedule.log` beside the refresh config,
 with one 64 KiB rotated file. It records fixed categories, attempts, elapsed
 time and the retry deadline. Ordinary reports continue to use the cached path.
 
-## Deployment
+## Deployment gates
+
+The reliability patch can ship after hosted compatibility, Pages repair and
+the CLI rollout checks pass. A sealed Cursor session continues to require
+foreground authorization. Track fully unattended collection on macOS as a
+separate requirement.
 
 Deploy the hosted service with the updated optional v2 `source_status` schema
 before distributing the CLI. The prior strict v2 validator rejects the new
@@ -144,6 +151,37 @@ reader in service and stop rolling out the candidate CLI or pause the test
 watch. Stored candidate revisions include source evidence in the ID. Keep the
 existing live projection, verified wall and backup intact.
 
+### Patch rollout
+
+1. Build the hosted artifact from the approved commit with
+   `sh scripts/build-hosted.sh <artifact-dir>`. Record its build revision with
+   `go version -m <artifact-dir>/wheretoken-hosted`. On the authorized host,
+   preserve the current binary, SPA, environment and a consistent MySQL backup.
+   Follow the [hosted deploy runbook](../engineering/v0.7.7_operator_runbook.md)
+   for paths and process checks. After deployment, check `/api/health` and
+   repeat both snapshot readbacks with the staging owner before enabling CLI
+   uploads. Use a schema-aware hosted artifact for rollback once candidate
+   snapshots have been accepted.
+2. Point the freshness workflow in the staging Pages repository at its own
+   hosted owner and Pages URL. Leave the expected mirror committed while
+   Pages serves the previous revision. Dispatch `profile-freshness.yml` in
+   that repository and record the main commit before and after. Wait for
+   `pages.yml` and run `python3 scripts/profile_pages.py --dir public-profile
+   --url <pages-profile-url> --attempts 5`. Require the committed snapshot
+   ID and `pages_mirror=verified`. Compare that ID with the verified hosted
+   wall and repeat the readback after the approved rollout.
+   [GitHub runner labels](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+3. Run `bash scripts/candidate-upgrade.sh` to exercise the published v0.7.19
+   updater against a local candidate. For the macOS pilot, run the candidate
+   by its absolute path and compare `profile refresh status --json` with
+   `profile refresh doctor --json`. An old CLI can load the same v1 state
+   but reports its own scheduler health, so use the candidate to judge
+   collection. Keep the ledger and its backup during the trial.
+4. After the hosted, Pages and CLI checks and release approval, use the
+   [patch release checklist](releasing.md) for v0.7.20. Push the release tag
+   only when ready to publish. Check the release artifact checksums before
+   updating the Homebrew and npm version references.
+
 ### macOS pilot over two scheduled slots
 
 Use a separate macOS GUI test account, its own ledger, a test Cursor account
@@ -152,15 +190,15 @@ status, owner time zone, each surface's snapshot ID, and the ledger's last
 Cursor observation and coverage. The pilot operator owns any real account
 login, Keychain prompt, scheduler setup and external publication.
 
-1. **Slot A at 10:30 local.** In the test Cursor account, create a small amount
-   of measurable usage after the baseline. Let the candidate watch run under
-   launchd. Require a newer trusted API observation with nonzero incremental
-   usage, account continuity and a complete audit for the requested interval.
-   Record separate collection and publication timestamps. For a sealed
-   session, classify a foreground collection separately. The unattended
-   requirement passes only if the scheduled worker acquires the new usage
-   without an operator, prompt or credential in plaintext storage.
-2. **Slot B at 17:00 local.** Before the slot, have the staging operator
+1. **First slot at 10:30 local.** Create measurable usage after the baseline
+   in a supported local source and let the candidate watch run under launchd.
+   Verify the new ledger facts and the public readback. A sealed Cursor
+   session should report `AUTH_REQUIRED` when its account coverage cannot
+   advance. For the separate unattended test, generate usage in the test
+   Cursor account. Require a new trusted API observation, account continuity
+   and a complete audit without an operator, prompt or plaintext credential
+   storage. Record any foreground collection separately.
+2. **Second slot at 17:00 local.** Before the slot, have the staging operator
    introduce a reversible provider outage or use an expired test session.
    Require the collection to report degradation, retain the baseline
    observations and avoid zeros for unobserved dates. Restore the staging

@@ -6,6 +6,14 @@ cd "$ROOT"
 export WHERETOKEN_EXTRA_ROOTS=
 dir="$(mktemp -d)"
 trap 'rm -rf "$dir"' EXIT
+# Rebuild can sync. Isolate both the endpoint and macOS credential lookup.
+export WHERETOKEN_HOSTED_URL=http://127.0.0.1:1
+if [ "$(uname -s)" = Darwin ]; then
+  mkdir "$dir/fixture-bin"
+  printf '#!/bin/sh\nexit 1\n' >"$dir/fixture-bin/security"
+  chmod 700 "$dir/fixture-bin/security"
+  export PATH="$dir/fixture-bin:$PATH"
+fi
 dst="$dir/.kimi-code/sessions/x/s/agents/main"
 mkdir -p "$dst"
 cp testdata/adapters/kimi/session/agents/main/wire.jsonl "$dst/wire.jsonl"
