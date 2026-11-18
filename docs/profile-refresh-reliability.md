@@ -132,7 +132,17 @@ After upgrading from v0.7.19, run `wheretoken profile refresh on` with the new
 binary if automatic refresh was already enabled. This installs the new
 launchd logging configuration. The ledger tables already exist. Existing
 observations remain readable and an offline backup can be restored with the
-watch stopped if a rollback is needed. On the Pages side, the scheduled check
+watch stopped if a rollback is needed. To return the CLI to v0.7.19, run
+`wheretoken profile refresh prepare-downgrade` on the candidate first. It
+copies `profile-refresh-schedule.json` to
+`profile-refresh-schedule.json.pre-downgrade`, clamps `attempts` to at most 3,
+and refreshes `profile-refresh-evidence.json`. Then install the 0.7.19 bottle.
+v0.7.19 can load that schedule, so KeepAlive does not restart a rejected file
+every minute. Its next save drops fields it does not know. The evidence file,
+the pre-downgrade copy, and the ledger stay. Do not delete the schedule file.
+If `attempts` is already above 3 and the 0.7.19 binary is installed first,
+stop the watch, run the candidate command against the same home, then start
+0.7.19. Details are in [`reliability.md`](reliability.md). On the Pages side, the scheduled check
 can dispatch repair for a missing or stale deployment even when the mirror
 commit is already present. The browser uses a verified hosted snapshot when
 its date and cumulative total preserve the accepted baseline, and keeps the

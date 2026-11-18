@@ -78,7 +78,11 @@ Gate B is NO-GO. The background watch does not unseal a Keychain session. The re
 - `scripts/freshness_classify_test.py` — a fresh wall does not hide `WILL_RETRY` or an Actions gap
 - `scripts/freshness_alert_test.sh` — surfaces do not close each other; a bad issue list is not `class=ok`
 - `scripts/freshness_lifecycle_test.py` — 7, 14, and 30 virtual days
-- `go test ./internal/cli/ -run 'TestProfileRefreshOutageRetriesAcrossHorizons|TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy|TestDoHTTPRefusesProductionFromATest'`
+- `scripts/freshness_watchdog_test.py` — wall down, Actions silent, Mac offline, and a state path the script cannot write
+- `go test ./internal/cli/ -run 'TestProfileRefreshOutageRetriesAcrossHorizons|TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy|TestDoHTTPRefusesProductionFromATest|TestScheduleDowngradeKeepsEvidenceAndStaysRunnable'`
+- `go test ./internal/hosted/ -run 'TestThemeRetryDoesNotReplaceANewerVerifiedSnapshot|TestAuditedCorrectionMayLowerTheVerifiedTotal'`
+- `go test ./internal/publicprofile/ -run 'TestQuietDayWithoutCoverageIsUnknown|TestConfirmedZeroDayStaysZero'`
+- `go test ./internal/scan/ -run 'TestMinimaxDirectoryWithoutLedgerIsNotFresh'`
 
 These are not a production soak. They do not prove the hosted machine, Pages, or a sealed Cursor session.
 
