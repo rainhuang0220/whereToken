@@ -58,6 +58,8 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 		return a.writeRefreshHealth(home, true, flags.JSON)
 	case "repair":
 		return a.profileRefreshRepair(home)
+	case "prepare-downgrade":
+		return a.profileRefreshPrepareDowngrade(home)
 	case "":
 		if os.Getenv(profileRefreshChildEnv) == "1" {
 			// A replaced or stopped watch may leave its own worker orphaned.

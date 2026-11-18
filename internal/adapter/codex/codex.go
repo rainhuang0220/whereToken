@@ -52,7 +52,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 	}
 	err := filepath.WalkDir(root.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if d.IsDir() {
 			return nil

@@ -210,6 +210,26 @@ func earlierLocalDate(next, prev string) bool {
 	return n.Before(p)
 }
 
+// VerifiedWallRegression reports why snap must not replace a proven wall.
+// An earlier date is never a correction. A lower total is allowed only when
+// permit is the exact audited drop. An empty result means the write may proceed.
+func VerifiedWallRegression(wall VerifiedWall, snap Snapshot, permit Correction) string {
+	if !wall.Proven {
+		return ""
+	}
+	if validLocalDate(wall.AsOfDate) && validLocalDate(snap.AsOfDate) && earlierLocalDate(snap.AsOfDate, wall.AsOfDate) {
+		return "verified snapshot is newer"
+	}
+	next := tokenValue(snap)
+	if wall.Total != nil && (next == nil || *next < *wall.Total) {
+		if next != nil && permit.Explains(*wall.Total, *next) {
+			return ""
+		}
+		return "verified total is higher"
+	}
+	return ""
+}
+
 // WallFromSnapshot builds a verified wall when the snapshot id is the one
 // that was published. The caller must already have proved that identity.
 func WallFromSnapshot(s Snapshot, publishedAt time.Time) VerifiedWall {

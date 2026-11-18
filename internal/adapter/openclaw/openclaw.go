@@ -53,7 +53,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 	var transcripts, trajectories []string
 	err := filepath.WalkDir(agents, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if d.IsDir() {
 			switch d.Name() {

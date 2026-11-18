@@ -114,16 +114,21 @@ func Build(in Input) (Snapshot, error) {
 		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable, in),
 	}
 	for i, date := range dates {
-		if date > snap.AsOfDate || !hasCoverageGap(in.SourceStatus, date, date, loc) {
+		if date > snap.AsOfDate {
 			continue
 		}
 		for j := range snap.Activity.Series {
 			series := &snap.Activity.Series[j]
-			if series.Metric != MetricTokens || series.States[i] != CellEmpty {
+			if (series.Metric != MetricTokens && series.Metric != MetricRequests) || series.States[i] != CellEmpty {
 				continue
 			}
-			if series.Dimension != "agent" || hasAgentCoverageGap(in.SourceStatus, series.ID, date, loc) {
+			agent := ""
+			if series.Dimension == "agent" {
+				agent = series.ID
+			}
+			if !measuredQuietZero(in.SourceStatus, agent, date) {
 				series.States[i] = CellUnknown
+				series.Values[i] = 0
 			}
 		}
 	}
@@ -304,6 +309,9 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 		periodFrom = *from
 	}
 	if all.Total() == 0 && hasCoverageGap(in.SourceStatus, periodFrom, to, loc) {
+		p.Totals = emptyTotals()
+	}
+	if all.Total() == 0 && len(in.SourceStatus) > 0 && !measuredQuietZero(in.SourceStatus, "", to) {
 		p.Totals = emptyTotals()
 	}
 	p.HitRate = hitRateOf(all.Miss, all.CacheRead, all.CacheCreate, false)

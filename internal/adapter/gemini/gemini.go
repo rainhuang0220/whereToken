@@ -56,7 +56,7 @@ func (Adapter) Parse(root adapter.SourceRoot, emit func(event.UsageEvent), emitT
 	var first error
 	err := filepath.WalkDir(tmp, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		name := d.Name()
 		if d.IsDir() {

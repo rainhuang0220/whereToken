@@ -146,3 +146,25 @@ func incompleteCollection(sources []SourceCoverage) bool {
 	}
 	return false
 }
+
+// measuredQuietZero is true only when every source that applies to this
+// cell has an audited zero covering the date. No source evidence, a fresh
+// read, or an unknown source is not a measured zero.
+func measuredQuietZero(sources []SourceCoverage, agent, date string) bool {
+	matched := false
+	for _, source := range sources {
+		if agent != "" && source.Source != agent {
+			continue
+		}
+		matched = true
+		if source.Status != SourceConfirmedZero || source.CoverageThroughUTC == "" || date > source.CoverageThroughUTC {
+			return false
+		}
+		for _, gap := range source.GapsUTC {
+			if gap.From <= date && date <= gap.To {
+				return false
+			}
+		}
+	}
+	return matched
+}

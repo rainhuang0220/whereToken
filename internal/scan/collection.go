@@ -22,14 +22,21 @@ func (r *collectionRun) add(id string, roots int, category string) {
 		return
 	}
 	check := publicprofile.SourceCheck{
-		SourceCoverage: publicprofile.SourceCoverage{Source: id, Status: publicprofile.SourceFresh},
+		SourceCoverage: publicprofile.SourceCoverage{Source: id, Status: publicprofile.SourceUnknown},
 		LastAttemptAt:  r.at.UTC(),
 		Category:       category,
 	}
-	if category != "" {
-		check.Status = publicprofile.SourceUnavailable
-	} else {
+	switch category {
+	case "":
+		// A read that returned events. This is not a covered date range.
+		check.Status = publicprofile.SourceFresh
 		check.LastObservationAt = &check.LastAttemptAt
+	case "NO_EVENTS", "ABSENT":
+		// An empty directory, a missing usage file, or a path that is not
+		// there. None of these is a measured zero or a healthy source.
+		check.Status = publicprofile.SourceUnknown
+	default:
+		check.Status = publicprofile.SourceUnavailable
 	}
 	r.checks = append(r.checks, check)
 }

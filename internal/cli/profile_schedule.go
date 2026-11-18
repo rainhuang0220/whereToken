@@ -16,6 +16,7 @@ import (
 // The reservation is durable before starting a child. A restart or calendar
 // slot change keeps the deadline and escalation for an unresolved outage.
 type profileRefreshSchedule struct {
+	SchemaVersion      int       `json:"schema_version,omitempty"`
 	Slot               time.Time `json:"slot"`
 	Attempts           int       `json:"attempts"`
 	RetryAt            time.Time `json:"retry_at,omitzero"`
@@ -31,6 +32,11 @@ type profileRefreshSchedule struct {
 
 var profileRefreshBackoff = [...]time.Duration{30 * time.Second, 2 * time.Minute, 2 * time.Hour, 4 * time.Hour}
 
+// v0.7.19 rejects a schedule whose attempts field is greater than 3 and
+// then exits. KeepAlive would restart that exit every minute. The candidate
+// keeps the outage in failures and never stores attempts above this cap.
+const legacyProfileRefreshAttempts = 3
+
 func profileRefreshSchedulePath(home adapter.Home) string {
 	return filepath.Join(filepath.Dir(publicprofile.RefreshConfigPath(home)), "profile-refresh-schedule.json")
 }
@@ -44,6 +50,18 @@ func (a *App) refreshSchedule(home adapter.Home, now time.Time) (profileRefreshS
 		if err := json.Unmarshal(raw, &st); err != nil || st.Slot.IsZero() || st.Attempts < 0 ||
 			st.Failures < 0 || st.Failures > len(profileRefreshBackoff) {
 			return st, time.Time{}, errors.New("refresh schedule unavailable")
+		}
+		if st.Attempts > legacyProfileRefreshAttempts {
+			if err := backupProfileRefreshSchedule(home, raw); err != nil {
+				return st, time.Time{}, err
+			}
+			if st.Failures == 0 {
+				st.Failures = min(st.Attempts, len(profileRefreshBackoff))
+			}
+			st.Attempts = legacyProfileRefreshAttempts
+			if err := saveProfileRefreshSchedule(home, st); err != nil {
+				return st, time.Time{}, err
+			}
 		}
 		if !st.Done && st.Failures == 0 && st.Attempts > 0 {
 			// The previous schedule persisted only the per-slot count. Its
@@ -83,6 +101,13 @@ func (a *App) refreshSchedule(home adapter.Home, now time.Time) (profileRefreshS
 }
 
 func saveProfileRefreshSchedule(home adapter.Home, st profileRefreshSchedule) error {
+	if st.Attempts > legacyProfileRefreshAttempts {
+		if st.Failures == 0 {
+			st.Failures = min(st.Attempts, len(profileRefreshBackoff))
+		}
+		st.Attempts = legacyProfileRefreshAttempts
+	}
+	st.SchemaVersion = 2
 	path := profileRefreshSchedulePath(home)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
@@ -91,7 +116,32 @@ func saveProfileRefreshSchedule(home adapter.Home, st profileRefreshSchedule) er
 	if err != nil {
 		return err
 	}
-	return writeAtomicFile(path, append(raw, '\n'), 0o600)
+	if err := writeAtomicFile(path, append(raw, '\n'), 0o600); err != nil {
+		return err
+	}
+	return writeRefreshEvidence(home, st)
+}
+
+func profileRefreshEvidencePath(home adapter.Home) string {
+	return filepath.Join(filepath.Dir(profileRefreshSchedulePath(home)), "profile-refresh-evidence.json")
+}
+
+func backupProfileRefreshSchedule(home adapter.Home, raw []byte) error {
+	path := profileRefreshSchedulePath(home) + ".pre-downgrade"
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return writeAtomicFile(path, raw, 0o600)
+}
+
+func writeRefreshEvidence(home adapter.Home, st profileRefreshSchedule) error {
+	raw, err := json.Marshal(st)
+	if err != nil {
+		return err
+	}
+	return writeAtomicFile(profileRefreshEvidencePath(home), append(raw, '\n'), 0o600)
 }
 
 func (a *App) attemptScheduledProfileRefresh(ctx context.Context, flags Flags, home adapter.Home, st profileRefreshSchedule) error {

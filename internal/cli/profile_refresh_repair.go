@@ -11,6 +11,36 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
+func (a *App) profileRefreshPrepareDowngrade(home adapter.Home) int {
+	raw, readErr := os.ReadFile(profileRefreshSchedulePath(home))
+	if readErr == nil {
+		backup := profileRefreshSchedulePath(home) + ".pre-downgrade"
+		if _, err := os.Stat(backup); os.IsNotExist(err) {
+			if err := writeAtomicFile(backup, raw, 0o600); err != nil {
+				fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+				return ExitFail
+			}
+		}
+	} else if !os.IsNotExist(readErr) {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	st, _, err := a.refreshSchedule(home, a.Now())
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	if err := saveProfileRefreshSchedule(home, st); err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	fmt.Fprintf(a.Stdout, "schedule_attempts=%d\nschedule_failures=%d\nschedule_schema=2\n", st.Attempts, st.Failures)
+	fmt.Fprintf(a.Stdout, "evidence=%s\n", profileRefreshEvidencePath(home))
+	fmt.Fprintln(a.Stdout, "ledger_untouched=yes")
+	fmt.Fprintln(a.Stdout, "downgrade_ready=yes")
+	return ExitOK
+}
+
 func (a *App) profileRefreshRepair(home adapter.Home) int {
 	if a.GOOS != "darwin" {
 		fmt.Fprintln(a.Stdout, "scheduler=unsupported")

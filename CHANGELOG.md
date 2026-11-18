@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Do not replace a verified public snapshot with an older date or a lower total unless the request carries an audited correction for that exact drop. An empty local read is unknown, and a quiet day is zero only when coverage says so. `profile refresh prepare-downgrade` makes the schedule readable by v0.7.19 without deleting it or touching the ledger.
 - Keep scheduler liveness, collector failures, the public wall, and Pages repair as separate health results. One recovery closes only its own incident. A test cannot dial the production host. A full Cursor billing page with no next cursor is not a finished window.
 - Remind Mac users when scheduled Cursor collection requires authorization and usage evidence is stale. Keep foreground authorization outside the shared scan lock.
 - Require a ledger for account-bound Cursor refresh and keep verified browser data across a reload in the same tab.

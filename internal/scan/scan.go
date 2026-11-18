@@ -214,6 +214,8 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 			})
 		}
 		hadErr := false
+		missing := 0
+		emitted := 0
 		rootCount := len(roots)
 		for _, h := range homes {
 			found := a.Discover(h)
@@ -227,7 +229,16 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 				if _, ok := seenPath[root.Path]; ok {
 					continue
 				}
-				if st, err := os.Stat(root.Path); err == nil {
+				st, statErr := os.Stat(root.Path)
+				statMissing := false
+				if statErr != nil {
+					if os.IsNotExist(statErr) {
+						statMissing = true
+					} else {
+						hadErr = true
+						errs = append(errs, a.ID()+": "+statErr.Error())
+					}
+				} else {
 					dup := false
 					for _, prev := range seenInfos {
 						if os.SameFile(prev, st) {
@@ -241,7 +252,6 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 					seenInfos = append(seenInfos, st)
 				}
 				seenPath[root.Path] = struct{}{}
-				roots = append(roots, root)
 				var rootEvents []event.UsageEvent
 				err := a.Parse(root, func(e event.UsageEvent) {
 					events = append(events, e)
@@ -262,8 +272,15 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 				if err != nil {
 					hadErr = true
 					errs = append(errs, a.ID()+": "+err.Error())
+					if !statMissing {
+						roots = append(roots, root)
+					}
+				} else if statMissing && len(rootEvents) == 0 {
+					missing++
 				} else {
 					complete = append(complete, rootEvents...)
+					emitted += len(rootEvents)
+					roots = append(roots, root)
 				}
 			}
 		}
@@ -277,11 +294,18 @@ func runWithProgress(home adapter.Home, adapters []adapter.Adapter, report func(
 					cursorCategory = "AUTH"
 				}
 			} else {
+				rootsFound := len(roots) - rootCount
 				category := ""
-				if hadErr {
+				switch {
+				case hadErr:
 					category = "LOCAL_READ"
+				case rootsFound == 0 && missing > 0:
+					category = "ABSENT"
+					rootsFound = missing
+				case rootsFound > 0 && emitted == 0:
+					category = "NO_EVENTS"
 				}
-				collection.add(a.ID(), len(roots)-rootCount, category)
+				collection.add(a.ID(), rootsFound, category)
 			}
 		}
 		if report != nil {

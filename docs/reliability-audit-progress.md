@@ -47,12 +47,17 @@ merge, tag, deploy, or replace the installed CLI without a separate approval.
 - Virtual-clock coverage: 7, 14, and 30 days of retry, and the same horizons
   for the incident lifecycle.
 
-## Verification before this commit
+## Verification
 
-- `go test ./...` passed.
-- `go vet ./...` passed.
-- `python3 scripts/freshness_classify_test.py`, `scripts/freshness_lifecycle_test.py`, and `bash scripts/freshness_alert_test.sh` passed.
-- Not run: Playwright, a live Mac slot, a hosted deploy, or a production GET after the Fake-IP EOF.
+- `63649a1` CI run 44286271381 and upgrade run 44286271385 succeeded on Ubuntu, macOS, and Windows.
+- After the follow-up fixes, `go test ./...` passed again, as did the freshness, lifecycle, alert, watchdog, and Pages script tests.
+- Isolated hosted tests, including an older snapshot theme retry and an audited correction, passed against the test database. They did not call production.
+- Read-only `GET https://wheretoken.plainlist.space/api/health` on this Mac failed. The name resolved to `198.18.0.48` and TLS ended with `SSL_ERROR_SYSCALL`. No response body was read. This is not a schema compatibility check.
+- Live watchdog at `2026-11-18T11:12:31Z` wrote `/tmp/wt-watchdog/alerts.json`: hosted unreachable, and Actions last schedule run `2026-11-18T04:19:59Z` so the local class is `check_failed workflow_silent`. No GitHub issue was created.
+- The local clock at the check was `2026-11-18 19:11 +0800`. The next natural refresh slot is `00:00`. It was not observed. The installed CLI is still Homebrew 0.7.19 and was not restarted.
+- Playwright `profile-e2e` ran 123 tests on Chromium, Firefox, and WebKit. All passed. The server was the local fixture, not production.
+
+## Not done
 
 ## Not done
 
