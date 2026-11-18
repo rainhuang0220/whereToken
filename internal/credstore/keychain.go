@@ -1,10 +1,12 @@
 package credstore
 
 import (
+	"context"
 	"errors"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const keychainService = "whereToken"
@@ -44,7 +46,16 @@ func (k *cmdStore) Delete(key string) error {
 }
 
 func runSecurity(args []string) (string, error) {
-	cmd := exec.Command("security", args...)
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	if len(args) > 0 && args[0] == "find-generic-password" {
+		// Only the hosted credential store uses this command. A locked
+		// login keychain must not outlive the scheduled refresh child.
+		ctx, cancel = context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+	}
+	cmd := exec.CommandContext(ctx, "security", args...)
+	cmd.WaitDelay = time.Second
 	out, err := cmd.Output()
 	if err != nil {
 		var ee *exec.ExitError

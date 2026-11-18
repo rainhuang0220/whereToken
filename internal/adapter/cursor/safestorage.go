@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -213,29 +214,29 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 	if value == "" || !strings.HasPrefix(value, sealedStoragePrefix) {
 		return value, nil
 	}
-	if a.NoOSKeychain {
-		// The macOS keychain query with UI disabled may still
-		// wait indefinitely for SecurityAgent on legacy macOS keychains.
-		// A scheduled refresh must never enter that OS code path.
-		return "", errOSPermission
-	}
-	if a.Unseal != nil {
+	if a.Unseal != nil && !a.NoOSKeychain {
 		return a.Unseal(value)
 	}
-	if plain, ok := rememberedOpened(dbPath); ok {
-		return plain, nil
+	authorized := consentAllows(a.ConsentPath)
+	if authorized {
+		if plain, ok := rememberedOpened(dbPath, value); ok {
+			return plain, nil
+		}
 	}
-	if !consentAllows(a.ConsentPath) {
-		return "", errAccountUsageUnavailable
+	if a.NoOSKeychain {
+		// A legacy macOS query can wait for SecurityAgent even with UI
+		// disabled. A scheduled or locked scan only uses the exact session
+		// already authorized and opened in this process, if any.
+		return "", errOSPermission
 	}
-	if flag.Lookup("test.v") != nil {
+	if !authorized || flag.Lookup("test.v") != nil {
 		return "", errAccountUsageUnavailable
 	}
 	plain, err := unsealOS(value, dbPath, a.AllowPrompt)
 	if err != nil {
 		return "", err
 	}
-	rememberOpened(dbPath, plain)
+	rememberOpened(dbPath, value, plain)
 	return plain, nil
 }
 
@@ -243,27 +244,35 @@ func (a Adapter) openSealed(value, dbPath string) (string, error) {
 // cursor connect reads the subject once, then the same command collects
 // usage without a second system dialog. The value is not written to the
 // ledger, a log, or an error.
+type openedSession struct {
+	sealedHash [32]byte
+	plain      string
+}
+
 var (
 	openedMu    sync.Mutex
-	openedPlain = map[string]string{}
+	openedPlain = map[string]openedSession{}
 )
 
-func rememberedOpened(dbPath string) (string, bool) {
+func rememberedOpened(dbPath, sealed string) (string, bool) {
 	if dbPath == "" {
 		return "", false
 	}
 	openedMu.Lock()
 	defer openedMu.Unlock()
-	plain, ok := openedPlain[dbPath]
-	return plain, ok && plain != ""
+	session, ok := openedPlain[dbPath]
+	if !ok || session.sealedHash != sha256.Sum256([]byte(sealed)) {
+		return "", false
+	}
+	return session.plain, true
 }
 
-func rememberOpened(dbPath, plain string) {
+func rememberOpened(dbPath, sealed, plain string) {
 	if dbPath == "" || plain == "" {
 		return
 	}
 	openedMu.Lock()
-	openedPlain[dbPath] = plain
+	openedPlain[dbPath] = openedSession{sealedHash: sha256.Sum256([]byte(sealed)), plain: plain}
 	openedMu.Unlock()
 }
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,13 +38,16 @@ func (a *App) refreshDo(req *http.Request) (*http.Response, error) {
 	if a.HTTPDo != nil {
 		return a.HTTPDo(req)
 	}
+	if err := refuseProductionFromTest(req); err != nil {
+		return nil, err
+	}
 	return (&http.Client{Timeout: profileRefreshTimeout, Transport: scopedProfileRefreshTransport(a.hostedBase())}).Do(req)
 }
 
 func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	switch flags.ProfileRefreshAction {
 	case "status":
-		return a.profileRefreshStatus(home)
+		return a.writeRefreshHealth(home, false, flags.JSON)
 	case "on":
 		return a.profileRefreshSet(home, true)
 	case "off":
@@ -51,9 +55,11 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	case "watch":
 		return a.profileRefreshWatch(flags, home)
 	case "doctor":
-		return a.profileRefreshDoctor(home)
+		return a.writeRefreshHealth(home, true, flags.JSON)
 	case "repair":
 		return a.profileRefreshRepair(home)
+	case "prepare-downgrade":
+		return a.profileRefreshPrepareDowngrade(home)
 	case "":
 		if os.Getenv(profileRefreshChildEnv) == "1" {
 			// A replaced or stopped watch may leave its own worker orphaned.
@@ -72,50 +78,111 @@ func (a *App) runProfileRefreshCommand(flags Flags, home adapter.Home) int {
 	}
 }
 
-func (a *App) profileRefreshStatus(home adapter.Home) int {
-	return a.writeRefreshHealth(home, false)
-}
-
-func (a *App) profileRefreshDoctor(home adapter.Home) int {
-	return a.writeRefreshHealth(home, true)
-}
-
-func (a *App) writeRefreshHealth(home adapter.Home, doctor bool) int {
+func (a *App) writeRefreshHealth(home adapter.Home, doctor, machine bool) int {
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
 		return ExitFail
 	}
+	st, _ := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	now := a.Now()
 	enabled := err == nil && on
-	if err != nil || !on {
-		fmt.Fprintln(a.Stdout, "phase=idle 未开启")
-	} else {
-		fmt.Fprintln(a.Stdout, "phase=idle 等待下一次")
-	}
 	scheduler := a.schedulerStatus(enabled)
-	code := a.lastRefreshCode(home)
-	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
+	h := refreshHealth{
+		Enabled: enabled, Scheduler: scheduler, SchedulerHealthy: scheduler == "running" || scheduler == "idle",
+		Last: st.Code, CheckedAt: st.CheckedAt, Publication: st.Publication, PagesMirror: "UNKNOWN", Overall: "pending",
+	}
+	if !h.Publication.PagesExpected && h.Publication.SnapshotGeneratedAt != nil {
+		h.PagesMirror = "UNCONFIGURED"
+	} else if doctor && h.Publication.PagesExpected {
+		h.PagesMirror = a.pagesMirrorStatus(h.Publication)
+		if h.PagesMirror == "FRESH" || h.PagesMirror == "MISMATCH" {
+			ok := h.PagesMirror == "FRESH"
+			h.PagesMirrorHealthy = &ok
+		}
+	}
 	if enabled && a.GOOS == "darwin" {
-		fmt.Fprintln(a.Stdout, "schedule=00:00,10:30,17:00")
-		fmt.Fprintf(a.Stdout, "next_check=%s\n", publicprofile.NextScheduledRefreshWake(a.Now(), a.Loc).In(a.Loc).Format(time.RFC3339))
+		schedule, next, err := a.refreshSchedule(home, now)
+		if err != nil {
+			h.SchedulerHealthy = false
+		} else {
+			if next.Before(now) {
+				next = now
+			}
+			h.NextCheck = next.In(a.Loc)
+			h.Attempts, h.ConsecutiveFailures = schedule.Attempts, schedule.Failures
+			h.DurationMS, h.RetryCategory = schedule.LastDurationMS, schedule.LastRetryReason
+			h.CursorAuthNoticeAt = schedule.CursorAuthNoticeAt
+		}
 	}
-	fmt.Fprintf(a.Stdout, "last=%s\n", code)
-	program, _ := a.refreshProgramPath()
-	plist := a.refreshPlistState(enabled, program)
+	h.Sources, h.CollectionHealthy = st.Collection.At(now)
+	h.DataFreshness = publicprofile.SourceUnknown
+	if h.CollectionHealthy {
+		h.DataFreshness = publicprofile.SourceFresh
+	} else if len(h.Sources) > 0 {
+		h.DataFreshness = "DEGRADED"
+	}
+	h.PublicationVerified = h.Publication.VerifiedAt != nil &&
+		h.Publication.VerifiedSnapshotID != "" && !h.Publication.VerifiedAt.After(now) &&
+		now.Sub(*h.Publication.VerifiedAt) < publicprofile.CollectionMaxAge
 	if doctor {
-		fmt.Fprintf(a.Stdout, "plist=%s\n", plist)
+		program, _ := a.refreshProgramPath()
+		h.Plist = a.refreshPlistState(enabled, program)
+	}
+	switch {
+	case !enabled:
+		h.Overall = "off"
+	case refreshUnhealthy(enabled, scheduler, st.Code, h.Plist, doctor) || (!h.SchedulerHealthy && a.GOOS == "darwin"):
+		h.Overall = "degraded"
+	case !st.CheckedAt.IsZero() && (!h.CollectionHealthy || !h.PublicationVerified):
+		h.Overall = "degraded"
+	case h.PagesMirror == "MISMATCH" || h.PagesMirror == "SOURCE_UNAVAILABLE":
+		h.Overall = "degraded"
+	case h.CollectionHealthy && h.PublicationVerified:
+		h.Overall = "healthy"
+	}
+	if machine {
+		if err := json.NewEncoder(a.Stdout).Encode(h); err != nil {
+			return ExitFail
+		}
+	} else {
+		a.printRefreshHealth(home, h, doctor)
+	}
+	if h.Overall == "degraded" {
+		return ExitFail
+	}
+	return ExitOK
+}
+
+func (a *App) printRefreshHealth(home adapter.Home, h refreshHealth, doctor bool) {
+	print := func(format string, args ...any) { fmt.Fprintf(a.Stdout, format, args...) }
+	if h.Enabled {
+		print("phase=idle 等待下一次\n")
+	} else {
+		print("phase=idle 未开启\n")
+	}
+	print("scheduler=%s\nscheduler_healthy=%s\n", h.Scheduler, yn(h.SchedulerHealthy))
+	if !h.NextCheck.IsZero() {
+		print("schedule=00:00,10:30,17:00\nnext_check=%s\n", h.NextCheck.Format(time.RFC3339))
+	}
+	print("last=%s\ncollection_healthy=%s\ndata_freshness=%s\n", h.Last, yn(h.CollectionHealthy), h.DataFreshness)
+	print("publication_verified=%s\npages_mirror=%s\n", yn(h.PublicationVerified), h.PagesMirror)
+	if h.PagesMirrorHealthy != nil {
+		print("pages_mirror_healthy=%s\n", yn(*h.PagesMirrorHealthy))
+	}
+	if h.Publication.VerifiedAt != nil {
+		print("publication_verified_at=%s\npublication_date=%s\n", h.Publication.VerifiedAt.Format(time.RFC3339), h.Publication.VerifiedAsOfDate)
+	}
+	if doctor && !h.CursorAuthNoticeAt.IsZero() {
+		print("cursor_auth_notice_at=%s\n", h.CursorAuthNoticeAt.Format(time.RFC3339))
+	}
+	if doctor {
+		print("plist=%s\nslot_attempts=%d\nlast_duration_ms=%d\nretry_category=%s\n", h.Plist, h.Attempts, h.DurationMS, h.RetryCategory)
 		facts, tokens, gaps := ledgerFigures(home)
-		fmt.Fprintf(a.Stdout, "ledger_facts=%s\n", facts)
-		fmt.Fprintf(a.Stdout, "ledger_tokens=%s\n", tokens)
-		fmt.Fprintf(a.Stdout, "ledger_import_gaps=%s\n", gaps)
+		print("ledger_facts=%s\nledger_tokens=%s\nledger_import_gaps=%s\n", facts, tokens, gaps)
 	}
-	healthy := !refreshUnhealthy(enabled, scheduler, code, plist, doctor)
-	if healthy {
-		fmt.Fprintln(a.Stdout, "healthy=yes")
-		return ExitOK
-	}
-	fmt.Fprintln(a.Stdout, "healthy=no")
-	return ExitFail
+	printRefreshCollection(h.Sources, doctor, print)
+	print("overall_health=%s\nhealthy=%s\n", h.Overall, yn(h.Overall == "healthy"))
 }
 
 func refreshUnhealthy(enabled bool, scheduler, code, plist string, doctor bool) bool {
@@ -146,7 +213,7 @@ func ledgerFigures(home adapter.Home) (facts, tokens, gaps string) {
 	if err != nil {
 		return unavailable()
 	}
-	lg, err := ledger.Open(p)
+	lg, err := ledger.OpenReadOnly(p)
 	if err != nil {
 		return unavailable()
 	}
@@ -158,23 +225,14 @@ func ledgerFigures(home adapter.Home) (facts, tokens, gaps string) {
 	return strconv.Itoa(st.Facts), strconv.FormatInt(st.Tokens, 10), strconv.Itoa(st.ImportGaps)
 }
 
-func (a *App) lastRefreshCode(home adapter.Home) string {
-	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
-	if err != nil || !publicprofile.AllowedRefreshCode(st.Code) {
-		return ""
-	}
-	return st.Code
-}
-
 func (a *App) noteRefresh(home adapter.Home, phase, code string) {
 	if a.Now == nil {
 		return
 	}
-	_ = publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
-		Phase:     phase,
-		Code:      code,
-		CheckedAt: a.Now(),
-	})
+	path := publicprofile.RefreshStatePath(home)
+	st, _ := publicprofile.LoadRefreshState(path)
+	st.Phase, st.Code, st.CheckedAt = phase, code, a.Now()
+	_ = publicprofile.SaveRefreshState(path, st)
 }
 
 func (a *App) profileRefreshSet(home adapter.Home, on bool) int {
@@ -312,12 +370,6 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 		fmt.Fprintln(a.Stdout, "phase=skipped 离线不覆盖已发布快照")
 		return ExitOK
 	}
-	token, login, err := a.profileRefreshCreds(home)
-	if err != nil {
-		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
-		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
-		return ExitOK
-	}
 	release, ok, lockErr := proclock.TryLock(a.scanLockPath(home))
 	if lockErr != nil {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
@@ -331,10 +383,28 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	defer release()
 	res := a.doScanWithKeychainPolicy(home, flags.Quiet, flags.Offline, flags.ASCII, false, true)
 	events, restored := a.retainAccountObservations(home, res.Events, res.Errors, nil)
+	prev, _ := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	res.Collection = mergeRefreshCollection(res, prev.Collection, a.Now())
+	if err := a.saveRefreshCollection(home, res.Collection, publicprofile.Snapshot{}, publicprofile.ApplyResult{}, prev.Publication.PagesExpected); err != nil {
+		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+		return a.refreshFailed()
+	}
 	snap, err := a.refreshSnapshot(home, res, events)
 	if err != nil {
 		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
 		return a.refreshFailed()
+	}
+	token, login, loginErr := a.profileRefreshCreds(home)
+	pagesExpected := login == "rainhuang0220" && a.hostedBase() == HostedWebURL
+	if loginErr != nil {
+		result := publicprofile.ApplyResult{Auth: true}
+		if err := a.saveRefreshCollection(home, res.Collection, snap, result, prev.Publication.PagesExpected); err != nil {
+			a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+			return a.refreshFailed()
+		}
+		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
+		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
+		return ExitOK
 	}
 	if snap.SnapshotID != "" && rejected != nil {
 		if _, seen := rejected[snap.SnapshotID]; seen {
@@ -356,6 +426,10 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 			applied = publicprofile.ApplyRefresh(ctx, snap, a.Now(), false, publisher)
 		}
 	}
+	if err := a.saveRefreshCollection(home, res.Collection, snap, applied, pagesExpected); err != nil {
+		a.noteRefresh(home, publicprofile.PhaseFailed, publicprofile.CodeWillRetry)
+		return a.refreshFailed()
+	}
 	if applied.Auth {
 		a.noteRefresh(home, publicprofile.PhaseIdle, publicprofile.CodeNotSignedIn)
 		fmt.Fprintln(a.Stderr, "not logged in; run wheretoken login")
@@ -375,6 +449,10 @@ func (a *App) executeProfileRefresh(ctx context.Context, flags Flags, home adapt
 	a.clearPermitIfPublished(home, applied)
 	a.noteRefresh(home, applied.Decision.Phase, applied.Decision.Code)
 	a.writeRefresh(a.Stdout, applied.Decision, true)
+	checks, _ := res.Collection.At(a.Now())
+	printRefreshCollection(checks, false, func(format string, args ...any) {
+		fmt.Fprintf(a.Stdout, format, args...)
+	})
 	return ExitOK
 }
 
@@ -388,6 +466,7 @@ func (a *App) refreshSnapshot(home adapter.Home, res scan.Result, events []event
 		PortraitSeed: a.PortraitSeed(home),
 		Offline:      res.Offline,
 		Errors:       res.Errors,
+		SourceStatus: snapshotSources(res.Collection, a.Now()),
 	})
 }
 
@@ -617,7 +696,7 @@ func (p projectionClient) Fetch(ctx context.Context) (publicprofile.RemoteView, 
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return publicprofile.RemoteView{}, publicprofile.ErrNotSignedIn
 	case resp.StatusCode >= 400:
-		return publicprofile.RemoteView{}, fmt.Errorf("HTTP %d", resp.StatusCode)
+		return publicprofile.RemoteView{}, publicprofile.RefreshHTTPStatus(resp.StatusCode)
 	}
 	return publicprofile.ParseLiveEnvelope(body)
 }

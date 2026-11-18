@@ -15,7 +15,7 @@ import (
 func TestPendingPublicationKeepsVerifiedPagesWithoutFailure(t *testing.T) {
 	when := time.Date(2026, 11, 9, 10, 0, 0, 0, time.UTC)
 	build := func(n int64) publicprofile.Snapshot {
-		s, err := publicprofile.Build(publicprofile.Input{Now: when, Loc: time.UTC, Version: "fixture", Events: []event.UsageEvent{{Source: "grok", Vendor: "xai", Model: "grok-4.6", Timestamp: when, Miss: n, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw}}})
+		s, err := publicprofile.Build(publicprofile.Input{Now: when, Loc: time.UTC, Version: "fixture", IncludeModels: true, Events: []event.UsageEvent{{Source: "grok", Vendor: "xai", Model: "grok-4.6", Timestamp: when, Miss: n, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,5 +122,61 @@ func TestUnverifiedAndRegressedWallCannotReplacePages(t *testing.T) {
 		if _, _, err := buildVerifiedFallback(b, nil); err == nil {
 			t.Fatalf("%s unexpectedly accepted", name)
 		}
+	}
+}
+
+func TestReuploadOfSameVerifiedSnapshotDoesNotRewriteCommittedBundle(t *testing.T) {
+	dir := t.TempDir()
+	wall := filepath.Join(t.TempDir(), "wall.json")
+	raw := testWall(t)
+	if err := os.WriteFile(wall, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := sync(wall, dir); err != nil || !changed {
+		t.Fatalf("first mirror: changed=%v err=%v", changed, err)
+	}
+	var env map[string]any
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatal(err)
+	}
+	env["snapshot"].(map[string]any)["generated_at"] = "2026-11-16T02:32:00Z"
+	raw, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(wall, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := sync(wall, dir); err != nil || changed {
+		t.Fatalf("reupload should leave static bytes unchanged: changed=%v err=%v", changed, err)
+	}
+}
+
+func TestSameDayOlderVerifiedRevisionCannotReplacePages(t *testing.T) {
+	when := time.Date(2026, 11, 16, 10, 0, 0, 0, time.UTC)
+	build := func(at time.Time, model string) publicprofile.Snapshot {
+		t.Helper()
+		s, err := publicprofile.Build(publicprofile.Input{Now: at, Loc: time.UTC, Version: "fixture", IncludeModels: true, Events: []event.UsageEvent{
+			{Source: "grok", Vendor: "xai", Model: model, Timestamp: at, Miss: 50, Quality: event.QualityAuthoritative, Derivation: event.DeriveRaw},
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	current := build(when, "grok-4.6")
+	older := build(when.Add(-time.Hour), "grok-4.5")
+	env := map[string]any{
+		"schema": "wheretoken.public-profile-live", "schema_version": 1,
+		"data_revision": older.SnapshotID, "snapshot": older,
+		"wall": map[string]any{"phase": "verified", "verified_snapshot_id": older.SnapshotID,
+			"verified_as_of_date": older.AsOfDate, "verified_total": 50, "verified_at": "2026-11-16T11:00:00Z"},
+	}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := buildVerifiedFallback(raw, &current); err == nil {
+		t.Fatal("same-day older revision was accepted")
 	}
 }

@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
@@ -55,7 +57,7 @@ func useLaunchd(t *testing.T, app *App, home string) (string, *[]string) {
 }
 
 func TestProfileRefreshPlistIsQuietAndHasNoInterval(t *testing.T) {
-	body, err := profileRefreshPlist("/opt/homebrew/bin/wheretoken", "/Users/ada", "/Users/ada/Library/Logs/wheretoken/profile-refresh.log")
+	body, err := profileRefreshPlist("/opt/homebrew/bin/wheretoken", "/Users/ada")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +80,7 @@ func TestProfileRefreshPlistIsQuietAndHasNoInterval(t *testing.T) {
 		"<string>Background</string>",
 		"<key>WorkingDirectory</key>",
 		"<string>/Users/ada</string>",
-		"profile-refresh.log",
+		"<string>/dev/null</string>",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("plist missing %q\n%s", want, text)
@@ -451,7 +453,7 @@ func TestProfileRefreshWatchReexecsWhenBinaryChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	home := t.TempDir()
-	body, err := profileRefreshPlist(next, home, filepath.Join(home, "profile-refresh.log"))
+	body, err := profileRefreshPlist(next, home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -566,6 +568,7 @@ func TestProfileRefreshHealthPlistIsPeriodicAndNotKeptAlive(t *testing.T) {
 		"<key>StartInterval</key>",
 		"<integer>3600</integer>",
 		"<key>RunAtLoad</key>",
+		"<string>/Users/ada/Library/Logs/wheretoken/profile-refresh-health.log</string>",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q\n%s", want, text)
@@ -587,7 +590,7 @@ func TestProfileRefreshRepairLeavesHealthyWatch(t *testing.T) {
 	app.Home = cfg
 	home, calls := useLaunchd(t, app, "")
 	program := filepath.Join(home, "wheretoken")
-	body, err := profileRefreshPlist(program, home, filepath.Join(home, "profile-refresh.log"))
+	body, err := profileRefreshPlist(program, home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -607,7 +610,7 @@ func TestProfileRefreshRepairLeavesHealthyWatch(t *testing.T) {
 			t.Fatalf("bootout a healthy watch: %v", *calls)
 		}
 	}
-	if !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "healthy=yes\n") {
+	if !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "scheduler_healthy=yes\n") {
 		t.Fatalf("repair %q", out.String())
 	}
 	health := filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
@@ -667,7 +670,7 @@ func TestProfileRefreshDoctorFailsWhenPlistMissing(t *testing.T) {
 	if code := app.Run(); code != ExitFail {
 		t.Fatalf("doctor %d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "plist=missing\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "ledger_facts=0\n") || !strings.Contains(out.String(), "ledger_tokens=0\n") || !strings.Contains(out.String(), "ledger_import_gaps=0\n") {
+	if !strings.Contains(out.String(), "plist=missing\n") || !strings.Contains(out.String(), "healthy=no\n") || !strings.Contains(out.String(), "scheduler=running\n") || !strings.Contains(out.String(), "ledger_facts=unavailable\n") || !strings.Contains(out.String(), "ledger_tokens=unavailable\n") || !strings.Contains(out.String(), "ledger_import_gaps=unavailable\n") {
 		t.Fatalf("doctor %q", out.String())
 	}
 }
@@ -701,7 +704,7 @@ func TestProfileRefreshWatchReexecsWhenSamePathIsReplaced(t *testing.T) {
 		t.Fatal(err)
 	}
 	home := t.TempDir()
-	body, err := profileRefreshPlist(self, home, filepath.Join(home, "profile-refresh.log"))
+	body, err := profileRefreshPlist(self, home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -795,5 +798,122 @@ func TestRefreshProgramPrefersBrewEntryOverOldCellarAlias(t *testing.T) {
 	got, err := app.refreshProgramPath()
 	if err != nil || got != stable {
 		t.Fatalf("service retained old Cellar alias: got=%q want=%q err=%v", got, stable, err)
+	}
+}
+
+func TestProfileRefreshRepairLeavesLoadedIdleHealthAgent(t *testing.T) {
+	app, _, _ := testApp(nil)
+	home, _ := useLaunchd(t, app, "")
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
+	program := filepath.Join(home, "wheretoken")
+	body, err := profileRefreshHealthPlist(program, filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(plist), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app.RunCmdOutput = func(_ string, args ...string) (string, error) {
+		if args[0] != "print" {
+			t.Fatalf("repair reloaded an idle but registered agent: %v", args)
+		}
+		return "state = waiting\n", nil
+	}
+	if err := app.repairOne(profileRefreshHealthLabel, plist, body, program); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProfileRefreshWatchReexecsAfterBrewRemovesOldCellar(t *testing.T) {
+	prefix := t.TempDir()
+	home := t.TempDir()
+	removed := filepath.Join(prefix, "Cellar", "wheretoken", "0.7.19", "bin", "wheretoken")
+	next := filepath.Join(prefix, "Cellar", "wheretoken", "0.7.20", "bin", "wheretoken")
+	stable := filepath.Join(prefix, "bin", "wheretoken")
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+	for _, path := range []string{next, stable, plist} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(next, []byte("fixture"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(next, stable); err != nil {
+		t.Fatal(err)
+	}
+	body, err := profileRefreshPlist(stable, home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var argv []string
+	app := &App{
+		GOOS:       "darwin",
+		Args:       []string{"profile", "refresh", "watch", "--quiet"},
+		UserHome:   func() (string, error) { return home, nil },
+		Executable: func() (string, error) { return removed, nil },
+		Reexec:     func(args []string) { argv = args },
+	}
+	app.maybeReexecProfileWatch()
+	if len(argv) != 5 || argv[0] != stable || argv[3] != "watch" {
+		t.Fatalf("watch stayed on the removed Cellar binary: argv=%v", argv)
+	}
+}
+
+func TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 18, 17, 7, 0, 0, time.FixedZone("CST", 8*3600))
+	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(cfg), publicprofile.RefreshState{
+		Phase: publicprofile.PhaseFailed, Code: publicprofile.CodeWillRetry, CheckedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	slot := publicprofile.ScheduledRefreshSlot(now, now.Location())
+	raw, err := json.Marshal(profileRefreshSchedule{
+		Slot: slot, Attempts: 3, Failures: 3, RetryAt: now.Add(-time.Minute), Done: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profileRefreshSchedulePath(cfg), append(raw, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "repair"})
+	app.Home = cfg
+	app.Now = func() time.Time { return now }
+	app.Loc = now.Location()
+	home, calls := useLaunchd(t, app, "")
+	program := filepath.Join(home, "wheretoken")
+	body, err := profileRefreshPlist(program, home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := app.Run(); code == ExitOK {
+		t.Fatalf("repair treated a failed slot as success: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "scheduler_healthy=yes\n") || !strings.Contains(out.String(), "healthy=no\n") ||
+		!strings.Contains(out.String(), "data_healthy=no\n") {
+		t.Fatalf("repair output %q err %s", out.String(), errb.String())
+	}
+	for _, c := range *calls {
+		if strings.Contains(c, "bootout") && strings.Contains(c, profileRefreshLabel+".plist") {
+			t.Fatalf("data failure bootout the watch: %v", *calls)
+		}
 	}
 }

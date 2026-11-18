@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          curl -fsS --retry 3 --retry-delay 5 \
+          curl -fsS --connect-timeout 8 --max-time 20 --retry 2 --retry-delay 5 \
             -H 'Cache-Control: no-cache' \
             -o "$RUNNER_TEMP/wall.json" \
             'https://wheretoken.plainlist.space/api/v1/public-profile/rainhuang0220'
@@ -37,13 +37,6 @@ jobs:
           fi
           class="$(python3 scripts/freshness_classify.py --surface actions --wall "$RUNNER_TEMP/wall.json")"
           echo "class=${class}" >> "$GITHUB_OUTPUT"
-
-      - name: Open or close one alert issue
-        if: always() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
-        run: bash scripts/freshness-alert.sh --class "$CLASS"
 
       # GitHub Pages must still display the most recently *verified* README
       # snapshot if the visitor's network cannot reach the hosted API.
@@ -72,16 +65,43 @@ jobs:
           git push origin HEAD:main
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      # A GITHUB_TOKEN push does not trigger regular push workflows. Explicit
-      # workflow_dispatch is allowed and ensures the new fallback gets deployed.
-      - name: Deploy refreshed fallback to Pages
-        if: steps.mirror.outputs.changed == 'true'
+      # A previous push may already contain the right fallback even if
+      # dispatch or deployment failed. Check deployed bytes every hour.
+      - name: Verify and repair the deployed Pages fallback
+        id: pages
+        if: always() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --repo "${{ github.repository }}" --ref main
+        run: |
+          set +e
+          git fetch --no-tags origin refs/heads/main
+          git archive FETCH_HEAD public-profile | tar -x -C "$RUNNER_TEMP"
+          python3 scripts/profile_pages.py --dir "$RUNNER_TEMP/public-profile" \
+            --url 'https://rainhuang0220.github.io/whereToken/profile' --repair
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "class=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "class=pages_stale" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or close one alert issue
+        if: always() && !cancelled() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
+          PAGES: ${{ steps.pages.outputs.class || 'pages_stale' }}
+        run: |
+          set -euo pipefail
+          bash scripts/freshness-alert.sh --surface actions --classes "$CLASS"
+          bash scripts/freshness-alert.sh --surface pages --classes "$PAGES"
 
       - name: Fail when the public wall check is not ok
-        if: steps.wall.outputs.class != 'ok'
+        if: always() && !cancelled() && (steps.wall.outputs.class != 'ok' || steps.pages.outputs.class != 'ok')
+        env:
+          CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
+          PAGES: ${{ steps.pages.outputs.class || 'pages_stale' }}
         run: |
-          echo "profile freshness class=${{ steps.wall.outputs.class }}"
+          echo "profile freshness class=$CLASS pages=$PAGES"
           exit 1

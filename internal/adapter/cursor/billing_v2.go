@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -43,7 +42,7 @@ func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int
 	}
 	next := ""
 	seenCursor := map[string]bool{}
-	seenItems := map[string]bool{}
+	seenItems := map[string]int{}
 	// Billing v2 has been observed to return a different object for
 	// truncated historical ranges. Query whole UTC months, then trim the
 	// returned events to the caller's safe requested interval.
@@ -75,7 +74,7 @@ func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int
 			base = strings.TrimRight(a.APIBase, "/")
 		}
 		endpoint := base + billingV2Path + "?" + q.Encode()
-		req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+		req, err := http.NewRequestWithContext(a.requestContext(), http.MethodGet, endpoint, nil)
 		if err != nil {
 			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=request_build page=%d]", errEndpointUnavailable, page)
 		}
@@ -87,23 +86,29 @@ func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int
 		c.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 		resp, err := c.Do(req)
 		if err != nil {
-			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=network page=%d]", errEndpointUnavailable, page)
-		}
-		limited, readErr := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
-		resp.Body.Close()
-		if readErr != nil {
-			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=body_read page=%d]", errEndpointUnavailable, page)
-		}
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || (resp.StatusCode >= 300 && resp.StatusCode < 400) {
-			return filteredFetch{}, errTokenRejected
-		}
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return filteredFetch{}, errRateLimited
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=network page=%d]", errNetwork, page)
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=http status=%d page=%d]", errEndpointUnavailable, resp.StatusCode, page)
+			resp.Body.Close()
+			switch {
+			case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode >= 300 && resp.StatusCode < 400:
+				return filteredFetch{}, errTokenRejected
+			case resp.StatusCode == http.StatusTooManyRequests:
+				return filteredFetch{}, errRateLimited
+			default:
+				return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=http status=%d page=%d]", errEndpointUnavailable, resp.StatusCode, page)
+			}
 		}
-		part, raw, after, err := decodeBillingPage(limited, userID, w, queryFrom)
+		const maxBillingBody = 16 << 20
+		rawBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBillingBody+1))
+		resp.Body.Close()
+		if readErr != nil {
+			return filteredFetch{}, fmt.Errorf("%w [endpoint=billing_v2 phase=body_read page=%d]", errNetwork, page)
+		}
+		if len(rawBody) > maxBillingBody {
+			return filteredFetch{}, fmt.Errorf("%w [reason=billing_body_limit page=%d]", errSchemaChanged, page)
+		}
+		part, raw, after, err := decodeBillingPage(rawBody, userID, w, queryFrom)
 		if errors.Is(err, errMissingBillingTeam) && teamID == 0 {
 			// Cursor may require an explicitly selected team even for a user
 			// scope. Resolve only a unique team of the logged-in account.
@@ -119,13 +124,21 @@ func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int
 		}
 		out.raw += raw
 		for _, e := range part {
-			if seenItems[e.RequestID] {
+			if i, seen := seenItems[e.RequestID]; seen {
+				if out.events[i] != e {
+					return filteredFetch{}, fmt.Errorf("%w [reason=conflicting_billing_item]", errPaginationIncomplete)
+				}
 				continue
 			}
-			seenItems[e.RequestID] = true
+			seenItems[e.RequestID] = len(out.events)
 			out.events = append(out.events, e)
 		}
 		if after == "" {
+			// A full page with no cursor is not proof the window ended. Committing
+			// it would mark the other days covered, including a false zero.
+			if len(part) >= billingV2PageSize {
+				return filteredFetch{}, fmt.Errorf("%w [reason=billing_cursor_missing]", errPaginationIncomplete)
+			}
 			// The new API offers no declared total. -1 records "not provided",
 			// rather than falsely attributing a measured count to its server.
 			out.declared = -1
@@ -155,13 +168,6 @@ func billingSessionIdentity(token string) (userID, jwt string, ok bool) {
 	return sub, jwt, true
 }
 
-type billingPage struct {
-	Data       []json.RawMessage `json:"data"`
-	Pagination *struct {
-		NextCursor string `json:"nextCursor"`
-	} `json:"pagination"`
-}
-
 func decodeBillingPage(raw []byte, userID string, w usageSpan, queryFrom time.Time) ([]event.UsageEvent, int, string, error) {
 	var obj map[string]json.RawMessage
 	if json.Unmarshal(raw, &obj) != nil {
@@ -170,91 +176,15 @@ func decodeBillingPage(raw []byte, userID string, w usageSpan, queryFrom time.Ti
 	data, found := obj["data"]
 	if !found {
 		if available, ok := obj["availability"]; ok && len(obj) == 1 {
-			// Report only harmless nested JSON field names, never their values.
-			var nested map[string]json.RawMessage
-			if json.Unmarshal(available, &nested) == nil && len(nested) > 0 {
-				keys := make([]string, 0, len(nested))
-				for key := range nested {
-					if len(key) == 0 || len(key) > 36 {
-						continue
-					}
-					valid := true
-					for _, c := range key {
-						if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-							valid = false
-							break
-						}
-					}
-					if valid {
-						keys = append(keys, key)
-					}
-				}
-				sort.Strings(keys)
-				if len(keys) > 10 {
-					keys = keys[:10]
-				}
-				return nil, 0, "", fmt.Errorf("%w [available_keys=%s]", errBillingAvailability, strings.Join(keys, ","))
+			var state string
+			if json.Unmarshal(available, &state) == nil && state == "missing_team_id" {
+				return nil, 0, "", errMissingBillingTeam
 			}
-			kind := "unknown"
-			if len(available) > 0 {
-				switch available[0] {
-				case '{':
-					kind = "object"
-				case '[':
-					kind = "array"
-				case '"':
-					kind = "string"
-				case 't', 'f':
-					kind = "boolean"
-				case 'n':
-					kind = "null"
-				default:
-					kind = "number_or_unknown"
-				}
-			}
-			if kind == "string" {
-				var state string
-				if json.Unmarshal(available, &state) == nil && len(state) <= 40 {
-					valid := len(state) > 0
-					for _, ch := range state {
-						if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '-') {
-							valid = false
-							break
-						}
-					}
-					if valid {
-						if state == "missing_team_id" {
-							return nil, 0, "", errMissingBillingTeam
-						}
-						return nil, 0, "", fmt.Errorf("%w [availability_state=%s]", errBillingAvailability, state)
-					}
-				}
-			}
-			return nil, 0, "", fmt.Errorf("%w [availability_type=%s]", errBillingAvailability, kind)
+			return nil, 0, "", errBillingAvailability
 		}
-		// Only schema key names are disclosed, never error text, IDs,
-		// response bodies or anything from the account.
-		if len(obj) == 0 {
-			return nil, 0, "", fmt.Errorf("%w [reason=empty_billing_object]", errSchemaChanged)
-		}
-		var names []string
-		for key := range obj {
-			if len(key) == 0 || len(key) > 48 {
-				continue
-			}
-			valid := true
-			for _, ch := range key {
-				if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '-') {
-					valid = false
-					break
-				}
-			}
-			if valid {
-				names = append(names, key)
-			}
-		}
-		sort.Strings(names)
-		return nil, 0, "", fmt.Errorf("%w [reason=missing_billing_data schema_keys=%s field_count=%d]", errSchemaChanged, strings.Join(names, ","), len(obj))
+		// A provider-controlled field name or value can itself contain
+		// account data. Diagnostics contain only predefined reason codes.
+		return nil, 0, "", fmt.Errorf("%w [reason=missing_billing_data]", errSchemaChanged)
 	}
 	var list []json.RawMessage
 	if json.Unmarshal(data, &list) != nil || list == nil {

@@ -146,6 +146,9 @@ func (s *server) publishPalette(ctx context.Context, user User, palette, kind st
 	if snap.SnapshotID != row.SnapshotID {
 		return s.failPublish(ctx, user, palette, kind, retry, "snapshot identity"), errors.New("snapshot identity")
 	}
+	if reason := publicprofile.VerifiedWallRegression(s.verifiedWall(ctx, user.ID), snap, publicprofile.CorrectionFrom(ctx)); reason != "" {
+		return s.failPublish(ctx, user, palette, kind, retry, reason), errVerifiedMoved
+	}
 	beforeID := snap.SnapshotID
 	light, dark, err := renderPreviews(snap, palette)
 	if err != nil {

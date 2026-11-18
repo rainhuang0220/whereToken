@@ -21,7 +21,7 @@ func (a Adapter) uniqueBillingTeamID(userID, jwt string) (int64, error) {
 	if a.APIBase != "" {
 		base = strings.TrimRight(a.APIBase, "/")
 	}
-	req, err := http.NewRequest(http.MethodPost, base+"/api/dashboard/teams", bytes.NewBufferString("{}"))
+	req, err := http.NewRequestWithContext(a.requestContext(), http.MethodPost, base+"/api/dashboard/teams", bytes.NewBufferString("{}"))
 	if err != nil {
 		return 0, fmt.Errorf("%w [reason=team_lookup_request]", errEndpointUnavailable)
 	}
@@ -33,7 +33,7 @@ func (a Adapter) uniqueBillingTeamID(userID, jwt string) (int64, error) {
 	c.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 	resp, err := c.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("%w [reason=team_lookup_network]", errEndpointUnavailable)
+		return 0, fmt.Errorf("%w [reason=team_lookup_network]", errNetwork)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || (resp.StatusCode >= 300 && resp.StatusCode < 400) {

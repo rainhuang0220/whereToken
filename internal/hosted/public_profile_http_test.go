@@ -1472,3 +1472,57 @@ func boolJSON(v bool) string {
 	}
 	return "false"
 }
+
+func TestPublicProjectionSourceStatusRollout(t *testing.T) {
+	git := newMemGit(publishReadme)
+	h := publishMux(t, git)
+	device, _, _ := seedOwner(t)
+	day := time.Date(2026, 11, 16, 2, 32, 0, 0, time.UTC)
+	ev := authEvent("kimi", "moonshot", day.Add(-time.Hour), 3_282_835)
+	input := publicprofile.Input{Now: day, Loc: time.UTC, Version: "test", Events: []event.UsageEvent{ev}}
+	legacy := mustProjection(t, input)
+	if bytes.Contains(legacy.raw, []byte(`"source_status"`)) {
+		t.Fatal("legacy fixture contains source evidence")
+	}
+	if got := putProjection(t, h, device, legacy.raw); got["snapshot_id"] != legacy.snap.SnapshotID {
+		t.Fatalf("schema-aware hosted rejected legacy snapshot: %+v", got)
+	}
+
+	input.Now = day.Add(24 * time.Hour)
+	input.SourceStatus = []publicprofile.SourceCoverage{{
+		Source: "cursor", Status: publicprofile.SourceAuthRequired, CoverageThroughUTC: "2026-11-15",
+		GapsUTC: []publicprofile.UTCGap{{From: "2026-11-16", To: "2026-11-17"}},
+	}}
+	candidate := mustProjection(t, input)
+	if got := putProjection(t, h, device, candidate.raw); got["snapshot_id"] != candidate.snap.SnapshotID || got["readme"] != "materialized" {
+		t.Fatalf("candidate was not accepted and published: %+v", got)
+	}
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/public-profile/rainhuang0220", nil))
+	view, err := publicprofile.ParseLiveEnvelope(rec.Body.Bytes())
+	if err != nil || rec.Code != http.StatusOK || view.Snapshot.SnapshotID != candidate.snap.SnapshotID ||
+		view.Wall.SnapshotID != candidate.snap.SnapshotID || view.Wall.AsOfDate != candidate.snap.AsOfDate ||
+		len(view.Snapshot.SourceStatus) != 1 || view.Snapshot.SourceStatus[0].Status != publicprofile.SourceAuthRequired {
+		t.Fatalf("candidate evidence lost on readback: status=%d err=%v", rec.Code, err)
+	}
+	if err := publicprofile.Validate(view.Snapshot); err != nil {
+		t.Fatalf("hosted readback changed the revision: %v", err)
+	}
+
+	// An older reader may ignore the optional field. A hosted rollback
+	// that strips the field must never reuse the resulting stale digest.
+	trimmed := candidate.snap
+	trimmed.SourceStatus = nil
+	raw, err := json.Marshal(trimmed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/sync/public-profile", bytes.NewReader(raw))
+	req.Header.Set("Authorization", "Bearer "+device)
+	blocked := httptest.NewRecorder()
+	h.ServeHTTP(blocked, req)
+	if blocked.Code != http.StatusBadRequest || publicSnapshotID(t, h, "rainhuang0220") != candidate.snap.SnapshotID {
+		t.Fatalf("stripped evidence reused a verified digest: status=%d", blocked.Code)
+	}
+}

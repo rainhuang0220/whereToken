@@ -13,17 +13,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # The Linux job installs the locked Playwright browser builds.
+        os: [ubuntu-24.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # go.mod requests toolchain go1.26.10. Set up that exact version on
+      # go.mod requests toolchain go1.26.11. Set up that exact version on
       # macOS/Windows; Linux hosted runners already provide it.
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         if: runner.os != 'Linux'
         with:
-          go-version: "1.26.10"
+          go-version: "1.26.11"
 
       - name: Runner Go toolchain
         run: go version
@@ -36,6 +37,7 @@ jobs:
         shell: bash
         run: |
           python3 scripts/freshness_classify_test.py
+          if [ "$RUNNER_OS" = Linux ]; then python3 scripts/profile_pages_test.py; fi
           bash scripts/freshness_alert_test.sh
 
       - name: Go vet

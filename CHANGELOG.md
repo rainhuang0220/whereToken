@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Retry a failed automatic refresh once per hour, without the previous 30-second/two-minute retry bursts. Normal 00:00, 10:30 and 17:00 checks and idle CPU behavior are unchanged. Retry deadlines persist across sleep and restarts.
+
+- Do not replace a verified public snapshot with an older date or a lower total unless the request carries an audited correction for that exact drop. An empty local read is unknown, and a quiet day is zero only when coverage says so. `profile refresh prepare-downgrade` makes the schedule readable by v0.7.19 without deleting it or touching the ledger.
+- Keep scheduler liveness, collector failures, the public wall, and Pages repair as separate health results. One recovery closes only its own incident. A test cannot dial the production host. A full Cursor billing page with no next cursor is not a finished window.
+- Remind Mac users when scheduled Cursor collection requires authorization and usage evidence is stale. Keep foreground authorization outside the shared scan lock.
+- Require a ledger for account-bound Cursor refresh and keep verified browser data across a reload in the same tab.
+
+- Build with Go 1.26.11 to pick up the standard-library HTTP security fix.
+
+- Report source freshness, UTC gaps, hosted acceptance, GitHub verification and Pages diagnostics independently. A refresh can retain trusted usage and display an incomplete activity wall.
+- Recover audited Cursor windows in bounded UTC batches. Keep sealed macOS sessions on the foreground authorization path and reject account observations that lower confirmed daily totals.
+- Keep refresh retries across sleep, restart and calendar slots. Repair stale Pages deployments independently of mirror commits and keep newer verified snapshots in the browser.
+
 ## 0.7.19 — 2026-11-10 (Alpha)
 
 - Interactive reports and `pricing --usage` show the existing mascot on stderr while a cached read is still running. The first frame waits 140ms so a fast command does not flash. `--json`, `--quiet`, pipes, and `TERM=dumb` stay clean. The mascot does not change token totals or avoid a full scan when the cache is missing.

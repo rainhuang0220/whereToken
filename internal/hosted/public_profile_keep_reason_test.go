@@ -192,6 +192,87 @@ func TestCorrectionTagIsNotReplayedAfterACrash(t *testing.T) {
 	}
 }
 
+func TestThemeRetryDoesNotReplaceANewerVerifiedSnapshot(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	opts := publishOptions(st, git)
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	later := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	current := mustProjection(t, publicprofile.Input{
+		Now: later, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", later.Add(-time.Hour), 40_000)},
+	})
+	if got := putProjection(t, h, device, current.raw); got["readme"] != "materialized" {
+		t.Fatalf("current %+v", got)
+	}
+	earlier := mustProjection(t, publicprofile.Input{
+		Now: later.Add(-48 * time.Hour), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", later.Add(-49*time.Hour), 40_000)},
+	})
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SaveProjection(context.Background(), user.ID, earlier.raw, earlier.snap); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetPublicationIntent(context.Background(), user.ID, earlier.snap.SnapshotID, "failed", "theme:cobalt", "github_write", sql.NullTime{}, 1); err != nil {
+		t.Fatal(err)
+	}
+	puts := git.puts
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	s.retryFailedReadmes(context.Background())
+	if git.puts != puts {
+		t.Fatalf("theme retry wrote GitHub %d -> %d", puts, git.puts)
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || pres.ReadmeSnapshotID != current.snap.SnapshotID {
+		t.Fatalf("verified moved to an older snapshot %+v %v", pres, err)
+	}
+}
+
+func TestAuditedCorrectionMayLowerTheVerifiedTotal(t *testing.T) {
+	git := newMemGit(publishReadme)
+	st := readyStore(t)
+	opts := publishOptions(st, git)
+	h := NewMux(opts)
+	device, _, _ := seedOwner(t)
+	day := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	current := mustProjection(t, publicprofile.Input{
+		Now: day, Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 40_000)},
+	})
+	if got := putProjection(t, h, device, current.raw); got["readme"] != "materialized" {
+		t.Fatalf("current %+v", got)
+	}
+	lower := mustProjection(t, publicprofile.Input{
+		Now: day.Add(time.Minute), Loc: time.UTC, Version: "test",
+		Events: []event.UsageEvent{authEvent("claude", "anthropic", day.Add(-time.Hour), 39_000)},
+	})
+	user, err := st.UserByLogin(context.Background(), "rainhuang0220")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SaveProjection(context.Background(), user.ID, lower.raw, lower.snap); err != nil {
+		t.Fatal(err)
+	}
+	drop := *current.snap.Periods.All.Totals.Total.Value - *lower.snap.Periods.All.Totals.Total.Value
+	puts := git.puts
+	s := &server{opts: opts, limiter: map[string][]time.Time{}}
+	ctx := publicprofile.ContextWithCorrection(context.Background(), publicprofile.Correction{Reason: "audited-revision", Delta: drop})
+	if _, err := s.publishPalette(ctx, user, publicprofile.DefaultPalette, "usage", nil); err != nil {
+		t.Fatal(err)
+	}
+	if git.puts == puts {
+		t.Fatal("audited correction did not publish")
+	}
+	pres, err := st.Presentation(context.Background(), user.ID)
+	if err != nil || !pres.VerifiedTotal.Valid || pres.VerifiedTotal.Int64 != *lower.snap.Periods.All.Totals.Total.Value {
+		t.Fatalf("correction did not become the verified total %+v %v", pres, err)
+	}
+}
+
 func TestOtherAccountCannotDropTheOwnerWall(t *testing.T) {
 	git := newMemGit(publishReadme)
 	h := publishMux(t, git)

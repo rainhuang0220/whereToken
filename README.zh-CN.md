@@ -102,6 +102,8 @@ whereToken 报告 token 数量。有公开标价时会附带 API 等价估价，
 
 把本机用量发布成脱敏快照：GitHub 亮/暗预览 SVG，加上静态交互页。页面在浏览器里是可交互的。数字本身是本机生成的公开快照，不是云端实时同步。不带命令的 `wheretoken` 只打本地报告，不上传。安装脚本也不会打开上传。`wheretoken profile refresh` 是一次明确的 PUT。`wheretoken profile refresh on` 打开开关，并只在 macOS 上安装用户级 launchd agent；`off` 关掉开关并卸掉该 agent。Linux 和 Windows 不安装后台代理，前台循环是 `wheretoken profile refresh watch`。关机的机器不会发布；补上是 watch 下次醒来，或图形界面登录后的 RunAtLoad。没有图形会话的 SSH 不会跑这个 agent，`status` 可以显示 `scheduler=dead`。
 
+用 `wheretoken profile refresh status --json` 分别检查采集与发布。`wheretoken profile refresh doctor` 会列出未核实的 UTC 日期和恢复方式。参见[自动刷新运维指南](docs/profile-refresh-reliability.md)。
+
 ```bash
 wheretoken profile build ./public-profile
 wheretoken profile validate ./public-profile --production
@@ -228,7 +230,7 @@ whereToken 读取各 coding agent 提供的用量信息。完整程度因工具�
 | Cursor | 部分；新增账号 Token 可能受上游 API 阻断 | 本地请求无需登录；密封账号会话需要 `cursor connect` |
 | Trae / Trae CN / TRAE SOLO | 部分 | 需要 |
 
-Cursor 的零配置采集是本机 `state.vscdb` 里的请求和回合。账号 token 在 Cursor 已经写入可读 JWT 时会直接请求。会话被封在操作系统密钥里时，默认扫描不读取该密钥，账号用量显示为不可用，请求和回合仍然保留。`wheretoken cursor connect` 记下这一次明确选择：macOS 由本进程向系统申请一次授权。Windows 的密封会话解封使用 Cursor 已经保存在当前账户下的 DPAPI 密钥，这一路径是实验性的，真实 Windows 登录尚未验收，不能当作已经全面支持。未签名升级可能再次询问。Linux 的密封会话仍不可用。之后同一份程序的刷新不再询问。`cursor disconnect` 只删除这个选择，之后的扫描不再读取会话。它不会取消系统已经记住的允许。尚未记录账号主体的历史观测，不会在第一次连接某个账号时被认领、覆盖或合并。在终端里，`cursor connect` 会显示历史 token、日期范围和已记录日数，并说明现有快照是否足够证明账号关联。输入 `yes` 才会绑定并继续过滤用量采集。输入 `no` 则让旧历史保持独立。普通扫描不会认领，也不会询问。程序不要求用户自己创建证书，也不把系统密钥工具设成长期可读取 Cursor 密钥。把 `state.vscdb` 整份重读是文件索引的 full。沿用的历史观测保留原先的账号测量，单独记录，不与本地 `tokenCount` 相加。Trae 的 token 列需要那些应用在本机已登录。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
+Cursor 的零配置采集是本机 `state.vscdb` 里的请求和回合。账号 token 在 Cursor 已经写入可读 JWT 时会直接请求。会话被封在操作系统密钥里时，默认扫描不读取该密钥，账号用量显示为不可用，请求和回合仍然保留。`wheretoken cursor connect` 记下这一次明确选择：macOS 由本进程向系统申请一次授权。Windows 的密封会话解封使用 Cursor 已经保存在当前账户下的 DPAPI 密钥，这一路径是实验性的，真实 Windows 登录尚未验收，不能当作已经全面支持。未签名升级可能再次询问。Linux 的密封会话仍不可用。macOS 密封会话需要在前台采集。后台报告 `AUTH_REQUIRED`，保留之前确认的账本数据。`cursor disconnect` 只删除这个选择，之后的扫描不再读取会话。它不会取消系统已经记住的允许。尚未记录账号主体的历史观测，不会在第一次连接某个账号时被认领、覆盖或合并。在终端里，`cursor connect` 会显示历史 token、日期范围和已记录日数，并说明现有快照是否足够证明账号关联。输入 `yes` 才会绑定并继续过滤用量采集。输入 `no` 则让旧历史保持独立。普通扫描不会认领，也不会询问。程序不要求用户自己创建证书，也不把系统密钥工具设成长期可读取 Cursor 密钥。把 `state.vscdb` 整份重读是文件索引的 full。沿用的历史观测保留原先的账号测量，单独记录，不与本地 `tokenCount` 相加。Trae 的 token 列需要那些应用在本机已登录。加密的 Trae 存储只汇报，不解密。Cline 和 Roo Code 只读 VS Code 系 `ui_messages.json` 里的 metrics，不读 settings 和对话正文。
 
 **Cursor Billing V2 已知限制（v0.7.11）：** Cursor 私有个人账号接口可能返回 `availability: missing_team_id`，而登录账号无法发现任何团队，此时**无法继续刷新新增 Token**。whereToken 会明确报告 `ENDPOINT_UNAVAILABLE`；仅当此前的历史已由用户明确关联到当前账号时，仍展示最近一次验证过的历史用量。**该数字不代表实时同步成功。** `--offline` 不读取 macOS 钥匙串或查询云端。程序不会猜测 `teamId=0` 来跨越账号作用域；干净macOS首次系统授权和Windows密封会话真实采集也尚未完成验收。详见 [Cursor 数据来源说明](docs/data-sources.md#cursor)。
 

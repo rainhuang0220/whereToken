@@ -59,6 +59,13 @@ func validateSemantics(s Snapshot) error {
 	default:
 		return fmt.Errorf("publicprofile: data_status")
 	}
+	seenSources := make(map[string]bool, len(s.SourceStatus))
+	for _, source := range s.SourceStatus {
+		if !ValidateSourceCoverage(source) || seenSources[source.Source] {
+			return fmt.Errorf("publicprofile: source_status")
+		}
+		seenSources[source.Source] = true
+	}
 	if s.Privacy.RawEvents {
 		return fmt.Errorf("publicprofile: privacy.raw_events")
 	}

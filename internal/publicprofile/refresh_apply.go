@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"time"
 )
 
@@ -25,9 +26,10 @@ type RemoteView struct {
 // blocked, or coalesced. An empty value is an old server. HTTP 200 is
 // not by itself a verified GitHub publication.
 type PutResult struct {
-	Status       int
-	KeptPrevious bool
-	Readme       string
+	Status             int
+	AcceptedSnapshotID string
+	KeptPrevious       bool
+	Readme             string
 	// Reason is set when the server kept the previous projection.
 	// "regression" is a lower total. "coverage" is a weaker ledger.
 	// An empty reason is an older server and stays a coverage block.
@@ -45,18 +47,26 @@ type RefreshPublisher interface {
 // Callers print the existing login hint and do not publish.
 var ErrNotSignedIn = errors.New("not signed in")
 
+// RefreshHTTPStatus carries an HTTP status without upstream response text.
+type RefreshHTTPStatus int
+
+func (RefreshHTTPStatus) Error() string { return "public profile HTTP request failed" }
+
 // ApplyResult is one refresh attempt. Rejected means the server refused
 // the body (4xx); the same bytes must not be sent again in a loop.
 // Transport means the last good remote snapshot was left in place.
 // Already means a follow-up read showed this snapshot is stored, so
 // no further PUT is required. Auth means the device is not signed in.
 type ApplyResult struct {
-	Decision  Decision
-	Rejected  bool
-	Transport bool
-	Already   bool
-	Auth      bool
-	Remote    *Snapshot
+	Decision         Decision
+	Rejected         bool
+	Transport        bool
+	Already          bool
+	Auth             bool
+	Remote           *Snapshot
+	HostedAcceptedAt time.Time
+	VerifiedWall     VerifiedWall
+	FailureCategory  string
 }
 
 // ApplyRefresh fetches the hosted envelope, applies DecideRefresh, and
@@ -78,7 +88,15 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		return ApplyResult{Auth: true}
 	}
 	if err != nil {
-		return ApplyResult{Decision: FailedRefresh(), Transport: true}
+		category := "NETWORK"
+		var status RefreshHTTPStatus
+		if errors.As(err, &status) {
+			category = "PUBLISH"
+			if status == http.StatusTooManyRequests {
+				category = "RATE_LIMIT"
+			}
+		}
+		return ApplyResult{Decision: FailedRefresh(), Transport: true, FailureCategory: category}
 	}
 	in := RefreshInput{
 		Local:           local,
@@ -94,6 +112,10 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		in.Remote = &remote
 	}
 	attach := func(r ApplyResult) ApplyResult {
+		r.HostedAcceptedAt = view.UpdatedAt
+		if view.WallKnown {
+			r.VerifiedWall = view.Wall
+		}
 		if view.Found && view.Snapshot.SnapshotID != "" {
 			snap := view.Snapshot
 			r.Remote = &snap
@@ -124,18 +146,21 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 	res, err := pub.Put(ctx, raw)
 	if err != nil || res.Status == 429 || res.Status >= 500 {
 		if confirmed, ok := stored(ctx, pub, local.SnapshotID); ok {
-			wall := confirmed.Wall
-			verified := confirmed.WallKnown && wall.Proven && wall.SnapshotID == local.SnapshotID && !wall.PublishedAt.IsZero() &&
-				wall.AsOfDate == local.AsOfDate && wall.Total != nil && local.Periods.All.Totals.Total.Value != nil &&
-				*wall.Total == *local.Periods.All.Totals.Total.Value
-			if verified {
+			if verifiedSnapshot(confirmed, local) {
 				d = Decision{Phase: PhasePublished, Label: "主页已验证", Code: CodeVerified, Action: ActionNoChange}
 			} else if d.Action == ActionPublishNow {
 				d = Decision{Phase: PhaseWaiting, Label: "主页更新将重试", Code: CodePendingGitHub, Action: ActionRetryPending}
 			}
-			return ApplyResult{Decision: d, Already: true, Remote: &confirmed.Snapshot}
+			return ApplyResult{Decision: d, Already: true, Remote: &confirmed.Snapshot,
+				HostedAcceptedAt: confirmed.UpdatedAt, VerifiedWall: confirmed.Wall}
 		}
-		return attach(ApplyResult{Decision: FailedRefresh(), Transport: true})
+		category := "PUBLISH"
+		if err != nil {
+			category = "NETWORK"
+		} else if res.Status == 429 {
+			category = "RATE_LIMIT"
+		}
+		return attach(ApplyResult{Decision: FailedRefresh(), Transport: true, FailureCategory: category})
 	}
 	if res.Status == 401 || res.Status == 403 {
 		return attach(ApplyResult{Auth: true})
@@ -149,13 +174,28 @@ func ApplyRefresh(ctx context.Context, local Snapshot, now time.Time, offline bo
 		}
 		return attach(ApplyResult{Decision: skipped("覆盖变弱，保留上次", CodeBlockedData)})
 	}
-	return attach(ApplyResult{Decision: decisionAfterPut(d, res.Readme)})
+	result := attach(ApplyResult{Decision: decisionAfterPut(d, res.Readme)})
+	if res.AcceptedSnapshotID == local.SnapshotID && local.SnapshotID != "" {
+		result.HostedAcceptedAt = now
+	}
+	if res.Readme == "materialized" {
+		actual, err := pub.Fetch(ctx)
+		if err != nil || !verifiedSnapshot(actual, local) {
+			result.Decision = Decision{Phase: PhaseWaiting, Label: "主页验证将重试", Code: CodePendingGitHub, Action: ActionRetryPending}
+			result.FailureCategory = "PUBLISH"
+		} else {
+			result.VerifiedWall = actual.Wall
+			if actual.Snapshot.SnapshotID == local.SnapshotID && !actual.UpdatedAt.IsZero() {
+				result.HostedAcceptedAt = actual.UpdatedAt
+			}
+		}
+	}
+	return result
 }
 
 // decisionAfterPut refuses to call a wall published when the server only
-// accepted the snapshot or asked the client to wait. An empty readme is an
-// old hosted response: the client decision stands, and the new server is
-// still the publication authority.
+// accepted the snapshot or asked the client to wait. A materialized result
+// still requires the caller's verifiedSnapshot read-back before reporting it.
 func decisionAfterPut(d Decision, readme string) Decision {
 	switch readme {
 	case "materialized":
@@ -186,8 +226,20 @@ func decisionAfterPut(d Decision, readme string) Decision {
 		}
 		return d
 	default:
+		if d.Phase == PhasePublished {
+			d.Phase = PhaseWaiting
+			d.Label = "主页待验证"
+		}
 		return d
 	}
+}
+
+func verifiedSnapshot(view RemoteView, local Snapshot) bool {
+	wall := view.Wall
+	total := local.Periods.All.Totals.Total.Value
+	return view.WallKnown && wall.Proven && wall.SnapshotID == local.SnapshotID &&
+		wall.AsOfDate == local.AsOfDate && !wall.PublishedAt.IsZero() &&
+		wall.Total != nil && total != nil && *wall.Total == *total
 }
 
 func stored(ctx context.Context, pub RefreshPublisher, id string) (RemoteView, bool) {

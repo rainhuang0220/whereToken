@@ -364,7 +364,7 @@ func TestRetainedSnapshotDoesNotSkipTheBackfill(t *testing.T) {
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		day := time.UnixMilli(body.Start).UTC().Format("2006-01-02")
 		starts = append(starts, day)
-		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":1}}]}`, body.Start, day)
+		_, _ = fmt.Fprintf(w, `{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"%d","model":"gpt-5","conversationId":"%s","tokenUsage":{"inputTokens":7}}]}`, body.Start, day)
 	}))
 	t.Cleanup(srv.Close)
 	res := Run(testhome.New(home), []adapter.Adapter{cursor.Adapter{
@@ -692,5 +692,27 @@ func TestBillingAvailabilityLeavesHistoryUnknownButShowsRecentUsage(t *testing.T
 			t.Fatalf("pass %d unavailable month was measured %+v err=%v", n, oct, err)
 		}
 		lg.Close()
+	}
+}
+
+func TestScheduledCursorAccountRequiresDurableIdentity(t *testing.T) {
+	t.Setenv("WHERETOKEN_EXTRA_ROOTS", "")
+	t.Setenv("WHERETOKEN_NO_LEDGER", "1")
+	home := t.TempDir()
+	writeChainCursorDB(t, home, false)
+	now := func() time.Time { return time.Date(2026, 11, 18, 0, 0, 1, 0, time.UTC) }
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		_, _ = io.WriteString(w, `{"totalUsageEventsCount":0,"usageEventsDisplay":[]}`)
+	}))
+	defer srv.Close()
+	res := RunWithCollection(testhome.New(home), []adapter.Adapter{cursor.Adapter{
+		Scheduled: true, Now: now, HTTP: srv.Client(), APIBase: srv.URL,
+		Unseal: func(string) (string, error) { return windowJWT, nil },
+	}}, nil, now)
+	checks, _ := res.Collection.At(now())
+	if hits != 0 || len(checks) != 1 || checks[0].Category != "LEDGER" {
+		t.Fatalf("unbound account accessed API: hits=%d collection=%+v", hits, checks)
 	}
 }

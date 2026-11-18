@@ -23,7 +23,7 @@ func TestProfileRefreshDisablesCursorOSKeychainOnly(t *testing.T) {
 	if found != 1 {
 		t.Fatalf("expected exactly one Cursor adapter, got %d", found)
 	}
-	updated := prohibitCursorOSKeychain(ads)
+	updated := prohibitCursorOSKeychain(ads, nil)
 	if len(updated) != len(ads) {
 		t.Fatal("lost adapters")
 	}

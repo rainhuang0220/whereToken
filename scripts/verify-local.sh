@@ -24,7 +24,8 @@ go build -o bin/wheretoken ./cmd/wheretoken
 echo "== scan --json"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
-./bin/wheretoken scan --json >"$tmp"
+# --offline and a loopback base keep this smoke off the production sync route.
+WHERETOKEN_HOSTED_URL=http://127.0.0.1:1 ./bin/wheretoken scan --json --offline >"$tmp"
 
 python3 - "$tmp" <<'PY'
 import json, subprocess, sys

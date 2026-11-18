@@ -107,7 +107,7 @@ func TestOwnedRefreshCommandCancellationReapsChildAndReleasesLock(t *testing.T) 
 	defer cancel()
 	app := &App{Stdout: cancelRefreshOnReady{cancel}, Stderr: io.Discard}
 	start := time.Now()
-	err = app.execProfileRefreshChild(ctx, exe, []string{"-test.run=^TestProfileRefreshCancelHelper$"})
+	err = app.execProfileRefreshChild(ctx, exe, []string{"-test.run=^TestProfileRefreshCancelHelper$"}, true)
 	if err == nil || !errors.Is(ctx.Err(), context.Canceled) || time.Since(start) > time.Second {
 		t.Fatalf("child was not promptly cancelled and reaped: err=%v context=%v elapsed=%s", err, ctx.Err(), time.Since(start))
 	}

@@ -43,6 +43,7 @@ func Build(in Input) (Snapshot, error) {
 		now = time.Now()
 	}
 	now = now.In(loc)
+	in.Loc = loc
 	_, zoneOffset := now.Zone()
 	offsetMinutes := zoneOffset / 60
 	owner, err := sanitizeOwner(in.Owner)
@@ -58,6 +59,9 @@ func Build(in Input) (Snapshot, error) {
 	in.Events = canonicalEvents
 	allSum := metric.AggregateProjectionAt(canonicalEvents, in.Turns, now, loc)
 	status := dataStatus(allSum)
+	if status == StatusAvailable && incompleteCollection(in.SourceStatus) {
+		status = StatusPartial
+	}
 	unavailable := status == StatusUnavailable
 
 	windows := periodWindows(now, loc, allSum.Calendar)
@@ -78,7 +82,8 @@ func Build(in Input) (Snapshot, error) {
 			RefreshMode: RefreshManualPublish,
 			LiveSync:    false,
 		},
-		DataStatus: status,
+		DataStatus:   status,
+		SourceStatus: in.SourceStatus,
 		Privacy: Privacy{
 			RawEvents:       false,
 			ModelsIncluded:  in.IncludeModels,
@@ -107,6 +112,25 @@ func Build(in Input) (Snapshot, error) {
 		To:        allSum.Calendar.WindowTo,
 		Dates:     dates,
 		Series:    buildSeries(allSum, dates, allSum.Calendar.WindowTo, unavailable, in),
+	}
+	for i, date := range dates {
+		if date > snap.AsOfDate {
+			continue
+		}
+		for j := range snap.Activity.Series {
+			series := &snap.Activity.Series[j]
+			if (series.Metric != MetricTokens && series.Metric != MetricRequests) || series.States[i] != CellEmpty {
+				continue
+			}
+			agent := ""
+			if series.Dimension == "agent" {
+				agent = series.ID
+			}
+			if !measuredQuietZero(in.SourceStatus, agent, date) {
+				series.States[i] = CellUnknown
+				series.Values[i] = 0
+			}
+		}
 	}
 	refreshSnapshotID(&snap)
 	return snap, nil
@@ -280,6 +304,16 @@ func projectPeriod(id string, w metric.Window, in Input, now time.Time, loc *tim
 	}
 	all := sum.All
 	p.Totals = totalsFromSlice(all)
+	periodFrom := ""
+	if from != nil {
+		periodFrom = *from
+	}
+	if all.Total() == 0 && hasCoverageGap(in.SourceStatus, periodFrom, to, loc) {
+		p.Totals = emptyTotals()
+	}
+	if all.Total() == 0 && len(in.SourceStatus) > 0 && !measuredQuietZero(in.SourceStatus, "", to) {
+		p.Totals = emptyTotals()
+	}
 	p.HitRate = hitRateOf(all.Miss, all.CacheRead, all.CacheCreate, false)
 	p.Requests = availableCount(all.Requests)
 	p.UserTurns = availableCount(all.UserTurns)

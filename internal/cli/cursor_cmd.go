@@ -13,6 +13,8 @@ import (
 	"github.com/rainhuang0220/whereToken/internal/event"
 	"github.com/rainhuang0220/whereToken/internal/ledger"
 	"github.com/rainhuang0220/whereToken/internal/metric"
+	"github.com/rainhuang0220/whereToken/internal/proclock"
+	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 	"github.com/rainhuang0220/whereToken/internal/scan"
 	"golang.org/x/term"
 )
@@ -20,6 +22,10 @@ import (
 func (a *App) runCursor(flags Flags, home adapter.Home) int {
 	switch flags.CursorAction {
 	case "connect":
+		if a.wantOffline(flags) {
+			fmt.Fprintln(a.Stderr, "cursor connect requires network access")
+			return ExitUsage
+		}
 		return a.cursorConnect(home)
 	case "backfill":
 		return a.cursorBackfill(flags, home)
@@ -60,7 +66,7 @@ func (a *App) cursorDisconnect(home adapter.Home) int {
 
 func (a *App) cursorConnect(home adapter.Home) int {
 	path := cursor.ConsentPath(home)
-	fmt.Fprintln(a.Stderr, "这一步会读取操作系统保护的 Cursor 会话，用来统计账号 token。系统可能会询问是否允许本程序读取。允许一次后，同一份未改动的程序在后台不再询问。未签名的升级可能会再问一次。同一开发者签名的升级通常不必再问。")
+	fmt.Fprintln(a.Stderr, "这一步会申请系统授权，读取操作系统保护的 Cursor 会话以采集账号用量。密封会话需要在前台采集。系统可能在重启或升级后再次询问。")
 	if runtime.GOOS == "linux" {
 		fmt.Fprintln(a.Stderr, "Linux 上的密封会话无法读取。明文 JWT 仍可统计。连接不会把密封会话变成可用账本。")
 	}
@@ -74,7 +80,7 @@ func (a *App) cursorConnect(home adapter.Home) int {
 	ad := cursor.Adapter{
 		ConsentPath: path,
 		AllowPrompt: true,
-		Probe:       false,
+		Scheduled:   true,
 		Now:         a.Now,
 	}
 	roots := ad.Discover(home)
@@ -191,11 +197,21 @@ func (a *App) readHistoryAnswer() (string, bool) {
 }
 
 func (a *App) finishCursorConnect(home adapter.Home, ad cursor.Adapter) int {
+	release, ok, err := proclock.TryLock(a.scanLockPath(home))
+	if err != nil || !ok {
+		fmt.Fprintln(a.Stderr, "已有扫描或扫描锁不可用，请稍后重试。")
+		return ExitFail
+	}
+	defer release()
+	// Subject already offered system authorization outside the scan lock.
+	// The scan can reuse that exact in-memory session. Another sealed row
+	// must wait for explicit foreground authorization.
+	ad.NoOSKeychain = true
 	var res scan.Result
 	if a.Scan != nil {
 		res = a.Scan(home)
 	} else {
-		res = scan.Run(home, []adapter.Adapter{ad})
+		res = scan.RunWithCollection(home, []adapter.Adapter{ad}, nil, a.Now)
 	}
 	var api []event.UsageEvent
 	var from, to string
@@ -217,24 +233,38 @@ func (a *App) finishCursorConnect(home adapter.Home, ad cursor.Adapter) int {
 	}
 	fmt.Fprintln(a.Stdout, "cursor connect: on")
 	fmt.Fprintf(a.Stdout, "session: %s\n", cursor.StoredSessionKind(home))
+	checks, _ := res.Collection.At(a.Now())
+	confirmedZero := false
+	for _, check := range checks {
+		if check.Source == "cursor" {
+			confirmedZero = check.Status == publicprofile.SourceConfirmedZero
+			fmt.Fprintf(a.Stdout, "collection: %s\n", check.Status)
+			if check.Category != "" {
+				fmt.Fprintf(a.Stdout, "category: %s\n", check.Category)
+			}
+		}
+	}
+	for _, e := range api {
+		confirmedZero = confirmedZero || e.RequestID == "cursor-api:measured-zero"
+	}
+	sum := metric.Aggregate(api, nil)
+	if sum.All.Total() == 0 && !confirmedZero {
+		if len(checks) == 0 {
+			fmt.Fprintf(a.Stdout, "collection: %s\n", publicprofile.SourceUnknown)
+		}
+		fmt.Fprintln(a.Stdout, "total: unavailable")
+		return ExitFail
+	}
 	if from != "" {
 		fmt.Fprintf(a.Stdout, "window: %s..%s\n", from, to)
 	}
-	sum := metric.Aggregate(api, nil)
 	fmt.Fprintf(a.Stdout, "events: %d\n", len(api))
 	fmt.Fprintf(a.Stdout, "input: %d\n", sum.All.Miss)
 	fmt.Fprintf(a.Stdout, "cache_read: %d\n", sum.All.CacheRead)
 	fmt.Fprintf(a.Stdout, "cache_write: %d\n", sum.All.CacheCreate)
 	fmt.Fprintf(a.Stdout, "output: %d\n", sum.All.Output)
 	fmt.Fprintf(a.Stdout, "total: %d\n", sum.All.Total())
-	apiErr := strings.Join(res.Errors, "\n")
-	if apiErr != "" {
-		fmt.Fprintln(a.Stderr, apiErr)
-		if len(api) == 0 {
-			return ExitFail
-		}
-	}
-	if strings.Contains(strings.ToLower(apiErr), "eyj") {
+	if len(res.Errors) != 0 {
 		return ExitFail
 	}
 	return ExitOK

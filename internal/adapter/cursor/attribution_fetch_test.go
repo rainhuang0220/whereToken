@@ -111,7 +111,7 @@ func TestAttributionRejectsRowsOutsideRequestedUTCWindow(t *testing.T) {
 func TestFilteredMissingTokenMetersStayUnavailable(t *testing.T) {
 	raw := []byte(`{"totalUsageEventsCount":1,"usageEventsDisplay":[{"timestamp":"2026-11-01T12:00:00Z","model":"default"}]}`)
 	events, n, _, _, err := parseFiltered(raw)
-	if err != nil || n != 1 || len(events) != 0 {
+	if CollectionFailure(err) != "SCHEMA" || len(events) != 0 {
 		t.Fatalf("missing meters became usage: n=%d events=%d err=%v", n, len(events), err)
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(raw) }))

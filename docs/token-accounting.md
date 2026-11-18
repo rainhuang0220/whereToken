@@ -62,6 +62,12 @@ the previous observation's earlier days and uses the new response inside
 the new window. A successful empty response is not a license to delete
 the previous positive observation during an outage.
 
+A scheduled account window records its pagination audit with the observation.
+A window that would lower a confirmed UTC day leaves the previous version in
+place for reconciliation. A validated explicit zero can confirm coverage. An
+availability-only or ambiguous response leaves the window unverified. See
+[Profile refresh reliability](profile-refresh-reliability.md).
+
 API observations now retain model-level accounting rows alongside the compatible
 daily component table. Recovery preserves original request timestamps, model,
 vendor, hashed request identity when provided, and a fixed endpoint provenance.

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -164,6 +165,7 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 	}}
 	puts := 0
 	var sawBatch bool
+	var uploaded publicprofile.Snapshot
 	app, out, errb := testApp([]string{"profile", "refresh", "--quiet"})
 	app.Home = home
 	app.Creds = creds
@@ -178,6 +180,9 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 			sawBatch = true
 		}
 		if req.Method == http.MethodGet {
+			if uploaded.SnapshotID != "" {
+				return verifiedResponse(uploaded, now)
+			}
 			return jsonRes(http.StatusNotFound, nil)
 		}
 		if req.Method == http.MethodPut && strings.HasSuffix(req.URL.Path, "/sync/public-profile") {
@@ -186,7 +191,10 @@ func TestProfileRefreshOneShotPutsAndUnavailableDoesNot(t *testing.T) {
 			if strings.Contains(string(body), `"live_sync": true`) {
 				t.Fatal("refresh set live_sync")
 			}
-			return jsonRes(200, map[string]any{"ok": true, "readme": "materialized"})
+			if err := json.Unmarshal(body, &uploaded); err != nil {
+				t.Fatal(err)
+			}
+			return jsonRes(200, map[string]any{"ok": true, "readme": "materialized", "snapshot_id": uploaded.SnapshotID})
 		}
 		t.Errorf("unexpected %s %s", req.Method, req.URL.Path)
 		return jsonRes(500, nil)
@@ -507,7 +515,7 @@ func TestProfileRefreshStateCheckedAtIsTheRunInstant(t *testing.T) {
 	if !strings.Contains(text, "2026-09-25T08:00:00Z") || !strings.Contains(text, `"code": "PUBLISHED"`) {
 		t.Fatalf("state %s", text)
 	}
-	for _, bad := range []string{"total", "snapshot", "0.00 M", "$0", "#0"} {
+	for _, bad := range []string{"total", "wtd_1.tok", "0.00 M", "$0", "#0"} {
 		if strings.Contains(text, bad) {
 			t.Fatalf("state contains %q: %s", bad, text)
 		}
@@ -642,8 +650,10 @@ func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("status code=%d %s", code, errb.String())
 	}
+	// 18:35 is after 17:00 and this slot has not run, so the next check is the
+	// catch-up that is already due. It is not tomorrow's 00:00 slot.
 	if !strings.Contains(out.String(), "schedule=00:00,10:30,17:00\n") ||
-		!strings.Contains(out.String(), "next_check=2026-11-10T00:00:00+08:00\n") {
+		!strings.Contains(out.String(), "next_check=2026-11-09T18:35:00+08:00\n") {
 		t.Fatalf("status missing next scheduled check: %s", out.String())
 	}
 }
@@ -651,7 +661,8 @@ func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
 func TestProfileRefreshBusyDoesNotConsumeScheduledSlot(t *testing.T) {
 	home := testhome.New(t.TempDir())
 	app, _, _ := testApp(nil)
-	app.Now = func() time.Time { return time.Date(2026, 11, 9, 10, 31, 0, 0, time.UTC) }
+	now := time.Date(2026, 11, 9, 10, 31, 0, 0, time.UTC)
+	app.Now = func() time.Time { return now }
 	app.Loc = time.UTC
 	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
 		Phase: publicprofile.PhaseSkipped, Code: publicprofile.CodeBusy,
@@ -659,7 +670,11 @@ func TestProfileRefreshBusyDoesNotConsumeScheduledSlot(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	if app.profileRefreshDue(home) {
+		t.Fatal("busy result caused a second scan before the one-hour deadline")
+	}
+	now = time.Date(2026, 11, 9, 11, 30, 0, 0, time.UTC)
 	if !app.profileRefreshDue(home) {
-		t.Fatal("busy check swallowed 10:30 slot instead of allowing its bounded retry")
+		t.Fatal("busy check swallowed the hourly recovery attempt")
 	}
 }

@@ -1,0 +1,51 @@
+name: hosted-readonly-check
+
+# Manual diagnostics from a GitHub-hosted runner, independent of the owner's
+# Mac DNS/TUN path. Never uses credentials, PUT, or deployment actions.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/hosted-readonly-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check public Hosted health and profile without writes
+        env:
+          HEALTH_URL: https://wheretoken.plainlist.space/api/health
+          PROFILE_URL: https://wheretoken.plainlist.space/api/v1/public-profile/rainhuang0220
+        run: |
+          set -euo pipefail
+          for name in health profile; do
+            if [ "$name" = health ]; then target="$HEALTH_URL"; else target="$PROFILE_URL"; fi
+            printf 'GET %s\n' "$name"
+            status="$(curl --silent --show-error --location --max-redirs 2 \
+              --connect-timeout 8 --max-time 20 --retry 0 \
+              --header 'Cache-Control: no-cache' \
+              --output "$RUNNER_TEMP/$name.json" --write-out '%{http_code}' "$target")" || {
+                echo "${name}_fetch_failed=true"; exit 1;
+              }
+            echo "${name}_http_status=$status"
+            if [ "$status" != 200 ]; then exit 1; fi
+            python3 - "$name" "$RUNNER_TEMP/$name.json" <<'PY'
+          import json,sys
+          name,path=sys.argv[1:]
+          obj=json.load(open(path,encoding='utf-8'))
+          if name=='health':
+              print('health_json_valid=true')
+              print('health_status='+str(obj.get('status','unknown')))
+              print('health_version='+str(obj.get('version','not_exposed')))
+          else:
+              snap=obj.get('snapshot',obj)
+              assert snap.get('snapshot_id') and snap.get('as_of_date')
+              print('profile_date='+str(snap['as_of_date']))
+              print('profile_snapshot_id='+str(snap['snapshot_id']))
+          PY
+          done

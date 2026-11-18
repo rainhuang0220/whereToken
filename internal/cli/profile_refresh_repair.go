@@ -5,15 +5,46 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
 )
 
+func (a *App) profileRefreshPrepareDowngrade(home adapter.Home) int {
+	raw, readErr := os.ReadFile(profileRefreshSchedulePath(home))
+	if readErr == nil {
+		backup := profileRefreshSchedulePath(home) + ".pre-downgrade"
+		if _, err := os.Stat(backup); os.IsNotExist(err) {
+			if err := writeAtomicFile(backup, raw, 0o600); err != nil {
+				fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+				return ExitFail
+			}
+		}
+	} else if !os.IsNotExist(readErr) {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	st, _, err := a.refreshSchedule(home, a.Now())
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	if err := saveProfileRefreshSchedule(home, st); err != nil {
+		fmt.Fprintln(a.Stderr, "public profile refresh failed; will retry")
+		return ExitFail
+	}
+	fmt.Fprintf(a.Stdout, "schedule_attempts=%d\nschedule_failures=%d\nschedule_schema=2\n", st.Attempts, st.Failures)
+	fmt.Fprintf(a.Stdout, "evidence=%s\n", profileRefreshEvidencePath(home))
+	fmt.Fprintln(a.Stdout, "ledger_untouched=yes")
+	fmt.Fprintln(a.Stdout, "downgrade_ready=yes")
+	return ExitOK
+}
+
 func (a *App) profileRefreshRepair(home adapter.Home) int {
 	if a.GOOS != "darwin" {
 		fmt.Fprintln(a.Stdout, "scheduler=unsupported")
-		fmt.Fprintln(a.Stdout, "healthy=yes")
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=unavailable")
 		return ExitOK
 	}
 	on, err := publicprofile.LoadRefreshSwitch(publicprofile.RefreshConfigPath(home))
@@ -23,7 +54,7 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	}
 	if err != nil || !on {
 		fmt.Fprintln(a.Stdout, "scheduler=off")
-		fmt.Fprintln(a.Stdout, "healthy=yes")
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=off")
 		return ExitOK
 	}
 	if a.euid() == 0 {
@@ -42,11 +73,83 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	scheduler := a.schedulerStatus(true)
 	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
 	if scheduler != "running" {
+		fmt.Fprintln(a.Stdout, "scheduler_healthy=no")
+		fmt.Fprintln(a.Stdout, "data_healthy=unknown")
 		fmt.Fprintln(a.Stdout, "healthy=no")
 		return ExitFail
 	}
-	fmt.Fprintln(a.Stdout, "healthy=yes")
+	fmt.Fprintln(a.Stdout, "scheduler_healthy=yes")
+	data, healthy, fail := a.refreshDataHealth(home)
+	fmt.Fprintf(a.Stdout, "data_healthy=%s\nhealthy=%s\n", data, healthy)
+	if fail {
+		return ExitFail
+	}
 	return ExitOK
+}
+
+// refreshEvidenceTrusted is true only when this checkpoint has a recent
+// check time and every persisted source is still FRESH or CONFIRMED_ZERO.
+// A code by itself, including OFFLINE and the quiet skip codes, is not that
+// evidence. A zero or expired CheckedAt is an old file, not a fresh proof.
+func refreshEvidenceTrusted(st publicprofile.RefreshState, now time.Time) bool {
+	if st.Collection == nil || st.CheckedAt.IsZero() || st.CheckedAt.After(now) {
+		return false
+	}
+	if now.Sub(st.CheckedAt) > publicprofile.CollectionMaxAge {
+		return false
+	}
+	_, ok := st.Collection.At(now)
+	return ok
+}
+
+// refreshDataHealth reads the local checkpoint only. A live scheduler is not
+// evidence that collection or publication succeeded. In-budget retries stay
+// exit 0 so the hourly job does not flap, and they still print healthy=no.
+func (a *App) refreshDataHealth(home adapter.Home) (data, healthy string, fail bool) {
+	now := a.Now()
+	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	if err != nil {
+		return "unknown", "no", false
+	}
+	schedule, _, schedErr := a.refreshSchedule(home, now)
+	if schedErr != nil {
+		return "unknown", "no", true
+	}
+	degraded := false
+	if st.Collection != nil {
+		_, ok := st.Collection.At(now)
+		degraded = !ok
+	}
+	age := time.Duration(0)
+	if !st.CheckedAt.IsZero() && !st.CheckedAt.After(now) {
+		age = now.Sub(st.CheckedAt)
+	}
+	checkedStale := age > publicprofile.CollectionMaxAge
+	switch st.Code {
+	case "":
+		return "unknown", "no", false
+	case publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover,
+		publicprofile.CodeSkippedCooldown, publicprofile.CodeSkippedDelta:
+		if checkedStale || degraded {
+			return "no", "no", true
+		}
+		if !refreshEvidenceTrusted(st, now) {
+			return "unknown", "no", false
+		}
+		return "yes", "yes", false
+	case publicprofile.CodeOffline:
+		if checkedStale || degraded {
+			return "no", "no", true
+		}
+		return "unknown", "no", false
+	case publicprofile.CodeWillRetry, publicprofile.CodePendingGitHub, publicprofile.CodeBusy:
+		if schedule.Failures >= 3 || age > 4*time.Hour || degraded && age > 4*time.Hour {
+			return "no", "no", true
+		}
+		return "recovering", "no", false
+	default:
+		return "no", "no", true
+	}
 }
 
 // repairProfileRefreshAgents bootstraps a job only when it is missing or its
@@ -56,19 +159,20 @@ func (a *App) repairProfileRefreshAgents(program string) error {
 	if err != nil || home == "" {
 		return errors.New("profile refresh agent is incomplete")
 	}
-	watchPlist, watchLog, err := a.profileRefreshPaths()
+	watchPlist, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return err
 	}
-	healthPlist, healthLog, err := a.profileRefreshHealthPaths()
+	healthPlist, err := a.profileRefreshPlistPath(profileRefreshHealthLabel)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(watchLog), 0o755); err != nil {
+	watchBody, err := profileRefreshPlist(program, home)
+	if err != nil {
 		return err
 	}
-	watchBody, err := profileRefreshPlist(program, home, watchLog)
-	if err != nil {
+	healthLog := filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
+	if err := os.MkdirAll(filepath.Dir(healthLog), 0o755); err != nil {
 		return err
 	}
 	healthBody, err := profileRefreshHealthPlist(program, healthLog)
@@ -97,17 +201,15 @@ func (a *App) agentNeedsBootstrap(label, plistPath, program string) bool {
 		return true
 	}
 	out, err := a.launchctl("print", fmt.Sprintf("gui/%d/%s", a.uid(), label))
-	if err != nil || !launchctlHasPID(out) {
-		return true
-	}
-	return false
+	// The hourly repair is one-shot and normally has no PID between runs.
+	return err != nil || (label == profileRefreshLabel && !launchctlHasPID(out))
 }
 
 func (a *App) refreshPlistState(enabled bool, program string) string {
 	if a.GOOS != "darwin" {
 		return "unsupported"
 	}
-	plistPath, _, err := a.profileRefreshPaths()
+	plistPath, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return "missing"
 	}

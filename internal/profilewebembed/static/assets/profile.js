@@ -76,11 +76,13 @@
     published: "newsprint",
     explicit: false,
     snap: null,
-    freshnessSource: "fallback",
-    hostedUpdatedAt: "",
+    freshnessSource: "snapshot",
+    publicationVerifiedAt: "",
     jobID: "",
   };
   const SESSION_KEY = "wt-profile-session";
+  const VERIFIED_PROFILE_KEY = "wt-verified-profile-v1";
+  const MAX_VERIFIED_PROFILE_LENGTH = 2 * 1024 * 1024;
   const LIVE_PROFILE = "/api/v1/public-profile/";
   const LIVE_AUTH = "/api/v1/auth/github";
   let tipTimer = 0;
@@ -380,10 +382,13 @@
     dismissTip();
     const p = periodOf(snap, state.range);
     const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
-    const when = state.hostedUpdatedAt || snap.generated_at || snap.as_of_date || "";
+    const when = state.publicationVerifiedAt || snap.generated_at || snap.as_of_date || "";
     const pretty = relativeAge(when);
-    const freshKey = demo ? "freshness.demo" : state.freshnessSource === "hosted" ? "freshness.hosted" : state.freshnessSource === "offline" ? "freshness.offline" : "freshness.snapshot";
-    $("freshness").textContent = pretty ? t(freshKey, { when: pretty }) : (demo ? t("freshness.demoBare") : "");
+    const freshKey = demo ? "freshness.demo" : "freshness." + state.freshnessSource;
+    const freshness = $("freshness");
+    freshness.textContent = pretty ? t(freshKey, { when: pretty }) : (demo ? t("freshness.demoBare") : "");
+    freshness.dataset.snapshotId = snap.snapshot_id;
+    freshness.dataset.asOfDate = snap.as_of_date;
     updateOwnerChrome();
     const owner = snap.owner || {};
     const identityNode = $("identity");
@@ -396,12 +401,26 @@
     $("hero-value").textContent = total.display || "—";
     $("hero-label").textContent = state.metric === "requests" ? t("hero.requests") : t("hero.tokens");
     const heroCoverage = $("hero-coverage");
-    const coverageIssue = hasMixedCoverage(snap) || snap.data_status !== "available";
+    const sources = Array.isArray(snap.source_status) ? snap.source_status : [];
+    const coverageUnverified = !demo && sources.length === 0;
+    const affected = sources.filter((entry) => entry && /^[a-z0-9]{1,20}$/.test(entry.source || "") &&
+      entry.status !== "FRESH" && entry.status !== "CONFIRMED_ZERO");
+    const coverageIssue = coverageUnverified || affected.length > 0 || hasMixedCoverage(snap) || snap.data_status !== "available";
     heroCoverage.hidden = !coverageIssue;
     const coverageText = heroCoverage.querySelector("span");
     if (coverageText) {
       coverageText.textContent = snap.data_status === "unavailable" ? t("coverage.issueUnavailable") :
-        snap.data_status === "partial" ? t("coverage.issuePartial") : t("coverage.issueVaries");
+        snap.data_status === "partial" ? t("coverage.issuePartial") :
+        coverageUnverified ? t("coverage.issueUnverified") : t("coverage.issueVaries");
+      for (const entry of affected) {
+        const source = snap.periods.all.by_agent.find((row) => row.id === entry.source)?.label || entry.source;
+        const day = entry.coverage_through_utc;
+        if (entry.status === "AUTH_REQUIRED") {
+          coverageText.textContent += " " + t("coverage.sourceAuthRequired", { source }) + ".";
+        }
+        coverageText.textContent += " " + (/^\d{4}-\d{2}-\d{2}$/.test(day || "")
+          ? t("coverage.sourceThroughUTC", { source, day }) : t("coverage.sourceUnverified", { source })) + ".";
+      }
     }
     const items = [
       [p.requests.display || "—", t("meta.requests")],
@@ -636,13 +655,16 @@
     $("trend-label").textContent = trendLabels[state.range];
     host.setAttribute("aria-label", trendLabels[state.range]);
     const pts = [];
+    let unknown = false;
     for (let i = start; i < end; i++) {
-      if ((ser.states[i] || "") === "future") continue;
+      const cell = ser.states[i] || "";
+      if (cell === "future") continue;
+      if (cell === "unknown") { unknown = true; continue; }
       pts.push({ date: dates[i], value: ser.values[i] || 0 });
     }
     const max = Math.max(1, ...pts.map((p) => p.value));
     const sum = pts.reduce((n, p) => n + p.value, 0);
-    label.textContent = compact(sum) + " " + unitLabel();
+    label.textContent = unknown ? t("coverage.partial") : compact(sum) + " " + unitLabel();
     const w = 1000;
     const h = 72;
     const ns = "http://www.w3.org/2000/svg";
@@ -1001,25 +1023,79 @@
       low.indexOf("device_token") >= 0 || low.indexOf("begin rsa") >= 0 || Boolean(snap.privacy && snap.privacy.raw_events);
   }
 
-  function hostedNewer(fallback, envelope) {
+  function hostedNewer(fallback, envelope, owner) {
     if (!envelope || envelope.schema !== "wheretoken.public-profile-live" || envelope.schema_version !== 1) return false;
     const fresh = envelope.freshness || {};
-    if (fresh.mode !== "near_real_time" || fresh.source !== "hosted" || !fresh.updated_at) return false;
+    if (fresh.mode !== "near_real_time" || fresh.source !== "hosted" || !Number.isFinite(Date.parse(fresh.updated_at))) return false;
+    if (!envelope.owner || envelope.owner.github_login !== owner) return false;
     const snap = envelope.snapshot;
-    if (!snap || snap.schema !== "wheretoken.public-profile") return false;
-    // The GitHub README uses only an independently verified wall snapshot.
-    // Never replace its matching fallback with a newer *unverified* hosted
-    // projection: the two surfaces would show different totals.
+    if (!snap || snap.provenance?.kind !== "local_sanitized_snapshot") return false;
+    if (snap.owner?.github_login && snap.owner.github_login !== owner) return false;
+
+    // The verified wall must describe the exact projection. A pending upload
+    // may be newer than the README while its predecessor stays verified.
     const wall = envelope.wall || {};
-    const rawTotal = snap.periods && snap.periods.all && snap.periods.all.totals && snap.periods.all.totals.total;
+    const total = snap.periods?.all?.totals?.total?.value;
     if (wall.phase !== "verified" || wall.verified_snapshot_id !== snap.snapshot_id ||
-        wall.verified_as_of_date !== snap.as_of_date || !rawTotal ||
-        wall.verified_total !== rawTotal.value) return false;
-    const hostedAt = Date.parse(fresh.updated_at);
-    const fallbackAt = Date.parse(fallback.generated_at || "");
-    if (Number.isNaN(hostedAt)) return false;
-    if (!Number.isNaN(fallbackAt) && hostedAt < fallbackAt) return false;
+        envelope.data_revision !== snap.snapshot_id || wall.verified_as_of_date !== snap.as_of_date ||
+        !Number.isFinite(Date.parse(wall.verified_at)) || !Number.isSafeInteger(total) || wall.verified_total !== total) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(snap.as_of_date) || !Number.isFinite(Date.parse(snap.generated_at))) return false;
+
+    // Hosted updated_at can advance on a re-upload of old data. Compare the
+    // actual snapshot dates and cumulative totals, then break same-day ties
+    // by the generation time when the data revision has changed.
+    if (snap.as_of_date < fallback.as_of_date) return false;
+    const generated = Date.parse(snap.generated_at);
+    const previous = Date.parse(fallback.generated_at);
+    if (Number.isFinite(previous) && generated < previous) return false;
+    const ahead = Date.now() + 36 * 60 * 60 * 1000;
+    if (generated > ahead || Date.parse(wall.verified_at) > ahead) return false;
+    if (snap.as_of_date > new Date(ahead).toISOString().slice(0, 10)) return false;
+    const staticTotal = fallback.periods.all.totals.total.value;
+    if (Number.isSafeInteger(staticTotal) && total < staticTotal) return false;
+    if (snap.as_of_date === fallback.as_of_date && snap.snapshot_id !== fallback.snapshot_id &&
+        generated < previous) return false;
     return true;
+  }
+
+  // The tab retains one verified public profile across reloads.
+  function saveVerifiedProfile(origin, owner, envelope) {
+    try {
+      const { schema, schema_version, data_revision, snapshot } = envelope;
+      const { mode, source, updated_at } = envelope.freshness;
+      const { phase, verified_at, verified_snapshot_id, verified_as_of_date, verified_total } = envelope.wall;
+      const raw = JSON.stringify({ origin, envelope: {
+        schema, schema_version, data_revision, snapshot,
+        owner: { github_login: owner },
+        freshness: { mode, source, updated_at },
+        presentation: { schema_version: 1, public_palette: publishedPalette(envelope.presentation) },
+        wall: { phase, verified_at, verified_snapshot_id, verified_as_of_date, verified_total },
+      } });
+      if (raw.length <= MAX_VERIFIED_PROFILE_LENGTH) sessionStorage.setItem(VERIFIED_PROFILE_KEY, raw);
+    } catch (_) {}
+  }
+
+  function readVerifiedProfile(fallback, origin, owner) {
+    try {
+      const raw = sessionStorage.getItem(VERIFIED_PROFILE_KEY);
+      if (!raw || raw.length > MAX_VERIFIED_PROFILE_LENGTH) return null;
+      const saved = JSON.parse(raw);
+      const envelope = saved.envelope;
+      if (saved.origin !== origin || !hostedNewer(fallback, envelope, owner) ||
+          envelope.snapshot.snapshot_id === fallback.snapshot_id || unsafeSnapshot(envelope.snapshot)) return null;
+      validateSnapshot(envelope.snapshot);
+      return envelope;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function applyVerifiedProfile(envelope, source) {
+    state.snap = envelope.snapshot;
+    state.publicationVerifiedAt = envelope.wall.verified_at;
+    state.freshnessSource = source;
+    state.published = publishedPalette(envelope.presentation);
+    if (!state.explicit) applyWallPalette(state.published, false);
   }
 
   function profileDemo() {
@@ -1198,29 +1274,22 @@
     }).catch(() => {});
   }
 
-  function refreshHosted(fallback) {
-    const origin = liveOrigin();
-    const owner = liveOwner(fallback);
-    if (!origin || !owner) return Promise.resolve();
-    if (fallback.provenance && fallback.provenance.kind === "synthetic_demo" && !window.__WT_LIVE_ORIGIN) return Promise.resolve();
+  function refreshHosted(fallback, origin, owner) {
     return fetch(origin + LIVE_PROFILE + encodeURIComponent(owner), { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error("hosted status"); return r.json(); })
       .then((envelope) => {
-        if (!hostedNewer(fallback, envelope)) throw new Error("hosted schema");
+        if (!hostedNewer(state.snap, envelope, owner)) throw new Error("hosted schema");
         const snap = envelope.snapshot;
         if (unsafeSnapshot(snap)) throw new Error("hosted privacy");
         validateSnapshot(snap);
-        state.snap = snap;
-        state.hostedUpdatedAt = (envelope.freshness && envelope.freshness.updated_at) || "";
-        state.freshnessSource = "hosted";
-        const published = publishedPalette(envelope.presentation);
-        state.published = published;
-        if (!state.explicit) applyWallPalette(published, false);
+        if (snap.snapshot_id !== fallback.snapshot_id) saveVerifiedProfile(origin, owner, envelope);
+        applyVerifiedProfile(envelope, "hosted");
         render();
       })
       .catch(() => {
-        state.freshnessSource = origin ? "offline" : "fallback";
-        state.hostedUpdatedAt = "";
+        if (state.freshnessSource === "saved") return;
+        state.freshnessSource = "offline";
+        state.publicationVerifiedAt = "";
         render();
       });
   }
@@ -1234,9 +1303,17 @@
       if (!state.explicit) applyWallPalette(state.published, false);
       validateSnapshot(snap);
       state.snap = snap;
-      state.freshnessSource = "fallback";
+      state.freshnessSource = "snapshot";
+      const origin = liveOrigin();
+      const owner = liveOwner(snap);
+      if (!origin || !owner || (snap.provenance.kind === "synthetic_demo" && !window.__WT_LIVE_ORIGIN)) {
+        render();
+        return consumeExchange();
+      }
+      const saved = readVerifiedProfile(snap, origin, owner);
+      if (saved) applyVerifiedProfile(saved, "saved");
       render();
-      return refreshHosted(snap).then(() => consumeExchange());
+      return refreshHosted(snap, origin, owner).then(() => consumeExchange());
     })
     .catch((err) => {
       $("status").hidden = false;

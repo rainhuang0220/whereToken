@@ -77,6 +77,8 @@ test("loads the static project subpath with truthful snapshot provenance", async
   await expect(page.locator("#freshness")).not.toContainText("DEMO DATA");
   await expect(page.locator("#freshness")).not.toContainText("Public snapshot");
   await expect(page.locator("#freshness")).toContainText("updated");
+  await expect(page.locator("#hero-coverage")).toBeVisible();
+  await expect(page.locator("#hero-coverage")).toContainText("Collection coverage unverified.");
 });
 
 test("switches every range and optional breakdown tab", async ({ page }) => {
@@ -591,39 +593,145 @@ test("switches Tokens and Requests without treating counts as tokens", async ({ 
   await expect(page.locator("#tip")).not.toContainText("tokens");
 });
 
-test("replaces the fallback when a newer hosted snapshot is valid", async ({ page }) => {
-  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
-  const hosted = structuredClone(snapshot);
-  hosted.periods.all.totals.total = { value: 42000000, display: "42.00M", status: "available" };
+const hostedRoute = "https://wheretoken.plainlist.space/api/v1/public-profile/rainhuang0220";
+
+async function serveHostedProfile(page, envelope) {
   await page.addInitScript(() => {
     window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
     window.__WT_LIVE_OWNER = "rainhuang0220";
   });
-  await page.route("https://wheretoken.plainlist.space/**", (route) => {
-    const url = route.request().url();
-    if (route.request().method() !== "GET" || !url.endsWith("/rainhuang0220")) {
-      return route.abort();
-    }
-    return route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        schema: "wheretoken.public-profile-live",
-        schema_version: 1,
-        freshness: { mode: "near_real_time", source: "hosted", updated_at: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
-        data_revision: hosted.snapshot_id,
-        presentation_revision: "1",
-        asset_revision: "",
-        presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
-        snapshot: hosted,
-        wall: { phase: "verified", verified_snapshot_id: hosted.snapshot_id,
-          verified_total: 42000000, verified_as_of_date: hosted.as_of_date },
-      }),
-    });
-  });
+  await page.route(hostedRoute, (route) => route.fulfill({ json: envelope }));
+}
+
+function verifiedEnvelope(snap) {
+  return {
+    schema: "wheretoken.public-profile-live",
+    schema_version: 1,
+    owner: { github_login: "rainhuang0220" },
+    freshness: { mode: "near_real_time", source: "hosted", updated_at: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+    data_revision: snap.snapshot_id,
+    presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
+    snapshot: snap,
+    wall: {
+      phase: "verified",
+      verified_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+      verified_snapshot_id: snap.snapshot_id,
+      verified_total: snap.periods.all.totals.total.value,
+      verified_as_of_date: snap.as_of_date,
+    },
+  };
+}
+
+test("replaces the fallback when a newer hosted snapshot is valid", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.snapshot_id = "sha256:" + "6".repeat(64);
+  hosted.generated_at = "2026-09-10T07:00:00Z";
+  hosted.as_of_date = "2026-09-10";
+  hosted.periods.all.totals.total = { value: 420000000, display: "420.00M", status: "available" };
+  await serveHostedProfile(page, verifiedEnvelope(hosted));
   await page.goto(baseURL);
-  await expect(page.locator("#hero-value")).toHaveText("42.00M");
+  await expect(page.locator("#hero-value")).toHaveText("420.00M");
   await expect(page.locator("#freshness")).toContainText("hosted");
   await expect(page.locator("#freshness")).toContainText("minutes ago");
+  await expect(page.locator("#hero-coverage")).toBeVisible();
+  await expect(page.locator("#hero-coverage")).toContainText("Collection coverage unverified.");
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
+  await expect(page.locator("#freshness")).toHaveAttribute("data-as-of-date", "2026-09-10");
+});
+
+test("retains the newest verified snapshot across reload and hosted failure", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.snapshot_id = "sha256:" + "6".repeat(64);
+  hosted.generated_at = "2026-09-11T07:00:00Z";
+  hosted.as_of_date = "2026-09-11";
+  hosted.periods.all.totals.total = { value: 420000000, display: "420.00M", status: "available" };
+  await serveHostedProfile(page, verifiedEnvelope(hosted));
+  await page.goto(baseURL);
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
+
+  const stale = structuredClone(hosted);
+  stale.snapshot_id = "sha256:" + "5".repeat(64);
+  stale.as_of_date = "2026-09-10";
+  stale.generated_at = "2026-09-10T07:00:00Z";
+  stale.periods.all.totals.total = { value: 410000000, display: "410.00M", status: "available" };
+  await page.unroute(hostedRoute);
+  await page.route(hostedRoute, (route) => route.fulfill({ json: verifiedEnvelope(stale) }));
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("420.00M");
+  await expect(page.locator("#freshness")).toContainText("saved snapshot");
+
+  await page.unroute(hostedRoute);
+  await page.route(hostedRoute, (route) => route.fulfill({ status: 503, json: {} }));
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("420.00M");
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
+
+  snapshot.snapshot_id = "sha256:" + "7".repeat(64);
+  snapshot.as_of_date = "2026-09-12";
+  snapshot.generated_at = "2026-09-12T07:00:00Z";
+  snapshot.periods.all.totals.total = { value: 430000000, display: "430.00M", status: "available" };
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText("430.00M");
+  await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", snapshot.snapshot_id);
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
+});
+
+for (const [caseName, asOfDate, total] of [
+  ["an older owner-local date with a higher total", "2026-11-12", 22000000000],
+  ["a later owner-local date with a lower total", "2026-11-17", 20000000000],
+]) {
+  test(`keeps Pages when the hosted wall has ${caseName}`, async ({ page }) => {
+    snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+    snapshot.as_of_date = "2026-11-16";
+    snapshot.generated_at = "2026-11-16T02:32:00Z";
+    snapshot.periods.all.totals.total = { value: 20440000000, display: "20.44B", status: "available" };
+    const hosted = structuredClone(snapshot);
+    hosted.snapshot_id = "sha256:" + "5".repeat(64);
+    hosted.as_of_date = asOfDate;
+    hosted.periods.all.totals.total = { value: total, display: "Older hosted wall", status: "available" };
+    await serveHostedProfile(page, verifiedEnvelope(hosted));
+    await page.goto(baseURL);
+    await expect(page.locator("#freshness")).toContainText("committed snapshot");
+    await expect(page.locator("#hero-value")).toHaveText("20.44B");
+    await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", snapshot.snapshot_id);
+  });
+}
+
+test("keeps Pages when the hosted envelope has a different data revision", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.generated_at = "2026-09-10T07:00:00Z";
+  hosted.as_of_date = "2026-09-10";
+  hosted.periods.all.totals.total = { value: 420000000, display: "420.00M", status: "available" };
+  const envelope = verifiedEnvelope(hosted);
+  envelope.data_revision = "sha256:" + "a".repeat(64);
+  await serveHostedProfile(page, envelope);
+  await page.goto(baseURL);
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+});
+
+test("shows degraded source coverage alongside a newly verified wall", async ({ page }) => {
+  snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
+  const hosted = structuredClone(snapshot);
+  hosted.snapshot_id = "sha256:" + "8".repeat(64);
+  hosted.as_of_date = "2026-11-16";
+  hosted.generated_at = "2026-11-16T02:32:00Z";
+  hosted.periods.all.totals.total = { value: 20440000000, display: "20.44B", status: "available" };
+  hosted.source_status = [
+    { source: "cursor", status: "AUTH_REQUIRED", coverage_through_utc: "2026-11-08",
+      gaps_utc: [{ from: "2026-11-09", to: "2026-11-16" }] },
+    { source: "kimi", status: "CONFIRMED_ZERO" },
+  ];
+  await serveHostedProfile(page, verifiedEnvelope(hosted));
+  await page.goto(baseURL);
+  await expect(page.locator("#hero-value")).toHaveText("20.44B");
+  await expect(page.locator("#freshness")).toContainText("verified");
+  await expect(page.locator("#hero-coverage")).toContainText("authorization required");
+  await expect(page.locator("#hero-coverage")).toContainText("2026-11-08 UTC");
+  await expect(page.locator("#hero-coverage")).not.toContainText("confirmed zero");
 });
 
 test("never replaces GitHub-verified fallback with unverified hosted usage", async ({ page }) => {
@@ -677,28 +785,18 @@ test("keeps the committed snapshot when the hosted profile is unavailable or inv
   await expect(page.locator("#freshness")).toContainText("committed snapshot");
 });
 
-test("rejects a hosted snapshot that contains a private path", async ({ page }) => {
+test("rejects a verified hosted snapshot that contains a private path", async ({ page }) => {
   snapshot.provenance = { kind: "local_sanitized_snapshot", refresh_mode: "manual_publish", live_sync: false };
   const fallback = snapshot.periods.all.totals.total.display;
   const leaked = structuredClone(snapshot);
-  leaked.periods.all.totals.total = { value: 1, display: "/Users/secret", status: "available" };
-  await page.addInitScript(() => {
-    window.__WT_LIVE_ORIGIN = "https://wheretoken.plainlist.space";
-    window.__WT_LIVE_OWNER = "rainhuang0220";
-  });
-  await page.route("https://wheretoken.plainlist.space/**", (route) => route.fulfill({
-    contentType: "application/json",
-    body: JSON.stringify({
-      schema: "wheretoken.public-profile-live",
-      schema_version: 1,
-      freshness: { mode: "near_real_time", source: "hosted", updated_at: "2026-09-23T03:00:00Z" },
-      presentation: { schema_version: 1, public_palette: "newsprint", revision: "1" },
-      snapshot: leaked,
-    }),
-  }));
+  leaked.snapshot_id = "sha256:" + "7".repeat(64);
+  leaked.generated_at = "2026-09-10T07:00:00Z";
+  leaked.as_of_date = "2026-09-10";
+  leaked.periods.all.totals.total = { value: 420000000, display: "/Users/secret", status: "available" };
+  await serveHostedProfile(page, verifiedEnvelope(leaked));
   await page.goto(baseURL);
+  await expect(page.locator("#freshness")).toContainText("committed snapshot");
   await expect(page.locator("#hero-value")).toHaveText(fallback);
-  await expect(page.locator("#hero-value")).not.toContainText("/Users/");
 });
 
 test("a visitor palette does not publish and an owner confirms on the same page", async ({ page }) => {

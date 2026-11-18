@@ -52,14 +52,12 @@ func (a *App) launchctl(args ...string) (string, error) {
 	return a.execLaunchctl(args...)
 }
 
-func (a *App) profileRefreshPaths() (plistPath, logPath string, err error) {
+func (a *App) profileRefreshPlistPath(label string) (string, error) {
 	home, err := a.userHome()
 	if err != nil || home == "" {
-		return "", "", errors.New("profile refresh agent is incomplete")
+		return "", errors.New("profile refresh agent is incomplete")
 	}
-	plistPath = filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
-	logPath = filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh.log")
-	return plistPath, logPath, nil
+	return filepath.Join(home, "Library", "LaunchAgents", label+".plist"), nil
 }
 
 func (a *App) refreshProgramPath() (string, error) {
@@ -118,8 +116,8 @@ func chooseRefreshProgram(resolved string, candidates []string) (string, error) 
 
 // profileRefreshPlist is the user agent definition. It has no
 // EnvironmentVariables, no StartInterval, and no --home.
-func profileRefreshPlist(program, workDir, logPath string) ([]byte, error) {
-	if program == "" || workDir == "" || logPath == "" {
+func profileRefreshPlist(program, workDir string) ([]byte, error) {
+	if program == "" || workDir == "" {
 		return nil, errors.New("profile refresh agent is incomplete")
 	}
 	esc := html.EscapeString
@@ -140,8 +138,8 @@ func profileRefreshPlist(program, workDir, logPath string) ([]byte, error) {
 	b.WriteString("\t<key>ThrottleInterval</key>\n\t<integer>60</integer>\n")
 	b.WriteString("\t<key>ProcessType</key>\n\t<string>Background</string>\n")
 	writePlistString(&b, "WorkingDirectory", workDir)
-	writePlistString(&b, "StandardOutPath", logPath)
-	writePlistString(&b, "StandardErrorPath", logPath)
+	writePlistString(&b, "StandardOutPath", "/dev/null")
+	writePlistString(&b, "StandardErrorPath", "/dev/null")
 	b.WriteString("</dict>\n</plist>\n")
 	return []byte(b.String()), nil
 }
@@ -155,19 +153,20 @@ func (a *App) installProfileRefreshAgent(program string) error {
 	if err != nil || home == "" {
 		return errors.New("profile refresh agent is incomplete")
 	}
-	watchPlist, watchLog, err := a.profileRefreshPaths()
+	watchPlist, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return err
 	}
-	healthPlist, healthLog, err := a.profileRefreshHealthPaths()
+	healthPlist, err := a.profileRefreshPlistPath(profileRefreshHealthLabel)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(watchLog), 0o755); err != nil {
+	watchBody, err := profileRefreshPlist(program, home)
+	if err != nil {
 		return err
 	}
-	watchBody, err := profileRefreshPlist(program, home, watchLog)
-	if err != nil {
+	healthLog := filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
+	if err := os.MkdirAll(filepath.Dir(healthLog), 0o755); err != nil {
 		return err
 	}
 	healthBody, err := profileRefreshHealthPlist(program, healthLog)
@@ -180,16 +179,6 @@ func (a *App) installProfileRefreshAgent(program string) error {
 		return errWatch
 	}
 	return errHealth
-}
-
-func (a *App) profileRefreshHealthPaths() (plistPath, logPath string, err error) {
-	home, err := a.userHome()
-	if err != nil || home == "" {
-		return "", "", errors.New("profile refresh agent is incomplete")
-	}
-	plistPath = filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
-	logPath = filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
-	return plistPath, logPath, nil
 }
 
 // profileRefreshHealthPlist is a one-shot hourly check. It has no KeepAlive:
@@ -236,12 +225,12 @@ func (a *App) stopProfileRefreshAgent() {
 	if a.GOOS != "darwin" {
 		return
 	}
-	a.bootoutAndRemove(a.profileRefreshPaths)
-	a.bootoutAndRemove(a.profileRefreshHealthPaths)
+	a.bootoutAndRemove(profileRefreshLabel)
+	a.bootoutAndRemove(profileRefreshHealthLabel)
 }
 
-func (a *App) bootoutAndRemove(paths func() (string, string, error)) {
-	plistPath, _, err := paths()
+func (a *App) bootoutAndRemove(label string) {
+	plistPath, err := a.profileRefreshPlistPath(label)
 	if err != nil {
 		return
 	}
@@ -302,7 +291,7 @@ func (a *App) maybeReexecProfileWatch() {
 	if a.GOOS != "darwin" {
 		return
 	}
-	plistPath, _, err := a.profileRefreshPaths()
+	plistPath, err := a.profileRefreshPlistPath(profileRefreshLabel)
 	if err != nil {
 		return
 	}
@@ -315,6 +304,11 @@ func (a *App) maybeReexecProfileWatch() {
 		return
 	}
 	same, err := sameExecutable(program, self)
+	if os.IsNotExist(err) && brewManaged(self) {
+		// The old process can outlive its Cellar directory. Accept the
+		// maintained entry point only when it still resolves to this formula.
+		_, err = chooseRefreshProgram(self, []string{program})
+	}
 	if err != nil {
 		return
 	}
