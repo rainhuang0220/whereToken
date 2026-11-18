@@ -31,7 +31,8 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # The locked Playwright version supports Ubuntu 24.04.
+    runs-on: ubuntu-24.04
     outputs:
       revision: ${{ steps.revision.outputs.commit }}
     steps:
