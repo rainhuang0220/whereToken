@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ func TestScheduleDowngradeKeepsEvidenceAndStaysRunnable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(dirOf(profileRefreshSchedulePath(home)), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(profileRefreshSchedulePath(home)), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(profileRefreshSchedulePath(home), append(raw, '\n'), 0o600); err != nil {
@@ -104,12 +105,4 @@ func readScheduleFile(t *testing.T, path string) profileRefreshSchedule {
 		t.Fatal(err)
 	}
 	return st
-}
-
-func dirOf(path string) string {
-	i := strings.LastIndex(path, "/")
-	if i < 0 {
-		return "."
-	}
-	return path[:i]
 }
