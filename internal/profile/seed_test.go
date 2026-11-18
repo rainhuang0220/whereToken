@@ -36,8 +36,11 @@ func TestIdentityCreatesStableInstallID(t *testing.T) {
 	if id2 := Identity(dir); id2 != id1 {
 		t.Fatalf("identity must be stable: %q then %q", id1, id2)
 	}
-	// No PII: the id must not embed the home path or any part of it.
-	if strings.Contains(id1, dir) || strings.Contains(id1, filepath.Base(dir)) {
+	// No PII: the id must not embed the home path. t.TempDir's own leaf is a
+	// three-digit sequence such as 001, and a UUID can contain those digits.
+	// The unique directory name is the parent.
+	leaf := filepath.Base(filepath.Dir(dir))
+	if strings.Contains(id1, dir) || (len(leaf) > 3 && strings.Contains(id1, leaf)) {
 		t.Fatalf("identity leaks path: %q", id1)
 	}
 }
