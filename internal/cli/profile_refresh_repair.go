@@ -87,6 +87,21 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	return ExitOK
 }
 
+// refreshEvidenceTrusted is true only when this checkpoint has a recent
+// check time and every persisted source is still FRESH or CONFIRMED_ZERO.
+// A code by itself, including OFFLINE and the quiet skip codes, is not that
+// evidence. A zero or expired CheckedAt is an old file, not a fresh proof.
+func refreshEvidenceTrusted(st publicprofile.RefreshState, now time.Time) bool {
+	if st.Collection == nil || st.CheckedAt.IsZero() || st.CheckedAt.After(now) {
+		return false
+	}
+	if now.Sub(st.CheckedAt) > publicprofile.CollectionMaxAge {
+		return false
+	}
+	_, ok := st.Collection.At(now)
+	return ok
+}
+
 // refreshDataHealth reads the local checkpoint only. A live scheduler is not
 // evidence that collection or publication succeeded. In-budget retries stay
 // exit 0 so the hourly job does not flap, and they still print healthy=no.
@@ -106,19 +121,27 @@ func (a *App) refreshDataHealth(home adapter.Home) (data, healthy string, fail b
 		degraded = !ok
 	}
 	age := time.Duration(0)
-	if !st.CheckedAt.IsZero() {
+	if !st.CheckedAt.IsZero() && !st.CheckedAt.After(now) {
 		age = now.Sub(st.CheckedAt)
 	}
+	checkedStale := age > publicprofile.CollectionMaxAge
 	switch st.Code {
-	case "", publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover,
-		publicprofile.CodeSkippedCooldown, publicprofile.CodeSkippedDelta, publicprofile.CodeOffline:
-		if st.Code == "" || degraded {
-			if st.Code == "" {
-				return "unknown", "no", false
-			}
+	case "":
+		return "unknown", "no", false
+	case publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover,
+		publicprofile.CodeSkippedCooldown, publicprofile.CodeSkippedDelta:
+		if checkedStale || degraded {
 			return "no", "no", true
 		}
+		if !refreshEvidenceTrusted(st, now) {
+			return "unknown", "no", false
+		}
 		return "yes", "yes", false
+	case publicprofile.CodeOffline:
+		if checkedStale || degraded {
+			return "no", "no", true
+		}
+		return "unknown", "no", false
 	case publicprofile.CodeWillRetry, publicprofile.CodePendingGitHub, publicprofile.CodeBusy:
 		if schedule.Failures >= 3 || age > 4*time.Hour || degraded && age > 4*time.Hour {
 			return "no", "no", true

@@ -120,6 +120,28 @@ class ClassifyTest(unittest.TestCase):
     def test_missing_workflow_evidence_is_silent(self):
         self.assertEqual(self.classify_cmd(["--workflow-missing"]), "workflow_silent")
 
+    def test_actions_lookup_failure_is_not_a_stopped_workflow(self):
+        self.assertEqual(self.classify_cmd(["--actions-lookup-failed"]), "check_failed")
+        self.assertNotIn("workflow_silent", self.classify_cmd(["--actions-lookup-failed"]))
+        self.assertEqual(self.classify_cmd(["--workflow-failed"]), "workflow_failed")
+
+    def test_actions_list_kinds_stay_distinct(self):
+        now = "2026-11-18T12:00:00Z"
+        rows = {
+            "silent": [],
+            "old": [{"event": "schedule", "createdAt": "2026-11-18T02:00:00Z", "status": "completed", "conclusion": "success"}],
+            "failed": [{"event": "schedule", "createdAt": "2026-11-18T11:00:00Z", "status": "completed", "conclusion": "failure"}],
+            "ok": [{"event": "schedule", "createdAt": "2026-11-18T11:00:00Z", "status": "completed", "conclusion": "success"}],
+        }
+        expect = {"silent": "silent", "old": "silent", "failed": "failed", "ok": "ok"}
+        for name, payload in rows.items():
+            with self.subTest(name=name):
+                out = subprocess.run(
+                    [sys.executable, str(SCRIPT), "--classify-actions", "--now", now],
+                    input=json.dumps(payload), text=True, capture_output=True, check=True,
+                ).stdout.strip().split()[0]
+                self.assertEqual(out, expect[name])
+
     def test_future_stamp_is_not_stale(self):
         self.assertEqual(self.classify("actions", wall(timedelta(minutes=5))), "ok")
 

@@ -78,6 +78,15 @@ GitHub Actions did not report this gap itself.
 This is not a new token measurement.
 EOF
       ;;
+    workflow_failed)
+      cat <<'EOF'
+class: workflow_failed
+
+The latest profile-freshness schedule or dispatch in the last 6 hours completed with a failure conclusion.
+A failed query of the Actions list is not this class.
+This is not a new token measurement.
+EOF
+      ;;
     *)
       echo "class: $1"
       echo
@@ -214,28 +223,35 @@ classify_local() {
     echo "check_failed"
     return 0
   fi
-  workflow_at=""
-  workflow_missing=1
-  if runs="$(gh run list --repo "$REPO" --workflow profile-freshness.yml --limit 10 --json event,createdAt,status 2>/dev/null)"; then
-    workflow_at="$(printf '%s' "$runs" | python3 -c 'import json,sys
-try:
-    rows=json.load(sys.stdin)
-except json.JSONDecodeError:
-    sys.exit(2)
-for row in rows:
-    if row.get("event") in ("schedule","workflow_dispatch") and row.get("createdAt"):
-        print(row["createdAt"])
-        break')" && workflow_missing=0
+  actions_mode="lookup_failed"
+  actions_at=""
+  if runs="$(gh run list --repo "$REPO" --workflow profile-freshness.yml --limit 10 --json event,createdAt,status,conclusion 2>/dev/null)"; then
+    parsed="$(printf '%s' "$runs" | python3 "$HERE/freshness_classify.py" --classify-actions)" || parsed="lookup_failed"
+    actions_mode="${parsed%% *}"
+    if [ "$parsed" != "$actions_mode" ]; then
+      actions_at="${parsed#* }"
+    fi
   fi
   set -- python3 "$HERE/freshness_classify.py" --surface local --wall "$tmp/wall.json"
   if [ -f "$STATE_FILE" ]; then
     set -- "$@" --state "$STATE_FILE"
   fi
-  if [ "$workflow_missing" -eq 0 ] && [ -n "$workflow_at" ]; then
-    set -- "$@" --workflow-at "$workflow_at"
-  else
-    set -- "$@" --workflow-missing
-  fi
+  case "$actions_mode" in
+    ok|running)
+      if [ -n "$actions_at" ]; then
+        set -- "$@" --workflow-at "$actions_at"
+      fi
+      ;;
+    failed)
+      set -- "$@" --workflow-failed
+      ;;
+    silent)
+      set -- "$@" --workflow-missing
+      ;;
+    *)
+      set -- "$@" --actions-lookup-failed
+      ;;
+  esac
   class="$("$@")"
   rm -rf "$tmp"
   printf '%s\n' "$class"

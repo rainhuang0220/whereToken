@@ -86,8 +86,10 @@ schedule directory with `filepath.Dir`, so the Windows test can open the file.
 
 ## Not done
 
-- The watchdog script is in the tree and is not installed as a host cron. The live alert file is on this Mac. A production GitHub issue was not opened.
+- The watchdog closes a recovered surface only when `--alert-command` runs for `ok`. A failed or timed-out command is `delivered: false`. An Actions query failure is `check_failed`, not `workflow_silent`. The host cron in `docs/reliability.md` is a draft and is not installed. No production issue has been opened.
+- `data_healthy=yes` now requires a `checked_at` within 24 hours and collection evidence that is still fresh. `OFFLINE` and a checkpoint with no collection stay unknown.
 - This Mac did not receive a production health body, so production schema compatibility is still unchecked.
+- Read-only Pages GET on 2026-11-18 returned snapshot `sha256:6d41bff42de0e1ea402312012269f2d880813521f8cf0627db0be1c98c398fe3` in `manifest.json`, `profile.json`, and both SVGs, as of 2026-11-16, generated `2026-11-16T02:32:07Z`. The README light and dark SVGs are `sha256:91e4547d9636342b8a88bef1694dd6282d2b27cde32259f55d8aa0e775a8e361`. Those two reads do not match. No Pages repair was dispatched.
 - No natural 00:00, 10:30, or 17:00 slot has been observed on the candidate binary.
 - Gate B stays NO-GO. Background refresh still does not unseal Cursor.
 

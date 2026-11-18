@@ -55,7 +55,11 @@ A token or request cell is `empty` only when every relevant source is `CONFIRMED
 
 ## Watchdog
 
-`scripts/hosted_freshness_watchdog.py` fetches the public profile and the profile-freshness Actions runs, writes a state file, and appends one alert record per surface. `--alert-command` is the optional delivery into `freshness-alert.sh`. The script does not open a GitHub issue unless that command is set.
+`scripts/hosted_freshness_watchdog.py` fetches the public profile and the profile-freshness Actions runs, writes a state file, and delivers one alert per surface through `--alert-command`. The command runs for a failure and for `ok`. `ok` closes only that surface's issue. A repeated class does not open a second issue. A changed class edits the open issue. If the command exits non-zero or exceeds `--alert-timeout` (30 seconds), the alert record is `delivered: false` and the process prints `delivery_failed` and exits 3.
+
+An Actions list has four results. `lookup_failed` means the query failed and the class is `check_failed`, which is not `workflow_silent` and is not `ok`. `silent` means the list was readable and has no schedule or dispatch in the last 6 hours. `failed` means the newest run in that window finished with a failure conclusion (`workflow_failed`). `ok` or `running` is a recent success or a run still in progress.
+
+`profile refresh repair` prints `data_healthy=yes` only when `checked_at` is within 24 hours and the saved collection is still `FRESH` or `CONFIRMED_ZERO`. `OFFLINE`, a missing collection, a state file with no `checked_at`, and an expired `checked_at` stay `unknown` or `no`. `SKIPPED_DELTA` and `SKIPPED_COOLDOWN` are healthy only with that same evidence.
 
 On this Mac at `2026-11-18T11:12:31Z` the public profile fetch failed. System resolution of `wheretoken.plainlist.space` was `198.18.0.48` and `2001:2::2f`, and TLS ended with `SSL_ERROR_SYSCALL`. Actions list succeeded. The last schedule run was `2026-11-18T04:19:59Z`. The alert file recorded `check_failed` and `check_failed workflow_silent`. No GitHub issue was opened.
 
@@ -78,13 +82,29 @@ Gate B is NO-GO. The background watch does not unseal a Keychain session. The re
 - `scripts/freshness_classify_test.py` — a fresh wall does not hide `WILL_RETRY` or an Actions gap
 - `scripts/freshness_alert_test.sh` — surfaces do not close each other; a bad issue list is not `class=ok`
 - `scripts/freshness_lifecycle_test.py` — 7, 14, and 30 virtual days
-- `scripts/freshness_watchdog_test.py` — wall down, Actions silent, Mac offline, and a state path the script cannot write
-- `go test ./internal/cli/ -run 'TestProfileRefreshOutageRetriesAcrossHorizons|TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy|TestDoHTTPRefusesProductionFromATest|TestScheduleDowngradeKeepsEvidenceAndStaysRunnable'`
+- `scripts/freshness_watchdog_test.py` — wall down, Actions query failure versus silence versus a failed run, the alert lifecycle, a delivery timeout, and a state path the script cannot write
+- `go test ./internal/cli/ -run 'TestProfileRefreshOutageRetriesAcrossHorizons|TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy|TestDoHTTPRefusesProductionFromATest|TestScheduleDowngradeKeepsEvidenceAndStaysRunnable|TestRefreshDataHealthRequiresTrustedEvidence'`
 - `go test ./internal/hosted/ -run 'TestThemeRetryDoesNotReplaceANewerVerifiedSnapshot|TestAuditedCorrectionMayLowerTheVerifiedTotal'`
 - `go test ./internal/publicprofile/ -run 'TestQuietDayWithoutCoverageIsUnknown|TestConfirmedZeroDayStaysZero'`
 - `go test ./internal/scan/ -run 'TestMinimaxDirectoryWithoutLedgerIsNotFresh'`
 
 These are not a production soak. They do not prove the hosted machine, Pages, or a sealed Cursor session.
+
+## Next read-only acceptance
+
+These steps are not done. None of them is a production write, a CLI replacement, or a v0.7.20 tag.
+
+1. Read `GET /api/health` and `GET /api/v1/public-profile/rainhuang0220` from a network that does not use this Mac's resolver, and again from inside the hosted machine. Record the status, the body, and the resolved address. This Mac's `198.18.0.48` TLS EOF stays a local-path observation until one of those two reads returns a body. Do not edit DNS, Clash, or Keychain.
+2. Keep the isolated hosted PUT of one legacy snapshot and one candidate snapshot, with both read back from the test database, as a separate record from any production GET. A production GET that fails is not a schema pass. An isolated PUT is not a production write.
+3. Read the production Pages `manifest.json`, `profile.json`, `preview-light.svg`, and `preview-dark.svg` at `https://rainhuang0220.github.io/whereToken/profile/`. Compare each snapshot id with the verified README snapshot. Do not dispatch a Pages repair from this check.
+4. The host cron below is a draft. It is not installed. The token is a fine-grained personal access token with Issues read and write on `rainhuang0220/whereToken` only, stored in a root-only file on the host, not in this repo. Do not open a production issue and do not run `--drill` until that install is approved.
+
+```cron
+# Draft only. Do not install.
+*/15 * * * * wheretoken cd /opt/wheretoken && /usr/bin/python3 scripts/hosted_freshness_watchdog.py --state /var/lib/wheretoken/watchdog-state.json --alerts /var/lib/wheretoken/watchdog-alerts.json --timeout 8 --alert-timeout 30 --alert-command /opt/wheretoken/scripts/freshness-alert.sh
+```
+
+5. The natural-slot check uses the candidate binary by absolute path and a separate `WHERETOKEN_HOME`. It does not replace `/opt/homebrew/bin/wheretoken` and it does not `kickstart` `io.github.rainhuang0220.wheretoken.profile-refresh`. A second launchd plist, or a second GUI account, waits for the next 00:00, 10:30, or 17:00 local slot. Record `scheduler_healthy`, `data_healthy`, and the checkpoint `checked_at`. The production 0.7.19 agent stays the one installed now.
 
 ## Rollout and rollback
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Classify public-profile freshness. Prints one class and exits 0.
 
-Classes: ok, collection_stale, wall_stale, mac_offline, publisher_stuck, workflow_silent, check_failed.
+Classes: ok, collection_stale, wall_stale, mac_offline, publisher_stuck,
+workflow_silent, workflow_failed, check_failed.
 
 The actions surface sees only the public wall. The local surface can also
 see the publisher state file and the last Actions run time.
@@ -66,8 +67,14 @@ CLASS_ORDER = (
     "publisher_stuck",
     "mac_offline",
     "workflow_silent",
+    "workflow_failed",
     "pages_stale",
 )
+
+# A completed run with one of these conclusions failed. A query error is not
+# in this set: failing to list runs is check_failed, not a stopped workflow.
+RUN_FAILURES = {"failure", "cancelled", "timed_out", "startup_failure", "action_required"}
+RUN_IN_PROGRESS = {"queued", "in_progress", "waiting", "pending", "requested"}
 
 # Last refresh codes that mean the collector did not finish. A later calendar
 # day or a fresh wall does not make these healthy.
@@ -85,7 +92,41 @@ def join_classes(found):
     return " ".join(ordered) if ordered else "ok"
 
 
-def classify(surface, wall, state, workflow_at, now, workflow_missing=False):
+def interpret_actions(rows, now):
+    """Classify one Actions list. The caller turns a failed query into lookup_failed.
+
+    Returns (kind, created_at). kind is silent, failed, running, ok, or
+    lookup_failed. silent means the list was readable and has no recent
+    schedule or dispatch. It does not mean the query failed.
+    """
+    if not isinstance(rows, list):
+        return "lookup_failed", None
+    newest = None
+    for row in rows:
+        if isinstance(row, dict) and row.get("event") in ("schedule", "workflow_dispatch"):
+            newest = row
+            break
+    if newest is None:
+        return "silent", None
+    created = newest.get("createdAt")
+    created = created if isinstance(created, str) else None
+    age = age_seconds(now, parse_time(created))
+    if age is None or age > SCHEDULE_GAP_S:
+        return "silent", created
+    status = newest.get("status") or ""
+    conclusion = newest.get("conclusion") or ""
+    if status in RUN_IN_PROGRESS:
+        return "running", created
+    if conclusion == "success":
+        return "ok", created
+    if conclusion in RUN_FAILURES:
+        return "failed", created
+    if conclusion == "skipped":
+        return "silent", created
+    return "lookup_failed", created
+
+
+def classify(surface, wall, state, workflow_at, now, workflow_missing=False, actions_status=""):
     if surface not in ("actions", "local"):
         return "check_failed"
     if not isinstance(wall, dict):
@@ -125,7 +166,11 @@ def classify(surface, wall, state, workflow_at, now, workflow_missing=False):
                     if stamp is None or not 0 <= age_seconds(now, stamp) < 24 * 3600:
                         found.add("collection_stale")
                         break
-    if workflow_missing:
+    if actions_status == "lookup_failed":
+        found.add("check_failed")
+    elif actions_status == "failed":
+        found.add("workflow_failed")
+    elif workflow_missing or actions_status == "silent":
         found.add("workflow_silent")
     else:
         run_age = age_seconds(now, parse_time(workflow_at) if isinstance(workflow_at, str) else workflow_at)
@@ -136,17 +181,36 @@ def classify(surface, wall, state, workflow_at, now, workflow_missing=False):
 
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--surface", required=True, choices=("actions", "local"))
-    parser.add_argument("--wall", required=True)
+    parser.add_argument("--surface", choices=("actions", "local"))
+    parser.add_argument("--wall")
     parser.add_argument("--state")
     parser.add_argument("--workflow-at")
     parser.add_argument("--workflow-missing", action="store_true")
+    parser.add_argument("--workflow-failed", action="store_true")
+    parser.add_argument("--actions-lookup-failed", action="store_true")
+    parser.add_argument("--classify-actions", action="store_true")
     parser.add_argument("--now")
     args = parser.parse_args(argv)
     now = parse_time(args.now) if args.now else datetime.now(timezone.utc)
     if now is None:
         print("check_failed")
         return 0
+    if args.classify_actions:
+        try:
+            rows = json.load(sys.stdin)
+        except json.JSONDecodeError:
+            print("lookup_failed")
+            return 0
+        kind, created = interpret_actions(rows, now)
+        print(kind if not created else f"{kind} {created}")
+        return 0
+    if not args.surface or not args.wall:
+        parser.error("--surface and --wall are required")
+    actions_status = ""
+    if args.actions_lookup_failed:
+        actions_status = "lookup_failed"
+    elif args.workflow_failed:
+        actions_status = "failed"
     wall = load_json(args.wall)
     if args.state:
         state = load_json(args.state)
@@ -155,7 +219,7 @@ def main(argv):
             return 0
     else:
         state = None
-    print(classify(args.surface, wall, state, args.workflow_at, now, args.workflow_missing))
+    print(classify(args.surface, wall, state, args.workflow_at, now, args.workflow_missing, actions_status))
     return 0
 
 
