@@ -53,6 +53,14 @@ A source with no install is omitted. A directory that is not there is `ABSENT`. 
 
 A token or request cell is `empty` only when every relevant source is `CONFIRMED_ZERO` through that date. Every other quiet cell is `unknown`. A period whose events sum to zero and is not an audited zero is unavailable, not `0`.
 
+## Independent public endpoint diagnostic
+
+Use the manually dispatched `.github/workflows/hosted-readonly-check.yml` to
+check `/api/health` and the public Profile from a GitHub runner when the Mac
+DNS/TUN route fails. This workflow makes public GET requests only, carries no
+credentials, and does not deploy or publish. A successful health GET confirms
+reachability from that runner, not full host schema compatibility or freshness.
+
 ## Watchdog
 
 `scripts/hosted_freshness_watchdog.py` fetches the public profile and the profile-freshness Actions runs, writes a state file, and delivers one alert per surface through `--alert-command`. The command runs for a failure and for `ok`. `ok` closes only that surface's issue. A repeated class does not open a second issue. A changed class edits the open issue. If the command exits non-zero or exceeds `--alert-timeout` (30 seconds), the alert record is `delivered: false` and the process prints `delivery_failed` and exits 3.
@@ -67,7 +75,7 @@ A cron on the hosted machine, plus `--alert-command` pointed at the alert script
 
 ## Retry
 
-The candidate watch keeps a deadline across sleep, restart, and the next calendar slot: about 30s, 2m, 2h, then 4h, with jitter. It does not stop after three attempts. The installed 0.7.19 binary does stop, which is why a slot can sit at `WILL_RETRY` until the next clock time while repair still logs healthy.
+The candidate watch keeps a deadline across sleep, restart, and the next calendar slot: one hour after each retryable failure, with no retry scan during the idle wait. It does not stop after three attempts. The installed 0.7.19 binary does stop, which is why a slot can sit at `WILL_RETRY` until the next clock time while repair still logs healthy.
 
 Auth and other definitive client errors are not retried. A refresh PUT that cannot be confirmed is retried later; a confirm GET that already shows the snapshot id does not PUT again.
 

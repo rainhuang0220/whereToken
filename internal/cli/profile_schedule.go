@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"time"
@@ -30,7 +29,9 @@ type profileRefreshSchedule struct {
 	LastRetryReason    string    `json:"last_retry_reason,omitempty"`
 }
 
-var profileRefreshBackoff = [...]time.Duration{30 * time.Second, 2 * time.Minute, 2 * time.Hour, 4 * time.Hour}
+// Retriable failures wait one hour instead of running dense recovery scans.
+// Preserve four entries for old schedule failure counters and downgrade support.
+var profileRefreshBackoff = [...]time.Duration{time.Hour, time.Hour, time.Hour, time.Hour}
 
 // v0.7.19 rejects a schedule whose attempts field is greater than 3 and
 // then exits. KeepAlive would restart that exit every minute. The candidate
@@ -150,7 +151,8 @@ func (a *App) attemptScheduledProfileRefresh(ctx context.Context, flags Flags, h
 	st.Attempts++
 	st.Failures = min(st.Failures+1, len(profileRefreshBackoff))
 	delay := profileRefreshBackoff[st.Failures-1]
-	delay += time.Duration(rand.Int64N(int64(delay/10) + 1))
+	// This installation uses a single hourly retry, so no jitter is needed.
+	// A deterministic deadline also makes the next attempt easy to inspect.
 	st.RetryAt = start.Add(profileRefreshRunTimeout + delay)
 	st.LastAttemptAt = start
 	st.LastDurationMS = 0

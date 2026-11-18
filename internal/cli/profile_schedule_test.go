@@ -66,7 +66,7 @@ func TestProfileRefreshWatchRunsOwnedChildWithDeadline(t *testing.T) {
 	}
 }
 
-func TestProfileRefreshWatchRetriesBusyWithBoundedBackoff(t *testing.T) {
+func TestProfileRefreshWatchRetriesBusyHourlyWithoutScanningWhileIdle(t *testing.T) {
 	old := profileRefreshInterval
 	profileRefreshInterval = time.Millisecond
 	defer func() { profileRefreshInterval = old }()
@@ -95,7 +95,7 @@ func TestProfileRefreshWatchRetriesBusyWithBoundedBackoff(t *testing.T) {
 	}
 	app.Sleep = func(d time.Duration) {
 		waits = append(waits, d)
-		if len(waits) > 5 {
+		if len(waits) > 130 {
 			t.Fatal("retry loop did not stop")
 		}
 		if attempts == 3 {
@@ -112,14 +112,19 @@ func TestProfileRefreshWatchRetriesBusyWithBoundedBackoff(t *testing.T) {
 	if attempts != 3 {
 		t.Fatalf("attempts=%d", attempts)
 	}
-	if len(waits) < 4 || len(waits) > 5 || waits[0] < 30*time.Second || waits[0] > 33*time.Second ||
-		waits[1] != time.Minute || waits[2] != time.Minute || waits[len(waits)-1] != time.Minute ||
-		(len(waits) == 5 && (waits[3] <= 0 || waits[3] > 12*time.Second)) {
-		t.Fatalf("wrong bounded retry/backoff: %v", waits)
+	// The watch wakes briefly to check its timer but must never start another
+	// costly scan before one hour has elapsed after a retriable failure.
+	if len(waits) < 120 || len(waits) > 122 {
+		t.Fatalf("expected two hours of idle one-minute clock checks, got %d", len(waits))
+	}
+	for _, d := range waits {
+		if d <= 0 || d > time.Minute {
+			t.Fatalf("idle wake=%s; no source scan should run between hourly retries", d)
+		}
 	}
 }
 
-func TestProfileRefreshRetryBudgetSurvivesWatchRestart(t *testing.T) {
+func TestProfileRefreshHourDeadlineSurvivesWatchRestart(t *testing.T) {
 	home := testhome.New(t.TempDir())
 	now := time.Date(2026, 11, 9, 17, 0, 0, 0, time.UTC)
 	attempts := 0
@@ -152,8 +157,8 @@ func TestProfileRefreshRetryBudgetSurvivesWatchRestart(t *testing.T) {
 			t.Fatalf("run=%d code=%d", run, code)
 		}
 	}
-	if attempts != 3 {
-		t.Fatalf("restart reset the per-slot budget: attempts=%d", attempts)
+	if attempts != 1 {
+		t.Fatalf("a restart retried before the one-hour deadline: attempts=%d", attempts)
 	}
 }
 
@@ -238,8 +243,8 @@ func TestScheduledRefreshCancellationLeavesSlotRetryable(t *testing.T) {
 	}
 	now = now.Add(34 * time.Second)
 	got, next, err := app.refreshSchedule(home, now)
-	if err != nil || got.Done || got.Attempts != 1 || next.After(now) {
-		t.Fatalf("cancelled scan consumed slot: state=%+v next=%s err=%v", got, next, err)
+	if err != nil || got.Done || got.Attempts != 1 || !next.Equal(time.Date(2026, 11, 9, 11, 30, 0, 0, time.UTC)) {
+		t.Fatalf("cancelled scan lost its one-hour retry deadline: state=%+v next=%s err=%v", got, next, err)
 	}
 }
 
@@ -258,7 +263,7 @@ func TestProfileRefreshExhaustedSlotProbesBeforeNextSlot(t *testing.T) {
 		}
 	}
 	// A new process starts later in the same slot, after Wi-Fi recovery.
-	now = time.Date(2026, 11, 16, 13, 0, 0, 0, time.UTC)
+	now = time.Date(2026, 11, 16, 13, 31, 0, 0, time.UTC)
 	restarted := failingScheduleApp(t, home, &now)
 	st, next, err := restarted.refreshSchedule(home, now)
 	if err != nil || next.After(now) {
@@ -292,7 +297,7 @@ func TestProfileRefreshCrossingSlotHonorsLastRetryDelay(t *testing.T) {
 	now = now.Add(10 * time.Second)
 	restarted := failingScheduleApp(t, home, &now)
 	_, next, err := restarted.refreshSchedule(home, now)
-	if err != nil || next.Sub(now) < 20*time.Second || next.Sub(now) > 23*time.Second {
+	if err != nil || next.Sub(now) != 59*time.Minute+50*time.Second {
 		t.Fatalf("crossing 10:30 did not honor retry delay: next=%s now=%s err=%v", next, now, err)
 	}
 }
@@ -315,7 +320,7 @@ func TestProfileRefreshChildWithoutNewResultDoesNotCompleteSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 	st, next, err := app.refreshSchedule(home, now)
-	if err != nil || st.Done || !next.After(now) || next.After(now.Add(time.Minute)) {
+	if err != nil || st.Done || !next.Equal(now.Add(time.Hour)) {
 		t.Fatalf("stale VERIFIED completed slot: state=%+v next=%s err=%v", st, next, err)
 	}
 }
@@ -358,10 +363,16 @@ func TestProfileRefreshSleepCatchesUpOnceAndKeepsOutageBackoff(t *testing.T) {
 	if err := restarted.attemptScheduledProfileRefresh(context.Background(), Flags{}, home, st); err != nil {
 		t.Fatal(err)
 	}
+	now = time.Date(2026, 11, 16, 9, 30, 0, 0, time.UTC)
+	_, next, err = restarted.refreshSchedule(home, now)
+	if err != nil || next.Sub(now) != 30*time.Minute {
+		t.Fatalf("wakeup recovery did not preserve one-hour retry: next=%s now=%s err=%v", next, now, err)
+	}
+	// Once the hour has elapsed, the next normal slot may run immediately.
 	now = time.Date(2026, 11, 16, 10, 30, 0, 0, time.UTC)
 	_, next, err = restarted.refreshSchedule(home, now)
-	if err != nil || next.Sub(now) < 150*time.Minute || next.Sub(now) > 174*time.Minute {
-		t.Fatalf("multi-day outage reset recovery delay: next=%s now=%s err=%v", next, now, err)
+	if err != nil || next.After(now) {
+		t.Fatalf("a due calendar slot was suppressed after the hourly deadline: next=%s err=%v", next, err)
 	}
 }
 
@@ -409,7 +420,7 @@ func TestProfileRefreshScheduleLogRotatesAndUsesSafeFields(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "untrusted private data") || !entry.At.Equal(now) || entry.Duration < 0 ||
 		entry.Phase != publicprofile.PhaseFailed || entry.Reason != "PROCESS_FAILED" || entry.Attempts != 1 ||
-		entry.RetryAt.Sub(now) < 30*time.Second || entry.RetryAt.Sub(now) > 33*time.Second {
+		entry.RetryAt.Sub(now) != time.Hour {
 		t.Fatalf("wrong schedule log record: %+v", entry)
 	}
 }

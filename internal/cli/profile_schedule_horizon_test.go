@@ -16,10 +16,9 @@ func TestProfileRefreshOutageRetriesAcrossHorizons(t *testing.T) {
 	for _, days := range []int{7, 14, 30} {
 		t.Run(time.Duration(days).String(), func(t *testing.T) {
 			attempts := simulateRefreshOutage(t, days)
-			// The old production cap was three attempts, then silence until the
-			// next calendar slot. The long backoff is four hours, so a horizon
-			// stays well above three and well below a one-minute loop.
-			if attempts < days*4 || attempts > days*8+6 {
+			// Continuous retryable failures cause one scan per hour, never
+			// 30-second bursts or an idle busy loop across long outages.
+			if attempts < days*24-1 || attempts > days*24+1 {
 				t.Fatalf("days=%d attempts=%d", days, attempts)
 			}
 		})
@@ -62,11 +61,8 @@ func simulateRefreshOutage(t *testing.T, days int) int {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if attempts >= 4 {
-			gap := saved.RetryAt.Sub(before)
-			if gap < 2*time.Hour || gap > 5*time.Hour {
-				t.Fatalf("attempt %d delay %s", attempts, gap)
-			}
+		if gap := saved.RetryAt.Sub(before); gap != time.Hour {
+			t.Fatalf("attempt %d next retry in %s; expected one hour", attempts, gap)
 		}
 		if !previous.IsZero() && !saved.RetryAt.After(previous) {
 			t.Fatalf("retry did not move forward: %s then %s", previous, saved.RetryAt)
@@ -76,7 +72,7 @@ func simulateRefreshOutage(t *testing.T, days int) int {
 			t.Fatal("failed attempt left no retry deadline")
 		}
 		now = saved.RetryAt
-		if attempts > days*8 {
+		if attempts > days*25 {
 			t.Fatalf("retry storm attempts=%d", attempts)
 		}
 	}

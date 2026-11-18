@@ -661,7 +661,8 @@ func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
 func TestProfileRefreshBusyDoesNotConsumeScheduledSlot(t *testing.T) {
 	home := testhome.New(t.TempDir())
 	app, _, _ := testApp(nil)
-	app.Now = func() time.Time { return time.Date(2026, 11, 9, 10, 31, 0, 0, time.UTC) }
+	now := time.Date(2026, 11, 9, 10, 31, 0, 0, time.UTC)
+	app.Now = func() time.Time { return now }
 	app.Loc = time.UTC
 	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(home), publicprofile.RefreshState{
 		Phase: publicprofile.PhaseSkipped, Code: publicprofile.CodeBusy,
@@ -669,7 +670,11 @@ func TestProfileRefreshBusyDoesNotConsumeScheduledSlot(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	if app.profileRefreshDue(home) {
+		t.Fatal("busy result caused a second scan before the one-hour deadline")
+	}
+	now = time.Date(2026, 11, 9, 11, 30, 0, 0, time.UTC)
 	if !app.profileRefreshDue(home) {
-		t.Fatal("busy check swallowed 10:30 slot instead of allowing its bounded retry")
+		t.Fatal("busy check swallowed the hourly recovery attempt")
 	}
 }

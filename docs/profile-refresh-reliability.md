@@ -79,8 +79,8 @@ trusted usage stays available.
 ## Recovery and diagnostics
 
 A healthy watch sleeps between calendar slots. After a transient failure, it
-retries after about 30 seconds, 2 minutes, 2 hours, then at four-hour intervals,
-with up to 10% jitter. The checkpoint carries the retry deadline across
+retries after one hour after each retryable failure,
+without frequent retries or jitter. The checkpoint carries the retry deadline across
 calendar slots, watch restarts and laptop sleep. A missed slot has one catch-up
 check after wake or graphical login. The isolated worker is bounded at five
 minutes. The kernel releases its scan lock on exit.
