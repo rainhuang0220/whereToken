@@ -24,7 +24,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pages
+  # Keep candidate builds out of the production deployment queue.
+  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('pages-build-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
