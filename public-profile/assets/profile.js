@@ -655,13 +655,16 @@
     $("trend-label").textContent = trendLabels[state.range];
     host.setAttribute("aria-label", trendLabels[state.range]);
     const pts = [];
+    let unknown = false;
     for (let i = start; i < end; i++) {
-      if ((ser.states[i] || "") === "future") continue;
+      const cell = ser.states[i] || "";
+      if (cell === "future") continue;
+      if (cell === "unknown") { unknown = true; continue; }
       pts.push({ date: dates[i], value: ser.values[i] || 0 });
     }
     const max = Math.max(1, ...pts.map((p) => p.value));
     const sum = pts.reduce((n, p) => n + p.value, 0);
-    label.textContent = compact(sum) + " " + unitLabel();
+    label.textContent = unknown ? t("coverage.partial") : compact(sum) + " " + unitLabel();
     const w = 1000;
     const h = 72;
     const ns = "http://www.w3.org/2000/svg";
@@ -1042,10 +1045,16 @@
     // actual snapshot dates and cumulative totals, then break same-day ties
     // by the generation time when the data revision has changed.
     if (snap.as_of_date < fallback.as_of_date) return false;
+    const generated = Date.parse(snap.generated_at);
+    const previous = Date.parse(fallback.generated_at);
+    if (Number.isFinite(previous) && generated < previous) return false;
+    const ahead = Date.now() + 36 * 60 * 60 * 1000;
+    if (generated > ahead || Date.parse(wall.verified_at) > ahead) return false;
+    if (snap.as_of_date > new Date(ahead).toISOString().slice(0, 10)) return false;
     const staticTotal = fallback.periods.all.totals.total.value;
     if (Number.isSafeInteger(staticTotal) && total < staticTotal) return false;
     if (snap.as_of_date === fallback.as_of_date && snap.snapshot_id !== fallback.snapshot_id &&
-        Date.parse(snap.generated_at) < Date.parse(fallback.generated_at)) return false;
+        generated < previous) return false;
     return true;
   }
 

@@ -42,7 +42,7 @@ for line in open(sys.argv[1], encoding="utf-8"):
     line=line.rstrip("\n")
     if not line:
         continue
-    number,state,title=line.split("\t",2)
+    number,state,title=line.split("\t",3)[:3]
     if state==sys.argv[2]:
         rows.append({"number":int(number),"title":title,"createdAt":"2026-11-09T01:30:58Z"})
 print(json.dumps(rows))' "$store" "$state_filter"
@@ -63,7 +63,20 @@ for line in open(sys.argv[1], encoding="utf-8"):
     if line.strip():
         n+=1
 print(n+1)' "$store")"
-  printf '%s\topen\t%s\n' "$number" "$title" >> "$store"
+  body=""
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--body" ]; then
+      body="$arg"
+    fi
+    prev="$arg"
+  done
+  classes="$(printf '%s\n' "$body" | python3 -c 'import sys
+for line in sys.stdin:
+    if line.startswith("classes:"):
+        print(line.split(":",1)[1].strip())
+        break')"
+  printf '%s\topen\t%s\t%s\n' "$number" "$title" "$classes" >> "$store"
   printf 'https://example.test/issues/%s\n' "$number"
   exit 0
 fi
@@ -77,11 +90,11 @@ for line in open(path, encoding="utf-8"):
     line=line.rstrip("\n")
     if not line:
         continue
-    n,state,title=line.split("\t",2)
+    n,state,title,classes=(line.split("\t",3)+[""])[:4]
     if n==number and state=="open":
         state="closed"
         found=True
-    rows.append("%s\t%s\t%s" % (n,state,title))
+    rows.append("%s\t%s\t%s\t%s" % (n,state,title,classes))
 if not found:
     sys.exit(1)
 open(path,"w",encoding="utf-8").write("\n".join(rows)+("\n" if rows else ""))' "$store" "$number"
@@ -93,30 +106,51 @@ if [ "$cmd" = "issue" ] && [ "$sub" = "reopen" ]; then
 path,number=sys.argv[1:]
 rows=[]
 for line in open(path,encoding="utf-8"):
-    n,state,title=line.rstrip("\n").split("\t",2)
+    n,state,title,classes=(line.rstrip("\n").split("\t",3)+[""])[:4]
     if n==number and state=="closed":
         state="open"
-    rows.append("\t".join((n,state,title)))
+    rows.append("\t".join((n,state,title,classes)))
 open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number"
   exit 0
 fi
 if [ "$cmd" = "issue" ] && [ "$sub" = "edit" ]; then
   number="$1"
-  title=""
+  body=""
   prev=""
   for arg in "$@"; do
-    if [ "$prev" = "--title" ]; then
-      title="$arg"
+    if [ "$prev" = "--body" ]; then
+      body="$arg"
     fi
     prev="$arg"
   done
+  classes="$(printf '%s\n' "$body" | python3 -c 'import sys
+for line in sys.stdin:
+    if line.startswith("classes:"):
+        print(line.split(":",1)[1].strip())
+        break')"
   python3 -c 'import sys
-path,number,title=sys.argv[1:]
+path,number,classes=sys.argv[1:]
 rows=[]
 for line in open(path,encoding="utf-8"):
-    n,state,old_title=line.rstrip("\n").split("\t",2)
-    rows.append("\t".join((n,state,title if n==number else old_title)))
-open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number" "$title"
+    n,state,title,old=(line.rstrip("\n").split("\t",3)+[""])[:4]
+    rows.append("\t".join((n,state,title,classes if n==number else old)))
+open(path,"w",encoding="utf-8").write("\n".join(rows)+"\n")' "$store" "$number" "$classes"
+  exit 0
+fi
+if [ "$cmd" = "issue" ] && [ "$sub" = "view" ]; then
+  number="$1"
+  python3 -c 'import json,sys
+path,number=sys.argv[1:]
+body=""
+for line in open(path,encoding="utf-8"):
+    n,state,title,classes=(line.rstrip("\n").split("\t",3)+[""])[:4]
+    if n==number:
+        body="classes: %s\n" % classes
+print(json.dumps({"body": body}))' "$store" "$number"
+  exit 0
+fi
+if [ "$cmd" = "workflow" ] && [ "$sub" = "run" ]; then
+  printf 'run\n' >> "${GH_FAKE_DISPATCH:?}"
   exit 0
 fi
 echo "unexpected gh $cmd $sub" >&2
@@ -135,58 +169,79 @@ chmod +x "$tmp/bin/date"
 
 export PATH="$tmp/bin:$PATH"
 export GH_FAKE_STORE="$store"
+export GH_FAKE_DISPATCH="$tmp/dispatch"
 export GITHUB_REPOSITORY="example/whereToken"
+export WHERETOKEN_DISPATCH_STAMP="$tmp/stamp"
+: > "$tmp/dispatch"
 
-out="$(bash "$ROOT/scripts/freshness-alert.sh" --class check_failed)"
-printf '%s\n' "$out" | grep -q 'class=check_failed opened'
-count="$(grep -c $'\topen\t' "$store" || true)"
-[ "$count" = "1" ]
-grep -Eq $'\topen\tprofile-freshness alert \([0-9]{4}-[0-9]{2}-[0-9]{2}\)$' "$store"
+out="$(bash "$ROOT/scripts/freshness-alert.sh" --surface actions --classes check_failed)"
+printf '%s\n' "$out" | grep -q 'class=check_failed surface=actions opened'
+grep -q $'\topen\tprofile-freshness alert (actions)\tcheck_failed$' "$store"
 
-again="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
-printf '%s\n' "$again" | grep -q 'already-open'
-count="$(grep -c $'\topen\t' "$store" || true)"
-[ "$count" = "1" ]
+again="$(bash "$ROOT/scripts/freshness-alert.sh" --surface actions --classes 'wall_stale collection_stale')"
+printf '%s\n' "$again" | grep -q 'issue=1 updated'
+[ "$(grep -c $'\topen\t' "$store")" = "1" ]
+grep -q $'\topen\tprofile-freshness alert (actions)\twall_stale collection_stale$' "$store"
 
-recovered="$(bash "$ROOT/scripts/freshness-alert.sh" --class ok)"
-printf '%s\n' "$recovered" | grep -q 'class=ok'
-if grep -q $'\topen\t' "$store"; then
-  echo "recovery left an open alert" >&2
+local_out="$(bash "$ROOT/scripts/freshness-alert.sh" --surface local --classes publisher_stuck)"
+printf '%s\n' "$local_out" | grep -q 'surface=local opened'
+[ "$(grep -c $'\topen\t' "$store")" = "2" ]
+
+pages_out="$(bash "$ROOT/scripts/freshness-alert.sh" --surface pages --classes pages_stale)"
+printf '%s\n' "$pages_out" | grep -q 'surface=pages opened'
+[ "$(grep -c $'\topen\t' "$store")" = "3" ]
+
+recovered="$(bash "$ROOT/scripts/freshness-alert.sh" --surface actions --classes ok)"
+printf '%s\n' "$recovered" | grep -q 'class=ok surface=actions'
+if grep -q $'\topen\tprofile-freshness alert (actions)\t' "$store"; then
+  echo "actions recovery closed the wrong incident or left its own open" >&2
   exit 1
 fi
-grep -Eq $'\tclosed\tprofile-freshness alert \([0-9]{4}-[0-9]{2}-[0-9]{2}\)$' "$store"
+grep -q $'\topen\tprofile-freshness alert (local)\t' "$store"
+grep -q $'\topen\tprofile-freshness alert (pages)\t' "$store"
 
-again_today="$(bash "$ROOT/scripts/freshness-alert.sh" --class publisher_stuck)"
-printf '%s\n' "$again_today" | grep -q 'reopened'
-[ "$(wc -l < "$store" | tr -d ' ')" = "1" ]
-printf '%s\n' "$(bash "$ROOT/scripts/freshness-alert.sh" --class ok)" | grep -q 'class=ok'
-# A legacy undated issue gains its original UTC incident date without
-# opening another ticket, then continues to deduplicate and close normally.
+same="$(bash "$ROOT/scripts/freshness-alert.sh" --surface local --classes publisher_stuck)"
+printf '%s\n' "$same" | grep -q 'already-open'
+[ "$(grep -c $'\topen\tprofile-freshness alert (local)\t' "$store")" = "1" ]
+
 printf '42\topen\tprofile-freshness alert\n' >> "$store"
-legacy="$(bash "$ROOT/scripts/freshness-alert.sh" --class check_failed)"
-printf '%s\n' "$legacy" | grep -q 'issue=42 already-open'
-[ "$(wc -l < "$store" | tr -d ' ')" = "2" ]
-grep -Fxq $'42\topen\tprofile-freshness alert (2026-11-09)' "$store"
-legacy_again="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
-printf '%s\n' "$legacy_again" | grep -q 'issue=42 already-open'
-[ "$(wc -l < "$store" | tr -d ' ')" = "2" ]
-bash "$ROOT/scripts/freshness-alert.sh" --class ok >/dev/null
-if grep -q $'42\topen\t' "$store"; then
-  echo "legacy undated alert left open after recovery" >&2
+legacy="$(bash "$ROOT/scripts/freshness-alert.sh" --surface actions --classes ok)"
+printf '%s\n' "$legacy" | grep -q 'class=ok surface=actions'
+grep -q $'^42\topen\tprofile-freshness alert$' "$store"
+
+silent="$(bash "$ROOT/scripts/freshness-alert.sh" --surface local --classes workflow_silent)"
+printf '%s\n' "$silent" | grep -q 'dispatch=requested'
+[ "$(wc -l < "$tmp/dispatch" | tr -d ' ')" = "1" ]
+silent_again="$(bash "$ROOT/scripts/freshness-alert.sh" --surface local --classes workflow_silent)"
+printf '%s\n' "$silent_again" | grep -q 'dispatch=skipped'
+[ "$(wc -l < "$tmp/dispatch" | tr -d ' ')" = "1" ]
+
+# A failed issue list must not look like recovery and must not open a ticket.
+cat > "$tmp/bin/gh" << 'EOF'
+#!/bin/bash
+echo "" 
+exit 0
+EOF
+chmod +x "$tmp/bin/gh"
+set +e
+bad="$(bash "$ROOT/scripts/freshness-alert.sh" --surface actions --classes ok 2>/dev/null)"
+bad_code=$?
+set -e
+[ "$bad_code" -ne 0 ]
+printf '%s\n' "$bad" | grep -q 'lookup-failed'
+if printf '%s\n' "$bad" | grep -q 'class=ok'; then
+  echo "lookup failure printed class=ok" >&2
   exit 1
 fi
-# An ongoing incident retains its original date across UTC rollover.
-printf '43\topen\tprofile-freshness alert (2001-01-01)\n' >> "$store"
-cross_day="$(bash "$ROOT/scripts/freshness-alert.sh" --class wall_stale)"
-printf '%s\n' "$cross_day" | grep -q 'issue=43 already-open'
-grep -Fxq $'43\topen\tprofile-freshness alert (2001-01-01)' "$store"
-[ "$(wc -l < "$store" | tr -d ' ')" = "3" ]
 
 yml="$ROOT/.github/workflows/profile-freshness.yml"
 grep -q "issues: write" "$yml"
 grep -q "steps.wall.outcome == 'failure'" "$yml"
 grep -q "steps.wall.outputs.class || 'check_failed'" "$yml"
+grep -q 'steps.pages.outputs.class' "$yml"
 grep -q 'GH_TOKEN: ${{ github.token }}' "$yml"
+grep -q -- '--surface actions' "$yml"
+grep -q -- '--surface pages' "$yml"
 mirror_line="$(grep -n 'name: Verify and repair the deployed Pages fallback' "$yml" | cut -d: -f1)"
 alert_line="$(grep -n 'name: Open or close one alert issue' "$yml" | cut -d: -f1)"
 if ! [ "$mirror_line" -lt "$alert_line" ]; then

@@ -38,6 +38,9 @@ func (a *App) refreshDo(req *http.Request) (*http.Response, error) {
 	if a.HTTPDo != nil {
 		return a.HTTPDo(req)
 	}
+	if err := refuseProductionFromTest(req); err != nil {
+		return nil, err
+	}
 	return (&http.Client{Timeout: profileRefreshTimeout, Transport: scopedProfileRefreshTransport(a.hostedBase())}).Do(req)
 }
 
@@ -101,8 +104,8 @@ func (a *App) writeRefreshHealth(home adapter.Home, doctor, machine bool) int {
 		if err != nil {
 			h.SchedulerHealthy = false
 		} else {
-			if !next.After(now) {
-				next = publicprofile.NextScheduledRefreshWake(now, a.Loc)
+			if next.Before(now) {
+				next = now
 			}
 			h.NextCheck = next.In(a.Loc)
 			h.Attempts, h.ConsecutiveFailures = schedule.Attempts, schedule.Failures

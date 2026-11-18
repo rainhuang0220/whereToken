@@ -284,3 +284,23 @@ func TestReportDoesNotRequireLogin(t *testing.T) {
 		t.Fatalf("report exit %d %s", code, errb.String())
 	}
 }
+
+func TestDoHTTPRefusesProductionFromATest(t *testing.T) {
+	app, _, _ := testApp(nil)
+	app.HTTPDo = nil
+	req, err := http.NewRequest(http.MethodGet, "https://wheretoken.plainlist.space/api/health", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.doHTTP(req); err == nil || !strings.Contains(err.Error(), "refusing to dial") {
+		t.Fatalf("production dial err=%v", err)
+	}
+	req, err = http.NewRequest(http.MethodGet, "http://127.0.0.1:1/api/health", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = app.doHTTP(req)
+	if err != nil && strings.Contains(err.Error(), "refusing to dial") {
+		t.Fatal("loopback was treated as production")
+	}
+}

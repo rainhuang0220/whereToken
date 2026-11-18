@@ -38,6 +38,13 @@ class ClassifyTest(unittest.TestCase):
             out = subprocess.check_output(cmd, text=True).strip()
             return out
 
+    def classify_cmd(self, extra):
+        with tempfile.TemporaryDirectory() as tmp:
+            wall_path = Path(tmp) / "wall.json"
+            wall_path.write_text(json.dumps(wall(timedelta(hours=-2))), encoding="utf-8")
+            cmd = [sys.executable, str(SCRIPT), "--surface", "local", "--wall", str(wall_path), "--now", stamp(timedelta(0)), *extra]
+            return subprocess.check_output(cmd, text=True).strip()
+
     def test_actions_thresholds(self):
         self.assertEqual(self.classify("actions", wall(timedelta(hours=-35, minutes=-59))), "ok")
         self.assertEqual(self.classify("actions", wall(timedelta(hours=-36))), "ok")
@@ -56,7 +63,7 @@ class ClassifyTest(unittest.TestCase):
         ]}
         self.assertEqual(self.classify("actions", doc), "collection_stale")
         doc["wall"]["verified_at"] = stamp(timedelta(hours=-40))
-        self.assertEqual(self.classify("actions", doc), "wall_stale")
+        self.assertEqual(self.classify("actions", doc), "wall_stale collection_stale")
         doc["wall"]["verified_at"] = stamp(timedelta(hours=-1))
         doc["snapshot"]["source_status"][0]["status"] = "FRESH"
         self.assertEqual(self.classify("actions", doc), "ok")
@@ -96,8 +103,22 @@ class ClassifyTest(unittest.TestCase):
         stale = wall(timedelta(hours=-50))
         self.assertEqual(
             self.classify("local", stale, state={"checked_at": stamp(timedelta(hours=-1))}, workflow_at=stamp(timedelta(hours=-9))),
-            "publisher_stuck",
+            "publisher_stuck workflow_silent",
         )
+
+    def test_local_retry_is_visible_while_the_wall_is_fresh(self):
+        state = {"phase": "failed", "code": "WILL_RETRY", "checked_at": stamp(timedelta(minutes=-5))}
+        self.assertEqual(self.classify("local", wall(timedelta(hours=-2)), state=state), "collection_stale")
+        quiet = {"phase": "published", "code": "VERIFIED", "checked_at": stamp(timedelta(minutes=-5)),
+                 "collection": {"sources": [{"source": "cursor", "status": "CONFIRMED_ZERO",
+                                             "last_successful_observation_at": stamp(timedelta(hours=-1))}]}}
+        self.assertEqual(self.classify("local", wall(timedelta(hours=-2)), state=quiet), "ok")
+
+    def test_unreadable_state_is_not_ok(self):
+        self.assertEqual(self.classify_cmd(["--state", str(SCRIPT)]), "check_failed")
+
+    def test_missing_workflow_evidence_is_silent(self):
+        self.assertEqual(self.classify_cmd(["--workflow-missing"]), "workflow_silent")
 
     def test_future_stamp_is_not_stale(self):
         self.assertEqual(self.classify("actions", wall(timedelta(minutes=5))), "ok")

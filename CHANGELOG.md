@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep scheduler liveness, collector failures, the public wall, and Pages repair as separate health results. One recovery closes only its own incident. A test cannot dial the production host. A full Cursor billing page with no next cursor is not a finished window.
 - Remind Mac users when scheduled Cursor collection requires authorization and usage evidence is stale. Keep foreground authorization outside the shared scan lock.
 - Require a ledger for account-bound Cursor refresh and keep verified browser data across a reload in the same tab.
 

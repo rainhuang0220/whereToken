@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
@@ -42,10 +44,59 @@ func (a *App) profileRefreshRepair(home adapter.Home) int {
 	fmt.Fprintf(a.Stdout, "scheduler=%s\n", scheduler)
 	if scheduler != "running" {
 		fmt.Fprintln(a.Stdout, "scheduler_healthy=no")
+		fmt.Fprintln(a.Stdout, "data_healthy=unknown")
+		fmt.Fprintln(a.Stdout, "healthy=no")
 		return ExitFail
 	}
 	fmt.Fprintln(a.Stdout, "scheduler_healthy=yes")
+	data, healthy, fail := a.refreshDataHealth(home)
+	fmt.Fprintf(a.Stdout, "data_healthy=%s\nhealthy=%s\n", data, healthy)
+	if fail {
+		return ExitFail
+	}
 	return ExitOK
+}
+
+// refreshDataHealth reads the local checkpoint only. A live scheduler is not
+// evidence that collection or publication succeeded. In-budget retries stay
+// exit 0 so the hourly job does not flap, and they still print healthy=no.
+func (a *App) refreshDataHealth(home adapter.Home) (data, healthy string, fail bool) {
+	now := a.Now()
+	st, err := publicprofile.LoadRefreshState(publicprofile.RefreshStatePath(home))
+	if err != nil {
+		return "unknown", "no", false
+	}
+	schedule, _, schedErr := a.refreshSchedule(home, now)
+	if schedErr != nil {
+		return "unknown", "no", true
+	}
+	degraded := false
+	if st.Collection != nil {
+		_, ok := st.Collection.At(now)
+		degraded = !ok
+	}
+	age := time.Duration(0)
+	if !st.CheckedAt.IsZero() {
+		age = now.Sub(st.CheckedAt)
+	}
+	switch st.Code {
+	case "", publicprofile.CodeVerified, publicprofile.CodePublished, publicprofile.CodeDateRollover,
+		publicprofile.CodeSkippedCooldown, publicprofile.CodeSkippedDelta, publicprofile.CodeOffline:
+		if st.Code == "" || degraded {
+			if st.Code == "" {
+				return "unknown", "no", false
+			}
+			return "no", "no", true
+		}
+		return "yes", "yes", false
+	case publicprofile.CodeWillRetry, publicprofile.CodePendingGitHub, publicprofile.CodeBusy:
+		if schedule.Failures >= 3 || age > 4*time.Hour || degraded && age > 4*time.Hour {
+			return "no", "no", true
+		}
+		return "recovering", "no", false
+	default:
+		return "no", "no", true
+	}
 }
 
 // repairProfileRefreshAgents bootstraps a job only when it is missing or its
@@ -67,7 +118,11 @@ func (a *App) repairProfileRefreshAgents(program string) error {
 	if err != nil {
 		return err
 	}
-	healthBody, err := profileRefreshHealthPlist(program)
+	healthLog := filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
+	if err := os.MkdirAll(filepath.Dir(healthLog), 0o755); err != nil {
+		return err
+	}
+	healthBody, err := profileRefreshHealthPlist(program, healthLog)
 	if err != nil {
 		return err
 	}

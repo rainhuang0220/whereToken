@@ -3,6 +3,7 @@ package cli
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rainhuang0220/whereToken/internal/adapter/testhome"
 	"github.com/rainhuang0220/whereToken/internal/publicprofile"
@@ -555,7 +557,7 @@ func TestInstallScriptsDoNotEnableProfileRefresh(t *testing.T) {
 }
 
 func TestProfileRefreshHealthPlistIsPeriodicAndNotKeptAlive(t *testing.T) {
-	body, err := profileRefreshHealthPlist("/Users/ada/.local/bin/wheretoken")
+	body, err := profileRefreshHealthPlist("/Users/ada/.local/bin/wheretoken", "/Users/ada/Library/Logs/wheretoken/profile-refresh-health.log")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -566,6 +568,7 @@ func TestProfileRefreshHealthPlistIsPeriodicAndNotKeptAlive(t *testing.T) {
 		"<key>StartInterval</key>",
 		"<integer>3600</integer>",
 		"<key>RunAtLoad</key>",
+		"<string>/Users/ada/Library/Logs/wheretoken/profile-refresh-health.log</string>",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q\n%s", want, text)
@@ -803,7 +806,7 @@ func TestProfileRefreshRepairLeavesLoadedIdleHealthAgent(t *testing.T) {
 	home, _ := useLaunchd(t, app, "")
 	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshHealthLabel+".plist")
 	program := filepath.Join(home, "wheretoken")
-	body, err := profileRefreshHealthPlist(program)
+	body, err := profileRefreshHealthPlist(program, filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -860,5 +863,57 @@ func TestProfileRefreshWatchReexecsAfterBrewRemovesOldCellar(t *testing.T) {
 	app.maybeReexecProfileWatch()
 	if len(argv) != 5 || argv[0] != stable || argv[3] != "watch" {
 		t.Fatalf("watch stayed on the removed Cellar binary: argv=%v", argv)
+	}
+}
+
+func TestProfileRefreshRepairDoesNotCallAFailedSlotHealthy(t *testing.T) {
+	cfg := testhome.New(t.TempDir())
+	if err := publicprofile.SaveRefreshSwitch(publicprofile.RefreshConfigPath(cfg), true); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 18, 17, 7, 0, 0, time.FixedZone("CST", 8*3600))
+	if err := publicprofile.SaveRefreshState(publicprofile.RefreshStatePath(cfg), publicprofile.RefreshState{
+		Phase: publicprofile.PhaseFailed, Code: publicprofile.CodeWillRetry, CheckedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	slot := publicprofile.ScheduledRefreshSlot(now, now.Location())
+	raw, err := json.Marshal(profileRefreshSchedule{
+		Slot: slot, Attempts: 3, Failures: 3, RetryAt: now.Add(-time.Minute), Done: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profileRefreshSchedulePath(cfg), append(raw, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app, out, errb := testApp([]string{"profile", "refresh", "repair"})
+	app.Home = cfg
+	app.Now = func() time.Time { return now }
+	app.Loc = now.Location()
+	home, calls := useLaunchd(t, app, "")
+	program := filepath.Join(home, "wheretoken")
+	body, err := profileRefreshPlist(program, home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plist := filepath.Join(home, "Library", "LaunchAgents", profileRefreshLabel+".plist")
+	if err := os.MkdirAll(filepath.Dir(plist), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plist, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code := app.Run(); code == ExitOK {
+		t.Fatalf("repair treated a failed slot as success: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "scheduler_healthy=yes\n") || !strings.Contains(out.String(), "healthy=no\n") ||
+		!strings.Contains(out.String(), "data_healthy=no\n") {
+		t.Fatalf("repair output %q err %s", out.String(), errb.String())
+	}
+	for _, c := range *calls {
+		if strings.Contains(c, "bootout") && strings.Contains(c, profileRefreshLabel+".plist") {
+			t.Fatalf("data failure bootout the watch: %v", *calls)
+		}
 	}
 }

@@ -134,6 +134,11 @@ func (a Adapter) fetchBillingWindowForTeam(token string, w usageSpan, teamID int
 			out.events = append(out.events, e)
 		}
 		if after == "" {
+			// A full page with no cursor is not proof the window ended. Committing
+			// it would mark the other days covered, including a false zero.
+			if len(part) >= billingV2PageSize {
+				return filteredFetch{}, fmt.Errorf("%w [reason=billing_cursor_missing]", errPaginationIncomplete)
+			}
 			// The new API offers no declared total. -1 records "not provided",
 			// rather than falsely attributing a measured count to its server.
 			out.declared = -1

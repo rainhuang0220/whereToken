@@ -650,8 +650,10 @@ func TestProfileRefreshStatusShowsThreeScheduledChecks(t *testing.T) {
 	if code := app.Run(); code != ExitOK {
 		t.Fatalf("status code=%d %s", code, errb.String())
 	}
+	// 18:35 is after 17:00 and this slot has not run, so the next check is the
+	// catch-up that is already due. It is not tomorrow's 00:00 slot.
 	if !strings.Contains(out.String(), "schedule=00:00,10:30,17:00\n") ||
-		!strings.Contains(out.String(), "next_check=2026-11-10T00:00:00+08:00\n") {
+		!strings.Contains(out.String(), "next_check=2026-11-09T18:35:00+08:00\n") {
 		t.Fatalf("status missing next scheduled check: %s", out.String())
 	}
 }

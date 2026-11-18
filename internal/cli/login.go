@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -164,7 +166,24 @@ func (a *App) doHTTP(req *http.Request) (*http.Response, error) {
 	if a.HTTPDo != nil {
 		return a.HTTPDo(req)
 	}
-	return http.DefaultClient.Do(req)
+	if err := refuseProductionFromTest(req); err != nil {
+		return nil, err
+	}
+	client := &http.Client{Timeout: 2 * time.Minute}
+	return client.Do(req)
+}
+
+// refuseProductionFromTest stops a unit test from dialing the public host
+// when nobody set a loopback WHERETOKEN_HOSTED_URL. EOF after that dial is
+// not evidence the server skipped a write.
+func refuseProductionFromTest(req *http.Request) error {
+	if flag.Lookup("test.v") == nil || req == nil || req.URL == nil {
+		return nil
+	}
+	if strings.EqualFold(req.URL.Hostname(), "wheretoken.plainlist.space") {
+		return errors.New("refusing to dial wheretoken.plainlist.space from a test")
+	}
+	return nil
 }
 
 func (a *App) jsonRequest(method, url string, body []byte, bearer string) (map[string]any, error) {

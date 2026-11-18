@@ -68,26 +68,40 @@ jobs:
       # A previous push may already contain the right fallback even if
       # dispatch or deployment failed. Check deployed bytes every hour.
       - name: Verify and repair the deployed Pages fallback
+        id: pages
         if: always() && !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set +e
           git fetch --no-tags origin refs/heads/main
           git archive FETCH_HEAD public-profile | tar -x -C "$RUNNER_TEMP"
           python3 scripts/profile_pages.py --dir "$RUNNER_TEMP/public-profile" \
             --url 'https://rainhuang0220.github.io/whereToken/profile' --repair
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "class=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "class=pages_stale" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Open or close one alert issue
         if: always() && !cancelled() && (steps.wall.outputs.class != '' || steps.wall.outcome == 'failure')
         env:
           GH_TOKEN: ${{ github.token }}
           CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
-        run: bash scripts/freshness-alert.sh --class "$CLASS"
+          PAGES: ${{ steps.pages.outputs.class || 'pages_stale' }}
+        run: |
+          set -euo pipefail
+          bash scripts/freshness-alert.sh --surface actions --classes "$CLASS"
+          bash scripts/freshness-alert.sh --surface pages --classes "$PAGES"
 
       - name: Fail when the public wall check is not ok
-        if: always() && !cancelled() && steps.wall.outputs.class != 'ok'
+        if: always() && !cancelled() && (steps.wall.outputs.class != 'ok' || steps.pages.outputs.class != 'ok')
         env:
           CLASS: ${{ steps.wall.outputs.class || 'check_failed' }}
+          PAGES: ${{ steps.pages.outputs.class || 'pages_stale' }}
         run: |
-          echo "profile freshness class=$CLASS"
+          echo "profile freshness class=$CLASS pages=$PAGES"
           exit 1

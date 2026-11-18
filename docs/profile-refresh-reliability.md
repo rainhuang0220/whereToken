@@ -106,7 +106,11 @@ minutes. The kernel releases its scan lock on exit.
 
 `status` uses local evidence. `doctor` also reads the ledger and, for the
 maintainer Pages target, checks the deployed manifest, JSON and both previews.
-Use `profile refresh repair` to check or reload the scheduler. The bounded
+`profile refresh repair` reloads a missing scheduler and then prints three
+different results: `scheduler_healthy` is process liveness, `data_healthy` is
+the checkpoint, and `healthy` is yes only when the checkpoint is current.
+A live process with `WILL_RETRY` or a blocked code is not healthy. The hourly
+health log is `~/Library/Logs/wheretoken/profile-refresh-health.log`. The bounded
 schedule log is `profile-refresh-schedule.log` beside the refresh config,
 with one 64 KiB rotated file. It records fixed categories, attempts, elapsed
 time and the retry deadline. Ordinary reports continue to use the cached path.

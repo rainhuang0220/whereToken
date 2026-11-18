@@ -56,7 +56,36 @@ def collection_degraded(checks):
                for s in checks)
 
 
-def classify(surface, wall, state, workflow_at, now):
+# Printed in this order. check_failed is exclusive. A wall failure does not
+# hide a collector or an Actions gap, and one class recovering does not clear
+# the others.
+CLASS_ORDER = (
+    "check_failed",
+    "wall_stale",
+    "collection_stale",
+    "publisher_stuck",
+    "mac_offline",
+    "workflow_silent",
+    "pages_stale",
+)
+
+# Last refresh codes that mean the collector did not finish. A later calendar
+# day or a fresh wall does not make these healthy.
+LOCAL_FAILURE_CODES = {
+    "WILL_RETRY",
+    "BLOCKED_DATA",
+    "BLOCKED_REGRESSION",
+    "BLOCKED_AUTH",
+    "NOT_SIGNED_IN",
+}
+
+
+def join_classes(found):
+    ordered = [name for name in CLASS_ORDER if name in found]
+    return " ".join(ordered) if ordered else "ok"
+
+
+def classify(surface, wall, state, workflow_at, now, workflow_missing=False):
     if surface not in ("actions", "local"):
         return "check_failed"
     if not isinstance(wall, dict):
@@ -67,37 +96,42 @@ def classify(surface, wall, state, workflow_at, now):
     wall_age = age_seconds(now, verified)
     if wall_age is None:
         return "check_failed"
+    found = set()
     if surface == "actions":
         if wall_age > ACTIONS_WALL_S:
-            return "wall_stale"
+            found.add("wall_stale")
         snap = wall.get("snapshot")
-        if isinstance(snap, dict):
-            if collection_degraded(snap.get("source_status")):
-                return "collection_stale"
-        return "ok"
+        if isinstance(snap, dict) and collection_degraded(snap.get("source_status")):
+            found.add("collection_stale")
+        return join_classes(found)
     if wall_age > LOCAL_WALL_S:
-        checked = None
-        if isinstance(state, dict):
-            checked = parse_time(state.get("checked_at"))
+        checked = parse_time(state.get("checked_at")) if isinstance(state, dict) else None
         check_age = age_seconds(now, checked)
         if check_age is not None and check_age <= RECENT_CHECK_S:
-            return "publisher_stuck"
-        return "mac_offline"
+            found.add("publisher_stuck")
+        else:
+            found.add("mac_offline")
     if isinstance(state, dict):
+        if state.get("phase") == "failed" or state.get("code") in LOCAL_FAILURE_CODES:
+            found.add("collection_stale")
         collection = state.get("collection")
         if isinstance(collection, dict):
             checks = collection.get("sources")
             if collection_degraded(checks):
-                return "collection_stale"
-            if isinstance(checks, list):
+                found.add("collection_stale")
+            elif isinstance(checks, list):
                 for check in checks:
                     stamp = parse_time(check.get("last_successful_observation_at")) if isinstance(check, dict) else None
                     if stamp is None or not 0 <= age_seconds(now, stamp) < 24 * 3600:
-                        return "collection_stale"
-    run_age = age_seconds(now, parse_time(workflow_at) if isinstance(workflow_at, str) else workflow_at)
-    if run_age is not None and run_age > SCHEDULE_GAP_S:
-        return "workflow_silent"
-    return "ok"
+                        found.add("collection_stale")
+                        break
+    if workflow_missing:
+        found.add("workflow_silent")
+    else:
+        run_age = age_seconds(now, parse_time(workflow_at) if isinstance(workflow_at, str) else workflow_at)
+        if run_age is not None and run_age > SCHEDULE_GAP_S:
+            found.add("workflow_silent")
+    return join_classes(found)
 
 
 def main(argv):
@@ -106,6 +140,7 @@ def main(argv):
     parser.add_argument("--wall", required=True)
     parser.add_argument("--state")
     parser.add_argument("--workflow-at")
+    parser.add_argument("--workflow-missing", action="store_true")
     parser.add_argument("--now")
     args = parser.parse_args(argv)
     now = parse_time(args.now) if args.now else datetime.now(timezone.utc)
@@ -113,8 +148,14 @@ def main(argv):
         print("check_failed")
         return 0
     wall = load_json(args.wall)
-    state = load_json(args.state) if args.state else None
-    print(classify(args.surface, wall, state, args.workflow_at, now))
+    if args.state:
+        state = load_json(args.state)
+        if state is None:
+            print("check_failed")
+            return 0
+    else:
+        state = None
+    print(classify(args.surface, wall, state, args.workflow_at, now, args.workflow_missing))
     return 0
 
 

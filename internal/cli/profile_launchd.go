@@ -165,7 +165,11 @@ func (a *App) installProfileRefreshAgent(program string) error {
 	if err != nil {
 		return err
 	}
-	healthBody, err := profileRefreshHealthPlist(program)
+	healthLog := filepath.Join(home, "Library", "Logs", "wheretoken", "profile-refresh-health.log")
+	if err := os.MkdirAll(filepath.Dir(healthLog), 0o755); err != nil {
+		return err
+	}
+	healthBody, err := profileRefreshHealthPlist(program, healthLog)
 	if err != nil {
 		return err
 	}
@@ -179,8 +183,8 @@ func (a *App) installProfileRefreshAgent(program string) error {
 
 // profileRefreshHealthPlist is a one-shot hourly check. It has no KeepAlive:
 // a periodic job that also restarts on exit would loop. It does not scan.
-func profileRefreshHealthPlist(program string) ([]byte, error) {
-	if program == "" {
+func profileRefreshHealthPlist(program, logPath string) ([]byte, error) {
+	if program == "" || logPath == "" {
 		return nil, errors.New("profile refresh agent is incomplete")
 	}
 	esc := html.EscapeString
@@ -196,8 +200,8 @@ func profileRefreshHealthPlist(program string) ([]byte, error) {
 	b.WriteString("\t</array>\n")
 	b.WriteString("\t<key>RunAtLoad</key>\n\t<true/>\n")
 	b.WriteString("\t<key>StartInterval</key>\n\t<integer>3600</integer>\n")
-	writePlistString(&b, "StandardOutPath", "/dev/null")
-	writePlistString(&b, "StandardErrorPath", "/dev/null")
+	writePlistString(&b, "StandardOutPath", logPath)
+	writePlistString(&b, "StandardErrorPath", logPath)
 	b.WriteString("</dict>\n</plist>\n")
 	return []byte(b.String()), nil
 }
