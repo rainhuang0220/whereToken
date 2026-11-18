@@ -77,6 +77,8 @@ test("loads the static project subpath with truthful snapshot provenance", async
   await expect(page.locator("#freshness")).not.toContainText("DEMO DATA");
   await expect(page.locator("#freshness")).not.toContainText("Public snapshot");
   await expect(page.locator("#freshness")).toContainText("updated");
+  await expect(page.locator("#hero-coverage")).toBeVisible();
+  await expect(page.locator("#hero-coverage")).toContainText("Collection coverage unverified.");
 });
 
 test("switches every range and optional breakdown tab", async ({ page }) => {
@@ -632,6 +634,8 @@ test("replaces the fallback when a newer hosted snapshot is valid", async ({ pag
   await expect(page.locator("#hero-value")).toHaveText("420.00M");
   await expect(page.locator("#freshness")).toContainText("hosted");
   await expect(page.locator("#freshness")).toContainText("minutes ago");
+  await expect(page.locator("#hero-coverage")).toBeVisible();
+  await expect(page.locator("#hero-coverage")).toContainText("Collection coverage unverified.");
   await expect(page.locator("#freshness")).toHaveAttribute("data-snapshot-id", hosted.snapshot_id);
   await expect(page.locator("#freshness")).toHaveAttribute("data-as-of-date", "2026-09-10");
 });

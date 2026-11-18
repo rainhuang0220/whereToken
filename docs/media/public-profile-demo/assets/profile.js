@@ -402,14 +402,16 @@
     $("hero-label").textContent = state.metric === "requests" ? t("hero.requests") : t("hero.tokens");
     const heroCoverage = $("hero-coverage");
     const sources = Array.isArray(snap.source_status) ? snap.source_status : [];
+    const coverageUnverified = !demo && sources.length === 0;
     const affected = sources.filter((entry) => entry && /^[a-z0-9]{1,20}$/.test(entry.source || "") &&
       entry.status !== "FRESH" && entry.status !== "CONFIRMED_ZERO");
-    const coverageIssue = affected.length > 0 || hasMixedCoverage(snap) || snap.data_status !== "available";
+    const coverageIssue = coverageUnverified || affected.length > 0 || hasMixedCoverage(snap) || snap.data_status !== "available";
     heroCoverage.hidden = !coverageIssue;
     const coverageText = heroCoverage.querySelector("span");
     if (coverageText) {
       coverageText.textContent = snap.data_status === "unavailable" ? t("coverage.issueUnavailable") :
-        snap.data_status === "partial" ? t("coverage.issuePartial") : t("coverage.issueVaries");
+        snap.data_status === "partial" ? t("coverage.issuePartial") :
+        coverageUnverified ? t("coverage.issueUnverified") : t("coverage.issueVaries");
       for (const entry of affected) {
         const source = snap.periods.all.by_agent.find((row) => row.id === entry.source)?.label || entry.source;
         const day = entry.coverage_through_utc;
