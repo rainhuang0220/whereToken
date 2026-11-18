@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.20 — 2026-11-19 (Alpha)
+
 - Retry a failed automatic refresh once per hour, without the previous 30-second/two-minute retry bursts. Normal 00:00, 10:30 and 17:00 checks and idle CPU behavior are unchanged. Retry deadlines persist across sleep and restarts.
 
 - Do not replace a verified public snapshot with an older date or a lower total unless the request carries an audited correction for that exact drop. An empty local read is unknown, and a quiet day is zero only when coverage says so. `profile refresh prepare-downgrade` makes the schedule readable by v0.7.19 without deleting it or touching the ledger.
