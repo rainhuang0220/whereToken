@@ -250,7 +250,10 @@ function begin(e){
  drag={id:e.pointerId,x:e.clientX,y:e.clientY,u:q.u,v:q.v,
    downAt:e.timeStamp,moved:false};
  e.preventDefault();e.stopPropagation();
- try{main.setPointerCapture(e.pointerId);}catch(_){}
+ // Pointer events are already tracked in document capture phase. Forcing
+ // capture onto the DOM report can re-target queued mouse events on WebKit/
+ // Chromium and turn a short pull into an impossible long-distance fold.
+ // Do not force capture: preserve each event's real viewport coordinates.
  wake(1500);
 }
 function move(e){
@@ -411,6 +414,9 @@ document.addEventListener('pointermove',e=>{
 },true);
 document.addEventListener('pointerup',end,true);
 document.addEventListener('pointercancel',end,true);
+window.addEventListener('blur',()=>{
+ if(drag&&model){drag=null;model.release();wake(1500);}
+});
 document.addEventListener('pointerdown',outside,false);
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'&&folding){

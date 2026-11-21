@@ -270,7 +270,7 @@
 
   // Lazy-load the Three.js paper only for visitors who selected Newsprint.
   // Other palettes continue to load only the original lightweight dashboard.
-  var physicalSource = "./assets/paper-3d.js?v=46fb9ea1d3f46805f0afadaf2a98622afbc34b637e224718f14c82205899827b";
+  var physicalSource = "./assets/paper-3d.js?v=fe97f32e680b71b33dec469d52cab4a5fbb6025c8fd91fc029bc4fde7ee09ed0";
   var physicalRequested = false;
   var physicalReady = false;
   function requestPhysicalPaper() {
