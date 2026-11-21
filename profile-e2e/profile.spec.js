@@ -503,22 +503,24 @@ test("makes no external runtime request", async ({ page }) => {
   await page.goto(baseURL);
   await expect(page.locator("#hero-value")).not.toBeEmpty();
   await expect.poll(() => requests.some((url) => url.includes("newsprint-height.jpg"))).toBe(true);
-  await expect.poll(() => requests.some((url) => url.includes("paper-3d.js"))).toBe(true);
+  // Linux Firefox headless may advertise only a coarse pointer: in that case
+  // the physical canvas is intentionally not loaded, but the DOM stays usable.
+  const physicalRequested = requests.some((url) => url.includes("/paper-3d.js"));
   const paths = [...new Set(requests.map((url) => url.split("?")[0]))];
   expect(paths.sort()).toEqual([
     "/whereToken/profile/",
     "/whereToken/profile/assets/lang.js",
     "/whereToken/profile/assets/messages.js",
     "/whereToken/profile/assets/paper.js",
-    "/whereToken/profile/assets/paper-3d.js",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
     "/whereToken/profile/assets/newsprint-height.jpg",
     "/whereToken/profile/assets/newsprint-surface.jpg",
     "/whereToken/profile/profile.json",
     "/whereToken/profile/presentation.json",
+    ...(physicalRequested ? ["/whereToken/profile/assets/paper-3d.js"] : []),
   ].sort());
-  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js", "paper-3d.js"]) {
+  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js", ...(physicalRequested ? ["paper-3d.js"] : [])]) {
     expect(requests.find((url) => url.includes("/assets/" + name))).toMatch(/\?v=[0-9a-f]{64}$/);
   }
   expect(requests.find((url) => url.includes("profile.json"))).not.toContain("?v=");
@@ -529,6 +531,21 @@ test("Newsprint folds the sanitized snapshot while preserving dashboard controls
   test.setTimeout(70000);
   await page.goto(baseURL + "?palette=newsprint");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  const physicallyEligible = await page.evaluate(() => {
+    const fine = window.matchMedia("(pointer:fine)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let webgl = false;
+    try { webgl = Boolean(document.createElement("canvas").getContext("webgl2")); } catch {}
+    return fine && !reduced && window.innerWidth > 700 && webgl;
+  });
+  if (!physicallyEligible) {
+    // Deliberate accessibility/GPU fallback, not a broken print renderer.
+    await expect(page.locator("#wt-physical-paper")).toBeHidden();
+    await expect(page.locator("#wall .cell")).not.toHaveCount(0);
+    await page.getByRole("tab", { name: "7d", exact: true }).click();
+    await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
+    return;
+  }
   await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().ready), {timeout:30000}).toBe(true);
   await expect(page.locator("#wt-physical-paper")).toBeVisible();
   // The newspaper is not a scroll trap in a vertically read report.
