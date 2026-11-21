@@ -472,15 +472,9 @@
     renderTrend(snap, ser);
     renderBreakdown(snap, p);
     renderCoverage(snap);
-    // The paper front page receives only the already-sanitized public snapshot
-    // and the active public controls. It never reads local logs or auth tokens.
-    window.__WT_NEWSprint = {
-      snapshot: snap, palette: state.palette,
-      selection: { range: state.range, metric: state.metric,
-                   tab: state.tab, filter: state.filter },
-      lang: document.documentElement.lang || 'en'
-    };
-    window.dispatchEvent(new Event('wt:profile-render'));
+    // Paper folds the same native DOM report. A rerender invalidates any
+    // temporary raster snapshot; the original data remains authoritative.
+    window.dispatchEvent(new Event("wt:profile-render"));
   }
 
   function renderSeg(root, items, selected, onPick) {

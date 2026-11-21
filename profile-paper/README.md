@@ -1,29 +1,44 @@
-# Physical Newsprint Front Page
+# Newspaper as a Single Native Profile
 
-whereToken's Newsprint palette uses a self-hosted Three.js D4 front page. The original accessible HTML dashboard remains below it and continues to provide detailed interactive ranges, metrics, source filtering, export, and publication controls. Cobalt and Magenta do not load the 3D engine.
+Newsprint is an **ink-and-paper palette** applied to whereToken's *existing*
+accessible Profile DOM. It does not create a second report, duplicated snapshot
+or framed Three.js preview. Switching Cobalt, Magenta and Newsprint preserves
+all layout measurements and all navigation, filters, charts, cells, links and
+screen-reader semantics.
 
-## Rebuild
+## The hidden D4 fold
 
-From the repository root:
+On a desktop fine-pointer device, grabbing an otherwise unmarked paper corner
+or side edge momentarily captures the currently visible native report with a
+self-hosted html2canvas renderer. D4 maps that real report (including its
+current content and activity heatmap) into a Three.js continuous-sheet fold.
+The original DOM occupies the same coordinates and is simply made transparent
+while the fold is active. On return, the native DOM immediately takes over.
+Escape or a click outside the folded paper restores the page. The physical
+model is not a full FEM or self-collision simulator.
 
-1. Run `cd profile-paper && npm ci && npm run build && cd ..`
-2. Run `go run ./scripts/syncprofileassets --dir public-profile`
-3. Run `go run ./scripts/syncprofileassets --dir docs/media/public-profile-demo`
-4. Verify with `go test ./internal/profilewebembed ./internal/publicprofile` and the Playwright tests in `profile-e2e`
+This behavior is an Easter egg, not a second UI: no display stand, button,
+label, border, dedicated scroll pane, or extra document heading is added.
 
-The engine bundle is committed at `internal/profilewebembed/static/assets/paper-3d.js`. The build updates its SHA-256 content-addressed URL in `assets/paper.js`. The Go `BundleWith` generator copies the asset into every public-profile publication and includes it in the asset-revision hash. An older installed whereToken publisher still embeds its old assets: upgrade or rebuild the publisher before allowing it to overwrite the newly deployed profile bundle.
+Text uses a real ink-density raster tile with irregular pinholes and variance
+inside its strokes. The source paper scan remains CC0 ambientCG Paper001.
+The 3D engine runs only on demand and is not loaded for Cobalt/Magenta.
 
-## Data and safety
+## Build and verification
 
-The print renderer sees only the already-sanitized public snapshot and selected metric/range/agent. It never reads private logs, file paths, account auth tokens, or raw prompts. Production print is labeled `PUBLIC SNAPSHOT`; synthetic demos remain labeled `SYNTHETIC DEMO`. The exact original snapshot date is preserved. A rendered newspaper front page is read-only; the accessible, interactive HTML dashboard remains authoritative.
+```bash
+cd profile-paper && npm ci && npm run build && cd ..
+go run ./scripts/syncprofileassets --dir public-profile
+go run ./scripts/syncprofileassets --dir docs/media/public-profile-demo
+go test ./internal/profilewebembed ./internal/publicprofile
+cd profile-e2e && npm ci && npx playwright test
+```
 
-The physical interaction is a single continuous-sheet geometric hinge model with finite-radius bending, a blank paper backside, and residual geometric crease memory. It is not a calibrated elastic-plastic finite-element simulation; multiple fold collisions are outside its scope.
+The build writes `internal/profilewebembed/static/assets/paper-3d.js` and
+updates its SHA256 URL in `assets/paper.js`; Go's public profile generator
+includes both assets and the ink tile in every subsequent publication. No
+external CDN, local-usage logs, credentials or private data are accessed.
 
-Small screens, coarse pointers, reduced-motion requests, failed GPU initialization, or blocked canvas access always retain the complete HTML view. The bundle is loaded lazily only for visitors who select Newsprint.
-
-## Upstream license notes
-
-- Three.js is distributed under the MIT license.
-- The existing Paper001 scanned material from ambientCG is CC0; see `scripts/gennewsprint/vendor/SOURCE.md`.
-
-No runtime CDN, tracker or third-party network request is required for the physical renderer.
+D4 folding was designed against the physical paper material rather than a
+cloth lattice; it preserves paper UVs and makes finite-width hinge creases.
+For a report with controls, the native DOM is always the authoritative view.

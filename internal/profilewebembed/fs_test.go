@@ -77,6 +77,30 @@ func TestPhysicalNewspaperBundleIsEmbedded(t *testing.T) {
 	}
 }
 
+func TestNewsprintPigmentIsEmbedded(t *testing.T) {
+	ink, err := Read("assets/newsprint-ink.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ink) < 1000 || len(ink) > 250*1024 {
+		t.Fatalf("unexpected pigment tile size: %d", len(ink))
+	}
+	page, err := Read("index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(page, []byte("wt-physical-paper")) {
+		t.Fatal("the printed report must not be duplicated as a showcase")
+	}
+	css, err := Read("assets/profile.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(css, []byte("newsprint-ink.png")) {
+		t.Fatal("newsprint glyphs do not have print pigment")
+	}
+}
+
 func TestNewsprintMaterialAssetsAreEmbedded(t *testing.T) {
 	surface, err := Read("assets/newsprint-surface.jpg")
 	if err != nil {

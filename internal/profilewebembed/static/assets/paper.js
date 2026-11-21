@@ -51,7 +51,7 @@
     "  float hD = heightAt(uv - vec2(0.0, texel.y));\n" +
     "  float hU = heightAt(uv + vec2(0.0, texel.y));\n" +
     "  float hC = heightAt(uv);\n" +
-    "  float scale = 28.0;\n" +
+    "  float scale = 10.0;\n" +
     "  vec3 n = normalize(vec3(-(hR - hL) * scale, -(hU - hD) * scale, 1.0));\n" +
     "  vec3 L = normalize(uLight);\n" +
     "  vec3 V = vec3(0.0, 0.0, 1.0);\n" +
@@ -79,15 +79,15 @@
     "  float D = a2 / (3.14159265 * d * d);\n" +
     "  float spec = ndotl * D * 0.012;\n" +
     "  float form = textureLod(uHeight, uv, 2.2).r;\n" +
-    "  vec3 albedo = vec3(0.955, 0.945, 0.915) * mix(0.94, 1.03, form);\n" +
+    "  vec3 albedo = vec3(0.955, 0.945, 0.915) * mix(0.986, 1.013, form);\n" +
     "  vec2 page = px / uRes * 2.0 - 1.0;\n" +
     "  vec2 lxy = L.xy;\n" +
     "  float llen = length(lxy);\n" +
     "  vec2 ldir = llen > 1e-4 ? lxy / llen : vec2(-0.77, -0.64);\n" +
     "  float side = clamp(dot(ldir, page) * 0.62 + 0.50, 0.0, 1.0);\n" +
-    "  float lift = mix(0.88, 1.14, side);\n" +
+    "  float lift = mix(0.970, 1.040, side);\n" +
     "  vec3 tint = mix(vec3(0.986, 0.988, 1.0), vec3(1.0, 0.993, 0.978), side);\n" +
-    "  vec3 color = albedo * (0.58 + 0.46 * diff) * lift * tint + vec3(1.0, 0.98, 0.94) * spec;\n" +
+    "  vec3 color = albedo * (0.845 + 0.155 * diff) * lift * tint + vec3(1.0, 0.98, 0.94) * spec;\n" +
     "  color = pow(max(color, 0.0), vec3(1.0 / 2.2));\n" +
     "  o = vec4(color, 1.0);\n" +
     "}\n";
@@ -270,7 +270,7 @@
 
   // Lazy-load the Three.js paper only for visitors who selected Newsprint.
   // Other palettes continue to load only the original lightweight dashboard.
-  var physicalSource = "./assets/paper-3d.js?v=51ac7d23423d6dd85577f492f68ac22954095713ea4412fc769f30c8f28c95c2";
+  var physicalSource = "./assets/paper-3d.js?v=a7510a0d97d40d910f12ac129ed985ad22df3f2bb73ff845fdbaae68b38304eb";
   var physicalRequested = false;
   var physicalReady = false;
   function requestPhysicalPaper() {

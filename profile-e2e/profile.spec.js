@@ -499,82 +499,75 @@ test("keeps mobile month labels and wrapped metadata rules clean", async ({ page
 });
 
 test("makes no external runtime request", async ({ page }) => {
-  await page.emulateMedia({reducedMotion:'no-preference'});
-  await page.goto(baseURL);
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  const requests=[];
+  page.on("request",req=>requests.push(req.url()));
+  await page.goto(baseURL+"?palette=newsprint");
   await expect(page.locator("#hero-value")).not.toBeEmpty();
-  await expect.poll(() => requests.some((url) => url.includes("newsprint-height.jpg"))).toBe(true);
-  // Linux Firefox headless may advertise only a coarse pointer: in that case
-  // the physical canvas is intentionally not loaded, but the DOM stays usable.
-  const physicalRequested = requests.some((url) => url.includes("/paper-3d.js"));
-  const paths = [...new Set(requests.map((url) => url.split("?")[0]))];
-  expect(paths.sort()).toEqual([
-    "/whereToken/profile/",
-    "/whereToken/profile/assets/lang.js",
-    "/whereToken/profile/assets/messages.js",
-    "/whereToken/profile/assets/paper.js",
-    "/whereToken/profile/assets/profile.css",
-    "/whereToken/profile/assets/profile.js",
-    "/whereToken/profile/assets/newsprint-height.jpg",
-    "/whereToken/profile/assets/newsprint-surface.jpg",
-    "/whereToken/profile/profile.json",
-    "/whereToken/profile/presentation.json",
-    ...(physicalRequested ? ["/whereToken/profile/assets/paper-3d.js"] : []),
-  ].sort());
-  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js", ...(physicalRequested ? ["paper-3d.js"] : [])]) {
-    expect(requests.find((url) => url.includes("/assets/" + name))).toMatch(/\?v=[0-9a-f]{64}$/);
+  await expect.poll(()=>requests.some(url=>url.includes("newsprint-height.jpg"))).toBe(true);
+  await expect.poll(()=>requests.some(url=>url.includes("newsprint-ink.png"))).toBe(true);
+  const canFold=await page.evaluate(()=>matchMedia("(pointer:fine)").matches &&
+    !matchMedia("(prefers-reduced-motion:reduce)").matches && innerWidth>700);
+  if(canFold)
+    await expect.poll(()=>requests.some(url=>url.includes("paper-3d.js")),{timeout:12000}).toBe(true);
+  const paths=new Set(requests.map(url=>new URL(url).pathname));
+  for(const path of paths)
+    expect(path.startsWith("/whereToken/profile/")).toBe(true);
+  expect(paths.has("/whereToken/profile/assets/newsprint-ink.png")).toBe(true);
+  for(const name of ["profile.css","lang.js","messages.js","profile.js","paper.js"]){
+    const actual=requests.find(url=>url.includes("/assets/"+name));
+    expect(actual).toMatch(/\\?v=[0-9a-f]{64}$/);
   }
-  expect(requests.find((url) => url.includes("profile.json"))).not.toContain("?v=");
 });
 
-test("Newsprint folds the sanitized snapshot while preserving dashboard controls", async ({ page }) => {
-  await page.emulateMedia({reducedMotion:'no-preference'});
+test("Newsprint is one native report with identical layout and hidden paper folding", async ({ page }) => {
+  await page.emulateMedia({reducedMotion:"no-preference"});
   test.setTimeout(70000);
-  await page.goto(baseURL + "?palette=newsprint");
+  await page.goto(baseURL+"?palette=cobalt");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
-  const physicallyEligible = await page.evaluate(() => {
-    const fine = window.matchMedia("(pointer:fine)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let webgl = false;
-    try { webgl = Boolean(document.createElement("canvas").getContext("webgl2")); } catch {}
-    return fine && !reduced && window.innerWidth > 700 && webgl;
-  });
-  if (!physicallyEligible) {
-    // Deliberate accessibility/GPU fallback, not a broken print renderer.
-    await expect(page.locator("#wt-physical-paper")).toBeHidden();
-    await expect(page.locator("#wall .cell")).not.toHaveCount(0);
-    await page.getByRole("tab", { name: "7d", exact: true }).click();
-    await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
-    return;
-  }
-  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().ready), {timeout:30000}).toBe(true);
-  await expect(page.locator("#wt-physical-paper")).toBeVisible();
-  // The newspaper is not a scroll trap in a vertically read report.
-  const paperArea = page.locator("#wt-paper-scene");
-  await paperArea.scrollIntoViewIfNeeded();
-  const paperBounds = await paperArea.boundingBox();
-  await page.mouse.move(paperBounds.x+paperBounds.width*.5, paperBounds.y+paperBounds.height*.5);
-  const beforeScroll = await page.evaluate(() => window.scrollY);
-  await page.mouse.wheel(0, 500);
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforeScroll);
-  await expect(page.locator("#wt-paper-flat-image")).toHaveJSProperty("naturalWidth", 900);
-  const first = await page.evaluate(() => window.__WT_PAPER3D__.getDiagnostics());
-  expect(first.asOf).toBe(snapshot.as_of_date);
-  expect(first.palette).toBe("newsprint");
-  await page.locator("[data-paper-flat]").click();
-  await expect(page.locator("#wt-paper-flat-image")).toBeVisible();
-  await page.locator("[data-paper-flat]").click();
-  await page.getByRole("tab", { name: "7d", exact: true }).click();
+  const rects=()=>page.evaluate(()=>Object.fromEntries(
+    ["main","hero-value","hero-meta","activity-h","wall","trend-card","break-h","rows"].map(id=>{
+      const rect=document.getElementById(id).getBoundingClientRect();
+      return [id,[rect.x,rect.y,rect.width,rect.height].map(n=>Math.round(n*100)/100)];
+    })
+  ));
+  const cobalt=await rects();
+  await page.getByRole("tab",{name:"Newsprint",exact:true}).click();
+  await expect(page.locator("#wt-physical-paper")).toHaveCount(0);
+  expect(await rects()).toEqual(cobalt);
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  await expect(page.locator("#hero-value")).toHaveCSS("background-image",/newsprint-ink[.]png/);
+  await page.getByRole("tab",{name:"7d",exact:true}).click();
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
-  await expect.poll(() => page.evaluate(() => window.__WT_NEWSprint?.selection.range)).toBe("7d");
-  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().printedTotal), {timeout:15000})
-    .toBe(snapshot.periods["7d"].totals.total.display);
-  await page.getByRole("tab", {name:"Requests",exact:true}).click();
-  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().printedTotal), {timeout:15000})
-    .toBe(snapshot.periods["7d"].requests.display);
-  await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
-  await expect(page.locator("#wt-physical-paper")).toBeHidden();
+  await page.getByRole("tab",{name:"Cobalt",exact:true}).click();
+  expect((await rects()).main.slice(0,3)).toEqual(cobalt.main.slice(0,3));
   await expect(page.locator("#wall .cell")).not.toHaveCount(0);
 });
+
+test("Newsprint folds its native report when a corner is grabbed",async ({ page })=>{
+  test.setTimeout(70000);
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.goto(baseURL+"?palette=newsprint");
+  const fine=await page.evaluate(()=>matchMedia("(pointer:fine)").matches);
+  if(!fine)return; // Firefox headless may expose a coarse pointer; HTML stays usable.
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().ready),{timeout:30000}).toBe(true);
+  const report=page.locator("#main");
+  const box=await report.boundingBox();
+  const start={x:box.x+box.width-11,y:box.y+13};
+  await page.mouse.move(start.x,start.y);
+  await page.mouse.down();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().active),{timeout:12000}).toBe(true);
+  await page.mouse.move(start.x-280,start.y+220,{steps:18});
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:5000}).toBeGreaterThan(20);
+  await page.mouse.up();
+  await expect(report).toHaveCount(1);
+  await expect(page.locator("#wt-physical-paper")).toHaveCount(0);
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  await page.keyboard.press("Escape");
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().active)).toBe(false);
+  await expect(page.locator("#main")).toHaveCSS("opacity","1");
+});
+
 test("Newsprint degrades gracefully to HTML on small screens", async ({ page }) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto(baseURL + "?palette=newsprint");

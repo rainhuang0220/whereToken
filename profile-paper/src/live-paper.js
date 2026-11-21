@@ -1,284 +1,373 @@
 import * as THREE from 'three';
-import { createPortraitPrint } from './print/portrait-sheet.js';
-import { projectSnapshot } from './print/profile-data.js';
-import { buildMaterialCanvases, loadLocalImage } from './paper/browser-maps.js';
+import html2canvas from 'html2canvas';
 import { PaperFoldSheet } from './scene/paper-foldsheet.js';
 
-const host=document.getElementById('wt-physical-paper');
-const board=document.getElementById('wt-paper-stage');
-const canvas=document.getElementById('wt-paper-scene');
-const flat=document.getElementById('wt-paper-flat-image');
-const status=document.getElementById('wt-paper-status');
-const hint=document.getElementById('wt-paper-hint');
-const action=name=>host.querySelector('[data-paper-'+name+']');
-const clamp=(x,low,high)=>Math.max(low,Math.min(high,x));
-const W=7.8,H=11.7;
-let renderer,scene,camera,front,back,frontMaterial,backMaterial,model,spot,mainLight,fillLight;
-let paperScan=null,lastKey='',lastPrintValue='',frame=0,lastTime=0,awake=0,active=false;
-let printTexture,normalTexture,roughTexture,backPrintTexture;
-let pointer=null,orbit=null,zoom=1,yaw=.035,pitch=-.07,grazing=false,flatMode=false;
-const fine=window.matchMedia('(pointer:fine)');
-const reduced=window.matchMedia('(prefers-reduced-motion:reduce)');
-const small=window.matchMedia('(max-width:700px)');
+/*
+ * Hidden single-sheet interaction for the existing, accessible Profile DOM.
+ * No second report, no added controls, no layout mutation when idle.
+ * Rasterize THE PRESENT REPORT only when a reader grabs its edge; fold the
+ * resulting exact content UV on the D4 mesh. Return to live DOM on recovery.
+ */
+const main=document.getElementById('main');
+const W=7.8;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const fine=matchMedia('(pointer:fine)');
+const reduced=matchMedia('(prefers-reduced-motion:reduce)');
+const small=matchMedia('(max-width:700px)');
+let state='idle', pending=null, model=null, renderer=null, scene=null;
+let camera=null,front=null,back=null,overlay=null,frame=0,lastTime=0;
+let paperTexture=null,paperHeight=null,layout=null,captureEpoch=0,drag=null;
+let savedMemories=[],scars=[],lastError=null;
+const inkTile=new Image();
+inkTile.src='./assets/newsprint-ink.png';
+let inkPixelData=null;
 
-function selected(){
-  const info=window.__WT_NEWSprint;
-  return info&&info.snapshot&&info.palette==='newsprint'&&fine.matches&&!reduced.matches&&!small.matches;
-}
-function texture(image,colorSpace=THREE.NoColorSpace){
- const t=new THREE.CanvasTexture(image);
- t.colorSpace=colorSpace;t.wrapS=THREE.ClampToEdgeWrapping;t.wrapT=THREE.ClampToEdgeWrapping;
- t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;
- t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
- return t;
-}
-function disposeTexture(item){if(item)item.dispose();}
-function wake(){
- awake=performance.now();
- if(active&&!frame)frame=requestAnimationFrame(tick);
-}
-function cameraFit(){
- const aspect=board.clientWidth/Math.max(1,board.clientHeight);
- const view=THREE.MathUtils.degToRad(camera.fov);
- const radius=Math.max(H/(2*Math.tan(view/2)),W/(2*Math.tan(view/2)*aspect))*1.23/zoom;
- camera.position.set(Math.sin(yaw)*radius,Math.sin(pitch)*radius,Math.cos(yaw)*Math.cos(pitch)*radius);
- camera.lookAt(0,0,.02);camera.updateProjectionMatrix();
-}
-function resize(){
- if(!renderer||!board.clientWidth||!board.clientHeight)return;
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
- renderer.setSize(board.clientWidth,board.clientHeight,false);
- camera.aspect=board.clientWidth/board.clientHeight;
- cameraFit();wake();
-}
-function rayOf(event){
- const b=canvas.getBoundingClientRect();
- const n=new THREE.Vector2(2*(event.clientX-b.left)/b.width-1,
-     1-2*(event.clientY-b.top)/b.height);
- const r=new THREE.Raycaster();r.setFromCamera(n,camera);return r;
-}
-function onFlap(p){
- return model.q({x:(p.uv.x-.5)*W,y:(p.uv.y-.5)*H})>model.bandWidth*.30;
-}
-function hit(event,ray){
- const intersections=ray.intersectObjects([front,back],false);
- if(model.phase==='latched'){
-  const flap=intersections.find(p=>p.uv&&onFlap(p));
-  if(flap)return flap;
-  const rect=canvas.getBoundingClientRect();
-  let closest=null;
-  for(const [u,v] of [[0,0],[0,1],[1,0],[1,1]]){
-   if(model.q({x:(u-.5)*W,y:(v-.5)*H})<model.bandWidth*.30)continue;
-   const p=model.mapVertex((u-.5)*W,(v-.5)*H);
-   const ndc=new THREE.Vector3(p.x,p.y,p.z).project(camera);
-   const x=rect.left+(ndc.x+1)*rect.width/2,y=rect.top+(1-ndc.y)*rect.height/2;
-   const distance=Math.hypot(x-event.clientX,y-event.clientY);
-   if(distance<24&&(!closest||distance<closest.distance))
-    closest={uv:new THREE.Vector2(u,v),point:new THREE.Vector3(p.x,p.y,p.z),distance};
+function preservePrintInCapture(snapshot){
+ if(!inkTile.complete||!inkTile.naturalWidth)return snapshot;
+ try {
+  if(!inkPixelData){
+   const tile=document.createElement('canvas');
+   tile.width=inkTile.naturalWidth;tile.height=inkTile.naturalHeight;
+   const tileCtx=tile.getContext('2d',{willReadFrequently:true});
+   tileCtx.drawImage(inkTile,0,0);
+   inkPixelData={width:tile.width,height:tile.height,
+     pixels:tileCtx.getImageData(0,0,tile.width,tile.height).data};
   }
-  if(closest)return closest;
+  const ctx=snapshot.getContext('2d',{willReadFrequently:true});
+  const image=ctx.getImageData(0,0,snapshot.width,snapshot.height);
+  const data=image.data,mask=inkPixelData.pixels;
+  const tileW=inkPixelData.width,tileH=inkPixelData.height;
+  // Only pigment-dark pixels are affected; already-light paper does not
+  // acquire random noise. Ink defects stay attached to each glyph when UVs fold.
+  for(let y=0;y<snapshot.height;y++){
+   const maskRow=(y%tileH)*tileW*4;
+   const pixelRow=y*snapshot.width*4;
+   for(let x=0;x<snapshot.width;x++){
+    const p=pixelRow+x*4;
+    const luminance=(data[p]*.30+data[p+1]*.59+data[p+2]*.11);
+    if(luminance>180||data[p+3]<200)continue;
+    const a=mask[maskRow+(x%tileW)*4+3];
+    if(a>=248)continue;
+    const drop=(255-a)/255*.86*Math.min(1,(205-luminance)/150);
+    if(drop<=0)continue;
+    data[p]=Math.round(data[p]+(245-data[p])*drop);
+    data[p+1]=Math.round(data[p+1]+(241-data[p+1])*drop);
+    data[p+2]=Math.round(data[p+2]+(230-data[p+2])*drop);
+   }
+  }
+  ctx.putImageData(image,0,0);
+ }catch(error){
+  console.warn('Print pigment capture fallback',error);
  }
- return intersections[0]||null;
+ return snapshot;
 }
-function paintStatus(){
- const diag=model?.getDiagnostics();
- if(!diag)return;
- status.textContent=diag.phase==='latched'?'FOLDED · '+diag.angleDegrees.toFixed(0)+'°':
-   diag.phase==='resting'?'PAPER · READY':diag.phase.toUpperCase()+' · '+diag.angleDegrees.toFixed(0)+'°';
+
+
+function allowed(){
+ return document.documentElement.dataset.activityPalette==='newsprint' &&
+   fine.matches && !reduced.matches && !small.matches && !document.hidden;
+}
+function getSheet(){
+ const r=main.getBoundingClientRect();
+ return {x:r.left,y:r.top,width:r.width,height:r.height,
+   top:r.top+window.scrollY,left:r.left+window.scrollX,H:W*r.height/r.width};
+}
+function cornerAt(e){
+ if(!allowed()||e.button!==0||e.pointerType==='touch')return null;
+ if(e.target.closest('button,a,input,textarea,select,summary,[role=tab],[role=button],[contenteditable]'))return null;
+ const r=getSheet();
+ if(r.width<400||r.height<300||!main.contains(e.target))return null;
+ const px=e.clientX-r.x,py=e.clientY-r.y;
+ if(px<0||py<0||px>r.width||py>r.height)return null;
+ const edgeX=Math.min(px,r.width-px);
+ const edgeY=Math.min(py,r.height-py);
+ // No pointer traps in the report interior. Only the unmarked paper edge.
+ if(!(edgeX<26 || (edgeY<30&&edgeX<65)))return null;
+ return {u:clamp(px/r.width,.001,.999),v:clamp(1-py/r.height,.001,.999),rect:r};
+}
+function clearScars(){
+ for(const mark of scars)mark.remove();
+ scars=[];
+}
+function renderScars(){
+ clearScars();
+ if(!layout||!savedMemories.length)return;
+ const rect=main.getBoundingClientRect();
+ for(const record of savedMemories.slice(-3)){
+  const h=record.hinge;
+  const start={x:(h.start.x+W/2)/W*rect.width,
+    y:(layout.H/2-h.start.y)/layout.H*rect.height};
+  const end={x:(h.end.x+W/2)/W*rect.width,
+    y:(layout.H/2-h.end.y)/layout.H*rect.height};
+  const len=Math.hypot(end.x-start.x,end.y-start.y);
+  if(len<20)continue;
+  const div=document.createElement('div');
+  div.className='wt-newsprint-scar';
+  Object.assign(div.style,{
+   position:'absolute',pointerEvents:'none',zIndex:'2',
+   left:start.x+'px',top:start.y+'px',width:len+'px',height:'2px',
+   transformOrigin:'0 50%',
+   transform:'rotate('+Math.atan2(end.y-start.y,end.x-start.x)+'rad)',
+   background:'linear-gradient(to bottom,rgba(21,19,15,.04),rgba(24,21,16,.19) 48%,rgba(255,250,237,.25) 70%,transparent)',
+   opacity:clamp(record.strength*.38,.08,.26).toString(),
+  });
+  main.appendChild(div);scars.push(div);
+ }
+}
+function dispose(){
+ if(frame)cancelAnimationFrame(frame);
+ frame=0;lastTime=0;
+ if(overlay)overlay.remove();
+ if(renderer){renderer.dispose();renderer.forceContextLoss();}
+ if(paperTexture)paperTexture.dispose();
+ if(paperHeight)paperHeight.dispose();
+ if(front){front.material.dispose();}
+ if(back){back.material.dispose();}
+ if(model){model.foldedGeometry.dispose();model.restingGeometry.dispose();}
+ overlay=renderer=scene=camera=front=back=paperTexture=paperHeight=model=null;
+ main.style.opacity='';
+ drag=null;
+}
+function restore(){
+ if(model?.memories?.length)savedMemories=model.memories.slice();
+ dispose();state='idle';pending=null;renderScars();
+}
+function invalidate(){
+ ++captureEpoch;
+ if(state!=='idle')restore();
+ if(!allowed())clearScars();
+}
+function shadow(){
+ const receiving=new THREE.Mesh(new THREE.PlaneGeometry(W,layout.H),
+   new THREE.ShadowMaterial({opacity:.14}));
+ receiving.position.z=-.07;receiving.receiveShadow=true;
+ scene.add(receiving);
+}
+function initGeometry(snapshot){
+ layout=getSheet();model=new PaperFoldSheet({width:W,height:layout.H});
+ if(savedMemories.length){
+  model.memories=savedMemories.slice();
+  model.refreshRestingGeometry();
+ }
+ overlay=document.createElement('canvas');
+ overlay.setAttribute('aria-hidden','true');
+ overlay.className='wt-fold-overlay';
+ Object.assign(overlay.style,{
+  position:'absolute',left:layout.left+'px',top:layout.top+'px',
+  width:layout.width+'px',height:layout.height+'px',
+  zIndex:'8',margin:'0',padding:'0',
+  pointerEvents:'auto',touchAction:'none',background:'transparent'
+ });
+ document.body.appendChild(overlay);
+ renderer=new THREE.WebGLRenderer({canvas:overlay,alpha:true,antialias:true,powerPreference:'default'});
+ renderer.setClearColor(0xffffff,0);
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.15));
+ renderer.setSize(layout.width,layout.height,false);
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.30;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ scene=new THREE.Scene();
+ camera=new THREE.OrthographicCamera(-W/2,W/2,layout.H/2,-layout.H/2,.1,60);
+ camera.position.set(0,0,24);camera.lookAt(0,0,0);
+ scene.add(new THREE.AmbientLight('#ffffff',1.40));
+ const sun=new THREE.DirectionalLight('#fff9ef',2.1);
+ sun.position.set(-6,7,11);sun.castShadow=true;
+ sun.shadow.mapSize.set(1024,1024);
+ const bound=Math.max(W,layout.H)*1.3;
+ Object.assign(sun.shadow.camera,{
+  left:-bound,right:bound,top:bound,bottom:-bound,near:.1,far:60});
+ sun.shadow.bias=-.00025;sun.shadow.normalBias=.022;scene.add(sun);
+ const bounce=new THREE.DirectionalLight('#e9ecee',.56);
+ bounce.position.set(8,-3,8);scene.add(bounce);
+ paperTexture=new THREE.CanvasTexture(snapshot);
+ paperTexture.colorSpace=THREE.SRGBColorSpace;
+ paperTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+ paperHeight=new THREE.TextureLoader().load('./assets/newsprint-height.jpg');
+ paperHeight.wrapS=paperHeight.wrapT=THREE.RepeatWrapping;
+ paperHeight.repeat.set(2.0,2.0*layout.H/W);
+ const face=new THREE.MeshStandardMaterial({
+   map:paperTexture,roughness:1,metalness:0,side:THREE.FrontSide,
+   bumpMap:paperHeight,bumpScale:.020
+ });
+ const reverse=new THREE.MeshStandardMaterial({
+   color:'#f1ede3',roughness:1,metalness:0,side:THREE.BackSide,
+   bumpMap:paperHeight,bumpScale:.025
+ });
+ front=new THREE.Mesh(model.renderGeometry,face);front.castShadow=true;
+ back=new THREE.Mesh(model.renderGeometry,reverse);
+ scene.add(front,back);shadow();
+ overlay.addEventListener('pointerdown',onOverlayDown);
+ overlay.addEventListener('pointermove',onOverlayMove);
+ overlay.addEventListener('pointerup',onOverlayUp);
+ overlay.addEventListener('pointercancel',onOverlayUp);
+ overlay.addEventListener('lostpointercapture',onOverlayUp);
+ main.style.opacity='0';
+ clearScars();
 }
 function tick(now){
- frame=0;if(!active||document.hidden||flatMode)return;
+ frame=0;
+ if(!renderer||!model||state==='idle')return;
  const dt=lastTime?clamp((now-lastTime)/1000,1/240,.16):1/60;
- lastTime=now;
- model.step(dt);
+ lastTime=now;model.step(dt);
  if(front.geometry!==model.renderGeometry){
-  front.geometry=model.renderGeometry;back.geometry=model.renderGeometry;
+   front.geometry=model.renderGeometry;back.geometry=model.renderGeometry;
  }
- renderer.shadowMap.needsUpdate=true;
  renderer.render(scene,camera);
- paintStatus();
- if(pointer||orbit||model.phase==='settling'||now-awake<1800)frame=requestAnimationFrame(tick);
- else lastTime=0;
-}
-function repaintPaper(){
- if(!active||!window.__WT_NEWSprint)return;
- const info=window.__WT_NEWSprint;
- const selection=info.selection||{};
- const key=info.snapshot.snapshot_id+'|'+[selection.metric,selection.range,selection.tab,selection.filter,info.lang].join('|');
- if(key===lastKey)return;
- lastKey=key;
- try{
-  const projection=projectSnapshot(info.snapshot,selection);
-  const original=createPortraitPrint(info.snapshot,info.lang==='zh-CN'?'zh':'en',selection);
-  // Preserve the 1200x1800 typography; use a smaller print map for the
-  // optical compositor to keep redraws bounded on integrated GPUs.
-  const print=document.createElement('canvas');
-  print.width=900;print.height=1350;
-  print.getContext('2d',{alpha:false}).drawImage(original,0,0,900,1350);
-  const maps=buildMaterialCanvases(print,paperScan,{
-   fiber:.63,roughness:.99,absorption:1.36,pinholes:.85,
-   spread:.45,mottle:.82,opaquePrint:true,paperColor:[.94,.935,.905]
-  });
-  disposeTexture(printTexture);disposeTexture(normalTexture);disposeTexture(roughTexture);
-  printTexture=texture(maps.albedo,THREE.SRGBColorSpace);
-  normalTexture=texture(maps.normal);
-  roughTexture=texture(maps.roughness);
-  frontMaterial.map=printTexture;frontMaterial.normalMap=normalTexture;
-  frontMaterial.roughnessMap=roughTexture;frontMaterial.needsUpdate=true;
-  flat.src=maps.albedo.toDataURL('image/png');
-  flat.alt='Printed whereToken public activity snapshot, '+info.snapshot.as_of_date;
-  lastPrintValue=projection.total.display;
-  model.reset({clearMemories:true});wake();
-  window.dispatchEvent(new Event('wt:paper3d-ready'));
- }catch(e){
-  console.warn('Newsprint print map failed, keeping existing readable HTML',e);
-  lastKey='';host.hidden=true;
+ if(model.phase==='resting'&&!drag){
+   restore();return;
  }
+ if(model.phase==='latched'&&!drag){
+   // The print stays folded until the user unfolds it or clicks elsewhere.
+   return;
+ }
+ frame=requestAnimationFrame(tick);
 }
-function init3D(){
- renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'default'});
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.12;
- renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
- renderer.shadowMap.autoUpdate=false;
- scene=new THREE.Scene();scene.background=new THREE.Color('#cbc9c2');
- camera=new THREE.PerspectiveCamera(33,1,.1,110);
- mainLight=new THREE.DirectionalLight('#fff6e7',2.15);
- mainLight.position.set(-7,9,9);mainLight.castShadow=true;
- mainLight.shadow.mapSize.set(2048,2048);
- Object.assign(mainLight.shadow.camera,{left:-11,right:11,top:15,bottom:-15,near:.1,far:50});
- mainLight.shadow.bias=-.00024;mainLight.shadow.normalBias=.025;mainLight.shadow.radius=3.5;
- scene.add(mainLight,mainLight.target);
- fillLight=new THREE.HemisphereLight('#faf8ef','#868276',.75);scene.add(fillLight);
- const bounce=new THREE.DirectionalLight('#f6f0e2',.95);
- bounce.position.set(8,-2,11);scene.add(bounce);
- spot=new THREE.PointLight('#fff4e4',8.5,7.8,2);spot.position.set(0,1.8,3.8);scene.add(spot);
- const table=new THREE.Mesh(new THREE.PlaneGeometry(100,100),
-  new THREE.MeshStandardMaterial({color:'#c4c2bc',roughness:1,metalness:0}));
- table.position.z=-.09;table.receiveShadow=true;scene.add(table);
- model=new PaperFoldSheet({width:W,height:H});
- frontMaterial=new THREE.MeshStandardMaterial({
-  color:'#fffef9',roughness:.98,metalness:0,side:THREE.FrontSide,
-  normalScale:new THREE.Vector2(.29,.29)
- });
- backMaterial=new THREE.MeshStandardMaterial({
-  color:'#eeeadf',roughness:1,metalness:0,side:THREE.BackSide
- });
- front=new THREE.Mesh(model.renderGeometry,frontMaterial);
- front.castShadow=true;front.receiveShadow=false;scene.add(front);
- back=new THREE.Mesh(model.renderGeometry,backMaterial);
- back.receiveShadow=false;scene.add(back);
- const blank=document.createElement('canvas');blank.width=300;blank.height=450;
- const blankCtx=blank.getContext('2d');blankCtx.fillStyle='#fff';
- blankCtx.fillRect(0,0,blank.width,blank.height);
- const reverse=buildMaterialCanvases(blank,paperScan,{
-  fiber:.69,roughness:.99,absorption:1.36,pinholes:0,
-  spread:0,mottle:.64,opaquePrint:true,paperColor:[.945,.933,.904]
- });
- // The reverse side is unprinted; avoid mirrored text.
- backPrintTexture=texture(reverse.albedo,THREE.SRGBColorSpace);
- backMaterial.map=backPrintTexture;backMaterial.needsUpdate=true;
- canvas.addEventListener('contextmenu',e=>e.preventDefault());
- canvas.addEventListener('pointerdown',e=>{
-  if(e.button===2){
-   orbit={x:e.clientX,y:e.clientY,yaw,pitch};
-   canvas.setPointerCapture(e.pointerId);wake();return;
-  }
-  if(e.button!==0)return;
-  const ray=rayOf(e),contact=hit(e,ray);
-  if(!contact||!contact.uv||!model.grabUV(contact.uv.x,contact.uv.y,e.timeStamp))return;
-  const plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
-  const start=ray.ray.intersectPlane(plane,new THREE.Vector3());
-  if(!start)return;
-  pointer={id:e.pointerId,start,plane};
-  canvas.setPointerCapture(e.pointerId);canvas.style.cursor='grabbing';wake();
- });
- canvas.addEventListener('pointermove',e=>{
-  if(orbit){
-   yaw=clamp(orbit.yaw+(e.clientX-orbit.x)*.004,-.7,.7);
-   pitch=clamp(orbit.pitch+(e.clientY-orbit.y)*.004,-.5,.48);cameraFit();wake();return;
-  }
-  const ray=rayOf(e);
-  if(pointer){
-   const p=ray.ray.intersectPlane(pointer.plane,new THREE.Vector3());
-   if(p)model.dragDelta(p.x-pointer.start.x,p.y-pointer.start.y,e.timeStamp);
-   wake();return;
-  }
-  const hovered=hit(e,ray);
-  const uv=hovered?.uv;
-  const edge=uv&&Math.min(uv.x,1-uv.x,uv.y,1-uv.y)<.115;
-  canvas.style.cursor=edge||(model.phase==='latched'&&hovered&&onFlap(hovered))?'grab':'default';
-  if(hovered){
-   spot.position.lerp(new THREE.Vector3(hovered.point.x,hovered.point.y,3.8),.3);wake();
-  }
- });
- const end=e=>{
-  if(pointer&&pointer.id===e.pointerId)model.release(e.timeStamp);
-  pointer=null;orbit=null;canvas.style.cursor='default';wake();
+function wake(){
+ if(renderer&&!frame)frame=requestAnimationFrame(tick);
+}
+function setFoldMotion(x,y,t){
+ if(!drag||!model)return;
+ const dx=(x-drag.x)*W/layout.width*.82;
+ const dy=-(y-drag.y)*layout.H/layout.height*.82;
+ model.dragDelta(dx,dy,t);wake();
+}
+function planeUVAt(e){
+ const r=overlay.getBoundingClientRect();
+ return {
+  x:(e.clientX-r.left)/r.width*W-W/2,
+  y:layout.H/2-(e.clientY-r.top)/r.height*layout.H
  };
- canvas.addEventListener('pointerup',end);
- canvas.addEventListener('pointercancel',end);
- canvas.addEventListener('lostpointercapture',end);
- // On a vertically scrolling profile, unmodified wheel always scrolls the
- // document. Require Alt/Ctrl/Meta for the 3D paper zoom, unlike the lab demo.
- canvas.addEventListener('wheel',e=>{
-  if(!(e.altKey||e.ctrlKey||e.metaKey))return;
-  e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.92:1.09),.6,3.5);
-  cameraFit();wake();
- },{passive:false});
- const reset=action('reset'),grazingButton=action('light'),flatButton=action('flat');
- reset?.addEventListener('click',()=>{model.reset({clearMemories:true});wake()});
- grazingButton?.addEventListener('click',()=>{
-  grazing=!grazing;grazingButton.setAttribute('aria-pressed',String(grazing));
-  mainLight.position.set(grazing?-8:-7,grazing?5:9,grazing?3.5:9);
-  mainLight.intensity=grazing?1.85:2.15;fillLight.intensity=grazing?1.05:.75;
-  spot.intensity=grazing?4.4:8.5;wake();
- });
- flatButton?.addEventListener('click',()=>{
-  flatMode=!flatMode;
-  flat.hidden=!flatMode;canvas.hidden=flatMode;
-  flatButton.setAttribute('aria-pressed',String(flatMode));
-  if(!flatMode){resize();wake();}
- });
- new ResizeObserver(resize).observe(board);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});
 }
-let launching=false,queued=0;
-async function activate(){
- if(!selected()){active=false;host.hidden=true;return;}
- host.hidden=false;
- if(!renderer){
-  if(launching)return;
-  launching=true;
-  try{
-   paperScan=await loadLocalImage('./assets/newsprint-height.jpg');
-   if(!selected()){host.hidden=true;return;}
-   init3D();
-  }catch(e){
-   console.warn('Interactive paper unavailable; leaving complete HTML dashboard',e);
-   host.hidden=true;return;
-  }finally{launching=false;}
+function acquireFold(e){
+ if(!model)return false;
+ const p=planeUVAt(e);
+ const ray=new THREE.Raycaster();
+ ray.setFromCamera(new THREE.Vector2(p.x/(W/2),p.y/(layout.H/2)),camera);
+ const hits=ray.intersectObjects([front,back],false);
+ const flap=hits.find(hit=>{
+  const u=hit.uv;if(!u||!model.hinge)return false;
+  return model.q({x:(u.x-.5)*W,y:(u.y-.5)*layout.H})>model.bandWidth*.3;
+ });
+ const match=flap||hits[0];
+ const u=match?.uv?.x??clamp((p.x+W/2)/W,0,1);
+ const v=match?.uv?.y??clamp((p.y+layout.H/2)/layout.H,0,1);
+ return model.grabUV(u,v,e.timeStamp);
+}
+function onOverlayDown(e){
+ if(!allowed()){restore();return;}
+ if(e.button!==0)return;
+ if(!acquireFold(e)){restore();return;}
+ e.preventDefault();
+ drag={id:e.pointerId,x:e.clientX,y:e.clientY};
+ overlay.setPointerCapture(e.pointerId);
+ state='folding';wake();
+}
+function onOverlayMove(e){
+ if(!drag||e.pointerId!==drag.id)return;
+ setFoldMotion(e.clientX,e.clientY,e.timeStamp);
+}
+function onOverlayUp(e){
+ if(!drag||e.pointerId!==drag.id)return;
+ drag=null;
+ model.release(e.timeStamp);
+ state='folding';wake();
+}
+function onMainMove(e){
+ if(!pending||pending.id!==e.pointerId)return;
+ pending.x=e.clientX;pending.y=e.clientY;
+ if(model&&drag)setFoldMotion(e.clientX,e.clientY,e.timeStamp);
+}
+function onMainUp(e){
+ if(!pending||pending.id!==e.pointerId)return;
+ pending.x=e.clientX;pending.y=e.clientY;
+ pending.pressed=false;
+ if(model&&drag){drag=null;model.release(e.timeStamp);wake();}
+}
+async function captureAndFold(input,epoch){
+ try {
+  // The cloned document drops pigment-clipped backgrounds because html2canvas
+  // cannot rasterize background-clip:text consistently in all browsers.
+  // It captures the SAME public DOM, never a second data model.
+  const targetHeight=Math.max(1,input.rect.height);
+  const scale=Math.min(1.1,2400/targetHeight,1700/input.rect.width);
+  const snapshot=await html2canvas(main,{
+    backgroundColor:'#f3f0e8',scale,logging:false,
+    useCORS:false,allowTaint:false,removeContainer:true,
+    onclone:doc=>doc.documentElement.classList.add('wt-fold-capture')
+  });
+  if(epoch!==captureEpoch||!allowed()||!pending)return;
+  preservePrintInCapture(snapshot);
+  try{initGeometry(snapshot);}catch(err){
+   lastError=err?.message||String(err);restore();return;
+  }
+  const grab=input.grab;
+  if(!model.grabUV(grab.u,grab.v,performance.now())){
+    restore();return;
+  }
+  drag={id:input.id,x:input.startX,y:input.startY};
+  state='folding';
+  if(pending.pressed){
+   setFoldMotion(pending.x,pending.y,performance.now());
+  }else{
+   const moved=Math.hypot(pending.x-input.startX,pending.y-input.startY);
+   if(moved<30){
+    // Even a plain click on an unseen corner reveals a tiny paper lift.
+    const ix=grab.u>.5?-1:1,iy=grab.v>.5?-1:1;
+    model.dragDelta(ix*.15,iy*.15,performance.now());
+   }else{
+    setFoldMotion(pending.x,pending.y,performance.now());
+   }
+   drag=null;model.release(performance.now());pending=null;
+  }
+  wake();
+ }catch(error){
+  lastError=error?.message||String(error);
+  restore();
  }
- active=true;resize();
- if(queued)clearTimeout(queued);
- // A wall range/tab selection can rerender five times in quick succession.
- // Coalesce print-map recomposition instead of blocking each DOM interaction.
- queued=setTimeout(()=>{queued=0;repaintPaper();},350);
- wake();
 }
-function sync(){
- if(!selected()){active=false;host.hidden=true;return;}
- activate();
+function onMainDown(e){
+ if(state!=='idle')return;
+ const grab=cornerAt(e);
+ if(!grab)return;
+ e.preventDefault();e.stopPropagation();
+ const epoch=++captureEpoch;
+ pending={id:e.pointerId,pressed:true,x:e.clientX,y:e.clientY};
+ const input={id:e.pointerId,startX:e.clientX,startY:e.clientY,
+   rect:grab.rect,grab};
+ try{main.setPointerCapture(e.pointerId);}catch(_){}
+ state='preparing';
+ captureAndFold(input,epoch);
 }
-window.addEventListener('wt:profile-render',sync);
-fine.addEventListener('change',sync);
-reduced.addEventListener('change',sync);
-small.addEventListener('change',sync);
-if(window.__WT_NEWSprint)sync();
+function onGlobalDown(e){
+ if(state==='folding'&&overlay&&!overlay.contains(e.target)){
+   restore();
+ }
+}
+main.addEventListener('pointerdown',onMainDown,true);
+main.addEventListener('pointermove',onMainMove,true);
+main.addEventListener('pointerup',onMainUp,true);
+main.addEventListener('pointercancel',onMainUp,true);
+document.addEventListener('pointerdown',onGlobalDown,true);
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&state!=='idle')restore();
+});
+window.addEventListener('wt:profile-render',invalidate);
+window.addEventListener('scroll',()=>{
+ if(state==='folding'&&!drag)restore();
+},{passive:true});
+window.addEventListener('resize',invalidate,{passive:true});
+fine.addEventListener('change',invalidate);
+reduced.addEventListener('change',invalidate);
+small.addEventListener('change',invalidate);
 window.__WT_PAPER3D__={
-  getDiagnostics:()=>({active,ready:!!renderer,phase:model?.phase||'none',
-   palette:window.__WT_NEWSprint?.palette||'',asOf:window.__WT_NEWSprint?.snapshot?.as_of_date||'',
-   printKey:lastKey,printedTotal:lastPrintValue,
-   ...(model?.getDiagnostics()||{})}),
-  refresh:sync
+ getDiagnostics:()=>({
+  ready:true,mode:'single DOM report · edge Easter egg',
+  active:state!=='idle',state,
+  extraReportSections:document.querySelectorAll('#wt-physical-paper').length,
+  inkAsset:'newsprint-ink.png',
+  error:lastError,
+  ...(model?.getDiagnostics()||{})
+ })
 };
