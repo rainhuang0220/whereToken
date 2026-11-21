@@ -7,8 +7,8 @@ export default defineConfig({
   workers: 1,
   reporter: "line",
   projects: [
-    { name: "chromium", use: { browserName: "chromium", headless: true } },
-    { name: "firefox", use: { browserName: "firefox", headless: true } },
-    { name: "webkit", use: { browserName: "webkit", headless: true } },
+    { name: "chromium", use: { browserName: "chromium", headless: true, reducedMotion: "reduce" } },
+    { name: "firefox", use: { browserName: "firefox", headless: true, reducedMotion: "reduce" } },
+    { name: "webkit", use: { browserName: "webkit", headless: true, reducedMotion: "reduce" } },
   ],
 });

@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://github.com; connect-src 'self' https://wheretoken.plainlist.space; base-uri 'none'; form-action 'none'">
   <link rel="icon" href="data:,">
   <title>whereToken · coding activity</title>
-  <link rel="stylesheet" href="./assets/profile.css?v=0bf4aec6e350bcd23321c5199aa9b4387a75273836998c1b8c0dc8aa89317f3b">
+  <link rel="stylesheet" href="./assets/profile.css?v=39036903a7cc317598f7246cdab201921dbd05316a9aacfa075f1c0d2153c53b">
   <script src="./assets/lang.js?v=f9791e870946099c08ec428e27435982c931a179d16a44b6fca929b454912096"></script>
 </head>
 <body>
@@ -48,6 +48,27 @@
 
   <main id="main">
     <p class="identity" id="identity" hidden></p>
+
+    <section id="wt-physical-paper" class="wt-physical-paper" aria-label="Interactive printed newspaper" hidden>
+      <div class="wt-paper-caption">
+        <div class="wt-paper-caption-copy">
+          <strong>whereToken / THE INTERACTIVE NEWSPRINT</strong>
+          <span>Physical print · press and fold a corner or edge · live public snapshot</span>
+        </div>
+        <div class="wt-paper-actions" role="group" aria-label="Newspaper material controls">
+          <span id="wt-paper-status" aria-live="off">PAPER · READY</span>
+          <button type="button" data-paper-reset aria-label="Unfold and clear paper creases">Reset paper</button>
+          <button type="button" data-paper-light aria-pressed="false">Side light</button>
+          <button type="button" data-paper-flat aria-pressed="false">Read flat</button>
+        </div>
+      </div>
+      <div id="wt-paper-stage" class="wt-paper-stage">
+        <canvas id="wt-paper-scene" aria-hidden="true"></canvas>
+        <img id="wt-paper-flat-image" alt="" hidden>
+      </div>
+      <p id="wt-paper-hint" class="wt-paper-hint">Drag a paper corner or side to fold · right-drag to orbit · wheel to zoom.
+        Printed front page follows the public snapshot; interactive figures and controls continue below.</p>
+    </section>
 
     <section class="overview" aria-labelledby="hero-label">
       <div class="hero">
@@ -147,7 +168,7 @@
     </details>
   </main>
   <script src="./assets/messages.js?v=162b73dc1b48fe19c770f81e2c64d930e96cd1c27a2e2d22d0ba16219d829e84"></script>
-  <script src="./assets/profile.js?v=1252156a4e4b8fffceada38dad8290ab0a2db70f5722b91628e8f180147dc394"></script>
-  <script src="./assets/paper.js?v=81761384fe72a1f36d7d022f945bd9e642c361854a081551a92a6c6432abe683"></script>
+  <script src="./assets/profile.js?v=06068fb449331e99426be3421831f278680e4b6b1285746160180e7841c3c1ef"></script>
+  <script src="./assets/paper.js?v=65db4052ddb713615854820e275e89d188dc4d1bb898692fb209cd0a42281242"></script>
 </body>
 </html>

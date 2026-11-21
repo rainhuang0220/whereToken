@@ -68,10 +68,19 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             profile-e2e/package-lock.json
+            profile-paper/package-lock.json
 
       - name: Web tests
         working-directory: web
         run: npm ci && npm test
+
+      - name: Verify reproducible physical Newsprint bundle (Linux)
+        if: runner.os == 'Linux'
+        working-directory: profile-paper
+        run: |
+          npm ci
+          npm run build
+          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper.js
 
       - name: Public profile browser tests (Linux)
         if: runner.os == 'Linux'

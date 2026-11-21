@@ -82,6 +82,9 @@ test("loads the static project subpath with truthful snapshot provenance", async
 });
 
 test("switches every range and optional breakdown tab", async ({ page }) => {
+  // The range controls must not wait for optical paper rendering.
+  // Real visitors may choose the lightweight Cobalt theme.
+  presentation = {schema_version:1,public_palette:"cobalt",revision:"ranges"};
   await page.goto(baseURL);
   for (const [label, id] of [["Today", "today"], ["7d", "7d"], ["30d", "30d"], ["53w", "53w"], ["All", "all"]]) {
     await page.getByRole("tab", { name: label, exact: true }).click();
@@ -496,15 +499,18 @@ test("keeps mobile month labels and wrapped metadata rules clean", async ({ page
 });
 
 test("makes no external runtime request", async ({ page }) => {
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto(baseURL);
   await expect(page.locator("#hero-value")).not.toBeEmpty();
   await expect.poll(() => requests.some((url) => url.includes("newsprint-height.jpg"))).toBe(true);
-  const paths = requests.map((url) => url.split("?")[0]);
+  await expect.poll(() => requests.some((url) => url.includes("paper-3d.js"))).toBe(true);
+  const paths = [...new Set(requests.map((url) => url.split("?")[0]))];
   expect(paths.sort()).toEqual([
     "/whereToken/profile/",
     "/whereToken/profile/assets/lang.js",
     "/whereToken/profile/assets/messages.js",
     "/whereToken/profile/assets/paper.js",
+    "/whereToken/profile/assets/paper-3d.js",
     "/whereToken/profile/assets/profile.css",
     "/whereToken/profile/assets/profile.js",
     "/whereToken/profile/assets/newsprint-height.jpg",
@@ -512,10 +518,44 @@ test("makes no external runtime request", async ({ page }) => {
     "/whereToken/profile/profile.json",
     "/whereToken/profile/presentation.json",
   ].sort());
-  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js"]) {
+  for (const name of ["profile.css", "lang.js", "messages.js", "profile.js", "paper.js", "paper-3d.js"]) {
     expect(requests.find((url) => url.includes("/assets/" + name))).toMatch(/\?v=[0-9a-f]{64}$/);
   }
   expect(requests.find((url) => url.includes("profile.json"))).not.toContain("?v=");
+});
+
+test("Newsprint folds the sanitized snapshot while preserving dashboard controls", async ({ page }) => {
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  test.setTimeout(70000);
+  await page.goto(baseURL + "?palette=newsprint");
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().ready), {timeout:30000}).toBe(true);
+  await expect(page.locator("#wt-physical-paper")).toBeVisible();
+  await expect(page.locator("#wt-paper-flat-image")).toHaveJSProperty("naturalWidth", 900);
+  const first = await page.evaluate(() => window.__WT_PAPER3D__.getDiagnostics());
+  expect(first.asOf).toBe(snapshot.as_of_date);
+  expect(first.palette).toBe("newsprint");
+  await page.locator("[data-paper-flat]").click();
+  await expect(page.locator("#wt-paper-flat-image")).toBeVisible();
+  await page.locator("[data-paper-flat]").click();
+  await page.getByRole("tab", { name: "7d", exact: true }).click();
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
+  await expect.poll(() => page.evaluate(() => window.__WT_NEWSprint?.selection.range)).toBe("7d");
+  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().printedTotal), {timeout:15000})
+    .toBe(snapshot.periods["7d"].totals.total.display);
+  await page.getByRole("tab", {name:"Requests",exact:true}).click();
+  await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().printedTotal), {timeout:15000})
+    .toBe(snapshot.periods["7d"].requests.display);
+  await page.getByRole("tab", { name: "Cobalt", exact: true }).click();
+  await expect(page.locator("#wt-physical-paper")).toBeHidden();
+  await expect(page.locator("#wall .cell")).not.toHaveCount(0);
+});
+test("Newsprint degrades gracefully to HTML on small screens", async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(baseURL + "?palette=newsprint");
+  await expect(page.locator("#wt-physical-paper")).toBeHidden();
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  await expect(page.locator("#wall .cell")).not.toHaveCount(0);
 });
 
 test("uses the owner palette for a clean visitor and keeps a visitor choice local", async ({ browser }) => {

@@ -19,6 +19,7 @@ var GeneratedFiles = []string{
 	"assets/messages.js",
 	"assets/profile.js",
 	"assets/paper.js",
+	"assets/paper-3d.js",
 	"assets/newsprint-surface.jpg",
 	"assets/newsprint-height.jpg",
 	"presentation.json",
@@ -36,6 +37,7 @@ var AssetRevisionInputs = []string{
 	"assets/messages.js",
 	"assets/profile.js",
 	"assets/paper.js",
+	"assets/paper-3d.js",
 	"assets/newsprint-surface.jpg",
 	"assets/newsprint-height.jpg",
 	"presentation.json",
@@ -117,6 +119,12 @@ func BundleWith(snap Snapshot, presentation Presentation) (map[string][]byte, er
 		return nil, err
 	}
 	out["assets/paper.js"] = paperJS
+	physicalJS, err := profilewebembed.Read("assets/paper-3d.js")
+	if err != nil {
+		return nil, err
+	}
+	out["assets/paper-3d.js"] = physicalJS
+
 	height, err := profilewebembed.Read("assets/newsprint-height.jpg")
 	if err != nil {
 		return nil, err

@@ -15,6 +15,7 @@ on:
       - "docs/media/public-profile-demo/**"
       - "public-profile/**"
       - "profile-e2e/**"
+      - "profile-paper/**"
       - "internal/profilewebembed/**"
       - "ci/github-workflows/pages.yml"
       - ".github/workflows/pages.yml"
@@ -53,6 +54,7 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             profile-e2e/package-lock.json
+            profile-paper/package-lock.json
 
       - name: Test and build the dashboard demo
         working-directory: web
@@ -60,6 +62,13 @@ jobs:
           npm ci
           npm test
           VITE_DEMO=1 npm run build
+
+      - name: Rebuild and verify the self-hosted D4 newspaper engine
+        working-directory: profile-paper
+        run: |
+          npm ci
+          npm run build
+          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper.js
 
       - name: Test the public profile in Chromium, Firefox and WebKit
         working-directory: profile-e2e

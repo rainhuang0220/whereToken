@@ -268,12 +268,32 @@
     img.src = "./assets/newsprint-height.jpg";
   }
 
+  // Lazy-load the Three.js paper only for visitors who selected Newsprint.
+  // Other palettes continue to load only the original lightweight dashboard.
+  var physicalSource = "./assets/paper-3d.js?v=a6b34e5b4e08a7001169cd49b8c3cb8d2e3a35d1c2699b8c571a94828eddb12d";
+  var physicalRequested = false;
+  var physicalReady = false;
+  function requestPhysicalPaper() {
+    if (physicalRequested || !wantPaper()) return;
+    if (!fine.matches || reduce.matches || window.innerWidth <= 700) return;
+    physicalRequested = true;
+    var script = document.createElement("script");
+    script.src = physicalSource;
+    script.defer = true;
+    script.onerror = function () { physicalRequested = false; };
+    document.head.appendChild(script);
+  }
+
+  function physicalDisplayed() {
+    return physicalReady && fine.matches && !reduce.matches && window.innerWidth > 700;
+  }
   function wantPaper() {
-    return document.documentElement.getAttribute("data-activity-palette") === "newsprint";
+    return document.documentElement.getAttribute("data-activity-palette") === "newsprint" && !physicalDisplayed();
   }
 
   function sync() {
     if (wantPaper()) {
+      requestPhysicalPaper();
       if (!active) start();
       else draw();
     } else if (active) {
@@ -281,11 +301,18 @@
     }
   }
 
+  window.addEventListener("wt:paper3d-ready", function () {
+    physicalReady = true;
+    sync();
+  });
   new MutationObserver(sync).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-activity-palette", "data-theme"],
   });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
+  window.addEventListener("resize", requestPhysicalPaper, {passive:true});
+  fine.addEventListener("change", requestPhysicalPaper);
+  reduce.addEventListener("change", requestPhysicalPaper);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", sync);
   } else {

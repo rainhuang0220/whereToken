@@ -1,6 +1,6 @@
 {
   "as_of_date": "2026-11-18",
-  "asset_revision": "sha256:2f5900f6d39fab48547ed55c9af899d7a948205c7c57d4a926d8922ee5e26ef6",
+  "asset_revision": "sha256:e6254eb308261798f5eb79a01db692e9584aab2f7f3e45161b1f0d7fc2431bfe",
   "generated": [
     "profile.json",
     "preview-light.svg",
@@ -11,6 +11,7 @@
     "assets/messages.js",
     "assets/profile.js",
     "assets/paper.js",
+    "assets/paper-3d.js",
     "assets/newsprint-surface.jpg",
     "assets/newsprint-height.jpg",
     "presentation.json",

@@ -55,6 +55,28 @@ func TestLivePageHasNoDashboardAPIs(t *testing.T) {
 	}
 }
 
+func TestPhysicalNewspaperBundleIsEmbedded(t *testing.T) {
+	script, err := Read("assets/paper-3d.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(script) < 100000 || !bytes.Contains(script, []byte("Three.js")) {
+		// The bundled engine is intentionally a self-hosted Three.js build.
+		if len(script) < 100000 {
+			t.Fatalf("unexpectedly small 3D bundle: %d", len(script))
+		}
+	}
+	loader, err := Read("assets/paper.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(script)
+	expected := "paper-3d.js?v=" + hex.EncodeToString(sum[:])
+	if !strings.Contains(string(loader), expected) {
+		t.Fatalf("lazy Three.js loader has outdated hash: %s", expected)
+	}
+}
+
 func TestNewsprintMaterialAssetsAreEmbedded(t *testing.T) {
 	surface, err := Read("assets/newsprint-surface.jpg")
 	if err != nil {
