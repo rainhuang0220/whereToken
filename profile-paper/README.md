@@ -1,28 +1,23 @@
-# Newspaper as a Single Native Profile
+# Newspaper: One Always-Physical D4 Sheet
 
-Newsprint is an **ink-and-paper palette** applied to whereToken's *existing*
-accessible Profile DOM. It does not create a second report, duplicated snapshot
-or framed Three.js preview. Switching Cobalt, Magenta and Newsprint preserves
-all layout measurements and all navigation, filters, charts, cells, links and
-screen-reader semantics.
+The Newspaper is **not** a CSS-only theme with a temporary folding animation.
+On desktop, selecting Newsprint creates a real Three.js D4 paper mesh immediately.
+It remains resident and visible during ordinary reading, shading the same
+physical paper with scanned fibers, reconstructed normals, roughness and light.
+The existing native Profile DOM sits in its original layout directly on that
+surface; real glyphs carry a microscopically irregular pigment texture.
 
-## The hidden D4 fold
+When a visitor discovers a sheet edge, the current native report is optically
+printed onto the **same resident D4 UV geometry** and folds. During that
+movement only, the native DOM becomes visually transparent; it is never
+duplicated, detached, moved, or replaced. When the paper recovers, the original
+interactive DOM is visible again, while real D4 geometric crease memory remains.
+A deeply folded page can be reopened by gripping the actual folded flap.
+No frames, separate previews, help labels, special paper controls, or layout
+changes exist. This is a physics renderer, not a cloth simulation.
 
-On a desktop fine-pointer device, grabbing an otherwise unmarked paper corner
-or side edge momentarily captures the currently visible native report with a
-self-hosted html2canvas renderer. D4 maps that real report (including its
-current content and activity heatmap) into a Three.js continuous-sheet fold.
-The original DOM occupies the same coordinates and is simply made transparent
-while the fold is active. On return, the native DOM immediately takes over.
-Escape or a click outside the folded paper restores the page. The physical
-model is not a full FEM or self-collision simulator.
-
-This behavior is an Easter egg, not a second UI: no display stand, button,
-label, border, dedicated scroll pane, or extra document heading is added.
-
-Text uses a real ink-density raster tile with irregular pinholes and variance
-inside its strokes. The source paper scan remains CC0 ambientCG Paper001.
-The 3D engine runs only on demand and is not loaded for Cobalt/Magenta.
+Cobalt and Magenta do not load the 3D mesh. Coarse pointer, reduced motion,
+GPU failure or small screen leave the accessible original HTML available.
 
 ## Build and verification
 

@@ -793,3 +793,37 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
   color: #181715 !important;
   -webkit-text-fill-color: #181715 !important;
 }
+
+
+/* The physical Newspaper is ALWAYS a real D4 mesh on desktop.
+   Its GPU canvas never occupies document flow, never adds a framed block,
+   and never intercepts the original report's native controls. */
+.wt-paper-resident {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+/* During a fold, one and the same report is printed onto the resident mesh.
+   The DOM is visually suspended, not detached, so it stays accessible and
+   returns immediately when the geometric paper settles. */
+:root.wt-paper-folding #main > * {
+  opacity: 0 !important;
+}
+:root.wt-paper-folding #main {
+  background: transparent !important;
+}
+
+
+/* Folding never creates a browser text selection, while ordinary report
+   reading and copy/paste keep their native behavior. */
+:root.wt-paper-folding,
+:root.wt-paper-folding * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
