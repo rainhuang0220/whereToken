@@ -219,7 +219,10 @@ function init3D(){
  canvas.addEventListener('pointerup',end);
  canvas.addEventListener('pointercancel',end);
  canvas.addEventListener('lostpointercapture',end);
+ // On a vertically scrolling profile, unmodified wheel always scrolls the
+ // document. Require Alt/Ctrl/Meta for the 3D paper zoom, unlike the lab demo.
  canvas.addEventListener('wheel',e=>{
+  if(!(e.altKey||e.ctrlKey||e.metaKey))return;
   e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?.92:1.09),.6,3.5);
   cameraFit();wake();
  },{passive:false});

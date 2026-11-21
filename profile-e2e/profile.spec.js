@@ -531,6 +531,14 @@ test("Newsprint folds the sanitized snapshot while preserving dashboard controls
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
   await expect.poll(() => page.evaluate(() => window.__WT_PAPER3D__?.getDiagnostics().ready), {timeout:30000}).toBe(true);
   await expect(page.locator("#wt-physical-paper")).toBeVisible();
+  // The newspaper is not a scroll trap in a vertically read report.
+  const paperArea = page.locator("#wt-paper-scene");
+  await paperArea.scrollIntoViewIfNeeded();
+  const paperBounds = await paperArea.boundingBox();
+  await page.mouse.move(paperBounds.x+paperBounds.width*.5, paperBounds.y+paperBounds.height*.5);
+  const beforeScroll = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforeScroll);
   await expect(page.locator("#wt-paper-flat-image")).toHaveJSProperty("naturalWidth", 900);
   const first = await page.evaluate(() => window.__WT_PAPER3D__.getDiagnostics());
   expect(first.asOf).toBe(snapshot.as_of_date);
