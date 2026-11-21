@@ -551,6 +551,10 @@ test("Newsprint folds its native report when a corner is grabbed",async ({ page 
   const fine=await page.evaluate(()=>matchMedia("(pointer:fine)").matches);
   if(!fine)return; // Firefox headless may expose a coarse pointer; HTML stays usable.
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().ready),{timeout:30000}).toBe(true);
+  // A still-HTML report prewarms only its temporary raster source while idle.
+  // The 3D canvas and duplicate content must remain absent until an edge grab.
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:22000}).toBe(true);
+  await expect(page.locator(".wt-fold-overlay")).toHaveCount(0);
   const report=page.locator("#main");
   const box=await report.boundingBox();
   const start={x:box.x+box.width-11,y:box.y+13};

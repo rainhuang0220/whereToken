@@ -18,6 +18,7 @@ let state='idle', pending=null, model=null, renderer=null, scene=null;
 let camera=null,front=null,back=null,overlay=null,frame=0,lastTime=0;
 let paperTexture=null,paperHeight=null,layout=null,captureEpoch=0,drag=null;
 let savedMemories=[],scars=[],lastError=null;
+let cachedFrame=null,cachedRevision=-1,snapshotInFlight=null,cacheTimer=0;
 const inkTile=new Image();
 inkTile.src='./assets/newsprint-ink.png';
 let inkPixelData=null;
@@ -131,11 +132,67 @@ function dispose(){
 function restore(){
  if(model?.memories?.length)savedMemories=model.memories.slice();
  dispose();state='idle';pending=null;renderScars();
+ cachedFrame=null;cachedRevision=-1;
+ ++captureEpoch;
+ schedulePrewarm(500);
 }
 function invalidate(){
  ++captureEpoch;
+ cachedFrame=null;cachedRevision=-1;
  if(state!=='idle')restore();
  if(!allowed())clearScars();
+ schedulePrewarm(500);
+}
+function schedulePrewarm(delay=650){
+ if(cacheTimer)clearTimeout(cacheTimer);
+ cacheTimer=0;
+ if(!allowed()||state!=='idle')return;
+ cacheTimer=setTimeout(()=>{cacheTimer=0;prewarm();},delay);
+}
+async function captureNativePage(){
+ // Capture only current native report DOM; never synthesize a duplicate.
+ const r=main.getBoundingClientRect();
+ const scale=Math.min(1.1,2400/Math.max(1,r.height),1700/Math.max(1,r.width));
+ const snapshot=await html2canvas(main,{
+  backgroundColor:'#f3f0e8',scale,logging:false,
+  useCORS:false,allowTaint:false,removeContainer:true,
+  onclone:doc=>doc.documentElement.classList.add('wt-fold-capture')
+ });
+ preservePrintInCapture(snapshot);
+ return snapshot;
+}
+function prewarm(){
+ if(!allowed()||state!=='idle')return;
+ const revision=captureEpoch;
+ if(cachedFrame&&cachedRevision===revision)return;
+ if(snapshotInFlight&&snapshotInFlight.revision===revision)return;
+ const promise=captureNativePage();
+ snapshotInFlight={revision,promise};
+ promise.then(snapshot=>{
+  if(revision===captureEpoch&&allowed()){
+   cachedFrame=snapshot;cachedRevision=revision;
+  }
+  if(snapshotInFlight?.revision===revision)snapshotInFlight=null;
+ }).catch(error=>{
+  if(snapshotInFlight?.revision===revision)snapshotInFlight=null;
+  lastError=error?.message||String(error);
+ });
+}
+async function snapshotForRevision(revision){
+ if(cachedFrame&&cachedRevision===revision)return cachedFrame;
+ if(snapshotInFlight&&snapshotInFlight.revision===revision)
+   return snapshotInFlight.promise;
+ const promise=captureNativePage();
+ snapshotInFlight={revision,promise};
+ try{
+  const image=await promise;
+  if(revision===captureEpoch&&allowed()){
+   cachedFrame=image;cachedRevision=revision;
+  }
+  return image;
+ }finally{
+  if(snapshotInFlight?.revision===revision)snapshotInFlight=null;
+ }
 }
 function shadow(){
  const receiving=new THREE.Mesh(new THREE.PlaneGeometry(W,layout.H),
@@ -287,18 +344,8 @@ function onMainUp(e){
 }
 async function captureAndFold(input,epoch){
  try {
-  // The cloned document drops pigment-clipped backgrounds because html2canvas
-  // cannot rasterize background-clip:text consistently in all browsers.
-  // It captures the SAME public DOM, never a second data model.
-  const targetHeight=Math.max(1,input.rect.height);
-  const scale=Math.min(1.1,2400/targetHeight,1700/input.rect.width);
-  const snapshot=await html2canvas(main,{
-    backgroundColor:'#f3f0e8',scale,logging:false,
-    useCORS:false,allowTaint:false,removeContainer:true,
-    onclone:doc=>doc.documentElement.classList.add('wt-fold-capture')
-  });
+  const snapshot=await snapshotForRevision(epoch);
   if(epoch!==captureEpoch||!allowed()||!pending)return;
-  preservePrintInCapture(snapshot);
   try{initGeometry(snapshot);}catch(err){
    lastError=err?.message||String(err);restore();return;
   }
@@ -332,7 +379,7 @@ function onMainDown(e){
  const grab=cornerAt(e);
  if(!grab)return;
  e.preventDefault();e.stopPropagation();
- const epoch=++captureEpoch;
+ const epoch=captureEpoch;
  pending={id:e.pointerId,pressed:true,x:e.clientX,y:e.clientY};
  const input={id:e.pointerId,startX:e.clientX,startY:e.clientY,
    rect:grab.rect,grab};
@@ -361,10 +408,13 @@ window.addEventListener('resize',invalidate,{passive:true});
 fine.addEventListener('change',invalidate);
 reduced.addEventListener('change',invalidate);
 small.addEventListener('change',invalidate);
+schedulePrewarm(250);
 window.__WT_PAPER3D__={
  getDiagnostics:()=>({
   ready:true,mode:'single DOM report · edge Easter egg',
   active:state!=='idle',state,
+  snapshotReady:!!cachedFrame&&cachedRevision===captureEpoch,
+  snapshotWarming:!!snapshotInFlight,
   extraReportSections:document.querySelectorAll('#wt-physical-paper').length,
   inkAsset:'newsprint-ink.png',
   error:lastError,
