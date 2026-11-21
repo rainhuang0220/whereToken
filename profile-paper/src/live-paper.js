@@ -247,13 +247,21 @@ function begin(e){
   return;
  }
  document.getSelection()?.removeAllRanges();
- drag={id:e.pointerId,x:e.clientX,y:e.clientY,u:q.u,v:q.v,moved:false};
+ drag={id:e.pointerId,x:e.clientX,y:e.clientY,u:q.u,v:q.v,
+   downAt:e.timeStamp,moved:false};
  e.preventDefault();e.stopPropagation();
  try{main.setPointerCapture(e.pointerId);}catch(_){}
  wake(1500);
 }
 function move(e){
  if(!drag||drag.id!==e.pointerId||!model)return;
+ // A pointermove queued BEFORE pointerdown may arrive after capture on some
+ // browsers. It often carries the old (0,0) cursor and produces an impossible
+ // instantaneous 179-degree fold. Never treat stale/no-button motion as drag.
+ if((e.buttons&1)===0||e.timeStamp<=drag.downAt)return;
+ const travel=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);
+ if(!drag.moved&&e.timeStamp-drag.downAt<120&&
+    travel>Math.min(450,layout.width*.42))return;
  const dx=(e.clientX-drag.x)*W/layout.width*.85;
  const dy=-(e.clientY-drag.y)*layout.H/layout.height*.85;
  drag.moved=Math.max(Math.abs(e.clientX-drag.x),

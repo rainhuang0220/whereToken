@@ -596,8 +596,22 @@ test("physical Newsprint responds continuously to short and deep drags",async ({
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
   const rect=await page.locator("#main").boundingBox();
   const start={x:rect.x+rect.width-12,y:rect.y+13};
+  // Emulate a pointermove queued before pointerdown and delivered after
+  // capture. The old implementation treated (0,0) as a 5-unit fold impulse.
+  await page.evaluate(()=>{
+    window.__wtCapturedPointerId=1;
+    document.addEventListener("pointerdown",event=>{
+      window.__wtCapturedPointerId=event.pointerId;
+    },{once:true,capture:true});
+  });
   await page.mouse.move(start.x,start.y);
   await page.mouse.down();
+  await page.evaluate(()=>document.dispatchEvent(new PointerEvent("pointermove",{
+    bubbles:true,pointerId:window.__wtCapturedPointerId,
+    pointerType:"mouse",clientX:0,clientY:0,buttons:0
+  })));
+  const before=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
+  expect(before.targetDegrees).toBeLessThan(4);
   await page.mouse.move(start.x-110,start.y+95,{steps:17});
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(25);
   const short=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
