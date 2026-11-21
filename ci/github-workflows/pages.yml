@@ -70,15 +70,14 @@ jobs:
           npm run build
           git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper.js
 
-      # The complete 129-case browser suite remains a required CI test.
-      # Pages runs the cross-browser smoke suite so deployment is not blocked
-      # by duplicate full-suite software-WebGL sessions.
-      - name: Smoke-test public profile and Newsprint in all three browsers
-        working-directory: profile-e2e
+      # Full cross-browser tests remain in CI. Do not duplicate the large
+      # Playwright browser download during GitHub Pages publication.
+      - name: Verify static public profile and newspaper assets
         run: |
-          npm ci
-          npx playwright install --with-deps chromium firefox webkit
-          npx playwright test --grep "loads the static project subpath|switches every range and optional breakdown tab|makes no external runtime request|Newsprint folds|Newsprint degrades|uses the owner palette for a clean visitor"
+          python3 scripts/profile_pages_test.py
+          node --check public-profile/assets/profile.js
+          node --check public-profile/assets/paper.js
+          test -s public-profile/assets/paper-3d.js
 
       - name: Assemble the Pages tree
         run: |
