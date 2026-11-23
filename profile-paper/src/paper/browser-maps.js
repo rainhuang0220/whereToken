@@ -12,11 +12,18 @@ export function loadLocalImage(src) {
   });
 }
 
+function createCanvas(width, height) {
+  if (typeof document === 'undefined') return new OffscreenCanvas(width, height);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
 // Keep paper fibers at a fixed CSS-pixel scale even as the document expands.
 // Mirrored tiles meet at identical edges; no stretched "white noise" overlay.
 function drawMap(image,width,height,blur=0,scale=1){
- const canvas=document.createElement('canvas');
- canvas.width=width;canvas.height=height;
+ const canvas=createCanvas(width,height);
  const ctx=canvas.getContext('2d',{willReadFrequently:true});
  const sourceWidth=image.naturalWidth||image.width;
  const sourceHeight=image.naturalHeight||image.height;
@@ -35,9 +42,7 @@ function drawMap(image,width,height,blur=0,scale=1){
 }
 
 export function toCanvas(map) {
-  const canvas = document.createElement('canvas');
-  canvas.width = map.width;
-  canvas.height = map.height;
+  const canvas = createCanvas(map.width, map.height);
   const context = canvas.getContext('2d');
   const image = new ImageData(new Uint8ClampedArray(map.data), map.width, map.height);
   context.putImageData(image, 0, 0);

@@ -1,48 +1,42 @@
-# Newspaper: one whole, always-printed D4 document
+# Newsprint rendering
 
-Desktop Newsprint is a single continuous Three.js `PaperFoldSheet`, not a CSS
-theme, a central card, or a temporary folding animation. Its UV space covers the
-viewport width and the document's complete scroll height, including the header,
-controls, activity, breakdown, and technical details. A fixed viewport canvas
-renders that document-sized mesh; scrolling moves only the orthographic camera.
+The native document owns layout, text, input, scrolling, and accessibility.
+A fine-pointer desktop with motion enabled additionally renders a
+`PaperFoldSheet` using Three.js in a dedicated Worker. Its UVs cover the full
+report, from the header through the technical details.
 
-The actual current HTML report is captured after data renders and composited with
-the scanned paper's optical absorption, fiber normals, and roughness. This
-printed front material remains visible at rest, throughout dragging, after
-recovery, and while latched. The back is blank paper. Ink stays fixed to the D4
-UVs, and residual creases are geometric valleys with asymmetric shoulders.
+The controller captures transparent ink in short, cancellable tasks using the
+locked html2canvas parser and painter. It sends the capture as an ImageBitmap
+along with the document revision, dimensions, DPR, and presentation key.
+The Worker retains a cache of scanned stock maps, builds the matching mesh,
+uploads the ink, and draws on a detached OffscreenCanvas. The controller
+publishes a completed bitmap before paint only if the document, texture, and
+mesh still match. Native HTML remains visible during every update.
 
-The native semantic DOM remains in exactly the same layout above the canvas.
-After capture its report visuals become transparent, never detached or
-`display: none`, so pointer targets, keyboard navigation, selection, and
-accessibility remain native. Hovered or focused controls and tooltips can appear
-natively above the print. Before capture and after any invalidation, ordinary
-HTML is visible instead of stale physical ink.
+The flat physical sheet scrolls with the document behind its native text. When
+a corner bends, the Worker draws the printed mesh and shadow through a fixed
+orthographic camera. Each accepted frame switches to the optical print as
+native content becomes transparent. Short pulls recover. Deep folds latch,
+can be grabbed again, and can be reopened. A small pressure valley remains in
+the mesh after release. In the same tab, it survives changes to the report and
+reloads. Leaving Newsprint clears its session state.
 
-All outer document corners and edges use the approved trajectory- and
-speed-sensitive D4 hinge. Short pulls recover; deep folds latch and can be
-re-grabbed at the projected flap and reopened. Reopening does not count the
-initial latched angle as a new fold. Geometric crease memories survive release.
-Wheel events are not trapped. Reduced motion, coarse pointers, small screens,
-and WebGL failure or context loss retain the readable HTML fallback.
+Rendering sleeps at rest. Mobile, reduced motion, coarse pointers, and
+unavailable Worker WebGL use the same native page and static paper tile.
+Cobalt and Magenta do not request the physical renderer.
 
-Rendering is invalidation-driven: there is no continuous animation frame loop at
-rest and no DOM capture on scroll or pointer movement. Cobalt and Magenta do not
-load the 3D bundle. No runtime CDN or additional dependency is used.
-
-## Build and verification
+## Build and verify
 
 ```bash
-cd profile-paper && npm ci && npm run build && cd ..
-go run ./scripts/syncprofileassets --dir public-profile
-go run ./scripts/syncprofileassets --dir docs/media/public-profile-demo
+npm --prefix profile-paper ci
+npm --prefix profile-paper run build
 go test ./internal/profilewebembed ./internal/publicprofile
 python3 scripts/profile_pages_test.py
-cd profile-e2e && npx playwright test
+npm --prefix profile-e2e test
 ```
 
-The build writes `internal/profilewebembed/static/assets/paper-3d.js` and updates
-its SHA256 URL in `assets/paper.js`. The sync command refreshes content-addressed
-assets in both generated public bundles. Rendering diagnostics, full-document
-layout comparisons, physical mouse regressions, fallback checks, and review
-screenshots verify the result without accessing source token data.
+On Linux, run `WT_LINUX_DESKTOP=1 xvfb-run -a npm --prefix profile-e2e test`
+to give Firefox a desktop pointer. The build writes hashed controller and
+Worker assets and refreshes the shell references. Both generated public
+bundles must use the same embedded assets. `scripts/syncprofileassets` can
+regenerate a bundle from its existing sanitized snapshot.

@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const staticBundle = path.join(repo, "internal", "profilewebembed", "static");
+const staticBundle = process.env.WT_PROFILE_STATIC || path.join(repo, "internal", "profilewebembed", "static");
 const snapshot = path.join(repo, "public-profile", "profile.json");
 const output = path.resolve(process.argv[2] || path.join(repo, "review"));
 const mount = "/whereToken/profile/";
@@ -104,7 +104,30 @@ async function fold(page, start, end, name) {
 }
 
 try {
-  if (process.env.WT_CAPTURE_RESIDUAL_ONLY === "1") {
+  if (process.env.WT_CAPTURE_SCAR_MATRIX === "1") {
+    for (const [width, height, theme] of [[1440, 900, "Light"], [1920, 1080, "Light"], [1440, 900, "Dark"]]) {
+      const { context, page } = await openPage(width, height);
+      await page.getByRole("button", { name: theme, exact: true }).click();
+      await ready(page);
+      const key = `scar-${width}x${height}-${theme.toLowerCase()}`;
+      await capture(page, key + "-flat");
+      const start = { x: width - 12, y: 13 };
+      await page.mouse.move(start.x, start.y);
+      await page.mouse.down();
+      await gradual(page, start, { x: start.x - 155, y: start.y + 130 }, 24);
+      await page.waitForFunction(() => window.__WT_PAPER3D__.getDiagnostics().angleDegrees > 55);
+      await capture(page, key + "-folded");
+      await page.mouse.up();
+      await page.waitForFunction(() => window.__WT_PAPER3D__.getDiagnostics().phase === "resting");
+      manifest[key] = await page.evaluate(() => ({
+        memories: JSON.parse(sessionStorage.getItem("wheretoken.newsprint.creases.v1")),
+        diagnostic: window.__WT_PAPER3D__.getDiagnostics(),
+      }));
+      assert.ok(manifest[key].memories.memories.length > 0);
+      await capture(page, key + "-released");
+      await context.close();
+    }
+  } else if (process.env.WT_CAPTURE_RESIDUAL_ONLY === "1") {
     const { context, page } = await openPage(1440, 900);
     await neutral(page, 1440);
     manifest.normal = await diagnostics(page);

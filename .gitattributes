@@ -10,5 +10,6 @@ internal/**/testdata/** text eol=lf
 npm/bin/wheretoken text eol=lf
 completions/* text eol=lf
 
-# Bundled Three.js contains multiline GLSL text; source lives in profile-paper.
+# Generated browser bundles. Source lives in profile-paper.
 **/assets/paper-3d.js -diff
+**/assets/paper-worker.js -diff

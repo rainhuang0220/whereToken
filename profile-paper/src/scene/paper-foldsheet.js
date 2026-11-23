@@ -12,12 +12,9 @@ const smooth=(x)=>{const t=clamp(x,0,1);return t*t*(3-2*t)};
  */
 export class PaperFoldSheet extends PaperResponsive {
   constructor(opts={}) {
-    super(opts);
-    // Closer to a physical, faint embossed crease. The inherited original
-    // 156x234 plane has a 0.05-unit pitch, which blurs tiny creases.
-    this.restingGeometry.dispose();
-    this.restingGeometry=new (this.restingGeometry.constructor)(this.width,this.height,480,720);
-    this.basePositions=new Float32Array(this.restingGeometry.attributes.position.array);
+    super({...opts,restSegments:1});
+    // An uncreased sheet is exactly planar. Tessellate it only once it has
+    // pressure marks, which need a finer pitch than the rigid surface.
     this.lastReleaseAngle=0;
     this.maxFoldAngle=PI-.018;
     this.reset({clearMemories:true});
@@ -114,31 +111,41 @@ export class PaperFoldSheet extends PaperResponsive {
       const t=((x-h.start.x)*ex+(y-h.start.y)*ey)/len;
       const extent=smooth((t+.07)/.13)*smooth((len+.07-t)/.13);
       if(extent<1e-4)continue;
+      const q=this.q({x,y},h);
+      if(Math.abs(q)>.185)continue;
       const longitudinal=t/len;
       const irregular=.0025*Math.sin(t*32.1)+.0015*Math.sin(t*83.7+.7);
-      const q=this.q({x,y},h)-irregular;
+      const offset=q-irregular;
       const core=.024+.008*m.strength;
-      if(Math.abs(q)>.18)continue;
-      const valley=Math.exp(-((q/core)**2));
-      const left=Math.max(0,1-Math.abs((q+.063)/.041));
-      const right=Math.max(0,1-Math.abs((q-.071)/.044));
+      const valley=Math.exp(-((offset/core)**2));
+      const left=Math.max(0,1-Math.abs((offset+.063)/.041));
+      const right=Math.max(0,1-Math.abs((offset-.071)/.044));
       const pressure=(.015+.017*m.strength)*
         (1+.07*Math.sin(longitudinal*19.3)+.04*Math.sin(longitudinal*58.9));
       z+=extent*pressure*(-valley+.13*left+.10*right);
     }
-    return clamp(z,-.044,.012);
+    return .5*clamp(z,-.044,.012);
   }
 
   refreshRestingGeometry(){
-    const position=this.restingGeometry?.attributes?.position;
-    if(!position)return;
+    if(this.memories.length && this.restingGeometry.attributes.position.count===4){
+      const previous=this.restingGeometry;
+      this.restingGeometry=new (previous.constructor)(this.width,this.height,480,720);
+      this.basePositions=new Float32Array(this.restingGeometry.attributes.position.array);
+      if(this.renderGeometry===previous)this.renderGeometry=this.restingGeometry;
+      previous.dispose();
+    }
+    const position=this.restingGeometry.attributes.position;
     const points=position.array,normals=this.restingGeometry.attributes.normal.array;
     const epsilon=.003;
+    // Compressed fibers reflect at a steeper angle than the shallow
+    // recovered surface. Keep this in the normals, without a cast shadow.
+    const compression=2.4/(2*epsilon);
     for(let i=0;i<points.length;i+=3){
       const x=this.basePositions[i],y=this.basePositions[i+1];
       points[i+2]=.012+this.residualHeight(x,y);
-      const dx=(this.residualHeight(x+epsilon,y)-this.residualHeight(x-epsilon,y))/(2*epsilon);
-      const dy=(this.residualHeight(x,y+epsilon)-this.residualHeight(x,y-epsilon))/(2*epsilon);
+      const dx=(this.residualHeight(x+epsilon,y)-this.residualHeight(x-epsilon,y))*compression;
+      const dy=(this.residualHeight(x,y+epsilon)-this.residualHeight(x,y-epsilon))*compression;
       const norm=Math.hypot(dx,dy,1);
       normals[i]=-dx/norm;normals[i+1]=-dy/norm;normals[i+2]=1/norm;
     }

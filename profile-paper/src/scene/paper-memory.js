@@ -20,7 +20,7 @@ const near = (a,b,epsilon=1e-7) => Math.abs(a-b) < epsilon;
  * This is an interactive phenomenological paper model, not a calibrated FEM.
  */
 export class PaperMemory {
-  constructor({width=7.8,height=11.7}={}) {
+  constructor({width=7.8,height=11.7,restSegments}={}) {
     this.width=width;this.height=height;
     this.rectangle=[
       {x:-width/2,y:-height/2},{x:width/2,y:-height/2},
@@ -40,7 +40,7 @@ export class PaperMemory {
       new THREE.BufferAttribute(this.normals,3).setUsage(THREE.DynamicDrawUsage));
     this.foldedGeometry.setIndex(new THREE.BufferAttribute(this.indices,1)
       .setUsage(THREE.DynamicDrawUsage));
-    this.restingGeometry=new THREE.PlaneGeometry(width,height,156,234);
+    this.restingGeometry=new THREE.PlaneGeometry(width,height,restSegments ?? 156,restSegments ?? 234);
     this.basePositions=new Float32Array(this.restingGeometry.attributes.position.array);
     this.renderGeometry=this.restingGeometry;
     this.memories=[];

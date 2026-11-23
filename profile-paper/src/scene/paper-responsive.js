@@ -17,6 +17,7 @@ export class PaperResponsive extends PaperMemory {
     this.uvs = new Float32Array(this.maxVertices*2);
     this.normals = new Float32Array(this.maxVertices*3);
     this.indices = new Uint16Array(this.maxIndices);
+    this.foldedGeometry.dispose();
     this.foldedGeometry = new THREE.BufferGeometry();
     this.foldedGeometry.setAttribute('position', new THREE.BufferAttribute(this.positions,3).setUsage(THREE.DynamicDrawUsage));
     this.foldedGeometry.setAttribute('uv', new THREE.BufferAttribute(this.uvs,2).setUsage(THREE.DynamicDrawUsage));

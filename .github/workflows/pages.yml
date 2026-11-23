@@ -68,7 +68,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper.js
+          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper-worker.js ../internal/profilewebembed/static/assets/paper.js ../internal/profilewebembed/static/index.html
 
       # Full cross-browser tests remain in CI. Do not duplicate the large
       # Playwright browser download during GitHub Pages publication.
@@ -78,6 +78,7 @@ jobs:
           node --check public-profile/assets/profile.js
           node --check public-profile/assets/paper.js
           test -s public-profile/assets/paper-3d.js
+          test -s public-profile/assets/paper-worker.js
 
       - name: Assemble the Pages tree
         run: |

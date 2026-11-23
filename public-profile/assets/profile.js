@@ -157,6 +157,9 @@
   function applyWallPalette(id, persist) {
     if (!WALL_PALETTES[id]) return;
     state.palette = id;
+    if (id !== "newsprint") {
+      try { sessionStorage.removeItem("wheretoken.newsprint.creases.v1"); } catch (_) {}
+    }
     document.documentElement.setAttribute("data-activity-palette", id);
     if (!persist) return;
     state.explicit = true;
@@ -376,9 +379,30 @@
       rows.some((row) => coverageOf(row).token_source !== "account_api");
   }
 
+  function renderControls() {
+    const rangeLabels = { today: t("range.today"), "7d": t("range.7d"), "30d": t("range.30d"), "53w": t("range.53w"), all: t("range.all") };
+    renderSeg($("metrics"), [
+      { id: "tokens", label: t("hero.tokens") },
+      { id: "requests", label: t("hero.requests") },
+    ], state.metric, (id) => { state.metric = id; writeURL(); render(); });
+    renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
+      state.range = id; writeURL(); render();
+    });
+    renderSeg($("palettes"), Object.entries(WALL_PALETTES).map(([id, palette]) => ({ id, label: palette.label })), state.palette, (id) => {
+      applyWallPalette(id, true);
+      writeURL();
+      render();
+    });
+  }
+
   function render() {
     const snap = state.snap;
-    if (!snap) return;
+    if (!snap) {
+      renderControls();
+      renderBreakdownTabs();
+      $("hero-label").textContent = state.metric === "requests" ? t("hero.requests") : t("hero.tokens");
+      return;
+    }
     dismissTip();
     const p = periodOf(snap, state.range);
     const demo = snap.provenance && snap.provenance.kind === "synthetic_demo";
@@ -441,19 +465,7 @@
       $("status").textContent = t("status.empty");
     }
 
-    const rangeLabels = { today: t("range.today"), "7d": t("range.7d"), "30d": t("range.30d"), "53w": t("range.53w"), all: t("range.all") };
-    renderSeg($("metrics"), [
-      { id: "tokens", label: t("hero.tokens") },
-      { id: "requests", label: t("hero.requests") },
-    ], state.metric, (id) => { state.metric = id; writeURL(); render(); });
-    renderSeg($("ranges"), ["today", "7d", "30d", "53w", "all"].map((id) => ({ id, label: rangeLabels[id] })), state.range, (id) => {
-      state.range = id; writeURL(); render();
-    });
-    renderSeg($("palettes"), Object.entries(WALL_PALETTES).map(([id, palette]) => ({ id, label: palette.label })), state.palette, (id) => {
-      applyWallPalette(id, true);
-      writeURL();
-      render();
-    });
+    renderControls();
     $("range-readout").textContent = t("range.readout", { n: p.active_days.display || "—" });
 
     const ser = seriesFor(snap);
@@ -474,10 +486,12 @@
     renderCoverage(snap);
     // A rerender invalidates the resident optical print. Native HTML stays
     // readable until the same whole-document DOM has been recaptured.
+    document.documentElement.dataset.profileSnapshot = snap.snapshot_id;
     window.dispatchEvent(new Event("wt:profile-render"));
   }
 
   function renderSeg(root, items, selected, onPick) {
+    const restoreFocus = root.contains(document.activeElement);
     root.replaceChildren();
     items.forEach((item, index) => {
       const b = document.createElement("button");
@@ -500,6 +514,7 @@
       });
       root.append(b);
     });
+    if (restoreFocus) root.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
   }
 
   function renderWall(snap, ser, row) {
@@ -712,11 +727,15 @@
     host.append(svg);
   }
 
-  function renderBreakdown(snap, p) {
+  function renderBreakdownTabs(period) {
     const tabs = [{ id: "agents", label: t("tab.agents") }, { id: "providers", label: t("tab.providers") }];
-    if ((p.by_model || []).length) tabs.push({ id: "models", label: t("tab.models") });
-    if (state.tab === "models" && tabs.length < 3) state.tab = "agents";
+    if (period?.by_model?.length) tabs.push({ id: "models", label: t("tab.models") });
+    if (period && state.tab === "models" && tabs.length < 3) state.tab = "agents";
     renderSeg($("tabs"), tabs, state.tab, (id) => { state.tab = id; state.filter = ""; writeURL(); render(); });
+  }
+
+  function renderBreakdown(snap, p) {
+    renderBreakdownTabs(p);
     const rows = state.tab === "providers" ? p.by_vendor : state.tab === "models" ? (p.by_model || []) : p.by_agent;
     $("rows").replaceChildren();
     const max = Math.max(1, ...(rows || []).map((row) => {
@@ -904,7 +923,7 @@
   }
 
   function scheduleTipHide(target) {
-    if (hoverTarget === target || focusTarget === target) return;
+    if (tipTarget !== target || hoverTarget === target || focusTarget === target) return;
     clearTimeout(tipTimer);
     tipTimer = setTimeout(() => {
       if (tipTarget !== target || hoverTarget === target || focusTarget === target) return;
@@ -942,7 +961,7 @@
   });
   window.__WT_RERENDER = function () {
     if (window.WT_I18N) window.WT_I18N.applyStatic();
-    if (state.snap) render();
+    render();
   };
   $("heat-scroll").addEventListener("scroll", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
   window.addEventListener("resize", () => { dismissTip(); updateMonthLabelVisibility(); }, { passive: true });
@@ -960,6 +979,7 @@
   }
   applyWallPalette(state.palette, false);
   try { applyTheme(localStorage.getItem("wt-theme") || "system"); } catch (_) { applyTheme("system"); }
+  render();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     if (!document.documentElement.getAttribute("data-theme") && state.snap) render();
   });

@@ -80,7 +80,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper.js
+          git diff --exit-code -- ../internal/profilewebembed/static/assets/paper-3d.js ../internal/profilewebembed/static/assets/paper-worker.js ../internal/profilewebembed/static/assets/paper.js ../internal/profilewebembed/static/index.html
 
       - name: Public profile browser tests (Linux)
         if: runner.os == 'Linux'
@@ -88,7 +88,7 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium firefox webkit
-          npm test
+          WT_LINUX_DESKTOP=1 xvfb-run -a npm test
 
       - name: npm wrapper tests
         working-directory: npm

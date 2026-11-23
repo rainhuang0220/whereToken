@@ -197,15 +197,8 @@ html[data-i18n-pending] body { visibility: hidden; }
   background-size: 560px auto;
   background-position: 0 0;
   background-blend-mode: normal;
-}
-#wt-paper {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  display: block;
+  position: relative;
+  min-height: 100vh;
 }
 .top,
 #status,
@@ -782,60 +775,67 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 }
 
 
-/* Capture uses a clean optical background. Live canvases and transient UI
-   never become part of the document's UV-fixed print. */
+/* Capture records transparent ink. The worker lights the scanned stock
+   independently, so the same paper remains visible behind native text. */
+:root.wt-paper-capture,
 :root.wt-paper-capture body {
-  --page: #ffffff !important;
-  background-color: #ffffff !important;
-  background-image: none !important;
+  background: transparent !important;
 }
-:root.wt-capture-dark body {
-  --page: #141210 !important;
-  background-color: #141210 !important;
+.wt-paper-capture .___html2canvas___pseudoelement_before::before,
+.wt-paper-capture .___html2canvas___pseudoelement_after::after {
+  content: none !important;
+  display: none !important;
+}
+/* The print rasterizer supports linear gradients. Tile one stripe period
+   so unavailable days retain the same hatch when the sheet bends. */
+.wt-paper-capture .cell.unknown {
+  background-image: linear-gradient(-45deg,
+    var(--empty) 25%, var(--surface-2) 25%, var(--surface-2) 50%,
+    var(--empty) 50%, var(--empty) 75%, var(--surface-2) 75%);
+  background-size: 5.657px 5.657px;
 }
 .wt-paper-capture #tip,
 .wt-paper-capture .local-dialog,
 .wt-paper-capture .publish-dialog,
-.wt-paper-capture #wt-paper,
-.wt-paper-capture #wt-paper-resident { display: none !important; }
+.wt-paper-capture #wt-paper-stock,
+.wt-paper-capture #wt-paper-fold { display: none !important; }
 
-/* One fixed viewport renders a mesh whose UV space is the entire document. */
-.wt-paper-resident {
-  position: fixed;
+/* The flat sheet image scrolls with the complete document. Only the
+   curved view needs a fixed camera and a raster copy of the current ink. */
+#wt-paper-stock {
+  position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  opacity: 0;
+  overflow: clip;
+  contain: strict;
+  pointer-events: none;
+}
+#wt-paper-resident,
+#wt-paper-fold {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
   user-select: none;
   z-index: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
-:root.wt-physical-print .wt-paper-resident { opacity: 1; }
-:root.wt-physical-print body { background-image: none; }
+#wt-paper-fold { position: fixed; }
+:root.wt-physical-print:not(.wt-paper-folding) #wt-paper-resident,
+:root.wt-physical-print.wt-paper-folding #wt-paper-fold { display: block; }
+:root.wt-physical-print.wt-paper-folding body { background-image: none; }
+:root[data-activity-palette="newsprint"][data-theme="dark"] body { background-blend-mode: multiply; }
+@media (prefers-color-scheme: dark) {
+  :root[data-activity-palette="newsprint"]:not([data-theme="light"]) body { background-blend-mode: multiply; }
+}
 
-/* Native HTML stays in place for semantics and input. Only the current,
-   completely captured state becomes visually transparent. */
-:root.wt-physical-print .top-inner,
-:root.wt-physical-print #status,
-:root.wt-physical-print #main > .identity,
-:root.wt-physical-print #main > .overview,
-:root.wt-physical-print #main > .break,
-:root.wt-physical-print #main > .technical,
-:root.wt-physical-print #main > .activity > :not(#tip) { opacity: 0; }
-:root.wt-physical-print #main > .activity > .publish-row:has(#publish-dialog:not([hidden])) { opacity: 1; }
-:root.wt-physical-print.wt-paper-ui .top-inner,
-:root.wt-physical-print.wt-paper-ui #status,
-:root.wt-physical-print.wt-paper-ui #main > .identity,
-:root.wt-physical-print.wt-paper-ui #main > .overview,
-:root.wt-physical-print.wt-paper-ui #main > .break,
-:root.wt-physical-print.wt-paper-ui #main > .technical,
-:root.wt-physical-print.wt-paper-ui #main > .activity > :not(#tip) { opacity: 1; }
-
+:root.wt-paper-folding .top { border-color: transparent; background: transparent; }
+:root.wt-paper-folding .top-inner,
+:root.wt-paper-folding #status,
+:root.wt-paper-folding #main > .identity,
+:root.wt-paper-folding #main > .overview,
+:root.wt-paper-folding #main > .break,
+:root.wt-paper-folding #main > .technical,
+:root.wt-paper-folding #main > .activity > :not(#tip) { opacity: 0; }
 
 /* Folding never creates a browser text selection, while ordinary report
    reading and copy/paste keep their native behavior. */

@@ -60,11 +60,13 @@ func TestPhysicalNewspaperBundleIsEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(script) < 100000 || !bytes.Contains(script, []byte("Three.js")) {
-		// The bundled engine is intentionally a self-hosted Three.js build.
-		if len(script) < 100000 {
-			t.Fatalf("unexpectedly small 3D bundle: %d", len(script))
-		}
+	worker, err := Read("assets/paper-worker.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	workerHash := sha256.Sum256(worker)
+	if !bytes.Contains(script, []byte("paper-worker.js?v="+hex.EncodeToString(workerHash[:]))) {
+		t.Fatal("controller has an outdated worker hash")
 	}
 	loader, err := Read("assets/paper.js")
 	if err != nil {
@@ -101,7 +103,7 @@ func TestNewsprintUsesPhysicalInkInsteadOfCSSGlyphPigment(t *testing.T) {
 			t.Fatalf("CSS glyph pigment remains instead of physical UV ink: %s", stale)
 		}
 	}
-	if !bytes.Contains(css, []byte(":root.wt-physical-print .top-inner")) {
+	if !bytes.Contains(css, []byte(":root.wt-paper-folding .top-inner")) {
 		t.Fatal("whole-document native interaction layer is missing")
 	}
 }
