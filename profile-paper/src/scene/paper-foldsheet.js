@@ -16,7 +16,7 @@ export class PaperFoldSheet extends PaperResponsive {
     // Closer to a physical, faint embossed crease. The inherited original
     // 156x234 plane has a 0.05-unit pitch, which blurs tiny creases.
     this.restingGeometry.dispose();
-    this.restingGeometry=new (this.restingGeometry.constructor)(this.width,this.height,312,468);
+    this.restingGeometry=new (this.restingGeometry.constructor)(this.width,this.height,480,720);
     this.basePositions=new Float32Array(this.restingGeometry.attributes.position.array);
     this.lastReleaseAngle=0;
     this.maxFoldAngle=PI-.018;
@@ -103,9 +103,9 @@ export class PaperFoldSheet extends PaperResponsive {
     return smooth((t+.085)/.14)*smooth((len+.085-t)/.14);
   }
 
-  // Narrow pressure crease, with a sharply defined (not Gaussian-rounded)
-  // center, slight asymmetric shoulders, and subtle irregularity along its
-  // fiber direction. The valley is truly inside the sheet geometry.
+  // Narrow pressure crease, slight asymmetric shoulders, and subtle
+  // irregularity along its fiber direction. The valley is truly inside the
+  // sheet geometry; a smooth core avoids dotted highlights on the rest grid.
   residualHeight(x,y){
     let z=0;
     for(const m of this.memories){
@@ -115,18 +115,36 @@ export class PaperFoldSheet extends PaperResponsive {
       const extent=smooth((t+.07)/.13)*smooth((len+.07-t)/.13);
       if(extent<1e-4)continue;
       const longitudinal=t/len;
-      const irregular=.004*Math.sin(t*32.1)+.002*Math.sin(t*83.7+.7);
+      const irregular=.0025*Math.sin(t*32.1)+.0015*Math.sin(t*83.7+.7);
       const q=this.q({x,y},h)-irregular;
-      const core=.030+.011*m.strength;
-      if(Math.abs(q)>.20)continue;
-      const cusp=Math.max(0,1-Math.sqrt(q*q+.000018)/core);
-      const left=Math.max(0,1-Math.abs((q+.068)/.048));
-      const right=Math.max(0,1-Math.abs((q-.073)/.054));
-      const pressure=(.007+.014*m.strength)*
-        (1+.10*Math.sin(longitudinal*19.3)+.06*Math.sin(longitudinal*58.9));
-      z+=extent*pressure*(-cusp+.14*left+.11*right);
+      const core=.024+.008*m.strength;
+      if(Math.abs(q)>.18)continue;
+      const valley=Math.exp(-((q/core)**2));
+      const left=Math.max(0,1-Math.abs((q+.063)/.041));
+      const right=Math.max(0,1-Math.abs((q-.071)/.044));
+      const pressure=(.015+.017*m.strength)*
+        (1+.07*Math.sin(longitudinal*19.3)+.04*Math.sin(longitudinal*58.9));
+      z+=extent*pressure*(-valley+.13*left+.10*right);
     }
-    return clamp(z,-.028,.012);
+    return clamp(z,-.044,.012);
+  }
+
+  refreshRestingGeometry(){
+    const position=this.restingGeometry?.attributes?.position;
+    if(!position)return;
+    const points=position.array,normals=this.restingGeometry.attributes.normal.array;
+    const epsilon=.003;
+    for(let i=0;i<points.length;i+=3){
+      const x=this.basePositions[i],y=this.basePositions[i+1];
+      points[i+2]=.012+this.residualHeight(x,y);
+      const dx=(this.residualHeight(x+epsilon,y)-this.residualHeight(x-epsilon,y))/(2*epsilon);
+      const dy=(this.residualHeight(x,y+epsilon)-this.residualHeight(x,y-epsilon))/(2*epsilon);
+      const norm=Math.hypot(dx,dy,1);
+      normals[i]=-dx/norm;normals[i+1]=-dy/norm;normals[i+2]=1/norm;
+    }
+    position.needsUpdate=true;this.restingGeometry.attributes.normal.needsUpdate=true;
+    this.restingGeometry.computeBoundingBox();
+    this.restingGeometry.computeBoundingSphere();
   }
 
   drawFolded(){
@@ -148,6 +166,6 @@ export class PaperFoldSheet extends PaperResponsive {
     const d=super.getDiagnostics();
     return {...d,solver:'continuous full-sheet fold / clipped line hinge',
       geometry:'single unbroken sheet; both ends of crease on original boundary',
-      creaseProfile:'narrow V-like compressed valley'};
+      creaseProfile:'narrow smooth compressed valley with asymmetric shoulders'};
   }
 }

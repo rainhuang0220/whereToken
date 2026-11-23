@@ -12,14 +12,26 @@ export function loadLocalImage(src) {
   });
 }
 
-function drawMap(image, width, height, blur = 0) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  context.filter = blur > 0 ? `blur(${blur}px)` : 'none';
-  context.drawImage(image, 0, 0, width, height);
-  return canvas;
+// Keep paper fibers at a fixed CSS-pixel scale even as the document expands.
+// Mirrored tiles meet at identical edges; no stretched "white noise" overlay.
+function drawMap(image,width,height,blur=0,scale=1){
+ const canvas=document.createElement('canvas');
+ canvas.width=width;canvas.height=height;
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ const sourceWidth=image.naturalWidth||image.width;
+ const sourceHeight=image.naturalHeight||image.height;
+ const tileW=560*scale,tileH=tileW*sourceHeight/sourceWidth;
+ const cols=Math.ceil(width/tileW),rows=Math.ceil(height/tileH);
+ ctx.filter=blur>0?'blur('+blur+'px)':'none';
+ for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+  ctx.save();
+  ctx.translate((col+(col%2===0?0:1))*tileW,(row+(row%2===0?0:1))*tileH);
+  ctx.scale(col%2===0?1:-1,row%2===0?1:-1);
+  ctx.drawImage(image,0,0,tileW,tileH);
+  ctx.restore();
+ }
+ ctx.filter='none';
+ return canvas;
 }
 
 export function toCanvas(map) {
@@ -32,13 +44,13 @@ export function toCanvas(map) {
   return canvas;
 }
 
-export function getMaterialBase(printCanvas, scanImage) {
+export function getMaterialBase(printCanvas, scanImage, scale = 1) {
   const width = printCanvas.width;
   const height = printCanvas.height;
   let base = materialBaseCache.get(printCanvas);
   if (!base || base.scanImage !== scanImage) {
-    const scan = drawMap(scanImage, width, height).getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height);
-    const blurred = drawMap(scanImage, width, height, 9).getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height);
+    const scan = drawMap(scanImage, width, height, 0, scale).getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height);
+    const blurred = drawMap(scanImage, width, height, 8*scale, scale).getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height);
     const print = printCanvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height);
     base = { scanImage, width, height, print, scan, blurred, optical: prepareOpaquePrint(print) };
     materialBaseCache.set(printCanvas, base);
@@ -47,7 +59,7 @@ export function getMaterialBase(printCanvas, scanImage) {
 }
 
 export function buildMaterialCanvases(printCanvas, scanImage, params) {
-  const base = getMaterialBase(printCanvas, scanImage);
+  const base = getMaterialBase(printCanvas, scanImage, params.cssScale || 1);
   const maps = compositeSurfaceMaps({ print: base.print, scan: base.scan, blurred: base.blurred, width: base.width, height: base.height, params: { ...params, ...base.optical } });
   return {
     albedo: toCanvas(maps.albedo),

@@ -100,6 +100,27 @@
 :root[data-theme="dark"][data-activity-palette="cobalt"] { --data-accent: #ffd700; --theme-label: #7cb7ff; }
 :root[data-theme="dark"][data-activity-palette="magenta"] { --data-accent: #f26ca8; --theme-label: #f26ca8; }
 
+/* The Newspaper palette has higher selector specificity than the generic dark
+   tokens. Without this override, --text remained #161616 on a #11100f
+   background and the dark optical print became physically unreadable. */
+:root[data-theme="dark"][data-activity-palette="newsprint"] {
+  --page: #141210;
+  --surface: transparent;
+  --surface-2: #1e1b18;
+  --border: #5b5750;
+  --text: #f2eee8;
+  --muted: #b7b0a8;
+  --subtle: #918b83;
+  --ui-accent: #f2eee8;
+  --theme-label: #f2eee8;
+  --focus: #f2eee8;
+  --empty: #24211e;
+  --tip-bg: #f2eee8;
+  --tip-text: #171513;
+  --tip-muted: #675e56;
+}
+
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --page: #11100f;
@@ -530,38 +551,38 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
   --page: #141210;
   --surface: transparent;
   --surface-2: #efece6;
-  --border: #2c2924;
-  --text: #1c1916;
-  --muted: #4d4944;
-  --subtle: #6f6a64;
-  --ui-accent: #1c1916;
-  --data-accent: #1f2328;
-  --theme-label: #1f2328;
-  --focus: #1c1916;
+  --border: #5b5750;
+  --text: #f2eee8;
+  --muted: #b7b0a8;
+  --subtle: #918b83;
+  --ui-accent: #f2eee8;
+  --data-accent: #f2eee8;
+  --theme-label: #f2eee8;
+  --focus: #f2eee8;
   --empty: #e6e2d8;
-  --tip-bg: #1b1b1b;
-  --tip-text: #ffffff;
-  --tip-muted: #d4d4d4;
-  color-scheme: light;
+  --tip-bg: #f2eee8;
+  --tip-text: #171513;
+  --tip-muted: #675e56;
+  color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"])[data-activity-palette="newsprint"] {
     --page: #141210;
     --surface: transparent;
     --surface-2: #efece6;
-    --border: #2c2924;
-    --text: #1c1916;
-    --muted: #4d4944;
-    --subtle: #6f6a64;
-    --ui-accent: #1c1916;
-    --data-accent: #1f2328;
-    --theme-label: #1f2328;
-    --focus: #1c1916;
+    --border: #5b5750;
+    --text: #f2eee8;
+    --muted: #b7b0a8;
+    --subtle: #918b83;
+    --ui-accent: #f2eee8;
+    --data-accent: #f2eee8;
+    --theme-label: #f2eee8;
+    --focus: #f2eee8;
     --empty: #e6e2d8;
-    --tip-bg: #1b1b1b;
-    --tip-text: #ffffff;
-    --tip-muted: #d4d4d4;
-    color-scheme: light;
+    --tip-bg: #f2eee8;
+    --tip-text: #171513;
+    --tip-muted: #675e56;
+    color-scheme: dark;
   }
 }
 .cell.peak { box-shadow: inset 0 0 0 1px var(--text); }
@@ -761,46 +782,31 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 }
 
 
-/* Newsprint is the same report, not a second view or a framed canvas.
-   Pigment is clipped into the original text glyphs. Sparse transparent gaps
-   in the pigment tile expose the already-scanned paper beneath each stroke. */
-:root[data-activity-palette="newsprint"] #main :is(
-  .hero-value, .hero-label, .section-head h2, .series-heading, .range-readout,
-  .hero-meta li, .trend-head span, .rank-top, .rank-value,
-  .rows strong, .rows .row-label, .rows .row-value,
-  .technical summary, .technical h2, .technical p,
-  .wall-hint, .legend, .coverage-note, .owner-set, .identity
-) {
-  color: transparent;
-  background-image: url("./newsprint-ink.png");
-  background-size: 256px 256px;
-  background-repeat: repeat;
-  background-position: 0 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-/* Preserve full accessibility and legible, consistently dark contrast when
-   capturing the actual report into the transient 3D paper texture. */
-.wt-fold-capture #main :is(
-  .hero-value, .hero-label, .section-head h2, .series-heading, .range-readout,
-  .hero-meta li, .trend-head span, .rank-top, .rank-value,
-  .rows strong, .rows .row-label, .rows .row-value,
-  .technical summary, .technical h2, .technical p,
-  .wall-hint, .legend, .coverage-note, .owner-set, .identity
-) {
+/* Capture uses a clean optical background. Live canvases and transient UI
+   never become part of the document's UV-fixed print. */
+:root.wt-paper-capture body {
+  --page: #ffffff !important;
+  background-color: #ffffff !important;
   background-image: none !important;
-  color: #181715 !important;
-  -webkit-text-fill-color: #181715 !important;
 }
+:root.wt-capture-dark body {
+  --page: #141210 !important;
+  background-color: #141210 !important;
+}
+.wt-paper-capture #tip,
+.wt-paper-capture .local-dialog,
+.wt-paper-capture .publish-dialog,
+.wt-paper-capture #wt-paper,
+.wt-paper-capture #wt-paper-resident { display: none !important; }
 
-
-/* The physical Newspaper is ALWAYS a real D4 mesh on desktop.
-   Its GPU canvas never occupies document flow, never adds a framed block,
-   and never intercepts the original report's native controls. */
+/* One fixed viewport renders a mesh whose UV space is the entire document. */
 .wt-paper-resident {
-  position: absolute;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: block;
+  opacity: 0;
   pointer-events: none;
   user-select: none;
   z-index: 0;
@@ -809,15 +815,26 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
   border: 0;
   background: transparent;
 }
-/* During a fold, one and the same report is printed onto the resident mesh.
-   The DOM is visually suspended, not detached, so it stays accessible and
-   returns immediately when the geometric paper settles. */
-:root.wt-paper-folding #main > * {
-  opacity: 0 !important;
-}
-:root.wt-paper-folding #main {
-  background: transparent !important;
-}
+:root.wt-physical-print .wt-paper-resident { opacity: 1; }
+:root.wt-physical-print body { background-image: none; }
+
+/* Native HTML stays in place for semantics and input. Only the current,
+   completely captured state becomes visually transparent. */
+:root.wt-physical-print .top-inner,
+:root.wt-physical-print #status,
+:root.wt-physical-print #main > .identity,
+:root.wt-physical-print #main > .overview,
+:root.wt-physical-print #main > .break,
+:root.wt-physical-print #main > .technical,
+:root.wt-physical-print #main > .activity > :not(#tip) { opacity: 0; }
+:root.wt-physical-print #main > .activity > .publish-row:has(#publish-dialog:not([hidden])) { opacity: 1; }
+:root.wt-physical-print.wt-paper-ui .top-inner,
+:root.wt-physical-print.wt-paper-ui #status,
+:root.wt-physical-print.wt-paper-ui #main > .identity,
+:root.wt-physical-print.wt-paper-ui #main > .overview,
+:root.wt-physical-print.wt-paper-ui #main > .break,
+:root.wt-physical-print.wt-paper-ui #main > .technical,
+:root.wt-physical-print.wt-paper-ui #main > .activity > :not(#tip) { opacity: 1; }
 
 
 /* Folding never creates a browser text selection, while ordinary report

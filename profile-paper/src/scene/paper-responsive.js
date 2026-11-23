@@ -99,7 +99,7 @@ export class PaperResponsive extends PaperMemory {
     if (this.phase!=='dragging') return;
     const peak=Math.max(this.theta,this.target),speed=this.speedFiltered||0;
     const reopening=this.dragReferenceAngle>1;
-    const latched=peak>2.70||(peak>2.06&&speed>3.0)||(reopening&&this.target>1.91);
+    const latched=reopening ? this.target>1.91 : peak>2.70||(peak>2.06&&speed>3.0);
     this.lastReleaseAngle=peak;
     if (this.peakAngle>.74||this.peakTarget>.74) this.recordMemory(latched);
     this.transition=latched?'latch':'recover';

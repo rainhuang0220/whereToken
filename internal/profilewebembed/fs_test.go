@@ -77,7 +77,7 @@ func TestPhysicalNewspaperBundleIsEmbedded(t *testing.T) {
 	}
 }
 
-func TestNewsprintPigmentIsEmbedded(t *testing.T) {
+func TestNewsprintUsesPhysicalInkInsteadOfCSSGlyphPigment(t *testing.T) {
 	ink, err := Read("assets/newsprint-ink.png")
 	if err != nil {
 		t.Fatal(err)
@@ -96,8 +96,13 @@ func TestNewsprintPigmentIsEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(css, []byte("newsprint-ink.png")) {
-		t.Fatal("newsprint glyphs do not have print pigment")
+	for _, stale := range [][]byte{[]byte("background-clip: text"), []byte("-webkit-text-fill-color: transparent"), []byte("wt-fold-capture")} {
+		if bytes.Contains(css, stale) {
+			t.Fatalf("CSS glyph pigment remains instead of physical UV ink: %s", stale)
+		}
+	}
+	if !bytes.Contains(css, []byte(":root.wt-physical-print .top-inner")) {
+		t.Fatal("whole-document native interaction layer is missing")
 	}
 }
 

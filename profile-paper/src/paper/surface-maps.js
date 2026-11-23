@@ -5,16 +5,27 @@ const byte = (value) => Math.round(clamp01(value) * 255);
 const image = (width, height) => ({ data: new Uint8ClampedArray(width * height * 4), width, height });
 
 export function mottleAt(u, v, fiber = 0, formation = 0) {
-  const low = Math.sin((u * 7.3 + v * 2.1) * Math.PI * 2) * 0.012;
-  const middle = Math.sin((v * 13.7 - u * 1.9) * Math.PI * 2 + 1.2) * 0.008;
-  const correlated = Math.max(-0.012, Math.min(0.012, fiber * 0.018 + formation * 0.025));
-  return Math.max(-0.04, Math.min(0.04, low + middle + correlated));
+  // Non-repeating fibrous formation. Repeating sine stripes read like a shader
+  // overlay, not paper pulp; this remains fixed to printed UV coordinates.
+  const broad=(valueNoise(u*13.7,v*19.1,31)-.5)*.048;
+  const fine=(valueNoise(u*41.3,v*57.2,19)-.5)*.026;
+  return Math.max(-.045,Math.min(.045,broad+fine+fiber*.022+formation*.024));
 }
 
 function paperHash(x, y, seed = 1) {
   let n = Math.imul(x + 151, 374761393) ^ Math.imul(y + 733, 668265263) ^ Math.imul(seed, 2246822519);
   n = Math.imul(n ^ (n >>> 13), 1274126177);
   return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+
+
+function valueNoise(x, y, seed) {
+  const ix=Math.floor(x),iy=Math.floor(y);
+  const tx=x-ix,ty=y-iy;
+  const sx=tx*tx*(3-2*tx),sy=ty*ty*(3-2*ty);
+  const a=paperHash(ix,iy,seed),b=paperHash(ix+1,iy,seed);
+  const c=paperHash(ix,iy+1,seed),d=paperHash(ix+1,iy+1,seed);
+  return (a+(b-a)*sx)*(1-sy)+(c+(d-c)*sx)*sy;
 }
 
 export function inkDropout(x, y, fiber = 0, amount = 0, scale = 1) {
@@ -108,15 +119,19 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
     for (let x = 0; x < width; x++) {
       const pixel = y * width + x;
       const offset = pixel * 4;
+      const px=x/(params.cssScale||1),py=y/(params.cssScale||1);
       const fiber = (scan.data[offset] - blurred.data[offset]) / 255;
       const formation = (blurred.data[offset] - 128) / 255;
       fiberHeight[pixel] = fiber;
-      const mottle = mottleAt(x / Math.max(1, width - 1), y / Math.max(1, height - 1), fiber, formation) * params.mottle;
-      const substrateVariation = 1 + formation * 0.055 + fiber * 0.012;
+      const mottle = mottleAt(px / 1500, py / 1500, fiber, formation) * params.mottle;
+      const centerDensity = params.opticalScalar?.[pixel] ?? scalarOpticalDensity(print.data, offset);
+      const printCoverage = clamp01(centerDensity / 4.6);
+      const broad=(valueNoise(px/195,py/195,53)-.5)*.030;
+      const fine=(valueNoise(px/47,py/47,83)-.5)*.016;
+      const substrateVariation = 1 + (formation * .025 + fiber * .004 + broad + fine) * (1 - printCoverage * .70);
       let coverage;
       let color;
       if (params.opaquePrint) {
-        const centerDensity = params.opticalScalar?.[pixel] ?? scalarOpticalDensity(print.data, offset);
         const xm = Math.max(0, x - 1);
         const xp = Math.min(width - 1, x + 1);
         const ym = Math.max(0, y - 1);
@@ -127,7 +142,7 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
         averageDensity /= neighbors.length;
         const spreadDensity = Math.max(0, averageDensity - centerDensity) * params.spread * 0.12;
         coverage = clamp01((centerDensity + spreadDensity) / 4.6);
-        const densityFactor = params.absorption * Math.max(0, 1 + mottle);
+        const densityFactor = params.absorption * Math.max(0, 1 + mottle + fiber*.065);
         const r = print.data[offset];
         const g = print.data[offset + 1];
         const b = print.data[offset + 2];
@@ -164,6 +179,6 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
       roughness.data[offset + 3] = 255;
     }
   }
-  const normal = { data: generateNormalPixels(fiberHeight, width, height, params.fiber * 5), width, height };
+  const normal = { data: generateNormalPixels(fiberHeight, width, height, params.fiber * 5 * (params.cssScale || 1)), width, height };
   return { albedo, ink, roughness, normal, fiberHeight };
 }

@@ -96,14 +96,6 @@
     return fine.matches && !reduce.matches;
   }
 
-  function sheet() {
-    var theme = document.documentElement.getAttribute("data-theme");
-    var dark = theme === "dark" || (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    if (!dark) return null;
-    var w = Math.min(1120, window.innerWidth);
-    return { x: (window.innerWidth - w) / 2, y: 0, w: w, h: window.innerHeight };
-  }
-
   function compile(type, src) {
     var shader = gl.createShader(type);
     gl.shaderSource(shader, src);
@@ -178,14 +170,8 @@
     var dpr = canvas.width / Math.max(1, window.innerWidth);
     gl.uniform2f(gl.getUniformLocation(prog, "uTile"), TILE * dpr, TILE * dpr * 0.623);
     gl.uniform2f(gl.getUniformLocation(prog, "uRes"), canvas.width, canvas.height);
-    var box = sheet();
-    if (box) {
-      gl.uniform1f(gl.getUniformLocation(prog, "uSheetOn"), 1);
-      gl.uniform4f(gl.getUniformLocation(prog, "uSheet"), box.x * dpr, box.y * dpr, box.w * dpr, box.h * dpr);
-    } else {
-      gl.uniform1f(gl.getUniformLocation(prog, "uSheetOn"), 0);
-      gl.uniform4f(gl.getUniformLocation(prog, "uSheet"), 0, 0, canvas.width, canvas.height);
-    }
+    gl.uniform1f(gl.getUniformLocation(prog, "uSheetOn"), 0);
+    gl.uniform4f(gl.getUniformLocation(prog, "uSheet"), 0, 0, canvas.width, canvas.height);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -270,7 +256,7 @@
 
   // Lazy-load the Three.js paper only for visitors who selected Newsprint.
   // Other palettes continue to load only the original lightweight dashboard.
-  var physicalSource = "./assets/paper-3d.js?v=fe97f32e680b71b33dec469d52cab4a5fbb6025c8fd91fc029bc4fde7ee09ed0";
+  var physicalSource = "./assets/paper-3d.js?v=b5b825c4d6714895a6ddc6eb9e0e06a0f134cc4c5c404caa0d8e4602d433ba99";
   var physicalRequested = false;
   var physicalReady = false;
   function requestPhysicalPaper() {
@@ -303,6 +289,10 @@
 
   window.addEventListener("wt:paper3d-ready", function () {
     physicalReady = true;
+    sync();
+  });
+  window.addEventListener("wt:paper3d-failed", function () {
+    physicalReady = false;
     sync();
   });
   new MutationObserver(sync).observe(document.documentElement, {

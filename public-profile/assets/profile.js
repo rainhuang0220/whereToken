@@ -472,8 +472,8 @@
     renderTrend(snap, ser);
     renderBreakdown(snap, p);
     renderCoverage(snap);
-    // Paper folds the same native DOM report. A rerender invalidates any
-    // temporary raster snapshot; the original data remains authoritative.
+    // A rerender invalidates the resident optical print. Native HTML stays
+    // readable until the same whole-document DOM has been recaptured.
     window.dispatchEvent(new Event("wt:profile-render"));
   }
 

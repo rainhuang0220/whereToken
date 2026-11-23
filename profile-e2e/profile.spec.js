@@ -505,7 +505,6 @@ test("makes no external runtime request", async ({ page }) => {
   await page.goto(baseURL+"?palette=newsprint");
   await expect(page.locator("#hero-value")).not.toBeEmpty();
   await expect.poll(()=>requests.some(url=>url.includes("newsprint-height.jpg"))).toBe(true);
-  await expect.poll(()=>requests.some(url=>url.includes("newsprint-ink.png"))).toBe(true);
   const canFold=await page.evaluate(()=>matchMedia("(pointer:fine)").matches &&
     !matchMedia("(prefers-reduced-motion:reduce)").matches && innerWidth>700);
   if(canFold)
@@ -513,91 +512,111 @@ test("makes no external runtime request", async ({ page }) => {
   const paths=new Set(requests.map(url=>new URL(url).pathname));
   for(const path of paths)
     expect(path.startsWith("/whereToken/profile/")).toBe(true);
-  expect(paths.has("/whereToken/profile/assets/newsprint-ink.png")).toBe(true);
   for(const name of ["profile.css","lang.js","messages.js","profile.js","paper.js"]){
     const actual=requests.find(url=>url.includes("/assets/"+name));
     expect(actual).toMatch(/\\?v=[0-9a-f]{64}$/);
   }
 });
 
-test("Newsprint is one native report with identical layout and hidden paper folding", async ({ page }) => {
+test("Newsprint is one whole printed document with identical layout and resident ink", async ({ page }) => {
   await page.emulateMedia({reducedMotion:"no-preference"});
   test.setTimeout(70000);
+  await page.setViewportSize({width:1440,height:900});
   await page.goto(baseURL+"?palette=cobalt");
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
   const rects=()=>page.evaluate(()=>Object.fromEntries(
     ["main","hero-value","hero-meta","activity-h","wall","trend-card","break-h","rows"].map(id=>{
       const rect=document.getElementById(id).getBoundingClientRect();
-      return [id,[rect.x,rect.y,rect.width,rect.height].map(n=>Math.round(n*100)/100)];
+      return [id,[rect.x,rect.y,rect.width,rect.height]];
     })
   ));
   const cobalt=await rects();
   await page.getByRole("tab",{name:"Newsprint",exact:true}).click();
   await expect(page.locator("#wt-physical-paper")).toHaveCount(0);
-  expect(await rects()).toEqual(cobalt);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  const newsprint=await rects();
+  for(const id of Object.keys(cobalt)) {
+    for(let axis=0;axis<4;axis++) expect(Math.abs(cobalt[id][axis]-newsprint[id][axis])).toBeLessThan(.5);
+  }
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
-  await expect(page.locator("#hero-value")).toHaveCSS("background-image",/newsprint-ink[.]png/);
-  // Selecting Newsprint does not simply enable a CSS background. The complete
-  // D4 sheet, normal map, roughness map and light stay resident at rest.
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().physicalMeshResident),{timeout:30000}).toBe(true);
-  await expect(page.locator("#wt-paper-resident")).toHaveCount(1);
   const physical=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
   expect(physical.materialMaps).toBe(true);
+  expect(physical.printedInkResident).toBe(true);
+  expect(physical.inkVisibleAtRest).toBe(true);
   expect(physical.geometryVertices).toBeGreaterThan(100000);
   expect(physical.phase).toBe("resting");
   expect(physical.folding).toBe(false);
-  expect(physical.presenting).toContain("resident D4");
+  expect(physical.presenting).toBe("UV-printed resident D4 mesh");
+  expect(physical.sheetCssWidth).toBe(1440);
+  expect(physical.sheetCssHeight).toBe(await page.evaluate(()=>document.documentElement.scrollHeight));
+  expect(physical.sheetCssHeight).toBeGreaterThan(await page.locator("#main").evaluate(node=>node.getBoundingClientRect().height));
+  expect(physical.effectiveInkScale).toBeGreaterThanOrEqual(1);
+  await expect(page.locator("#wt-paper-resident")).toHaveCSS("position","fixed");
+  const canvasBox=await page.locator("#wt-paper-resident").boundingBox();
+  expect(canvasBox).toEqual({x:0,y:0,width:1440,height:900});
+  const drawingBuffer=await page.locator("#wt-paper-resident").evaluate(node=>({width:node.width,height:node.height,dpr:Math.min(devicePixelRatio||1,2)}));
+  expect(drawingBuffer.width).toBeGreaterThanOrEqual(1440*drawingBuffer.dpr);
+  expect(drawingBuffer.height).toBeGreaterThanOrEqual(900*drawingBuffer.dpr);
+  await expect(page.locator(".top-inner")).toHaveCSS("opacity","0");
+  await expect(page.locator("#main > .overview")).toHaveCSS("opacity","0");
 
   await page.getByRole("tab",{name:"7d",exact:true}).click();
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  await page.getByRole("tab",{name:"Requests",exact:true}).click();
+  await expect(page.locator("#hero-label")).toHaveText("Requests");
+  await page.getByRole("tab",{name:"Providers",exact:true}).click();
+  await expect(page.getByRole("tab",{name:"Providers",exact:true})).toHaveAttribute("aria-selected","true");
+  await page.getByRole("button",{name:"中文",exact:true}).click();
+  await expect(page.locator("html")).toHaveAttribute("lang","zh-CN");
+  await page.getByRole("button",{name:"深色",exact:true}).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
+  await expect(page.locator("#hero-value")).toHaveCSS("color","rgb(242, 238, 232)");
   await page.getByRole("tab",{name:"Cobalt",exact:true}).click();
   expect((await rects()).main.slice(0,3)).toEqual(cobalt.main.slice(0,3));
   await expect(page.locator("#wall .cell")).not.toHaveCount(0);
 });
 
-test("Newsprint folds its native report when a corner is grabbed",async ({ page })=>{
+test("Newsprint folds the outer document corner without surrendering its printed mesh",async ({ page })=>{
   test.setTimeout(70000);
   await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.setViewportSize({width:1440,height:900});
   await page.goto(baseURL+"?palette=newsprint");
   const fine=await page.evaluate(()=>matchMedia("(pointer:fine)").matches);
-  if(!fine)return; // Firefox headless may expose a coarse pointer; HTML stays usable.
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().ready),{timeout:30000}).toBe(true);
-  // The sheet is ALREADY rendered in the D4 engine before anyone touches it.
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:22000}).toBe(true);
+  if(!fine)return;
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
   await expect(page.locator("#wt-paper-resident")).toHaveCount(1);
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().physicalMeshResident)).toBe(true);
+  await expect(page.locator("html")).toHaveClass(/wt-physical-print/);
   await expect(page.locator("html")).not.toHaveClass(/wt-paper-folding/);
-  const report=page.locator("#main");
-  const box=await report.boundingBox();
-  const start={x:box.x+box.width-11,y:box.y+13};
+  const start={x:1429,y:13};
   await page.mouse.move(start.x,start.y);
   await page.mouse.down();
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().folding),{timeout:12000}).toBe(true);
   await expect(page.locator("html")).toHaveClass(/wt-paper-folding/);
-  await page.mouse.move(start.x-280,start.y+220,{steps:18});
+  await gradualMouseMove(page,start,{x:start.x-140,y:start.y+115},20);
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:5000}).toBeGreaterThan(20);
   await page.mouse.up();
-  await expect(report).toHaveCount(1);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
+  await expect(page.locator("#main")).toHaveCount(1);
   await expect(page.locator("#wt-physical-paper")).toHaveCount(0);
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
-  await page.keyboard.press("Escape");
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().folding)).toBe(false);
+  const resting=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(resting.printedInkResident).toBe(true);
+  expect(resting.inkVisibleAtRest).toBe(true);
+  expect(resting.presenting).toBe("UV-printed resident D4 mesh");
+  await expect(page.locator("html")).toHaveClass(/wt-physical-print/);
   await expect(page.locator("html")).not.toHaveClass(/wt-paper-folding/);
-  await expect(page.locator("#wt-paper-resident")).toHaveCount(1);
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().physicalMeshResident)).toBe(true);
   await expect(page.locator("#main")).toHaveCSS("opacity","1");
 });
 
-test("physical Newsprint responds continuously to short and deep drags",async ({page})=>{
-  test.setTimeout(70000);
+test("physical Newsprint supports 60 degree recovery, deep latch, regrab, and residual scars",async ({page})=>{
+  test.setTimeout(90000);
   await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.setViewportSize({width:1440,height:900});
   await page.goto(baseURL+"?palette=newsprint");
   if(!await page.evaluate(()=>matchMedia("(pointer:fine)").matches))return;
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
-  const rect=await page.locator("#main").boundingBox();
-  const start={x:rect.x+rect.width-12,y:rect.y+13};
-  // Emulate a pointermove queued before pointerdown and delivered after
-  // capture. The old implementation treated (0,0) as a 5-unit fold impulse.
+  const start={x:1428,y:13};
   await page.evaluate(()=>{
     window.__wtCapturedPointerId=1;
     document.addEventListener("pointerdown",event=>{
@@ -612,25 +631,85 @@ test("physical Newsprint responds continuously to short and deep drags",async ({
   })));
   const before=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
   expect(before.targetDegrees).toBeLessThan(4);
-  await page.mouse.move(start.x-110,start.y+95,{steps:17});
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(25);
+  await gradualMouseMove(page,start,{x:start.x-155,y:start.y+130},24);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(55);
   const short=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
   expect(short.angleDegrees).toBeLessThan(135);
   await page.mouse.up();
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:8000}).toBe("resting");
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
   const after=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
   expect(after.physicalMeshResident).toBe(true);
-  expect(after.materialMaps).toBe(true);
+  expect(after.printedInkResident).toBe(true);
+  expect(after.plasticCreases).toBeGreaterThan(0);
   await page.mouse.move(start.x,start.y);
   await page.mouse.down();
-  await page.mouse.move(start.x-330,start.y+255,{steps:21});
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(140);
+  await gradualMouseMove(page,start,{x:start.x-370,y:start.y+305},28);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(150);
   const deep=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
   expect(deep.creaseLength).toBeGreaterThan(short.creaseLength);
   await page.mouse.up();
-  await page.keyboard.press("Escape");
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().folding)).toBe(false);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("latched");
+  const latched=await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics());
+  expect(latched.printedInkResident).toBe(true);
+  const tip=latched.flapPoints.find(point=>point.u>.5&&point.v>.5);
+  expect(tip).toBeTruthy();
+  await page.mouse.move(tip.x,tip.y);
+  await page.mouse.down();
+  await gradualMouseMove(page,tip,{x:tip.x+260,y:tip.y-190},24);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().targetDegrees),{timeout:8000}).toBeLessThan(100);
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
+  const reopened=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(reopened.plasticCreases).toBeGreaterThan(0);
+  expect(reopened.printedInkResident).toBe(true);
+  expect(reopened.inkVisibleAtRest).toBe(true);
   await expect(page.locator("#wt-paper-resident")).toHaveCount(1);
+});
+
+test("the lower outer corner folds after scrolling without remapping the document",async ({page})=>{
+  test.setTimeout(70000);
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(baseURL+"?palette=newsprint");
+  if(!await page.evaluate(()=>matchMedia("(pointer:fine)").matches))return;
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+  const scroll=await page.evaluate(()=>scrollY);
+  expect(scroll).toBeGreaterThan(0);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().cameraScrollY)).toBeCloseTo(scroll,1);
+  await page.mouse.move(18,887);
+  await page.mouse.down();
+  await page.mouse.move(185,680,{steps:20});
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(25);
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().printedInkResident)).toBe(true);
+});
+
+test("printed Newsprint sleeps at rest and falls back when WebGL is unavailable",async ({page})=>{
+  test.setTimeout(70000);
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.goto(baseURL+"?palette=newsprint");
+  if(await page.evaluate(()=>matchMedia("(pointer:fine)").matches)) {
+    await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+    await page.waitForTimeout(600);
+    const frames=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().frameCount);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics().frameCount)).toBe(frames);
+  }
+  await page.addInitScript(()=>{
+    const original=HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext=function(type,...args){
+      if(type==="webgl"||type==="webgl2"||type==="experimental-webgl")return null;
+      return original.call(this,type,...args);
+    };
+  });
+  await page.reload();
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods.all.totals.total.display);
+  await expect(page.locator(".hero")).toHaveCSS("opacity","1");
+  await expect(page.locator("html")).not.toHaveClass(/wt-physical-print/);
+  await expect(page.locator("#wt-paper-resident")).toHaveCount(0);
+  await page.getByRole("tab",{name:"7d",exact:true}).click();
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
 });
 
 test("Newsprint degrades gracefully to HTML on small screens", async ({ page }) => {
@@ -1136,6 +1215,13 @@ test("keeps the legend apart and inside the viewport", async ({ page }) => {
     await expect(page.locator("#legend-less")).toHaveText("更少");
   }
 });
+
+async function gradualMouseMove(page, from, to, steps) {
+  for (let step = 1; step <= steps; step++) {
+    await page.mouse.move(from.x + (to.x - from.x) * step / steps, from.y + (to.y - from.y) * step / steps);
+    await page.waitForTimeout(14);
+  }
+}
 
 function formatExpectedDay(iso) {
   return new Intl.DateTimeFormat("en-US", {
