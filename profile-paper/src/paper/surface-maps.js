@@ -112,6 +112,7 @@ export function prepareOpaquePrint(print) {
 
 export function compositeSurfaceMaps({ print, scan, blurred, width, height, params }) {
   const albedo = image(width, height);
+  const substrate = image(width, height);
   const ink = image(width, height);
   const roughness = image(width, height);
   const fiberHeight = new Float32Array(width * height);
@@ -168,9 +169,11 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
         const paper = srgbToLinear(params.paperColor[channel]) * substrateVariation;
         const printed = color[channel] * (1 - dropout) + paper * dropout;
         albedo.data[offset + channel] = byte(linearToSrgb(printed));
+        substrate.data[offset + channel] = byte(linearToSrgb(paper));
         ink.data[offset + channel] = byte(remainingInk);
       }
       albedo.data[offset + 3] = 255;
+      substrate.data[offset + 3] = 255;
       ink.data[offset + 3] = byte(remainingInk);
       const rough = Math.min(0.98, Math.max(0.72, params.roughness + formation * 0.04 + fiber * 0.012));
       roughness.data[offset] = byte(rough);
@@ -180,5 +183,5 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
     }
   }
   const normal = { data: generateNormalPixels(fiberHeight, width, height, params.fiber * 5 * (params.cssScale || 1)), width, height };
-  return { albedo, ink, roughness, normal, fiberHeight };
+  return { albedo, substrate, ink, roughness, normal, fiberHeight };
 }

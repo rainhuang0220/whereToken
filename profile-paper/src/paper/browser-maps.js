@@ -63,6 +63,7 @@ export function buildMaterialCanvases(printCanvas, scanImage, params) {
   const maps = compositeSurfaceMaps({ print: base.print, scan: base.scan, blurred: base.blurred, width: base.width, height: base.height, params: { ...params, ...base.optical } });
   return {
     albedo: toCanvas(maps.albedo),
+    substrate: toCanvas(maps.substrate),
     ink: toCanvas(maps.ink),
     roughness: toCanvas(maps.roughness),
     normal: toCanvas(maps.normal),

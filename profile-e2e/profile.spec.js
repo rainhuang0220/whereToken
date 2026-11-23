@@ -591,9 +591,12 @@ test("Newsprint folds the outer document corner without surrendering its printed
   const start={x:1429,y:13};
   await page.mouse.move(start.x,start.y);
   await page.mouse.down();
-  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().folding),{timeout:12000}).toBe(true);
-  await expect(page.locator("html")).toHaveClass(/wt-paper-folding/);
+  // Physics activation is intentionally delayed until the visitor drags
+  // beyond 12px. This keeps ordinary corner clicks natively clickable.
+  expect((await page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics())).folding).toBe(false);
   await gradualMouseMove(page,start,{x:start.x-140,y:start.y+115},20);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().folding),{timeout:8000}).toBe(true);
+  await expect(page.locator("html")).toHaveClass(/wt-paper-folding/);
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:5000}).toBeGreaterThan(20);
   await page.mouse.up();
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
@@ -607,6 +610,86 @@ test("Newsprint folds the outer document corner without surrendering its printed
   await expect(page.locator("html")).toHaveClass(/wt-physical-print/);
   await expect(page.locator("html")).not.toHaveClass(/wt-paper-folding/);
   await expect(page.locator("#main")).toHaveCSS("opacity","1");
+});
+
+test("Newsprint clicks update ink promptly and preserve real crease memories",async ({page})=>{
+  test.setTimeout(90000);
+  await page.emulateMedia({reducedMotion:"no-preference"});
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(baseURL+"?palette=newsprint");
+  if(!await page.evaluate(()=>matchMedia("(pointer:fine)").matches))return;
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  const initial=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(initial.fullMaterialBuilds).toBe(1);
+  // A whole edge strip must NOT steal clicks. Only real document corners fold.
+  await page.mouse.move(12,270);
+  await page.mouse.down();await page.mouse.move(105,308,{steps:7});await page.mouse.up();
+  expect((await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics())).plasticCreases).toBe(0);
+  // A corner tap must not enter the paper physics solver.
+  await page.mouse.move(1428,13);await page.mouse.down();await page.mouse.up();
+  expect((await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics())).phase).toBe("resting");
+  // A physical fold produces an actual (not screen-space) crease.
+  const start={x:1428,y:13};
+  await page.mouse.move(start.x,start.y);await page.mouse.down();
+  await gradualMouseMove(page,start,{x:start.x-155,y:start.y+130},24);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().angleDegrees),{timeout:8000}).toBeGreaterThan(45);
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
+  const scarred=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(scarred.plasticCreases).toBeGreaterThan(0);
+  // Detect the old full-page flash. It must never remove the physical-print
+  // class while range/filter controls update the printed ink.
+  await page.evaluate(()=>{
+    window.__WT_PRINT_FLASHES=0;
+    new MutationObserver(()=>{
+      if(!document.documentElement.classList.contains("wt-physical-print"))
+        window.__WT_PRINT_FLASHES++;
+    }).observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
+  });
+  await page.getByRole("tab",{name:"7d",exact:true}).click();
+  await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["7d"].totals.total.display);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:25000}).toBe(true);
+  const afterRange=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(afterRange.plasticCreases).toBeGreaterThan(0);
+  expect(afterRange.printedInkResident).toBe(true);
+  expect(await page.evaluate(()=>window.__WT_PRINT_FLASHES)).toBe(0);
+  const previousFast=afterRange.fastInkUpdates;
+  // The second click is an ink-only change on the same sheet.
+  await page.getByRole("tab",{name:"Requests",exact:true}).click();
+  await expect(page.locator("#hero-label")).toHaveText("Requests");
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:25000}).toBe(true);
+  const afterMetric=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(afterMetric.plasticCreases).toBeGreaterThan(0);
+  expect(afterMetric.fastInkUpdates).toBeGreaterThan(previousFast);
+  expect(afterMetric.lastInkUpdateMs).toBeLessThan(700);
+  expect(await page.evaluate(()=>window.__WT_PRINT_FLASHES)).toBe(0);
+  expect(afterMetric.phase).toBe("resting");
+  // A report that grows in document height must remap—not discard—the
+  // existing physical creases while constructing the new-sized paper.
+  const beforeResize=afterMetric.sheetCssHeight;
+  await page.evaluate(()=>{
+    const extension=document.createElement("div");
+    extension.id="wt-simulated-report-expansion";
+    extension.style.height="240px";
+    extension.style.pointerEvents="none";
+    document.body.appendChild(extension);
+  });
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().sheetCssHeight),{timeout:16000})
+    .toBeGreaterThan(beforeResize+100);
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:25000}).toBe(true);
+  const resized=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
+  expect(resized.plasticCreases).toBeGreaterThan(0);
+  expect(resized.fullMaterialBuilds).toBeGreaterThan(afterMetric.fullMaterialBuilds);
+  expect(await page.evaluate(()=>window.__WT_PRINT_FLASHES)).toBe(0);
+  // A browser reload in the SAME tab restores the physical scar; changing
+  // palette deliberately forgets it. Closing the tab clears sessionStorage.
+  await page.reload();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  expect((await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics())).plasticCreases).toBeGreaterThan(0);
+  await page.getByRole("tab",{name:"Cobalt",exact:true}).click();
+  await page.getByRole("tab",{name:"Newsprint",exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:30000}).toBe(true);
+  expect((await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics())).plasticCreases).toBe(0);
 });
 
 test("physical Newsprint supports 60 degree recovery, deep latch, regrab, and residual scars",async ({page})=>{

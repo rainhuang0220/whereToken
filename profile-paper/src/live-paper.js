@@ -10,15 +10,20 @@ const reduced=matchMedia('(prefers-reduced-motion:reduce)');
 const small=matchMedia('(max-width:700px)');
 const PIXELS_PER_UNIT=100;
 const MAX_PIXELS=12_000_000;
+// Session-scoped: survives a tab reload, but not closing the tab. Never sent
+// to the server, and explicitly discarded on a real palette change.
+const CREASE_SESSION_KEY='wheretoken.newsprint.creases.v1';
 let renderer=null,canvas=null,scene=null,camera=null,front=null,back=null,ground=null;
 let model=null,material=null,backMaterial=null,blankTexture=null,printTexture=null;
 let normalTexture=null,roughTexture=null,blankNormal=null,blankRough=null;
-let originalNormalCanvas=null;
+let originalNormalCanvas=null,inkSubstrateCanvas=null,lastPrintDark=null;
+let sheetShapeRevision=0,materialShapeRevision=-1,fastInkUpdates=0,fullMaterialBuilds=0;
+let lastInkUpdateMs=0;
 let paperScan=null,layout=null,sun=null,resizeObserver=null,contextLost=false;
 let active=false,folding=false,drag=null,frame=0,renderFrame=0,lastTime=0,animatedUntil=0;
 let queued=0,revision=0,readyRevision=-1,printTask=null,lastError=null;
 let lastCaptureMs=0,lastMaterialMs=0,frameCount=0,effectiveInkScale=0,textureSize=null;
-let lightTarget={x:-10,y:8},launching=false,hoverControl=false,focusControl=false;
+let lightTarget={x:-12,y:8},launching=false,hoverControl=false,focusControl=false;
 let keyboardNavigation=false;
 
 function enabled(){
@@ -83,6 +88,61 @@ function updateCamera(){
  camera.updateProjectionMatrix();
  camera.updateMatrixWorld();
 }
+
+
+function forgetSessionCreases(){
+ try{sessionStorage.removeItem(CREASE_SESSION_KEY);}catch{}
+}
+function rememberSessionCreases(){
+ if(!model)return;
+ try{
+  if(!model.memories.length){forgetSessionCreases();return;}
+  sessionStorage.setItem(CREASE_SESSION_KEY,JSON.stringify({
+   width:model.width,height:model.height,memories:model.memories
+  }));
+ }catch{}
+}
+function restoreSessionCreases(next){
+ try{
+  const text=sessionStorage.getItem(CREASE_SESSION_KEY);
+  if(!text||text.length>12000)return;
+  const stored=JSON.parse(text);
+  if(!Number.isFinite(stored.width)||!Number.isFinite(stored.height)||
+    stored.width<=0||stored.height<=0||
+    !Array.isArray(stored.memories)||stored.memories.length>9)return;
+  const finitePoint=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
+  const memoryOK=m=>{
+   const h=m?.hinge;
+   return h&&['corner','edge'].includes(h.kind)&&
+    finitePoint(h.start)&&finitePoint(h.end)&&finitePoint(h.origin)&&
+    [h.nx,h.ny,h.depth,h.length,m.strength,m.band].every(Number.isFinite)&&
+    m.strength>=0&&m.strength<=1&&h.length>0;
+  };
+  if(!stored.memories.every(memoryOK))return;
+  transferCreases(stored,next);
+ }catch{}
+}
+function transferCreases(previous,next){
+ if(!previous?.memories?.length)return;
+ const sx=next.width/previous.width,sy=next.height/previous.height;
+ if(!Number.isFinite(sx)||!Number.isFinite(sy)||sx<=0||sy<=0)return;
+ const point=p=>({x:p.x*sx,y:p.y*sy});
+ next.memories=previous.memories.map(memory=>{
+  const h=memory.hinge;
+  const scale=Math.hypot(h.nx/sx,h.ny/sy);
+  const start=point(h.start),end=point(h.end);
+  return {
+   ...memory,
+   hinge:{...h,origin:point(h.origin),start,end,
+    nx:(h.nx/sx)/scale,ny:(h.ny/sy)/scale,depth:h.depth/scale,
+    length:Math.hypot(end.x-start.x,end.y-start.y),
+    ...(h.span?{span:h.span*Math.sqrt(sx*sy)}:{})
+   }
+  };
+ });
+ next.refreshRestingGeometry();
+}
+
 function updateDocument(){
  if(!renderer)return;
  const next=withWorld(measure());
@@ -98,8 +158,13 @@ function updateDocument(){
    Math.abs(previous.height-next.height)>.5;
  if(sheetChanged){
   if(drag){drag=null;finishFold();}
-  model?.foldedGeometry.dispose();model?.restingGeometry.dispose();
+  const previousModel=model;
   model=new PaperFoldSheet({width:next.W,height:next.H});
+  transferCreases(previousModel,model);
+  if(previousModel?.memories.length)rememberSessionCreases();
+  previousModel?.foldedGeometry.dispose();
+  previousModel?.restingGeometry.dispose();
+  sheetShapeRevision++;
   if(front)front.geometry=model.renderGeometry;
   if(back)back.geometry=model.renderGeometry;
   if(ground){
@@ -122,6 +187,8 @@ function tick(now){
  const dt=lastTime?clamp((now-lastTime)/1000,1/240,.10):1/60;
  lastTime=now;
  model.step(dt);
+ const shadowMotion=model.phase==='dragging'||model.phase==='settling';
+ if(shadowMotion)renderer.shadowMap.needsUpdate=true;
  if(front.geometry!==model.renderGeometry){
   front.geometry=model.renderGeometry;back.geometry=model.renderGeometry;
   renderer.shadowMap.needsUpdate=true;
@@ -164,20 +231,19 @@ async function captureNative(rect,color){
  lastCaptureMs=performance.now()-begin;
  return image;
 }
-function queueCapture(delay=250){
+function queueCapture(delay=35){
  if(queued)clearTimeout(queued);
  const current=++revision;
- readyRevision=-1;
  queued=0;
  if(!active)return;
  if(drag){
   queued=setTimeout(()=>{queued=0;queueCapture(250);},250);
   return;
  }
- if(folding){
-  model.reset({clearMemories:false});finishFold();
- }
- root.classList.remove('wt-physical-print','wt-paper-ui');
+ // Keep the old resident print and real clickable controls visible while new
+ // content is captured. Removing wt-physical-print caused a full-page flash,
+ // a ~2s UI stall, and temporarily broke the feeling of physical continuity.
+ // Existing folded geometry and crease memories remain resident.
  queued=setTimeout(async()=>{
   queued=0;
   if(!active||current!==revision)return;
@@ -189,33 +255,61 @@ function queueCapture(delay=250){
    const image=await task;
    if(!active||current!==revision)return;
    const materialBegin=performance.now();
-   const maps=buildMaterialCanvases(image,paperScan,{
-    fiber:.60,roughness:.97,absorption:1.13,pinholes:0,pinholeScale:1.35,
-    spread:.50,mottle:.25,opaquePrint:true,
-    cssScale:image.width/Math.max(1,rect.width),
-    paperColor:color.dark?[1,1,1]:color.paperColor
-   });
-   if(!active||current!==revision)return;
-   // Dark mode is reverse print (light pigment on dark substrate). The optical
-   // absorption compositor models DARK ink on LIGHT paper; applying it to
-   // already light-colored glyphs makes the text vanish. Keep the captured
-   // high-contrast dark-theme print as albedo; the D4 physical normal and
-   // roughness maps still provide the same real paper microstructure.
-   const nextPrint=makeTexture(color.dark?image:maps.albedo);
-   originalNormalCanvas=document.createElement('canvas');
-   originalNormalCanvas.width=maps.normal.width;originalNormalCanvas.height=maps.normal.height;
-   originalNormalCanvas.getContext('2d').drawImage(maps.normal,0,0);
-   const nextNormal=makeTexture(maps.normal,THREE.NoColorSpace);
-   const nextRough=makeTexture(maps.roughness,THREE.NoColorSpace);
-   releaseTexture(printTexture);releaseTexture(normalTexture);releaseTexture(roughTexture);
-   printTexture=nextPrint;normalTexture=nextNormal;roughTexture=nextRough;
-   material.map=printTexture;material.normalMap=normalTexture;material.roughnessMap=roughTexture;
-   backMaterial.map=printTexture;backMaterial.normalMap=normalTexture;backMaterial.roughnessMap=roughTexture;
-   backMaterial.color.setRGB(...color.paperColor,THREE.SRGBColorSpace);
-   backMaterial.needsUpdate=true;
-   if(model?.memories.length)applyCreaseImprint();
-   material.needsUpdate=true;
+   const canRefreshInk=!!inkSubstrateCanvas&&!!normalTexture&&!!roughTexture&&
+    materialShapeRevision===sheetShapeRevision&&lastPrintDark===color.dark&&
+    textureSize?.[0]===image.width&&textureSize?.[1]===image.height;
+   let nextPrint;
+   if(canRefreshInk){
+    // A range, source, or filter click changes PRINTED INK, not cellulose.
+    // Composite against the cached real paper substrate using a native 2D
+    // blend. Normal, roughness, geometry and existing scars stay unchanged.
+    if(color.dark){
+     nextPrint=makeTexture(image);
+    }else{
+     const refreshed=document.createElement('canvas');
+     refreshed.width=image.width;refreshed.height=image.height;
+     const context=refreshed.getContext('2d');
+     context.drawImage(inkSubstrateCanvas,0,0);
+     context.globalCompositeOperation='multiply';
+     context.drawImage(image,0,0);
+     context.globalCompositeOperation='source-over';
+     nextPrint=makeTexture(refreshed);
+    }
+    fastInkUpdates++;
+   }else{
+    const maps=buildMaterialCanvases(image,paperScan,{
+     fiber:.60,roughness:.97,absorption:1.13,pinholes:0,pinholeScale:1.35,
+     spread:.50,mottle:.25,opaquePrint:true,
+     cssScale:image.width/Math.max(1,rect.width),
+     paperColor:color.dark?[1,1,1]:color.paperColor
+    });
+    if(!active||current!==revision)return;
+    // Capture remains authoritative for reverse white-on-dark printing.
+    nextPrint=makeTexture(color.dark?image:maps.albedo);
+    inkSubstrateCanvas=maps.substrate;
+    originalNormalCanvas=document.createElement('canvas');
+    originalNormalCanvas.width=maps.normal.width;originalNormalCanvas.height=maps.normal.height;
+    originalNormalCanvas.getContext('2d').drawImage(maps.normal,0,0);
+    const nextNormal=makeTexture(maps.normal,THREE.NoColorSpace);
+    const nextRough=makeTexture(maps.roughness,THREE.NoColorSpace);
+    releaseTexture(normalTexture);releaseTexture(roughTexture);
+    normalTexture=nextNormal;roughTexture=nextRough;
+    material.normalMap=normalTexture;material.roughnessMap=roughTexture;
+    backMaterial.normalMap=normalTexture;backMaterial.roughnessMap=roughTexture;
+    backMaterial.color.setRGB(...color.paperColor,THREE.SRGBColorSpace);
+    material.needsUpdate=true;
+    backMaterial.needsUpdate=true;
+    if(model?.memories.length)applyCreaseImprint();
+    materialShapeRevision=sheetShapeRevision;
+    lastPrintDark=color.dark;
+    fullMaterialBuilds++;
+   }
+   releaseTexture(printTexture);
+   printTexture=nextPrint;
+   material.map=printTexture;
+   backMaterial.map=printTexture;
    lastMaterialMs=performance.now()-materialBegin;
+   lastInkUpdateMs=lastMaterialMs;
    effectiveInkScale=image.width/Math.max(1,rect.width);
    textureSize=[image.width,image.height];
    readyRevision=current;
@@ -224,7 +318,9 @@ function queueCapture(delay=250){
    renderNow();
   }catch(error){
    lastError='Capture: '+String(error);
-   root.classList.remove('wt-physical-print','wt-paper-ui');
+   // The prior verified print remains on the sheet if a transient recapture
+   // fails. The native document stays fully interactive underneath.
+   if(!printTexture)root.classList.remove('wt-physical-print','wt-paper-ui');
   }finally{
    if(printTask===task)printTask=null;
   }
@@ -252,7 +348,7 @@ function applyCreaseImprint(){
   const x1=Math.min(w-1,Math.ceil((Math.max(hinge.start.x,hinge.end.x)+.16+W/2)/W*(w-1)));
   const y0=Math.max(0,Math.floor((H/2-Math.max(hinge.start.y,hinge.end.y)-.16)/H*(h-1)));
   const y1=Math.min(h-1,Math.ceil((H/2-Math.min(hinge.start.y,hinge.end.y)+.16)/H*(h-1)));
-  const core=.024+.008*memory.strength,pressure=.020+.035*memory.strength;
+  const core=.024+.008*memory.strength,pressure=.014+.021*memory.strength;
   for(let y=y0;y<=y1;y++){
    const yy=pixelToY(y);
    for(let x=x0;x<=x1;x++){
@@ -264,8 +360,8 @@ function applyCreaseImprint(){
     const fade=Math.min(1,along/.10,(length-along)/.10);
     const gradient=pressure*(2*q/core**2)*Math.exp(-((q/core)**2))*fade;
     const offset=(y*w+x)*4;
-    pixels.data[offset]=clamp(pixels.data[offset]-gradient*hinge.nx*115,0,255);
-    pixels.data[offset+1]=clamp(pixels.data[offset+1]-gradient*hinge.ny*115,0,255);
+    pixels.data[offset]=clamp(pixels.data[offset]-gradient*hinge.nx*78,0,255);
+    pixels.data[offset+1]=clamp(pixels.data[offset+1]-gradient*hinge.ny*78,0,255);
    }
   }
  }
@@ -329,55 +425,57 @@ function candidate(event){
  if(readyRevision!==revision||!root.classList.contains('wt-physical-print'))return null;
  const contact=inspect(event);
  if(!contact)return null;
+ if(isControl(event))return null;
  if(model.phase==='latched'){
   const folded=pickFoldFlap(contact);
   return folded?{...contact,...folded}:null;
  }
- if(isControl(event))return null;
  const edgeX=Math.min(contact.x,layout.width-contact.x);
  const edgeY=Math.min(contact.documentY,layout.height-contact.documentY);
- if(edgeX<Math.min(132,layout.width*.115)||edgeY<Math.min(120,layout.height*.115))return contact;
+ // Both axes must approach a corner. A 120px-wide horizontal/vertical
+ // strip stole far too many clicks from the actual dashboard.
+ if(edgeX<Math.min(84,layout.width*.075)&&edgeY<84)return contact;
  return null;
 }
 function begin(event){
  if(drag||!active||!enabled())return;
  const contact=candidate(event);
- if(!contact||!enterFold())return;
- if(!model.grabUV(contact.u,contact.v,event.timeStamp)){
-  if(model.phase==='resting')finishFold();
-  return;
- }
- document.getSelection()?.removeAllRanges();
+ if(!contact)return;
+ // Merely clicking a page corner is NOT a fold and must not steal the click.
+ // Activate the physics solver only after intentional movement.
  drag={id:event.pointerId,x:event.clientX,y:event.clientY,
-  downAt:event.timeStamp,moved:false};
- event.preventDefault();event.stopPropagation();
- wake(1200);
+  downAt:event.timeStamp,moved:false,pending:true,contact};
 }
 function move(event){
  if(!drag||drag.id!==event.pointerId||!model)return;
  if((event.buttons&1)===0||event.timeStamp<=drag.downAt)return;
  const travel=Math.hypot(event.clientX-drag.x,event.clientY-drag.y);
- if(!drag.moved&&event.timeStamp-drag.downAt<120&&
-   travel>Math.min(450,layout.width*.42))return;
+ if(drag.pending){
+  if(travel<12)return;
+  if(event.timeStamp-drag.downAt<120&&
+    travel>Math.min(450,layout.width*.42))return;
+  if(!enterFold()||!model.grabUV(drag.contact.u,drag.contact.v,event.timeStamp)){
+   drag=null;return;
+  }
+  drag.pending=false;
+  document.getSelection()?.removeAllRanges();
+ }
  const dx=(event.clientX-drag.x)/PIXELS_PER_UNIT*.85;
  const dy=-(event.clientY-drag.y)/PIXELS_PER_UNIT*.85;
- drag.moved=Math.max(Math.abs(event.clientX-drag.x),Math.abs(event.clientY-drag.y))>10;
+ drag.moved=true;
  model.dragDelta(dx,dy,event.timeStamp);
- wake(1000);
+ event.preventDefault();event.stopPropagation();
+ wake(350);
 }
 function end(event){
  if(!drag||drag.id!==event.pointerId)return;
- if(!drag.moved){
-  // A click at the edge is not a fold; otherwise a stray pointer event can
-  // leave a giant permanent flap even though the visitor did not drag.
+ if(drag.pending||!drag.moved){
   drag=null;
-  model.reset({clearMemories:false});
-  finishFold();
-  wake(150);
   return;
  }
  drag=null;
  model.release();
+ rememberSessionCreases();
  wake(1200);
 }
 function flapPoints(){
@@ -425,7 +523,7 @@ function init3D(scan){
  sun=new THREE.DirectionalLight('#fff8ee',2.75);
  sun.position.set(-12,8,7);
  sun.castShadow=true;
- sun.shadow.mapSize.set(4096,4096);
+ sun.shadow.mapSize.set(2048,2048);
  sun.shadow.camera.near=.1;sun.shadow.camera.far=100;
  sun.shadow.bias=-.00012;sun.shadow.normalBias=.019;sun.shadow.radius=3;
  scene.add(sun);
@@ -464,11 +562,12 @@ function init3D(scan){
  };
  backMaterial.customProgramCacheKey=()=> 'paper-reverse-thickness-transmitted-ink-v1';
  model=new PaperFoldSheet({width:layout.W,height:layout.H});
+ restoreSessionCreases(model);
  front=new THREE.Mesh(model.renderGeometry,material);
  back=new THREE.Mesh(model.renderGeometry,backMaterial);
  front.castShadow=true;back.castShadow=false;front.receiveShadow=true;back.receiveShadow=true;
  ground=new THREE.Mesh(new THREE.PlaneGeometry(layout.W,layout.H),
-  new THREE.ShadowMaterial({opacity:.20}));
+  new THREE.ShadowMaterial({opacity:.165}));
  ground.position.z=-.045;ground.receiveShadow=true;
  scene.add(ground,front,back);
  active=true;contextLost=false;
@@ -483,7 +582,7 @@ function init3D(scan){
   if(!active||drag)return;
   const next=measure();
   if(Math.abs(next.width-layout.width)>.5||Math.abs(next.height-layout.height)>.5){
-   updateDocument();queueCapture(300);
+   updateDocument();queueCapture(100);
   }
  });
  resizeObserver.observe(document.body);
@@ -511,11 +610,14 @@ function dispose(notify=false){
  canvas?.remove();
  canvas=renderer=scene=camera=front=back=model=material=backMaterial=null;
  blankTexture=printTexture=normalTexture=roughTexture=blankNormal=blankRough=null;
- originalNormalCanvas=null;
+ originalNormalCanvas=null;inkSubstrateCanvas=null;lastPrintDark=null;
+ materialShapeRevision=-1;
  printTask=null;textureSize=null;effectiveInkScale=0;
  if(notify)window.dispatchEvent(new Event('wt:paper3d-failed'));
 }
 async function sync(){
+ if(root.dataset.activityPalette&&root.dataset.activityPalette!=='newsprint')
+  forgetSessionCreases();
  if(!enabled()){
   if(active||canvas)dispose();
   return;
@@ -541,11 +643,8 @@ document.addEventListener('pointermove',event=>{
  // Normal pointer hover never changes the visual ink authority.
  if(keyboardNavigation){keyboardNavigation=false;syncNativeOverlay();}
  hoverControl=active&&isControl(event);
- if(!active||!enabled())return;
- const contact=inspect(event);if(!contact)return;
- lightTarget.x=-10+(contact.u-.5)*.85;
- lightTarget.y=8+(contact.v-.5)*.80;
- wake(180);
+ // Resting paper has a stationary physical light: ordinary pointer hover,
+ // especially across buttons, must not trigger expensive shadow re-renders.
 },true);
 document.addEventListener('pointerup',end,true);
 document.addEventListener('pointercancel',end,true);
@@ -556,7 +655,7 @@ document.addEventListener('focusout',()=>{
 });
 document.addEventListener('selectionchange',syncNativeOverlay);
 window.addEventListener('blur',()=>{
- if(drag&&model){drag=null;model.release();wake(1200);}
+ if(drag&&model){drag=null;model.release();rememberSessionCreases();wake(1200);}
 });
 document.addEventListener('keydown',event=>{
  if(event.key==='Tab'){keyboardNavigation=true;syncNativeOverlay();}
@@ -569,15 +668,15 @@ window.addEventListener('scroll',()=>{
  layout.scrollY=window.scrollY;updateCamera();invalidate();
 },{passive:true});
 window.addEventListener('resize',()=>{
- if(active){updateDocument();queueCapture(300);}
+ if(active){updateDocument();queueCapture(90);}
  sync();
 },{passive:true});
 window.addEventListener('wt:profile-render',()=>{
  if(!enabled()){sync();return;}
- if(active){updateDocument();queueCapture(280);}else sync();
+ if(active){updateDocument();queueCapture(35);}else sync();
 });
 document.addEventListener('toggle',event=>{
- if(active&&event.target?.tagName==='DETAILS'){updateDocument();queueCapture(300);}
+ if(active&&event.target?.tagName==='DETAILS'){updateDocument();queueCapture(45);}
 },true);
 fine.addEventListener('change',sync);
 reduced.addEventListener('change',sync);
@@ -597,7 +696,8 @@ window.__WT_PAPER3D__={
   presenting:printTexture?'UV-printed resident D4 mesh':'D4 paper awaiting optical print',
   active,folding,snapshotReady:readyRevision===revision&&readyRevision>=0,
   captureRevision:revision,readyRevision,captureMs:Math.round(lastCaptureMs),
-  materialMs:Math.round(lastMaterialMs),effectiveInkScale,textureSize,frameCount,
+  materialMs:Math.round(lastMaterialMs),lastInkUpdateMs:Math.round(lastInkUpdateMs),
+  fastInkUpdates,fullMaterialBuilds,effectiveInkScale,textureSize,frameCount,
   geometryVertices:model?.restingGeometry?.attributes?.position?.count||0,
   sheetCssWidth:layout?.width||0,sheetCssHeight:layout?.height||0,
   viewportWidth:layout?.viewportWidth||0,viewportHeight:layout?.viewportHeight||0,
