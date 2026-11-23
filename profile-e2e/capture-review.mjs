@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs/promises";
@@ -35,7 +35,8 @@ const server = http.createServer(async (req, res) => {
 await fs.mkdir(output, { recursive: true });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const baseURL = `http://127.0.0.1:${server.address().port}${mount}`;
-const browser = await chromium.launch({ headless: process.env.WT_CAPTURE_HEADFUL !== '1' });
+const engine = { chromium, firefox, webkit }[process.env.WT_CAPTURE_ENGINE || "chromium"];
+const browser = await engine.launch({ headless: process.env.WT_CAPTURE_HEADFUL !== "1" });
 
 async function ready(page) {
   await page.waitForFunction(() => {
@@ -45,11 +46,69 @@ async function ready(page) {
   await page.waitForFunction(() => document.documentElement.classList.contains("wt-physical-print"));
 }
 
+// Hash the real bitmaprenderer ink before its WebGL upload. Only enabled
+// for parity evidence, because diagnostic readback changes render timing.
+async function observeInk(context) {
+  await context.addInitScript(() => {
+    window.__wtInkHashes = [];
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(...args) {
+        super(...args);
+        if (String(args[0]).includes("paper-worker.js")) {
+          this.addEventListener("message", event => {
+            if (event.data.type === "ink-probe") window.__wtInkHashes.push(event.data);
+          });
+        }
+      }
+    };
+  });
+  await context.route("**/paper-worker.js?*", async route => {
+    const response = await route.fetch();
+    const probe = `
+      const originalGetContext = OffscreenCanvas.prototype.getContext;
+      const firstBySize = new Map();
+      OffscreenCanvas.prototype.getContext = function (kind, ...args) {
+        const context = originalGetContext.call(this, kind, ...args);
+        if (kind === 'bitmaprenderer' && context) {
+          const transfer = context.transferFromImageBitmap.bind(context);
+          context.transferFromImageBitmap = bitmap => {
+            transfer(bitmap);
+            const copy = new OffscreenCanvas(this.width, this.height).getContext('2d', { willReadFrequently: true });
+            copy.drawImage(this, 0, 0);
+            const bytes = copy.getImageData(0, 0, this.width, this.height).data;
+            const size = this.width + 'x' + this.height;
+            if (!firstBySize.has(size)) firstBySize.set(size, bytes);
+            const original = firstBySize.get(size);
+            let maxPremultipliedDelta = 0, changedChannels = 0, maxAlphaDelta = 0;
+            for (let offset = 0; offset < bytes.length; offset += 4) {
+              const a = bytes[offset + 3], b = original[offset + 3];
+              maxAlphaDelta = Math.max(maxAlphaDelta, Math.abs(a - b));
+              for (let c = 0; c < 3; c++) {
+                if (bytes[offset + c] !== original[offset + c]) changedChannels++;
+                maxPremultipliedDelta = Math.max(maxPremultipliedDelta,
+                  Math.abs(bytes[offset + c] * a - original[offset + c] * b) / 255);
+              }
+            }
+            crypto.subtle.digest('SHA-256', bytes).then(hash => {
+              self.postMessage({ type: 'ink-probe', size, changedChannels, maxPremultipliedDelta, maxAlphaDelta,
+                hash: Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') });
+            });
+          };
+        }
+        return context;
+      };
+    `;
+    await route.fulfill({ response, body: probe + await response.text() });
+  });
+}
+
 async function openPage(width, height, palette = "newsprint", dpr = 1) {
   const context = await browser.newContext({
     viewport: { width, height }, deviceScaleFactor: dpr,
     colorScheme: "light", reducedMotion: "no-preference",
   });
+  if (process.env.WT_CAPTURE_INK_PARITY === "1") await observeInk(context);
   const page = await context.newPage();
   await page.goto(`${baseURL}?palette=${palette}`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => document.getElementById("hero-value")?.textContent !== "—");
@@ -104,7 +163,44 @@ async function fold(page, start, end, name) {
 }
 
 try {
-  if (process.env.WT_CAPTURE_SCAR_MATRIX === "1") {
+  if (process.env.WT_CAPTURE_INK_PARITY === "1") {
+    const { context, page } = await openPage(1440, 900);
+    for (const [index, range] of ["All", "7d", "All"].entries()) {
+      if (index) await page.locator("#ranges").getByRole("tab", { name: range, exact: true }).click();
+      await ready(page);
+      await page.waitForFunction(count => window.__wtInkHashes.length >= count, index + 1);
+      manifest[range + index] = {
+        pixels: await page.evaluate(() => window.__wtInkHashes.at(-1)),
+        diagnostic: await diagnostics(page),
+      };
+    }
+    await fs.writeFile(path.join(output, "capture-manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+    assert.equal(manifest.All2.diagnostic.inkReused, true);
+    assert.equal(manifest.All2.pixels.size, manifest.All0.pixels.size);
+    assert.equal(manifest.All2.pixels.maxAlphaDelta, 0);
+    // Firefox can round decoded color by two levels on translucent glyph
+    // edges. Coverage must stay exact, and color must stay within that range.
+    assert.ok(manifest.All2.pixels.maxPremultipliedDelta <= 2, JSON.stringify(manifest.All2.pixels));
+    assert.notEqual(manifest["7d1"].pixels.hash, manifest.All0.pixels.hash);
+    await context.close();
+  } else if (process.env.WT_CAPTURE_STOCK_MATRIX === "1") {
+    for (const [theme, dpr] of [["Light", 1], ["Dark", 1], ["Light", 2]]) {
+      const { context, page } = await openPage(1440, 900, "newsprint", dpr);
+      await page.getByRole("button", { name: theme, exact: true }).click();
+      await ready(page);
+      for (const name of ["All", "7d", "30d"]) {
+        await page.locator("#ranges").getByRole("tab", { name, exact: true }).click();
+        await ready(page);
+        const key = `${theme.toLowerCase()}-dpr${dpr}-${name}`;
+        const canvas = page.locator("#wt-paper-resident");
+        const encoded = await canvas.evaluate(node => node.toDataURL().split(",")[1]);
+        await fs.writeFile(path.join(output, key + "-stock.png"), Buffer.from(encoded, "base64"));
+        await capture(page, key);
+        manifest[key] = await diagnostics(page);
+      }
+      await context.close();
+    }
+  } else if (process.env.WT_CAPTURE_SCAR_MATRIX === "1") {
     for (const [width, height, theme] of [[1440, 900, "Light"], [1920, 1080, "Light"], [1440, 900, "Dark"]]) {
       const { context, page } = await openPage(width, height);
       await page.getByRole("button", { name: theme, exact: true }).click();

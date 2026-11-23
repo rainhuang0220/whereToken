@@ -1,5 +1,5 @@
 import { evaluatePaperField } from './height-field.js';
-import { compositeSurfaceMaps, prepareOpaquePrint } from './surface-maps.js';
+import { compositeSurfaceMaps, prepareOpaquePrint, prepareStockMaps } from './surface-maps.js';
 
 const materialBaseCache = new WeakMap();
 
@@ -39,6 +39,15 @@ function drawMap(image,width,height,blur=0,scale=1){
  }
  ctx.filter='none';
  return canvas;
+}
+
+export function buildScannedStock(scanImage) {
+  // Two mirrored repeats preserve the original CSS-pixel fiber pitch.
+  const width = 1120;
+  const height = Math.round(width * scanImage.height / scanImage.width);
+  const pixels = blur => drawMap(scanImage, width, height, blur).getContext('2d', { willReadFrequently: true })
+    .getImageData(0, 0, width, height);
+  return prepareStockMaps(pixels(0), pixels(8), width, height, .60, .97);
 }
 
 export function toCanvas(map) {

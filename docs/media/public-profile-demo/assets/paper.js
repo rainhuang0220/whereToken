@@ -11,7 +11,7 @@
       !fine.matches || reduced.matches || small.matches) return;
     requested = true;
     const script = document.createElement('script');
-    script.src = './assets/paper-3d.js?v=0d0fc55e1da05f82ab4c8698b4adc28cdb8d08654aecc2d99754f70efbdf810c';
+    script.src = './assets/paper-3d.js?v=c9f2e128bbf75124880dd255ca212ed0d3f65d9fb5a8fb20c0865f8f334dbc83';
     document.head.append(script);
   }
   new MutationObserver(load).observe(root, { attributes: true, attributeFilter: ['data-activity-palette'] });

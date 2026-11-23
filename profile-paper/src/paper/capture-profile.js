@@ -32,7 +32,41 @@ function waitForFrame(iframe, signal) {
   });
 }
 
-export async function captureProfile(layout, signal) {
+// The heat panel dominates parse work. Its parsed boxes and glyph bounds may
+// be reused only when the content, capture styles and document-space bounds
+// match. Images or form widgets require a fresh html2canvas resource context.
+function captureRegions(cache, styleKey, layout) {
+  const environment = JSON.stringify([styleKey, layout.rgb, layout.width,
+    layout.viewportWidth, layout.viewportHeight, layout.dpr]);
+  const keys = new WeakMap();
+  let reused = 0;
+  return {
+    get(node) {
+      if (!styleKey || !node.classList.contains('heat-panel') ||
+        node.querySelector('img, canvas, svg, input, textarea, select, iframe, video')) return;
+      const { x, y, width, height } = node.getBoundingClientRect();
+      const heat = node.querySelector('#heat-scroll');
+      const key = JSON.stringify([environment, x, y, width, height, heat?.scrollLeft, heat?.scrollTop, node.outerHTML]);
+      keys.set(node, key);
+      const cached = cache.get(key);
+      if (cached) {
+        reused++;
+        cache.delete(key);
+        cache.set(key, cached);
+      }
+      return cached;
+    },
+    remember(node, container) {
+      const key = keys.get(node);
+      if (!key) return;
+      cache.set(key, container);
+      if (cache.size > 2) cache.delete(cache.keys().next().value);
+    },
+    get reused() { return reused; },
+  };
+}
+
+export async function captureProfile(layout, signal, regionCache, styleKey) {
   const started = performance.now();
   let deadline = started + 7;
   const checkpoint = async () => {
@@ -77,7 +111,8 @@ export async function captureProfile(layout, signal) {
     // .x/.y remain document-local even when the live page is scrolled.
     const tree = createContainer(context, body);
     tree.flags |= 4; // html2canvas CREATES_REAL_STACKING_CONTEXT
-    await parseProfileNodes(context, body, tree, tree, checkpoint);
+    const regions = captureRegions(regionCache, styleKey, layout);
+    await parseProfileNodes(context, body, tree, tree, checkpoint, regions);
     measure('parse');
 
     const canvas = new OffscreenCanvas(Math.floor(width * scale), Math.floor(height * scale));
@@ -94,7 +129,7 @@ export async function captureProfile(layout, signal) {
     measure('paint');
     const bitmap = canvas.transferToImageBitmap();
     measure('transfer');
-    return { bitmap, captureMs: Math.round(performance.now() - started), times };
+    return { bitmap, captureMs: Math.round(performance.now() - started), times, reusedRegions: regions.reused };
   } finally {
     cloner.frame?.remove();
   }

@@ -1,0 +1,464 @@
+{
+  "paired-control": {
+    "cold": [
+      {
+        "nativeMs": 62,
+        "committedMs": 1261,
+        "firstNativeDataFrameMs": 19,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 101,
+          "materialMs": 333,
+          "geometryMs": 1,
+          "compileMs": 18,
+          "uploadMs": 8,
+          "drawMs": 4,
+          "bitmapMs": 180
+        }
+      },
+      {
+        "nativeMs": 74,
+        "committedMs": 1327,
+        "firstNativeDataFrameMs": 18.1,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 110,
+          "materialMs": 359,
+          "geometryMs": 1,
+          "compileMs": 18,
+          "uploadMs": 10,
+          "drawMs": 4,
+          "bitmapMs": 181
+        }
+      },
+      {
+        "nativeMs": 61,
+        "committedMs": 1223,
+        "firstNativeDataFrameMs": 17.3,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 100,
+          "materialMs": 308,
+          "geometryMs": 1,
+          "compileMs": 18,
+          "uploadMs": 8,
+          "drawMs": 4,
+          "bitmapMs": 170
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.3,
+      "p95": 2.3,
+      "max": 2.6
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 15.6,
+      "p95": 15.9,
+      "max": 33.5
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 32,
+      "p95": 32,
+      "max": 64
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 45.0,
+      "p95": 46,
+      "max": 48
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 232.0,
+      "p95": 249,
+      "max": 283
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 71.5,
+        "p95": 78,
+        "max": 89
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 4.0,
+        "p95": 6,
+        "max": 11
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 2
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 50.0,
+        "p95": 63,
+        "max": 64
+      }
+    },
+    "steadyLongTasks": [],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 233.0,
+        "p95": 265,
+        "max": 265
+      },
+      "30d": {
+        "count": 10,
+        "median": 232.0,
+        "p95": 249,
+        "max": 249
+      },
+      "Agents": {
+        "count": 10,
+        "median": 216.0,
+        "p95": 232,
+        "max": 232
+      },
+      "Requests": {
+        "count": 10,
+        "median": 216.0,
+        "p95": 217,
+        "max": 217
+      },
+      "All": {
+        "count": 10,
+        "median": 249.0,
+        "p95": 283,
+        "max": 283
+      }
+    },
+    "rapidClickWallMs": 121,
+    "rapidCommitWallMs": 350,
+    "sampledFrames": 1259,
+    "inconsistentFrames": 0
+  },
+  "paired-candidate": {
+    "cold": [
+      {
+        "nativeMs": 76,
+        "committedMs": 986,
+        "firstNativeDataFrameMs": 32.9,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 111,
+          "materialMs": 29,
+          "geometryMs": 1,
+          "compileMs": 18,
+          "uploadMs": 9,
+          "drawMs": 4,
+          "bitmapMs": 180
+        }
+      },
+      {
+        "nativeMs": 62,
+        "committedMs": 1064,
+        "firstNativeDataFrameMs": 18.3,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 106,
+          "materialMs": 34,
+          "geometryMs": 1,
+          "compileMs": 26,
+          "uploadMs": 9,
+          "drawMs": 4,
+          "bitmapMs": 179
+        }
+      },
+      {
+        "nativeMs": 76,
+        "committedMs": 1115,
+        "firstNativeDataFrameMs": 18,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 115,
+          "materialMs": 32,
+          "geometryMs": 1,
+          "compileMs": 24,
+          "uploadMs": 9,
+          "drawMs": 4,
+          "bitmapMs": 176
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.3,
+      "p95": 0.4,
+      "max": 14.7
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 15.7,
+      "p95": 16.4,
+      "max": 41.5
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 24,
+      "p95": 32,
+      "max": 64
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 45.0,
+      "p95": 47,
+      "max": 48
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 82.0,
+      "p95": 135,
+      "max": 165
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 49,
+        "max": 78
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 1,
+        "max": 2
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 4.0,
+        "p95": 7,
+        "max": 15
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      }
+    },
+    "steadyLongTasks": [],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 83.0,
+        "p95": 165,
+        "max": 165
+      },
+      "30d": {
+        "count": 10,
+        "median": 82.0,
+        "p95": 132,
+        "max": 132
+      },
+      "Agents": {
+        "count": 10,
+        "median": 82.0,
+        "p95": 98,
+        "max": 98
+      },
+      "Requests": {
+        "count": 10,
+        "median": 82.0,
+        "p95": 165,
+        "max": 165
+      },
+      "All": {
+        "count": 10,
+        "median": 82.0,
+        "p95": 132,
+        "max": 132
+      }
+    },
+    "rapidClickWallMs": 126,
+    "rapidCommitWallMs": 150,
+    "sampledFrames": 652,
+    "inconsistentFrames": 0
+  },
+  "stockPixelComparison": {
+    "dark-dpr1-30d-stock.png": {
+      "pixels": [
+        1440,
+        1286
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 1.5660100224641438e-05
+    },
+    "dark-dpr1-7d-stock.png": {
+      "pixels": [
+        1440,
+        1286
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 1.5660100224641438e-05
+    },
+    "dark-dpr1-All-stock.png": {
+      "pixels": [
+        1440,
+        1635
+      ],
+      "maxChannelDelta": 0,
+      "maxMeanChannelDelta": 0.0
+    },
+    "light-dpr1-30d-stock.png": {
+      "pixels": [
+        1440,
+        1286
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 0.00012204078106099879
+    },
+    "light-dpr1-7d-stock.png": {
+      "pixels": [
+        1440,
+        1286
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 0.00012204078106099879
+    },
+    "light-dpr1-All-stock.png": {
+      "pixels": [
+        1440,
+        1635
+      ],
+      "maxChannelDelta": 0,
+      "maxMeanChannelDelta": 0.0
+    },
+    "light-dpr2-30d-stock.png": {
+      "pixels": [
+        2880,
+        2572
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 0.00010705568515638501
+    },
+    "light-dpr2-7d-stock.png": {
+      "pixels": [
+        2880,
+        2572
+      ],
+      "maxChannelDelta": 1,
+      "maxMeanChannelDelta": 0.00010705568515638501
+    },
+    "light-dpr2-All-stock.png": {
+      "pixels": [
+        2880,
+        3270
+      ],
+      "maxChannelDelta": 0,
+      "maxMeanChannelDelta": 0.0
+    }
+  },
+  "scars": {
+    "b68b403": {
+      "scar-1440x900-light": {
+        "meanCreaseDarkness": 8.46,
+        "maxOutsideCreaseDelta": 0,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      },
+      "scar-1920x1080-light": {
+        "meanCreaseDarkness": 7.77,
+        "maxOutsideCreaseDelta": 1,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      },
+      "scar-1440x900-dark": {
+        "meanCreaseDarkness": 1.54,
+        "maxOutsideCreaseDelta": 0,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      }
+    },
+    "candidate": {
+      "scar-1440x900-light": {
+        "meanCreaseDarkness": 8.46,
+        "maxOutsideCreaseDelta": 0,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      },
+      "scar-1920x1080-light": {
+        "meanCreaseDarkness": 7.77,
+        "maxOutsideCreaseDelta": 1,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      },
+      "scar-1440x900-dark": {
+        "meanCreaseDarkness": 1.54,
+        "maxOutsideCreaseDelta": 0,
+        "cornerPixelsOutsideCrease": 58260,
+        "cornerPixelsChangedByMoreThan3": 0
+      }
+    }
+  },
+  "inkPixelComparison": {
+    "chromium": {
+      "type": "ink-probe",
+      "size": "1440x1635",
+      "changedChannels": 0,
+      "maxPremultipliedDelta": 0,
+      "maxAlphaDelta": 0,
+      "hash": "c52889c34bc719aa4ce37433d943db5b40418ed9662dde635615c8baddd88c04"
+    },
+    "firefox": {
+      "type": "ink-probe",
+      "size": "1440x1634",
+      "changedChannels": 67213,
+      "maxPremultipliedDelta": 1.9372549019607843,
+      "maxAlphaDelta": 0,
+      "hash": "43f820ec61198da233a6cfabbccf904998facba4a3b3c1c82efbe4fad3df902b"
+    },
+    "webkit": {
+      "type": "ink-probe",
+      "size": "1440x1633",
+      "changedChannels": 0,
+      "maxPremultipliedDelta": 0,
+      "maxAlphaDelta": 0,
+      "hash": "7e6bfab36a1a0243f99f5167af0b189a5980fbc42746c967a7eabf2b8e568b9c"
+    }
+  }
+}

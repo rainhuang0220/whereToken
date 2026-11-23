@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { PaperFoldSheet } from './scene/paper-foldsheet.js';
 import { restoreCreases } from './scene/crease-memory.js';
-import { buildMaterialCanvases } from './paper/browser-maps.js';
+import { buildScannedStock, toCanvas } from './paper/browser-maps.js';
+import { RasterCache } from './paper/raster-cache.js';
+import { tintStock } from './paper/surface-maps.js';
 
 const PIXELS_PER_UNIT = 100;
 const MAX_PIXELS = 12_000_000;
@@ -12,8 +14,12 @@ const tiles = new Map();
 const ink = { value: null };
 const inkAmount = { value: 0 };
 const reverseInk = { value: 0 };
-let renderer, sun, ground, front, back, scan, saved;
-let current, latestRevision, model, print, scrollY, lastTime, animation, frameCount = 0;
+let renderer, sun, ground, front, back, saved, stockReady, stock;
+let creaseRevision = 0;
+const printCache = new RasterCache(8 * 1024 * 1024, 12, () => {});
+const MAX_PENDING_PRINT_BYTES = 48 * 1024 * 1024;
+let pendingPrints = 0, pendingPrintBytes = 0, peakPendingPrintBytes = 0;
+let current, readyFields, latestRevision, model, print, scrollY, lastTime, animation, frameCount = 0;
 let captureCount = 0, materialBuilds = 0, fastInkUpdates = 0;
 let visible = true;
 let motionEpoch = 0, motionDirty = false, frameID = 0, outstanding = 0;
@@ -98,38 +104,48 @@ async function initialize(message) {
   front.receiveShadow = true;
   back.receiveShadow = true;
   scene.add(ground, front, back);
-  const response = await fetch('./newsprint-height.jpg');
-  if (!response.ok) throw new Error('Newsprint height scan unavailable');
-  scan = await createImageBitmap(await response.blob());
+  stockReady = (async () => {
+    const response = await fetch('./newsprint-height.jpg');
+    if (!response.ok) throw new Error('Newsprint height scan unavailable');
+    const scan = await createImageBitmap(await response.blob());
+    try {
+      const [prepared, stockMs] = measure('stock', () => buildScannedStock(scan));
+      stock = prepared;
+      return {
+        normal: repeatMap(toCanvas(stock.normal)),
+        roughness: repeatMap(toCanvas(stock.roughness)),
+        stockMs,
+      };
+    } finally {
+      scan.close();
+    }
+  })();
   post('available', {
     renderer: gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL || gl.RENDERER),
     limit: Math.min(renderer.capabilities.maxTextureSize, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)),
   });
+  await stockReady;
 }
 
-function getTile(layout) {
+function repeatMap(source, colorSpace) {
+  const map = texture(source, colorSpace);
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  return map;
+}
+
+function getTile(layout, maps) {
   const key = layout.rgb.join(',');
   if (tiles.has(key)) return tiles.get(key);
-  // Two mirrored repeats of the scan form a seamless sheet-space tile.
-  const width = 1120, height = Math.round(width * scan.height / scan.width);
-  const blank = new OffscreenCanvas(width, height);
-  const ctx = blank.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, width, height);
-  const maps = buildMaterialCanvases(blank, scan, {
-    fiber: .60, roughness: .97, absorption: 1.13, pinholes: 0, spread: .50,
-    mottle: .25, opaquePrint: true, paperColor: layout.rgb.map(value => value / 255),
-  });
-  const tile = { width, height, albedo: texture(maps.albedo, THREE.SRGBColorSpace),
-    normal: texture(maps.normal), roughness: texture(maps.roughness) };
-  for (const map of [tile.albedo, tile.normal, tile.roughness]) {
-    map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  }
+  const tile = {
+    width: stock.width, height: stock.height,
+    albedo: repeatMap(toCanvas(tintStock(stock, layout.rgb)), THREE.SRGBColorSpace),
+    normal: maps.normal, roughness: maps.roughness,
+  };
   tiles.set(key, tile);
   if (tiles.size > 2) {
     const oldest = tiles.keys().next().value;
     const maps = tiles.get(oldest);
-    for (const map of [maps.albedo, maps.normal, maps.roughness]) map.dispose();
+    maps.albedo.dispose();
     tiles.delete(oldest);
   }
   materialBuilds++;
@@ -204,7 +220,7 @@ function diagnostics() {
     materialMaps: true, printedInkResident: !!print, textureSize: [print.image.width, print.image.height],
     meshCssWidth: Math.round(model.width * PIXELS_PER_UNIT),
     meshCssHeight: Math.round(model.height * PIXELS_PER_UNIT),
-    fastInkUpdates, fullMaterialBuilds: materialBuilds,
+    fastInkUpdates, fullMaterialBuilds: materialBuilds, inkCacheBytes: printCache.bytes, pendingPrintBytes, peakPendingPrintBytes,
   };
 }
 
@@ -221,27 +237,95 @@ function flapPoints(layout) {
   return points;
 }
 
-function sendFrame(type, layout, fields) {
-  const [bitmap, transferMs] = measure('bitmap', () => canvas.transferToImageBitmap());
-  post(type, { layout, bitmap, diagnostics: diagnostics(), transferMs, ...fields }, [bitmap]);
+function stockKey(layout) {
+  return JSON.stringify([layout.width, layout.height, layout.scale, layout.rgb, creaseRevision]);
 }
 
-async function prepare({ layout, bitmap }) {
+function cropSource(layout, stockKeys) {
+  if (model.memories.length || !Number.isInteger(layout.scale)) return undefined;
+  // A flat stock sample is periodic, with vertical phase fixed at the
+  // bottom edge by the sheet UV. The bottom rows of a taller homogeneous
+  // sheet therefore cover the shorter sheet at the same texel pitch.
+  let sourceHeight = Infinity;
+  for (const key of stockKeys) {
+    const [, height] = JSON.parse(key);
+    if (height > layout.height && height < sourceHeight && key === stockKey({ ...layout, height })) {
+      sourceHeight = height;
+    }
+  }
+  return Number.isFinite(sourceHeight) ? stockKey({ ...layout, height: sourceHeight }) : undefined;
+}
+
+function sendReady(layout, fields, stockKeys = []) {
+  const key = stockKey(layout);
+  const cropFrom = stockKeys.includes(key) ? undefined : cropSource(layout, stockKeys);
+  if (cropFrom || stockKeys.includes(key)) {
+    post('ready', { layout, diagnostics: diagnostics(), ...fields, stockKey: key, cropFrom, drawMs: 0, transferMs: 0 });
+    return;
+  }
+  configureView(layout, false);
+  const [, drawMs] = measure('flat draw', draw);
+  sendFrame('ready', layout, { ...fields, drawMs });
+}
+
+function sendFrame(type, layout, fields) {
+  const [bitmap, transferMs] = measure('bitmap', () => canvas.transferToImageBitmap());
+  post(type, { layout, bitmap, diagnostics: diagnostics(), transferMs, stockKey: stockKey(layout), ...fields }, [bitmap]);
+}
+
+function rememberPrint(id, canvas) {
+  const bytes = canvas.width * canvas.height * 4;
+  if (!canvas.convertToBlob || pendingPrints >= 2 || pendingPrintBytes + bytes > MAX_PENDING_PRINT_BYTES) return;
+  pendingPrints++;
+  pendingPrintBytes += bytes;
+  peakPendingPrintBytes = Math.max(peakPendingPrintBytes, pendingPrintBytes);
+  // Encoding is optional and never delays a new revision waiting on ink.
+  Promise.resolve().then(() => canvas.convertToBlob({ type: 'image/png' })).then(blob => {
+    if (printCache.put(id, blob, blob.size)) post('ink-cache', { ids: Array.from(printCache.keys()) });
+  }).catch(() => {}).finally(() => {
+    pendingPrints--;
+    pendingPrintBytes -= bytes;
+  });
+}
+
+async function prepare({ layout, bitmap, inkID, stockKeys }) {
+  const maps = await stockReady;
   if (layout.revision !== latestRevision) {
-    bitmap.close();
+    bitmap?.close();
     post('discarded', { revision: layout.revision });
     return;
   }
   const expectedWidth = Math.floor(layout.width * layout.scale);
   const expectedHeight = Math.floor(layout.height * layout.scale);
-  if (bitmap.width !== expectedWidth || bitmap.height !== expectedHeight) {
-    bitmap.close();
+  const inkReused = !bitmap;
+  if (inkReused) {
+    const cached = printCache.get(inkID);
+    if (!cached) {
+      post('need-ink', { revision: layout.revision, inkID });
+      return;
+    }
+    try {
+      bitmap = await createImageBitmap(cached);
+    } catch {
+      printCache.delete(inkID);
+      post('need-ink', { revision: layout.revision, inkID });
+      return;
+    }
+    if (layout.revision !== latestRevision) {
+      bitmap.close();
+      post('discarded', { revision: layout.revision });
+      return;
+    }
+  }
+  const source = bitmap;
+  if (source.width !== expectedWidth || source.height !== expectedHeight) {
+    bitmap?.close();
     throw new Error('Paper capture size mismatch');
   }
   stopAnimation();
   current = null;
   const previousMaterialBuilds = materialBuilds;
-  const [tile, materialMs] = measure('material', () => getTile(layout));
+  const [tile, materialMs] = measure('material', () => getTile(layout, maps));
   if (previousMaterialBuilds === materialBuilds) fastInkUpdates++;
   const [, geometryMs] = measure('geometry', () => updateGeometry(layout));
   for (const mesh of [front, back]) {
@@ -253,16 +337,14 @@ async function prepare({ layout, bitmap }) {
   for (const map of [tile.albedo, tile.normal, tile.roughness]) {
     map.repeat.set(layout.width / tile.width, layout.height / tile.height);
   }
-  // Use a CanvasTexture so browser WebGL applies the same UV orientation
-  // to the capture and the scan, including on the reverse-facing mesh.
-  const optical = new OffscreenCanvas(bitmap.width, bitmap.height);
-  optical.getContext('bitmaprenderer').transferFromImageBitmap(bitmap);
-  const next = texture(optical, THREE.SRGBColorSpace);
   releasePrint();
-  print = next;
-  ink.value = next;
+  // Keep upload orientation and alpha identical to the baseline capture.
+  const optical = new OffscreenCanvas(expectedWidth, expectedHeight);
+  optical.getContext('bitmaprenderer').transferFromImageBitmap(bitmap);
+  print = texture(optical, THREE.SRGBColorSpace);
+  ink.value = print;
   const [, uploadMs] = measure('upload', () => {
-    for (const map of [tile.albedo, tile.normal, tile.roughness, next]) renderer.initTexture(map);
+    for (const map of [tile.albedo, tile.normal, tile.roughness, print]) renderer.initTexture(map);
     renderer.getContext().finish();
   });
   const first = !captureCount;
@@ -284,10 +366,10 @@ async function prepare({ layout, bitmap }) {
     post('discarded', { revision: layout.revision });
     return;
   }
-  configureView(layout, false);
-  const [, drawMs] = measure('flat draw', draw);
   current = layout;
-  sendFrame('ready', layout, { materialMs, geometryMs, uploadMs, compileMs, drawMs });
+  readyFields = { materialMs, stockMs: maps.stockMs, geometryMs, uploadMs, compileMs, inkReused };
+  sendReady(layout, readyFields, stockKeys);
+  if (!inkReused && inkID !== null) rememberPrint(inkID, optical);
 }
 
 function stopAnimation() {
@@ -363,6 +445,10 @@ async function receive(message) {
     return;
   }
   if (message.type === 'prepare') return prepare(message);
+  if (message.type === 'render-stock') {
+    if (current?.revision === message.revision) sendReady(current, readyFields);
+    return;
+  }
   if (message.type === 'visibility') {
     visible = message.visible;
     if (!visible) stopAnimation();
@@ -394,6 +480,7 @@ async function receive(message) {
 function storeCreases() {
   if (!model.memories.length) return;
   saved = { width: model.width, height: model.height, memories: model.memories };
+  creaseRevision++;
   post('creases', { saved });
 }
 

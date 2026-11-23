@@ -110,6 +110,52 @@ export function prepareOpaquePrint(print) {
   return { opticalScalar, opticalDepth };
 }
 
+function substrateVariation(x, y, fiber, formation) {
+  const broad = (valueNoise(x / 195, y / 195, 53) - .5) * .030;
+  const fine = (valueNoise(x / 47, y / 47, 83) - .5) * .016;
+  return formation * .025 + fiber * .004 + broad + fine;
+}
+
+function writeRoughness(data, offset, base, formation, fiber) {
+  const roughness = byte(Math.min(.98, Math.max(.72, base + formation * .04 + fiber * .012)));
+  data[offset] = data[offset + 1] = data[offset + 2] = roughness;
+  data[offset + 3] = 255;
+}
+
+// Unprinted stock has unit transmission and zero optical coverage. Calculate
+// the scan-dependent field once, then tint it without re-running the ink model.
+export function prepareStockMaps(scan, blurred, width, height, fiberStrength, baseRoughness) {
+  const fiberHeight = new Float32Array(width * height);
+  const variation = new Float64Array(width * height);
+  const roughness = image(width, height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pixel = y * width + x;
+      const offset = pixel * 4;
+      const fiber = (scan.data[offset] - blurred.data[offset]) / 255;
+      const formation = (blurred.data[offset] - 128) / 255;
+      fiberHeight[pixel] = fiber;
+      variation[pixel] = 1 + substrateVariation(x, y, fiber, formation);
+      writeRoughness(roughness.data, offset, baseRoughness, formation, fiber);
+    }
+  }
+  const normal = { data: generateNormalPixels(fiberHeight, width, height, fiberStrength * 5), width, height };
+  return { width, height, variation, normal, roughness };
+}
+
+export function tintStock(stock, rgb) {
+  const albedo = image(stock.width, stock.height);
+  const paper = rgb.map(value => srgbToLinear(value / 255));
+  for (let pixel = 0; pixel < stock.variation.length; pixel++) {
+    const offset = pixel * 4;
+    for (let channel = 0; channel < 3; channel++) {
+      albedo.data[offset + channel] = byte(linearToSrgb(paper[channel] * stock.variation[pixel]));
+    }
+    albedo.data[offset + 3] = 255;
+  }
+  return albedo;
+}
+
 export function compositeSurfaceMaps({ print, scan, blurred, width, height, params }) {
   const albedo = image(width, height);
   const substrate = image(width, height);
@@ -127,9 +173,7 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
       const mottle = mottleAt(px / 1500, py / 1500, fiber, formation) * params.mottle;
       const centerDensity = params.opticalScalar?.[pixel] ?? scalarOpticalDensity(print.data, offset);
       const printCoverage = clamp01(centerDensity / 4.6);
-      const broad=(valueNoise(px/195,py/195,53)-.5)*.030;
-      const fine=(valueNoise(px/47,py/47,83)-.5)*.016;
-      const substrateVariation = 1 + (formation * .025 + fiber * .004 + broad + fine) * (1 - printCoverage * .70);
+      const paperVariation = 1 + substrateVariation(px, py, fiber, formation) * (1 - printCoverage * .70);
       let coverage;
       let color;
       if (params.opaquePrint) {
@@ -153,12 +197,12 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
           const encoded = neutral ? luma : print.data[offset + channel] / 255;
           const opticalDepth = params.opticalDepth?.[pixel * 3 + channel] ?? -Math.log(Math.max(0.0001, srgbToLinear(encoded)));
           const transmission = Math.exp(-(opticalDepth + spreadDensity) * densityFactor);
-          return srgbToLinear(params.paperColor[channel]) * substrateVariation * transmission;
+          return srgbToLinear(params.paperColor[channel]) * paperVariation * transmission;
         });
       } else {
         const { center, average } = coverageAt(print, width, height, x, y);
         coverage = clamp01(center + Math.max(0, average - center) * params.spread * 0.12);
-        const paperLinear = params.paperColor.map((value) => srgbToLinear(value) * substrateVariation);
+        const paperLinear = params.paperColor.map((value) => srgbToLinear(value) * paperVariation);
         const pigmentLinear = [0, 1, 2].map((channel) => srgbToLinear(print.data[offset + channel] / 255));
         color = compositeInk(paperLinear, pigmentLinear, coverage, { absorption: params.absorption, mottle });
       }
@@ -166,7 +210,7 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
         ? inkDropout(x, y, fiber, params.pinholes || 0, params.pinholeScale || 1) : 0;
       const remainingInk = coverage * (1 - dropout);
       for (let channel = 0; channel < 3; channel++) {
-        const paper = srgbToLinear(params.paperColor[channel]) * substrateVariation;
+        const paper = srgbToLinear(params.paperColor[channel]) * paperVariation;
         const printed = color[channel] * (1 - dropout) + paper * dropout;
         albedo.data[offset + channel] = byte(linearToSrgb(printed));
         substrate.data[offset + channel] = byte(linearToSrgb(paper));
@@ -175,11 +219,7 @@ export function compositeSurfaceMaps({ print, scan, blurred, width, height, para
       albedo.data[offset + 3] = 255;
       substrate.data[offset + 3] = 255;
       ink.data[offset + 3] = byte(remainingInk);
-      const rough = Math.min(0.98, Math.max(0.72, params.roughness + formation * 0.04 + fiber * 0.012));
-      roughness.data[offset] = byte(rough);
-      roughness.data[offset + 1] = byte(rough);
-      roughness.data[offset + 2] = byte(rough);
-      roughness.data[offset + 3] = 255;
+      writeRoughness(roughness.data, offset, params.roughness, formation, fiber);
     }
   }
   const normal = { data: generateNormalPixels(fiberHeight, width, height, params.fiber * 5 * (params.cssScale || 1)), width, height };

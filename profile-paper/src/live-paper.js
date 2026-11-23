@@ -1,3 +1,5 @@
+import { RasterCache } from './paper/raster-cache.js';
+import { captureStyleKey } from './paper/capture-style.js';
 import { captureProfile } from './paper/capture-profile.js';
 import { CREASE_SESSION_KEY, readCreases } from './scene/crease-memory.js';
 
@@ -14,6 +16,40 @@ let worker, limit, renderer, observer, degraded, capture, captureAbort, pendingF
 let revision = 0, layout, committed, drag, rest, fold, shownScroll, foldShown = false;
 let skippedFrames = 0, lastError, captureTimes, workerTimes, dprQuery;
 let latestMotion, motionEpoch = 0, motionActive = false;
+const inkIndex = new Map();
+const regionCache = new Map();
+let nextInkID = 0;
+let cachedInkIDs = new Set();
+const stockFrames = new RasterCache(48 * 1024 * 1024, 6, disposeLayer);
+
+function disposeLayer(frame) {
+  frame.node.remove();
+  frame.canvas.width = frame.canvas.height = 0;
+}
+
+function detachStock() {
+  if (!rest) return;
+  if (stockFrames.has(rest.stockKey)) rest.node.remove();
+  else disposeLayer(rest);
+  rest = null;
+}
+
+// Capture keys use the rendered DOM rather than a filter name. Runtime
+// labels, language, hosted refresh, dialogs and open details can all change
+// the ink without changing the URL.
+function inkFingerprint(target, styleKey) {
+  // These elements can change their pixels without a markup change.
+  if (!styleKey || document.querySelector('main img, main canvas, main video, main iframe, main input, main textarea, main select')) return null;
+  const content = Array.from(document.body.children)
+    .filter(node => !['SCRIPT', 'IFRAME'].includes(node.tagName))
+    .map(node => node.outerHTML);
+  const heat = document.getElementById('heat-scroll');
+  return JSON.stringify([
+    styleKey, target.rgb, target.width, target.height, target.viewportWidth,
+    target.viewportHeight, target.dpr, target.scale,
+    heat?.scrollLeft, heat?.scrollTop, content,
+  ]);
+}
 
 // CSS paints the native document throughout startup and invalidation. The
 // only path onto the screen is a fully rendered bitmap for the measured DOM.
@@ -51,7 +87,6 @@ function layer(id) {
     wrapper.id = 'wt-paper-stock';
     wrapper.setAttribute('aria-hidden', 'true');
     wrapper.append(canvas);
-    document.body.append(wrapper);
     return { canvas, context, node: wrapper };
   }
   document.body.append(canvas);
@@ -81,9 +116,9 @@ function showFold(visible) {
 function hide() {
   showFold(false);
   root.classList.remove('wt-physical-print');
-  rest?.node.remove();
-  fold?.node.remove();
-  rest = fold = null;
+  detachStock();
+  if (fold) disposeLayer(fold);
+  fold = null;
   committed = latestMotion = null;
   motionActive = false;
   if (pendingFrame) discardFrame(pendingFrame);
@@ -123,6 +158,10 @@ function stop() {
   if (scheduled) cancelAnimationFrame(scheduled);
   scheduled = 0;
   hide();
+  stockFrames.clear();
+  inkIndex.clear();
+  cachedInkIDs.clear();
+  regionCache.clear();
 }
 
 function sync() {
@@ -173,19 +212,58 @@ function receive(message) {
     case 'creases':
       try { sessionStorage.setItem(CREASE_SESSION_KEY, JSON.stringify(message.saved)); } catch {}
       break;
+    case 'ink-cache':
+      cachedInkIDs = new Set(message.ids);
+      break;
+    case 'need-ink':
+      cachedInkIDs.delete(message.inkID);
+      for (const [key, id] of inkIndex) {
+        if (id === message.inkID) inkIndex.delete(key);
+      }
+      // The worker owns cache eviction. Retry the same live revision if it
+      // no longer has the print that was indexed by the controller.
+      if (capture?.revision === message.revision) capture = null;
+      schedule();
+      break;
     case 'discarded':
       if (capture?.revision === message.revision) capture = null;
       schedule();
       break;
     case 'ready':
-      if (capture?.revision === message.layout.revision) capture = null;
-      queueFrame(message);
-      schedule();
+      stageReady(message);
       break;
     case 'motion':
       queueFrame(message);
       break;
   }
+}
+
+async function stageReady(message) {
+  const owner = worker;
+  if (message.cropFrom && isCurrentFrame(message)) {
+    const source = stockFrames.get(message.cropFrom)?.canvas;
+    const { width, height, scale } = message.layout;
+    const w = Math.floor(width * scale), h = Math.floor(height * scale);
+    const start = performance.now();
+    try {
+      message.bitmap = await createImageBitmap(source, 0, source.height - h, w, h);
+      message.cropMs = Math.round(performance.now() - start);
+      performance.clearMeasures('Newsprint stock crop');
+      performance.measure('Newsprint stock crop', { start });
+    } catch {
+      if (isCurrentFrame(message) && worker) {
+        worker.postMessage({ type: 'render-stock', revision });
+        return;
+      }
+    }
+  }
+  if (!worker || worker !== owner) {
+    message.bitmap?.close();
+    return;
+  }
+  if (capture?.revision === message.layout.revision) capture = null;
+  queueFrame(message);
+  schedule();
 }
 
 function acknowledge(message) {
@@ -194,7 +272,7 @@ function acknowledge(message) {
 
 function discardFrame(message) {
   skippedFrames++;
-  message.bitmap.close();
+  message.bitmap?.close();
   acknowledge(message);
 }
 
@@ -213,32 +291,49 @@ function queueFrame(message) {
   schedule();
 }
 
+function presentStock(message) {
+  const { layout: frameLayout, bitmap, stockKey } = message;
+  detachStock();
+  if (bitmap) {
+    rest = layer('wt-paper-resident');
+    paint(rest, bitmap, frameLayout.width, frameLayout.height);
+    rest.stockKey = stockKey;
+    stockFrames.put(stockKey, rest, rest.canvas.width * rest.canvas.height * 4);
+  } else {
+    rest = stockFrames.get(stockKey);
+  }
+  document.body.append(rest.node);
+}
+
 function present(message) {
   const { layout: frameLayout, bitmap } = message;
   const height = message.folding ? frameLayout.viewportHeight : frameLayout.height;
-  if (bitmap.width !== Math.floor(frameLayout.width * frameLayout.scale) ||
-      bitmap.height !== Math.floor(height * frameLayout.scale) ||
+  const cachedStock = bitmap ? null : stockFrames.get(message.stockKey)?.canvas;
+  const surface = bitmap ?? cachedStock;
+  if (surface?.width !== Math.floor(frameLayout.width * frameLayout.scale) ||
+      surface?.height !== Math.floor(height * frameLayout.scale) ||
       message.diagnostics.meshCssWidth !== frameLayout.width ||
       message.diagnostics.meshCssHeight !== frameLayout.height ||
       message.diagnostics.textureSize[0] !== Math.floor(frameLayout.width * frameLayout.scale) ||
       message.diagnostics.textureSize[1] !== Math.floor(frameLayout.height * frameLayout.scale)) {
-    bitmap.close();
+    bitmap?.close();
     fail('Paper frame size mismatch');
     return;
   }
   if (message.type === 'ready') {
-    rest ??= layer('wt-paper-resident');
-    paint(rest, bitmap, frameLayout.width, height);
+    presentStock(message);
     committed = frameLayout;
     latestMotion = message;
     workerTimes = {
-      materialMs: message.materialMs, geometryMs: message.geometryMs, uploadMs: message.uploadMs,
+      materialMs: message.materialMs, stockMs: message.stockMs, geometryMs: message.geometryMs, uploadMs: message.uploadMs,
       compileMs: message.compileMs, drawMs: message.drawMs, bitmapMs: message.transferMs,
+      inkReused: message.inkReused, stockReused: !bitmap || !!message.cropFrom,
+      stockCropped: !!message.cropFrom, cropMs: message.cropMs ?? 0,
     };
     showFold(false);
     root.classList.add('wt-physical-print');
   } else if (!message.folding) {
-    paint(rest, bitmap, frameLayout.width, height);
+    presentStock(message);
     showFold(false);
     motionActive = false;
     latestMotion = message;
@@ -287,13 +382,27 @@ async function startCapture(target) {
   const stale = () => instance !== worker || revision !== target.revision;
   let bitmap;
   try {
-    const result = await captureProfile(target, abort.signal);
-    bitmap = result.bitmap;
+    const styleKey = captureStyleKey(document);
+    const fingerprint = inkFingerprint(target, styleKey);
+    let inkID = fingerprint && inkIndex.get(fingerprint);
+    if (cachedInkIDs.has(inkID)) {
+      inkIndex.delete(fingerprint);
+      captureTimes = { captureMs: 0, capturePhases: {}, reusedCaptureRegions: 0 };
+    } else {
+      const result = await captureProfile(target, abort.signal, regionCache, styleKey);
+      bitmap = result.bitmap;
+      inkID = ++nextInkID;
+      captureTimes = { captureMs: result.captureMs, capturePhases: result.times, reusedCaptureRegions: result.reusedRegions };
+    }
     if (stale()) {
       throw new DOMException('Outdated paper capture', 'AbortError');
     }
-    captureTimes = { captureMs: result.captureMs, capturePhases: result.times };
-    instance.postMessage({ type: 'prepare', layout: target, bitmap }, [bitmap]);
+    if (fingerprint) {
+      inkIndex.set(fingerprint, inkID);
+      if (inkIndex.size > 12) inkIndex.delete(inkIndex.keys().next().value);
+    }
+    instance.postMessage({ type: 'prepare', layout: target, bitmap, inkID: fingerprint ? inkID : null,
+      stockKeys: Array.from(stockFrames.keys()) }, bitmap ? [bitmap] : []);
   } catch (error) {
     bitmap?.close();
     if (capture === target) capture = null;
@@ -424,6 +533,7 @@ window.__WT_PAPER3D__ = {
     viewportHeight: committed?.viewportHeight, cameraScrollY: scrollY,
     flapPoints: latestMotion?.flapPoints ?? [], skippedFrames, error: lastError ?? null,
     ...latestMotion?.diagnostics, ...captureTimes, ...workerTimes,
+    stockCacheBytes: stockFrames.bytes,
     lastInkUpdateMs: workerTimes?.materialMs,
   }),
   refresh: sync,

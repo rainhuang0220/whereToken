@@ -1475,3 +1475,47 @@ test("first paint controls accept a range while the profile response is pending"
   await expect(page.locator("#hero-value")).toHaveText(snapshot.periods["30d"].totals.total.display);
   await expect(month).toBeFocused();
 });
+
+test("revisiting a report reuses its exact ink and stock within bounded caches", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(baseURL + "?palette=newsprint");
+  const original = await waitForPhysicalPaper(page);
+  const choose = async label => {
+    await page.getByRole("tab", { name: label, exact: true }).click();
+    return waitForPhysicalPaper(page);
+  };
+
+  const seven = await choose("7d");
+  expect(seven.sheetCssHeight).toBeLessThan(original.sheetCssHeight);
+  expect(seven.stockCropped).toBe(true);
+  const revisited = await choose("All");
+  expect(revisited.inkReused).toBe(true);
+  expect(revisited.stockReused).toBe(true);
+  expect(revisited.captureMs).toBe(0);
+  expect(revisited.bitmapMs).toBe(0);
+  expect(revisited.textureSize).toEqual(original.textureSize);
+  expect(revisited.readyRevision).toBeGreaterThan(seven.readyRevision);
+  expect(revisited.inkCacheBytes).toBeLessThanOrEqual(8 * 1024 * 1024);
+  expect(revisited.peakPendingPrintBytes).toBeLessThanOrEqual(48 * 1024 * 1024);
+  expect(revisited.stockCacheBytes).toBeLessThanOrEqual(48 * 1024 * 1024);
+
+  await page.evaluate(() => {
+    document.querySelector("#hero-label").textContent = "Updated visual content";
+    window.dispatchEvent(new Event("wt:profile-render"));
+  });
+  const changed = await waitForPhysicalPaper(page);
+  expect(changed.documentKey).toBe(revisited.documentKey);
+  expect(changed.inkReused).toBe(false);
+  expect(changed.stockReused).toBe(true);
+  expect(changed.captureMs).toBeGreaterThan(0);
+  expect(changed.reusedCaptureRegions).toBe(1);
+
+  await page.evaluate(() => {
+    document.body.style.setProperty("--subtle", "#ff0000");
+    window.dispatchEvent(new Event("wt:profile-render"));
+  });
+  const restyled = await waitForPhysicalPaper(page);
+  expect(restyled.inkReused).toBe(false);
+  expect(restyled.reusedCaptureRegions).toBe(0);
+});

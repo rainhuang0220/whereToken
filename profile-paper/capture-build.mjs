@@ -37,15 +37,20 @@ export const incrementalCapture = {
       if (start < 0 || end < start) throw new Error('Review html2canvas node traversal');
       const traversal = source.slice(start, end)
         .replaceAll('parseNodeTree', 'parseProfileNodes')
-        .replace('= function (context, node, parent, root)', '= async function (context, node, parent, root, checkpoint)')
+        .replace('= function (context, node, parent, root)', '= async function (context, node, parent, root, checkpoint, regions)')
         .replace('nextNode = childNode.nextSibling;', 'await checkpoint();\n        nextNode = childNode.nextSibling;')
         .replace('childNode.assignedNodes().forEach(function (childNode) { return parseProfileNodes(context, childNode, parent, root); });',
-          'for (const assigned of childNode.assignedNodes()) await parseProfileNodes(context, assigned, parent, root, checkpoint);')
+          'for (const assigned of childNode.assignedNodes()) await parseProfileNodes(context, assigned, parent, root, checkpoint, regions);')
         .replace('parseProfileNodes(context, childNode.shadowRoot, container, root);',
-          'await parseProfileNodes(context, childNode.shadowRoot, container, root, checkpoint);')
+          'await parseProfileNodes(context, childNode.shadowRoot, container, root, checkpoint, regions);')
         .replace('parseProfileNodes(context, childNode, container, root);',
-          'await parseProfileNodes(context, childNode, container, root, checkpoint);');
-      return { contents: source + '\n' + traversal +
+          'await parseProfileNodes(context, childNode, container, root, checkpoint, regions);');
+      const cachedTraversal = traversal.replace(
+        'var container = createContainer(context, childNode);',
+        'const reused = regions.get(childNode); if (reused) { parent.elements.push(reused); continue; }\n                var container = createContainer(context, childNode);')
+        .replace('await parseProfileNodes(context, childNode, container, root, checkpoint, regions);',
+          'await parseProfileNodes(context, childNode, container, root, checkpoint, regions);\n                        regions.remember(childNode, container);');
+      return { contents: source + '\n' + cachedTraversal +
         '\nexport { Bounds, Context, DocumentCloner, CanvasRenderer, createContainer, parseProfileNodes };',
         loader: 'js' };
     });
