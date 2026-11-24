@@ -16,3 +16,29 @@ test('evicts least-recently used resources and does not retain oversized allocat
   assert.equal(cache.bytes, 0);
   assert.deepEqual(disposed, ['B', 'A', 'C']);
 });
+
+test('reaccounts a growing atlas while retaining its existing strips', () => {
+  const disposed = [];
+  const cache = new RasterCache(10, 3, resource => disposed.push(resource));
+  const atlas = { strips: ['top'] };
+  cache.put('cloth', 'other', 5);
+  cache.put('paper', atlas, 4);
+  atlas.strips.push('bottom');
+  assert.equal(cache.put('paper', atlas, 7), true);
+  assert.equal(cache.bytes, 7);
+  assert.deepEqual(disposed, ['other']);
+  assert.equal(cache.get('paper'), atlas);
+  cache.clear();
+  assert.deepEqual(disposed, ['other', atlas]);
+});
+
+test('an atlas that outgrows the budget remains owned by its caller', () => {
+  const disposed = [];
+  const cache = new RasterCache(10, 3, resource => disposed.push(resource));
+  const atlas = {};
+  cache.put('paper', atlas, 4);
+  assert.equal(cache.put('paper', atlas, 12), false);
+  assert.equal(cache.bytes, 0);
+  assert.equal(cache.has('paper'), false);
+  assert.deepEqual(disposed, []);
+});

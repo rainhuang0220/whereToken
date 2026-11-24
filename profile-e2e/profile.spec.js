@@ -1507,7 +1507,11 @@ test("revisiting a report reuses its exact ink and stock within bounded caches",
   expect(seven.sheetCssHeight).toBeLessThan(original.sheetCssHeight);
   expect(seven.stockCropped).toBe(true);
   const shortStock = await page.locator("#wt-paper-resident").evaluate(canvas => [canvas.width, canvas.height]);
-  expect(shortStock).toEqual(seven.textureSize);
+  expect(shortStock).toEqual(original.textureSize);
+  // Firefox reports the body’s fractional layout height. The logical
+  // document and the drawing buffer retain their integer dimensions.
+  const clip = await page.locator("#wt-paper-stock").boundingBox();
+  expect(Math.abs(clip.height - seven.sheetCssHeight)).toBeLessThan(1);
   const revisited = await choose("All");
   expect(revisited.inkReused).toBe(true);
   expect(revisited.stockReused).toBe(true);

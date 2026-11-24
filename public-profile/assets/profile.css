@@ -804,16 +804,18 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
 /* The flat sheet image scrolls with the complete document. Only the
    curved view needs a fixed camera and a raster copy of the current ink. */
 #wt-paper-stock {
+  display: none;
   position: absolute;
   inset: 0;
-  overflow: clip;
+  height: min(100%, var(--wt-paper-stock-height));
+  overflow: hidden;
   contain: strict;
   pointer-events: none;
 }
-#wt-paper-resident,
+.wt-paper-stock-strip,
 #wt-paper-fold,
-#wt-paper-shadow,
-#wt-paper-highlight {
+.wt-paper-shadow,
+.wt-paper-highlight {
   display: none;
   position: absolute;
   top: 0;
@@ -823,14 +825,21 @@ h2 { text-wrap: balance; scroll-margin-top: 16px; }
   z-index: 0;
 }
 #wt-paper-fold { position: fixed; }
+#wt-paper-light {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
 /* The light bitmap carries only the crease's change in reflected light.
    Compositing it over native paint preserves glyphs and hit targets. */
-#wt-paper-shadow,
-#wt-paper-highlight { z-index: 2; }
-#wt-paper-highlight { mix-blend-mode: color-dodge; }
-:root.wt-paper-flat:not(.wt-paper-folding) #wt-paper-shadow,
-:root.wt-paper-flat:not(.wt-paper-folding) #wt-paper-highlight { display: block; }
-:root.wt-paper-flat:not(.wt-paper-folding) #wt-paper-resident,
+.wt-paper-shadow,
+.wt-paper-highlight { z-index: 2; }
+.wt-paper-highlight { mix-blend-mode: color-dodge; }
+:root.wt-paper-flat:not(.wt-paper-folding) .wt-paper-shadow,
+:root.wt-paper-flat:not(.wt-paper-folding) .wt-paper-highlight { display: block; }
+:root.wt-paper-flat:not(.wt-paper-folding) #wt-paper-stock,
+:root.wt-paper-flat:not(.wt-paper-folding) .wt-paper-stock-strip,
 :root.wt-physical-print.wt-paper-folding #wt-paper-fold { display: block; }
 :root.wt-physical-print.wt-paper-folding body { background-image: none; }
 :root[data-activity-palette="newsprint"][data-theme="dark"] body { background-blend-mode: multiply; }

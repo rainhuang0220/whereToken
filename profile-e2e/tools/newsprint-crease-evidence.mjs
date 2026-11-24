@@ -42,6 +42,8 @@ if (serveOnly) {
       await exerciseFold(browser);
     } else if (process.argv.includes('--stock')) {
       await verifyStockPhase(browser);
+    } else if (process.argv.includes('--stock-growth')) {
+      await verifyStockGrowth(browser);
     } else {
       const cases = process.env.WT_SINGLE ? [[1440, 900, 'light', 1]] : [
         [1440, 900, 'light', 1], [1440, 900, 'dark', 2],
@@ -382,4 +384,40 @@ async function verifyStockPhase(browser) {
   }
   await writeFile(path.join(output, 'stock-phase.json'), JSON.stringify(results, null, 2) + '\n');
   console.log(results);
+}
+
+
+async function verifyStockGrowth(browser) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'light' });
+  await page.goto(url + '&range=today');
+  const first = await ready(page);
+  await page.getByRole('tab', { name: 'All', exact: true }).click();
+  const grown = await ready(page, first.readyRevision);
+  assert.equal(grown.stockAtlasStrips, 2);
+  assert.equal(grown.stockReadbackPixels, (grown.textureSize[1] - first.textureSize[1]) * grown.textureSize[0]);
+
+  const compareAt = first.textureSize[1] - 16;
+  const read = () => page.locator('#wt-paper-stock').evaluate((stock, y) => {
+    const surface = new OffscreenCanvas(384, 64);
+    const ctx = surface.getContext('2d');
+    let top = 0;
+    for (const strip of stock.querySelectorAll('canvas')) {
+      const start = Math.max(y, top), end = Math.min(y + surface.height, top + strip.height);
+      if (end > start) ctx.drawImage(strip, 80, start - top, 384, end - start, 0, start - y, 384, end - start);
+      top += strip.height;
+    }
+    return Array.from(ctx.getImageData(0, 0, 384, 64).data);
+  }, compareAt);
+  const appended = await read();
+  await page.screenshot({ fullPage: true, path: path.join(output, 'dpr2-grown-stock.png') });
+  await page.reload();
+  const direct = await ready(page);
+  assert.equal(direct.stockAtlasStrips, 1);
+  const full = await read();
+  const maxDelta = appended.reduce((max, channel, i) => Math.max(max, Math.abs(channel - full[i])), 0);
+  assert.ok(maxDelta <= 1, `growth seam RGB difference: ${maxDelta}`);
+  await writeFile(path.join(output, 'stock-growth.json'), JSON.stringify({
+    from: first.textureSize, to: grown.textureSize, readbackPixels: grown.stockReadbackPixels, maxDelta,
+  }, null, 2) + '\n');
+  await page.close();
 }

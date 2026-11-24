@@ -102,7 +102,12 @@ async function collectTrace(page, name, exercise) {
 }
 
 const viewport = { width: 1440, height: 900 };
-const scarred = process.env.WT_TRACE_SCAR === '1';
+const rangeMatrix = process.env.WT_TRACE_RANGES === '1';
+const runs = rangeMatrix ? 1 : 3;
+const rangePointer = process.env.WT_TRACE_POINTER === '1';
+const startRange = process.env.WT_TRACE_START ?? '53w';
+const scar = process.env.WT_TRACE_SCAR;
+const scarred = ['1', 'bottom', 'both'].includes(scar);
 const baseline = process.argv.includes('--baseline');
 const waitReady = (page, old = -2) => page.waitForFunction(revision => {
   const paper = window.__WT_PAPER3D__?.getDiagnostics();
@@ -114,24 +119,25 @@ const cold = [];
 const operations = [];
 let rapid;
 try {
-  for (let run = 0; run < (baseline ? 1 : 3); run++) {
+  for (let run = 0; run < (baseline ? 1 : runs); run++) {
     browser = await chromium.launch({ headless: process.env.WT_HEADFUL !== '1' });
-    const context = await browser.newContext({ viewport, recordVideo: { dir: output, size: viewport } });
+    const context = await browser.newContext({ viewport, deviceScaleFactor: rangeMatrix ? 2 : 1, recordVideo: { dir: output, size: viewport } });
     const page = await context.newPage();
-    if (scarred) await page.addInitScript(() => {
+    if (scarred) await page.addInitScript(mode => {
       // Same physical line as the 1440px drag-and-reopen evidence.
-      const width = 14.4, height = 16.35, edge = 3.625;
-      const nx = -Math.SQRT1_2, ny = Math.SQRT1_2;
-      const origin = { x: -width / 2, y: height / 2 };
-      const start = { x: origin.x + edge, y: origin.y };
-      const end = { x: origin.x, y: origin.y - edge };
-      const length = Math.hypot(edge, edge);
-      sessionStorage.setItem('wheretoken.newsprint.creases.v1', JSON.stringify({
-        width, height, memories: [{ strength: .85, band: .2, times: 1,
-          hinge: { kind: 'corner', nx, ny, depth: edge * ny, origin, start, end, length, span: length,
-            fullSpan: true, alongShift: 0 } }],
-      }));
-    });
+      const width = 14.4, height = 16.35, edge = mode === 'both' ? 2.4 : 3.625;
+      const memories = (mode === 'both' ? [false, true] : [mode === 'bottom']).map(bottom => {
+        const nx = -Math.SQRT1_2, ny = bottom ? -Math.SQRT1_2 : Math.SQRT1_2;
+        const origin = { x: -width / 2, y: bottom ? -height / 2 : height / 2 };
+        const start = { x: origin.x + edge, y: origin.y };
+        const end = { x: origin.x, y: origin.y + (bottom ? edge : -edge) };
+        const length = Math.hypot(edge, edge);
+        return { strength: .85, band: .2, times: 1,
+          hinge: { kind: 'corner', nx, ny, depth: edge * Math.abs(ny), origin, start, end, length, span: length,
+            fullSpan: true, alongShift: 0 } };
+      });
+      sessionStorage.setItem('wheretoken.newsprint.creases.v1', JSON.stringify({ width, height, memories }));
+    }, scar);
     await setup(page);
     page.on('pageerror', error => console.error(error.message));
     if (process.env.WT_TRACE_DEBUG) page.on('console', message => console.log(message.text()));
@@ -152,7 +158,7 @@ try {
 
     const startup = async () => {
       const start = performance.now();
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await page.goto(rangeMatrix ? url + '&range=' + encodeURIComponent(startRange.toLowerCase()) : url, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => document.querySelector('#ranges [aria-selected=true]'));
       const nativeMs = elapsed(start);
       try {
@@ -174,7 +180,73 @@ try {
       });
     } else {
       cold.push(run === 0 ? await collectTrace(page, 'after-cold', startup) : await startup());
-      if (run === 2) {
+      if (rangeMatrix) {
+        const changes = rangePointer
+          ? ['All', 'Today', 'All', 'Today', '30d', 'Today', '7d', '53w', '7d', '53w', '30d', '53w']
+          : ['All', '7d', '30d', 'Today', 'All', 'Today', '30d', '7d', '53w', 'Today', '53w'];
+        await collectTrace(page, 'after-filters', async () => {
+          const rounds = Number(process.env.WT_TRACE_ROUNDS ?? 5);
+          for (let round = 0; round < rounds; round++) {
+            for (const label of changes) {
+              let result = await page.evaluate(({ name, pointer }) => {
+                const controller = window.__WT_PAPER3D__;
+                const previous = controller.getDiagnostics();
+                const tab = [...document.querySelectorAll('#ranges [role=tab]')].find(node => node.textContent === name);
+                function measureClick(start) {
+                  let firstFrame;
+                  return new Promise((resolve, reject) => {
+                    function inspect(now) {
+                      firstFrame ??= {
+                        nativeMs: now - start,
+                        nativeVisible: !!document.getElementById('hero-value')?.textContent?.trim(),
+                        backdropVisible: document.documentElement.classList.contains('wt-paper-flat'),
+                      };
+                      if (document.querySelector('#ranges [aria-selected=true]')?.textContent !== name) {
+                        reject(new Error('Native range did not update by its first frame'));
+                        return;
+                      }
+                      const diagnostic = controller.getDiagnostics();
+                      if (diagnostic.readyRevision > previous.readyRevision && diagnostic.snapshotReady) {
+                        const stock = document.getElementById('wt-paper-stock');
+                        const viewport = stock?.getBoundingClientRect();
+                        if (Math.abs(viewport?.height - diagnostic.sheetCssHeight) >= 1 || viewport?.width !== diagnostic.sheetCssWidth ||
+                            diagnostic.meshCssHeight !== document.documentElement.scrollHeight ||
+                            diagnostic.captureRevision !== diagnostic.readyRevision) {
+                          reject(new Error('Paper atlas viewport does not match the current sheet'));
+                          return;
+                        }
+                        resolve({ fromHeight: previous.sheetCssHeight, ...firstFrame, readyMs: performance.now() - start, diagnostic });
+                      } else if (diagnostic.error || now - start > 15000) {
+                        reject(new Error(JSON.stringify(diagnostic)));
+                      } else {
+                        requestAnimationFrame(inspect);
+                      }
+                    }
+                    requestAnimationFrame(inspect);
+                  });
+                }
+                if (pointer) {
+                  window.paperRangeClick = new Promise((resolve, reject) => {
+                    tab.addEventListener('click', event => measureClick(event.timeStamp).then(resolve, reject), { once: true });
+                  });
+                  return null;
+                }
+                const start = performance.now();
+                tab.click();
+                if (document.querySelector('#ranges [aria-selected=true]')?.textContent !== name) {
+                  throw new Error('Native range did not update synchronously');
+                }
+                return measureClick(start);
+              }, { name: label, pointer: rangePointer });
+              if (rangePointer) {
+                await page.locator('#ranges').getByRole('tab', { name: label, exact: true }).click();
+                result = await page.evaluate(() => window.paperRangeClick);
+              }
+              operations.push({ round, label, ...result });
+            }
+          }
+        });
+      } else if (run === 2) {
         const range = name => page.locator('#ranges').getByRole('tab', { name, exact: true });
         const tab = name => page.getByRole('tab', { name, exact: true });
         await collectTrace(page, 'after-filters', async () => {
@@ -212,7 +284,7 @@ try {
       }
     }
     cold.at(-1).timeline = await page.evaluate(() => window.paperPerf);
-    await page.screenshot({ path: path.join(output, `rest-${run + 1}.png`) });
+    await page.screenshot({ fullPage: rangeMatrix, path: path.join(output, `rest-${run + 1}.png`) });
     const video = page.video();
     await context.close();
     await video.saveAs(path.join(output, `run-${run + 1}.webm`));
@@ -220,7 +292,39 @@ try {
     await browser.close();
     browser = null;
   }
-  await writeFile(path.join(output, 'measurements.json'), JSON.stringify({ viewport, scarred, cold, operations, rapid }, null, 2) + '\n');
+  await writeFile(path.join(output, 'measurements.json'), JSON.stringify({ viewport, scarred, scar, startRange, rangeMatrix, rangePointer, cold, operations, rapid }, null, 2) + '\n');
+  if (rangeMatrix) {
+    const warm = operations.filter(op => op.round > 0);
+    if (new Set(operations.map(op => op.diagnostic.sheetCssHeight)).size !== 3 || warm.length === 0) {
+      throw new Error('Matrix did not cover all three heights and warm revisits');
+    }
+    const misses = warm.filter(op => !op.diagnostic.stockReused || op.diagnostic.stockReadbackPixels > 0);
+    console.log(`DPR2 warm stock misses: ${misses.length}/${warm.length}`);
+    if (!process.env.WT_TRACE_OBSERVE) {
+      if (misses.length) throw new Error('Revisited heights caused stock GPU readback');
+      if (warm.some(op => !op.nativeVisible || !op.backdropVisible)) throw new Error('A warm switch hid native content or its backdrop');
+      if (scar === '1' && operations.some(op => !op.diagnostic.lightReused || !op.diagnostic.creaseLighting)) {
+        throw new Error('Unchanged upper crease was redrawn on a new paper height');
+      }
+      if (scar === 'both') {
+        const newHeights = operations.filter(op => op.diagnostic.lightReadbackCount > 0);
+        if (newHeights.length !== 2 || newHeights.some(op => op.diagnostic.lightReadbackCount !== 1 ||
+            op.diagnostic.lightReusedCount !== 1)) throw new Error('Moving the lower crease redrew the disjoint upper crease');
+      }
+      if (process.env.WT_TRACE_ASSERT_LATENCY) {
+        const cross = warm.filter(op => op.fromHeight !== op.diagnostic.sheetCssHeight).map(op => op.readyMs).sort((a,b) => a-b);
+        const p95 = cross[Math.ceil(cross.length * .95) - 1];
+        if (!(p95 <= 150)) throw new Error(`Warm cross-height p95 ${p95.toFixed(1)} ms exceeded 150 ms`);
+      }
+      if (startRange === 'Today') {
+        const growth = operations[0].diagnostic;
+        const initial = cold[0].diagnostic;
+        const rows = growth.textureSize[1] - initial.textureSize[1];
+        if (!growth.stockGrown || growth.stockReadbackPixels !== rows * growth.textureSize[0] ||
+            growth.stockAtlasStrips !== 2) throw new Error('Stock growth did not rasterize just the new rows');
+      }
+    }
+  }
   console.log(output, cold.map(run => [run.nativeMs, run.readyMs]), operations.length);
 } finally {
   await browser?.close();

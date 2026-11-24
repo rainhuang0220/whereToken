@@ -67,18 +67,46 @@ export function readCreases() {
   }
 }
 
-export function restoreCreases(saved, sheet, { refresh = true } = {}) {
+export function clipHinge(rectangle,nx,ny,depth,origin) {
+  const q=p=>(p.x-origin.x)*nx+(p.y-origin.y)*ny+depth;
+  const points=[];
+  const R=rectangle;
+  for(let i=0;i<R.length;i++){
+    const a=R[i],b=R[(i+1)%R.length],da=q(a),db=q(b);
+    if(Math.abs(da)<1e-7)points.push({...a});
+    if(da*db<0){
+      const t=da/(da-db);
+      points.push({x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y)});
+    }
+  }
+  const filtered=[];
+  for(const p of points)
+    if(!filtered.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<1e-6))filtered.push(p);
+  if(filtered.length<2)return null;
+  let best=null,dist=-1;
+  for(let i=0;i<filtered.length;i++)for(let j=i+1;j<filtered.length;j++){
+    const v=Math.hypot(filtered[i].x-filtered[j].x,filtered[i].y-filtered[j].y);
+    if(v>dist){dist=v;best=[filtered[i],filtered[j]]}
+  }
+  return {start:best[0],end:best[1],length:dist};
+}
+
+
+export function projectCreases(saved, width, height) {
   const records = normalizeCreases(saved)?.memories;
-  if (!records?.length) return;
-  sheet.memories = [];
+  if (!records?.length) return [];
+  const rectangle = [
+    { x: -width / 2, y: -height / 2 }, { x: width / 2, y: -height / 2 },
+    { x: width / 2, y: height / 2 }, { x: -width / 2, y: height / 2 },
+  ];
+  const memories = [];
   for (const record of records) {
     const { anchor, nx, ny, depth, direction, kind, fiberStart, fiberLength } = record;
     const origin = {
-      x: (anchor.x === 'right' ? 1 : -1) * (sheet.width / 2 - anchor.dx / CSS_PIXELS_PER_UNIT),
-      y: (anchor.y === 'top' ? 1 : -1) * (sheet.height / 2 - anchor.dy / CSS_PIXELS_PER_UNIT),
+      x: (anchor.x === 'right' ? 1 : -1) * (width / 2 - anchor.dx / CSS_PIXELS_PER_UNIT),
+      y: (anchor.y === 'top' ? 1 : -1) * (height / 2 - anchor.dy / CSS_PIXELS_PER_UNIT),
     };
-    const cut = sheet.lineIntersections(nx, ny, depth, origin);
-    // A line entirely off the current paper still exists in the session.
+    const cut = clipHinge(rectangle, nx, ny, depth, origin);
     if (!cut) continue;
     const { length } = cut;
     let { start, end } = cut;
@@ -87,8 +115,14 @@ export function restoreCreases(saved, sheet, { refresh = true } = {}) {
     }
     const hinge = { start, end, length, origin, nx, ny, depth, kind, anchor,
       span: length, fullSpan: true, alongShift: 0, direction, fiberStart, fiberLength };
-    sheet.memories.push({ hinge, strength: record.strength, band: record.band, times: record.times, record });
+    memories.push({ hinge, strength: record.strength, band: record.band, times: record.times, record });
   }
+  return memories;
+}
+
+export function restoreCreases(saved, sheet, { refresh = true } = {}) {
+  if (!saved) return;
+  sheet.memories = projectCreases(saved, sheet.width, sheet.height);
   if (refresh && sheet.memories.length) sheet.refreshRestingGeometry();
 }
 
@@ -97,6 +131,8 @@ export function storeCreases(sheet, before, saved) {
   if (!previous || before.includes(previous)) return saved;
   const removed = new Set(before.filter(m => !sheet.memories.includes(m)).map(m => m.record));
   previous.record = recordFor(previous, sheet.width, sheet.height);
+  const { direction, fiberStart, fiberLength } = previous.record;
+  Object.assign(previous.hinge, { direction, fiberStart, fiberLength });
   const memories = (saved?.memories ?? []).filter(m => !removed.has(m));
   memories.push(previous.record);
   const retained = memories.slice(-MAX_CREASES);

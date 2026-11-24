@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { PaperFoldSheet } from './scene/paper-foldsheet.js';
 import { CSS_PIXELS_PER_UNIT as PIXELS_PER_UNIT, creasePositions, restoreCreases, storeCreases } from './scene/crease-memory.js';
 import { buildScannedStock, toCanvas } from './paper/browser-maps.js';
-import { lightFrameKey, stockFrameKey } from './paper/paper-frame-keys.js';
+import { MAX_STOCK_STRIPS, stockFrame } from './paper/paper-frame-keys.js';
 import { RasterCache } from './paper/raster-cache.js';
+import { creaseLightFrames, LIGHT_VERTEX_PITCH } from './paper/crease-light-frame.js';
 import { tintStock } from './paper/surface-maps.js';
 
 const canvas = new OffscreenCanvas(1, 1);
@@ -13,14 +14,14 @@ const tiles = new Map();
 const ink = { value: null };
 const inkAmount = { value: 0 };
 const reverseInk = { value: 0 };
-const lightHighlights = { value: false };
 let renderer, sun, ground, front, back, light, saved, stockReady, stock;
 const flatStock = new THREE.PlaneGeometry();
 let creaseRevision = 0;
 const printCache = new RasterCache(8 * 1024 * 1024, 12, () => {});
 const MAX_PENDING_PRINT_BYTES = 48 * 1024 * 1024;
 let pendingPrints = 0, pendingPrintBytes = 0, peakPendingPrintBytes = 0;
-let current, readyFields, latestRevision, model, print, scrollY, lastTime, animation, frameCount = 0;
+let current, latestRevision, model, print, scrollY, lastTime, animation, frameCount = 0;
+let printUploaded = false;
 let captureCount = 0, materialBuilds = 0, fastInkUpdates = 0;
 let visible = true;
 let motionEpoch = 0, motionDirty = false, frameID = 0, outstanding = 0;
@@ -38,6 +39,13 @@ function disposeMesh(sheet) {
 function releasePrint() {
   print?.dispose();
   print = ink.value = null;
+  printUploaded = false;
+}
+
+function uploadPrint() {
+  if (printUploaded || !print) return;
+  renderer.initTexture(print);
+  printUploaded = true;
 }
 function texture(source, colorSpace = THREE.NoColorSpace) {
   const result = new THREE.CanvasTexture(source);
@@ -53,11 +61,9 @@ function material(side, amount, lighting = false) {
   });
   stock.onBeforeCompile = shader => {
     if (lighting) {
-      // Both plates encode the same scalar gain over the stock's flat
-      // lighting. A shadow multiplies by 1-alpha; color dodge divides by
-      // 1-color. Ink stays proportionate to the paper under both.
-      shader.uniforms.paperHighlights = lightHighlights;
-      shader.fragmentShader = 'uniform bool paperHighlights;\n' + shader.fragmentShader
+      // Pack both optical gains in one opaque buffer for a single readback.
+      // A shadow multiplies by 1-alpha; color dodge divides by 1-color.
+      shader.fragmentShader = shader.fragmentShader
         .replace('#include <logdepthbuf_fragment>', `
           #include <logdepthbuf_fragment>
           if (max(abs(vNormal.x), abs(vNormal.y)) < 0.00005) {
@@ -78,13 +84,7 @@ function material(side, amount, lighting = false) {
           float base = dot(clamp(linearToOutputTexel(vec4(flatLight, 1.0)).rgb, 0.0, 1.0), luma);
           float lit = dot(clamp(linearToOutputTexel(vec4(outgoingLight, 1.0)).rgb, 0.0, 1.0), luma);
           float gain = max(0.01, lit) / max(0.01, base);
-          if (paperHighlights && gain > 1.0) {
-            gl_FragColor = vec4(vec3(1.0 - 1.0 / gain), 1.0);
-          } else if (!paperHighlights && gain < 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - gain);
-          } else {
-            gl_FragColor = vec4(0.0);
-          }
+          gl_FragColor = vec4(max(0.0, 1.0 - gain), max(0.0, 1.0 - 1.0 / gain), 0.0, 1.0);
           return;
         `);
       return;
@@ -192,16 +192,14 @@ function getTile(layout, maps) {
   return tile;
 }
 
-function updateGeometry(layout, reuseLight) {
+function updateGeometry(layout) {
   const width = layout.width / PIXELS_PER_UNIT, height = layout.height / PIXELS_PER_UNIT;
   if (!model || model.width !== width || model.height !== height) {
     const previous = model;
     model = new PaperFoldSheet({ width, height });
-    // The exact-size light bitmap already contains the resting mesh's
-    // shading. Fold motion uses the analytic height field; tessellate
-    // on demand if this view ever needs a new light bitmap.
-    restoreCreases(saved, model, { refresh: !reuseLight });
-    light.geometry = model.restingGeometry;
+    // Motion samples the analytic height field. The resting light pass
+    // tessellates only the affected region, using the same solver.
+    restoreCreases(saved, model, { refresh: false });
     disposeMesh(previous);
     ground.geometry.dispose();
     ground.geometry = new THREE.PlaneGeometry(width, height);
@@ -237,6 +235,8 @@ function configureView(layout, folding, bounds) {
   light.visible = false;
   front.geometry = back.geometry = model.renderGeometry;
   back.visible = ground.visible = sun.castShadow = folding;
+  ink.value = folding ? print : null;
+  if (folding) uploadPrint();
   inkAmount.value = folding ? 1 : 0;
   reverseInk.value = folding ? .11 : 0;
   renderer.shadowMap.needsUpdate = folding;
@@ -264,7 +264,7 @@ function draw() {
 function diagnostics() {
   return {
     ...model.getDiagnostics(), creaseRevision, creasePositions: creasePositions(model), frameCount, geometryVertices: model.restingGeometry.attributes.position.count,
-    materialMaps: true, printedInkResident: !!print, textureSize: [print.image.width, print.image.height],
+    materialMaps: true, printedInkResident: !!print, inkUploaded: printUploaded, textureSize: [print.image.width, print.image.height],
     meshCssWidth: Math.round(model.width * PIXELS_PER_UNIT),
     meshCssHeight: Math.round(model.height * PIXELS_PER_UNIT),
     fastInkUpdates, fullMaterialBuilds: materialBuilds, inkCacheBytes: printCache.bytes, pendingPrintBytes, peakPendingPrintBytes,
@@ -284,85 +284,97 @@ function flapPoints(layout) {
   return points;
 }
 
-function cropSource(layout, stockKeys) {
-  if (!Number.isInteger(layout.scale)) return undefined;
-  // All stock maps share top-left phase and fixed CSS pixel pitch. Only
-  // the uncreased, same-width stock can be cropped at the top.
-  let sourceHeight = Infinity;
-  for (const key of stockKeys) {
-    const [, height] = JSON.parse(key);
-    if (height > layout.height && height < sourceHeight && key === stockFrameKey({ ...layout, height })) {
-      sourceHeight = height;
-    }
+function creaseGeometry(layout, bounds) {
+  const pixelsToCssX = layout.width / bounds.width;
+  const pixelsToCssY = layout.height / bounds.height;
+  const cssWidth = bounds.w * pixelsToCssX, cssHeight = bounds.h * pixelsToCssY;
+  const geometry = new THREE.PlaneGeometry(cssWidth / PIXELS_PER_UNIT, cssHeight / PIXELS_PER_UNIT,
+    Math.ceil(cssWidth / LIGHT_VERTEX_PITCH), Math.ceil(cssHeight / LIGHT_VERTEX_PITCH));
+  const { position, normal, uv } = geometry.attributes;
+  const cx = (bounds.x * pixelsToCssX + cssWidth / 2 - layout.width / 2) / PIXELS_PER_UNIT;
+  const cy = (layout.height / 2 - bounds.y * pixelsToCssY - cssHeight / 2) / PIXELS_PER_UNIT;
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const i = vertex * 3;
+    const x = position.array[i] + cx, y = position.array[i + 1] + cy;
+    position.array[i] = x;
+    position.array[i + 1] = y;
+    uv.setXY(vertex, x / model.width + .5, y / model.height + .5);
+    model.restVertex(x, y, position.array, normal.array, i);
   }
-  return Number.isFinite(sourceHeight) ? stockFrameKey({ ...layout, height: sourceHeight }) : undefined;
+  return geometry;
 }
 
-function lightBox(layout) {
-  const points = creasePositions(model).flatMap(({ start, end }) => [start, end]);
-  const width = Math.floor(layout.width * layout.scale);
-  const height = Math.floor(layout.height * layout.scale);
-  // The residual solver's 18.5 CSS px support plus mesh interpolation.
-  const pad = 24;
-  function edges(axis, size, full) {
-    const coords = points.map(p => p[axis]);
-    return [
-      Math.max(0, Math.floor((Math.min(...coords) - pad) * full / size)),
-      Math.min(full, Math.ceil((Math.max(...coords) + pad) * full / size)),
-    ];
-  }
-  const [x, endX] = edges('x', layout.width, width);
-  const [y, endY] = edges('y', layout.height, height);
-  return { x, y, w: endX - x, h: endY - y, width, height };
-}
-
-function configureLight(layout, bounds) {
-  if (model.restingGeometry.attributes.position.count === 4) model.refreshRestingGeometry();
+function drawCreaseLight(layout, bounds) {
   configureView(layout, false, bounds);
   front.visible = false;
   light.visible = true;
-  light.geometry = model.restingGeometry;
+  light.geometry = creaseGeometry(layout, bounds);
   const { x, y, w, h, width, height } = bounds;
   camera.setViewOffset(width, height, x, y, w, h);
+  try {
+    draw();
+  } finally {
+    light.geometry.dispose();
+    light.geometry = undefined;
+    light.visible = false;
+  }
 }
 
-function sendRest(type, layout, fields, stockKeys = [], lightKeys = []) {
-  const key = stockFrameKey(layout);
-  const cropFrom = stockKeys.includes(key) ? undefined : cropSource(layout, stockKeys);
-  let bitmap, lightingBitmaps, lightBounds, lightKey;
-  let drawMs = 0, transferMs = 0;
-  const transfer = () => {
-    const [result, ms] = measure('bitmap', () => canvas.transferToImageBitmap());
-    transferMs += ms;
-    return result;
-  };
-  if (!cropFrom && !stockKeys.includes(key)) {
-    configureView(layout, false);
+function readCreaseLight({ w, h }) {
+  const gl = renderer.getContext();
+  const gains = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, gains);
+  const surface = new OffscreenCanvas(w, h);
+  const ctx = surface.getContext('2d');
+  const pixels = ctx.createImageData(w, h);
+  const output = pixels.data;
+  return [0, 1].map(channel => {
+    for (let y = 0; y < h; y++) {
+      let from = (h - 1 - y) * w * 4 + channel;
+      let to = y * w * 4;
+      for (let x = 0; x < w; x++, from += 4, to += 4) {
+        const gain = gains[from];
+        output[to] = output[to + 1] = output[to + 2] = channel ? gain : 0;
+        output[to + 3] = channel ? (gain ? 255 : 0) : gain;
+      }
+    }
+    ctx.putImageData(pixels, 0, 0);
+    return surface.transferToImageBitmap();
+  });
+}
+
+function sendRest(type, layout, fields, coverage, lightKeys = []) {
+  const stock = stockFrame(layout);
+  const previous = coverage?.key === stock.key && coverage.width === stock.width ? coverage : null;
+  let bitmap;
+  let drawMs = 0, stockBitmapMs = 0, lightBitmapMs = 0;
+  if (!previous || previous.height < stock.height) {
+    stock.start = previous?.strips < MAX_STOCK_STRIPS ? previous.height : 0;
+    const rows = stock.height - stock.start;
+    configureView(layout, false, { w: stock.width, h: rows });
+    camera.setViewOffset(stock.width, stock.height, 0, stock.start, stock.width, rows);
     front.geometry = flatStock;
     front.scale.set(model.width, model.height, 1);
     try {
       [, drawMs] = measure('flat draw', draw);
-      bitmap = transfer();
+      [bitmap, stockBitmapMs] = measure('stock bitmap', () => canvas.transferToImageBitmap());
     } finally {
       front.scale.set(1, 1, 1);
       front.geometry = model.renderGeometry;
     }
   }
-  if (model.memories.length) {
-    lightKey = lightFrameKey(key, creaseRevision);
-    if (!lightKeys.includes(lightKey)) {
-      lightBounds = lightBox(layout);
-      configureLight(layout, lightBounds);
-      lightingBitmaps = [false, true].map(highlights => {
-        lightHighlights.value = highlights;
-        const [, lightMs] = measure(highlights ? 'crease highlights' : 'crease shadows', draw);
-        drawMs += lightMs;
-        return transfer();
-      });
-    }
+  const lights = creaseLightFrames(layout, saved, creaseRevision);
+  for (const lightFrame of lights) {
+    if (lightKeys.includes(lightFrame.key)) continue;
+    const [, lightMs] = measure('crease light draw', () => drawCreaseLight(layout, lightFrame.bounds));
+    const [plates, readMs] = measure('crease light bitmap', () => readCreaseLight(lightFrame.bounds));
+    drawMs += lightMs;
+    lightBitmapMs += readMs;
+    lightFrame.plates = plates;
   }
-  post(type, { layout, bitmap, lightingBitmaps, lightKey, lightBounds, diagnostics: diagnostics(),
-    ...fields, stockKey: key, cropFrom, drawMs, transferMs }, [bitmap, ...(lightingBitmaps ?? [])].filter(Boolean));
+  post(type, { layout, bitmap, lights, diagnostics: diagnostics(),
+    ...fields, stock, drawMs, stockBitmapMs, lightBitmapMs, transferMs: stockBitmapMs + lightBitmapMs },
+    [bitmap, ...lights.flatMap(frame => frame.plates ?? [])].filter(Boolean));
 }
 
 function sendFrame(type, layout, fields) {
@@ -385,7 +397,7 @@ function rememberPrint(id, canvas) {
   });
 }
 
-async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
+async function prepare({ layout, bitmap, inkID, stock, lightKeys }) {
   const maps = await stockReady;
   if (layout.revision !== latestRevision) {
     bitmap?.close();
@@ -395,6 +407,7 @@ async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
   const expectedWidth = Math.floor(layout.width * layout.scale);
   const expectedHeight = Math.floor(layout.height * layout.scale);
   const inkReused = !bitmap;
+  let inkDecodeMs = 0;
   if (inkReused) {
     const cached = printCache.get(inkID);
     if (!cached) {
@@ -402,7 +415,11 @@ async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
       return;
     }
     try {
+      const start = performance.now();
       bitmap = await createImageBitmap(cached);
+      inkDecodeMs = Math.round(performance.now() - start);
+      performance.measure('Newsprint worker ink decode', { start, duration: inkDecodeMs });
+      performance.clearMeasures('Newsprint worker ink decode');
     } catch {
       printCache.delete(inkID);
       post('need-ink', { revision: layout.revision, inkID });
@@ -424,8 +441,7 @@ async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
   const previousMaterialBuilds = materialBuilds;
   const [tile, materialMs] = measure('material', () => getTile(layout, maps));
   if (previousMaterialBuilds === materialBuilds) fastInkUpdates++;
-  const reuseLight = lightKeys.includes(lightFrameKey(stockFrameKey(layout), creaseRevision));
-  const [, geometryMs] = measure('geometry', () => updateGeometry(layout, reuseLight));
+  const [, geometryMs] = measure('geometry', () => updateGeometry(layout));
   for (const mesh of [front, back, light]) {
     if (!mesh.material.map) mesh.material.needsUpdate = true;
     mesh.material.map = tile.albedo;
@@ -441,12 +457,17 @@ async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
   const optical = new OffscreenCanvas(expectedWidth, expectedHeight);
   optical.getContext('bitmaprenderer').transferFromImageBitmap(bitmap);
   print = texture(optical, THREE.SRGBColorSpace);
-  ink.value = print;
-  const [, uploadMs] = measure('upload', () => {
-    for (const map of [tile.albedo, tile.normal, tile.roughness, print]) renderer.initTexture(map);
-    renderer.getContext().finish();
-  });
   const first = !captureCount;
+  let uploadMs = 0;
+  if (first) {
+    // The flat presentation uses native text. Keep the validated raster
+    // resident for motion, and warm the GPU texture only for a fold.
+    [, uploadMs] = measure('upload', () => {
+      for (const map of [tile.albedo, tile.normal, tile.roughness]) renderer.initTexture(map);
+      uploadPrint();
+      renderer.getContext().finish();
+    });
+  }
   scrollY = layout.scrollY;
   let compileMs = 0;
   if (first) {
@@ -467,8 +488,8 @@ async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
   }
   captureCount++;
   current = layout;
-  readyFields = { materialMs, stockMs: maps.stockMs, geometryMs, uploadMs, compileMs, inkReused };
-  sendRest('ready', layout, readyFields, stockKeys, lightKeys);
+  const readyFields = { materialMs, stockMs: maps.stockMs, geometryMs, uploadMs, compileMs, inkReused, inkDecodeMs };
+  sendRest('ready', layout, readyFields, stock, lightKeys);
   if (!inkReused && inkID !== null) rememberPrint(inkID, optical);
 }
 
@@ -505,7 +526,7 @@ function tick(now) {
       draw();
       sendFrame('motion', current, { ...fields, flapPoints: flapPoints(current) });
     } else {
-      sendRest('motion', current, fields, [stockFrameKey(current)]);
+      sendRest('motion', current, fields, stockFrame(current));
     }
     const bending = model.phase === 'dragging' &&
       (Math.abs(model.target - model.theta) > .003 || Math.abs(model.velocity) > .008);
@@ -548,10 +569,6 @@ async function receive(message) {
     return;
   }
   if (message.type === 'prepare') return prepare(message);
-  if (message.type === 'render-stock') {
-    if (current?.revision === message.revision) sendRest('ready', current, readyFields);
-    return;
-  }
   if (message.type === 'visibility') {
     visible = message.visible;
     if (!visible) stopAnimation();
@@ -560,7 +577,9 @@ async function receive(message) {
   }
   if (!current || message.revision !== current.revision) return;
   motionEpoch = message.motionEpoch;
-  if (message.type === 'scroll') {
+  if (message.type === 'warm-ink') {
+    measure('fold ink upload', uploadPrint);
+  } else if (message.type === 'scroll') {
     scrollY = message.scrollY;
     if (model.phase !== 'resting') wake();
   } else if (message.type === 'grab') {

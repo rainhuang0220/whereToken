@@ -1,5 +1,5 @@
 import { PaperResponsive } from './paper-responsive.js';
-import { creaseAnchor } from './crease-memory.js';
+import { clipHinge, creaseAnchor } from './crease-memory.js';
 
 const PI=Math.PI;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -22,27 +22,7 @@ export class PaperFoldSheet extends PaperResponsive {
   }
 
   lineIntersections(nx,ny,depth,origin) {
-    const q=p=>(p.x-origin.x)*nx+(p.y-origin.y)*ny+depth;
-    const points=[];
-    const R=this.rectangle;
-    for(let i=0;i<R.length;i++){
-      const a=R[i],b=R[(i+1)%R.length],da=q(a),db=q(b);
-      if(Math.abs(da)<1e-7)points.push({...a});
-      if(da*db<0){
-        const t=da/(da-db);
-        points.push({x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y)});
-      }
-    }
-    const filtered=[];
-    for(const p of points)
-      if(!filtered.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<1e-6))filtered.push(p);
-    if(filtered.length<2)return null;
-    let best=null,dist=-1;
-    for(let i=0;i<filtered.length;i++)for(let j=i+1;j<filtered.length;j++){
-      const v=Math.hypot(filtered[i].x-filtered[j].x,filtered[i].y-filtered[j].y);
-      if(v>dist){dist=v;best=[filtered[i],filtered[j]]}
-    }
-    return {start:best[0],end:best[1],length:dist};
+    return clipHinge(this.rectangle,nx,ny,depth,origin);
   }
 
   computeHinge(grab,dx,dy) {
@@ -131,6 +111,18 @@ export class PaperFoldSheet extends PaperResponsive {
     return .5*clamp(z,-.044,.012);
   }
 
+  restVertex(x,y,positions,normals,i){
+    const epsilon=.003;
+    // The lighting pass and the full resting surface sample the same
+    // compressed-fiber normals at their respective mesh vertices.
+    const compression=2.4/(2*epsilon);
+    positions[i+2]=.012+this.residualHeight(x,y);
+    const dx=(this.residualHeight(x+epsilon,y)-this.residualHeight(x-epsilon,y))*compression;
+    const dy=(this.residualHeight(x,y+epsilon)-this.residualHeight(x,y-epsilon))*compression;
+    const norm=Math.hypot(dx,dy,1);
+    normals[i]=-dx/norm;normals[i+1]=-dy/norm;normals[i+2]=1/norm;
+  }
+
   refreshRestingGeometry(){
     if(this.memories.length && this.restingGeometry.attributes.position.count===4){
       const previous=this.restingGeometry;
@@ -141,17 +133,8 @@ export class PaperFoldSheet extends PaperResponsive {
     }
     const position=this.restingGeometry.attributes.position;
     const points=position.array,normals=this.restingGeometry.attributes.normal.array;
-    const epsilon=.003;
-    // Compressed fibers reflect at a steeper angle than the shallow
-    // recovered surface. Keep this in the normals, without a cast shadow.
-    const compression=2.4/(2*epsilon);
     for(let i=0;i<points.length;i+=3){
-      const x=this.basePositions[i],y=this.basePositions[i+1];
-      points[i+2]=.012+this.residualHeight(x,y);
-      const dx=(this.residualHeight(x+epsilon,y)-this.residualHeight(x-epsilon,y))*compression;
-      const dy=(this.residualHeight(x,y+epsilon)-this.residualHeight(x,y-epsilon))*compression;
-      const norm=Math.hypot(dx,dy,1);
-      normals[i]=-dx/norm;normals[i+1]=-dy/norm;normals[i+2]=1/norm;
+      this.restVertex(this.basePositions[i],this.basePositions[i+1],points,normals,i);
     }
     position.needsUpdate=true;this.restingGeometry.attributes.normal.needsUpdate=true;
     this.restingGeometry.computeBoundingBox();

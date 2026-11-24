@@ -10,6 +10,7 @@ export class RasterCache {
   }
 
   has(key) { return this.entries.has(key); }
+  owns(key, resource) { return this.entries.get(key)?.resource === resource; }
   keys() { return this.entries.keys(); }
 
   get(key) {
@@ -21,6 +22,11 @@ export class RasterCache {
   }
 
   put(key, resource, bytes) {
+    const previous = this.entries.get(key);
+    if (previous?.resource === resource) {
+      this.entries.delete(key);
+      this.bytes -= previous.bytes;
+    }
     if (bytes > this.maxBytes) return false;
     this.delete(key);
     this.entries.set(key, { resource, bytes });
