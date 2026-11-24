@@ -1,0 +1,20 @@
+{
+  "pointer-control": {
+    "clickEventP95Ms": 56,
+    "clickEventSamples": 36,
+    "nativeFrameP95Ms": 15,
+    "physicalCommitP95Ms": 776.2,
+    "operations": 36,
+    "warmCrossHeightOperations": 22,
+    "warmStockMisses": 12
+  },
+  "pointer-candidate": {
+    "clickEventP95Ms": 56,
+    "clickEventSamples": 36,
+    "nativeFrameP95Ms": 15.0,
+    "physicalCommitP95Ms": 82.9,
+    "operations": 36,
+    "warmCrossHeightOperations": 22,
+    "warmStockMisses": 0
+  }
+}
