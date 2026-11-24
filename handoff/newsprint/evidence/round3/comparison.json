@@ -1,0 +1,1080 @@
+{
+  "control-perf": {
+    "cold": [
+      {
+        "nativeMs": 176,
+        "committedMs": 1930,
+        "firstNativeDataFrameMs": 86,
+        "longTasks": [
+          51
+        ],
+        "phases": {
+          "captureMs": 235,
+          "materialMs": 56,
+          "geometryMs": 1,
+          "compileMs": 43,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 327
+        }
+      },
+      {
+        "nativeMs": 127,
+        "committedMs": 1819,
+        "firstNativeDataFrameMs": 31.3,
+        "longTasks": [
+          55
+        ],
+        "phases": {
+          "captureMs": 207,
+          "materialMs": 58,
+          "geometryMs": 1,
+          "compileMs": 34,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 323
+        }
+      },
+      {
+        "nativeMs": 122,
+        "committedMs": 1778,
+        "firstNativeDataFrameMs": 31.2,
+        "longTasks": [
+          55
+        ],
+        "phases": {
+          "captureMs": 206,
+          "materialMs": 56,
+          "geometryMs": 1,
+          "compileMs": 36,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 321
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.5,
+      "p95": 0.6,
+      "max": 6.9
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 23.5,
+      "p95": 28.4,
+      "max": 59.4
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 40,
+      "p95": 48,
+      "max": 88
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 59.0,
+      "p95": 69,
+      "max": 132
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 97.0,
+      "p95": 197,
+      "max": 255
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 105,
+        "max": 154
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 1
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 7.5,
+        "p95": 11,
+        "max": 11
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      }
+    },
+    "steadyLongTasks": [],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 99.0,
+        "p95": 255,
+        "max": 255
+      },
+      "30d": {
+        "count": 10,
+        "median": 96.5,
+        "p95": 180,
+        "max": 180
+      },
+      "Agents": {
+        "count": 10,
+        "median": 91.5,
+        "p95": 98,
+        "max": 98
+      },
+      "Requests": {
+        "count": 10,
+        "median": 95.5,
+        "p95": 240,
+        "max": 240
+      },
+      "All": {
+        "count": 10,
+        "median": 97.0,
+        "p95": 197,
+        "max": 197
+      }
+    },
+    "rapidClickWallMs": 121,
+    "rapidCommitWallMs": 284,
+    "sampledFrames": 775,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 108.9,
+    "warmP95Ms": 99,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 50,
+      "stockCropped": 3,
+      "lightReused": 0
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 0,
+      "peakPendingPrintBytes": 11214720
+    }
+  },
+  "candidate-perf": {
+    "cold": [
+      {
+        "nativeMs": 133,
+        "committedMs": 1834,
+        "firstNativeDataFrameMs": 59.2,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 218,
+          "materialMs": 57,
+          "geometryMs": 1,
+          "compileMs": 40,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 320
+        }
+      },
+      {
+        "nativeMs": 104,
+        "committedMs": 1780,
+        "firstNativeDataFrameMs": 29.9,
+        "longTasks": [
+          55
+        ],
+        "phases": {
+          "captureMs": 198,
+          "materialMs": 55,
+          "geometryMs": 1,
+          "compileMs": 38,
+          "uploadMs": 14,
+          "drawMs": 7,
+          "bitmapMs": 330
+        }
+      },
+      {
+        "nativeMs": 124,
+        "committedMs": 1785,
+        "firstNativeDataFrameMs": 31.7,
+        "longTasks": [
+          54
+        ],
+        "phases": {
+          "captureMs": 205,
+          "materialMs": 56,
+          "geometryMs": 1,
+          "compileMs": 36,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 322
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.5,
+      "p95": 0.7,
+      "max": 7.7
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 23.8,
+      "p95": 28.1,
+      "max": 58.7
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 40,
+      "p95": 48,
+      "max": 88
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 60.0,
+      "p95": 89,
+      "max": 130
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 97.0,
+      "p95": 222,
+      "max": 268
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 109,
+        "max": 159
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 1
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 7.0,
+        "p95": 13,
+        "max": 17
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      }
+    },
+    "steadyLongTasks": [],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 90.5,
+        "p95": 254,
+        "max": 254
+      },
+      "30d": {
+        "count": 10,
+        "median": 98.0,
+        "p95": 196,
+        "max": 196
+      },
+      "Agents": {
+        "count": 10,
+        "median": 81.5,
+        "p95": 98,
+        "max": 98
+      },
+      "Requests": {
+        "count": 10,
+        "median": 81.5,
+        "p95": 268,
+        "max": 268
+      },
+      "All": {
+        "count": 10,
+        "median": 97.5,
+        "p95": 222,
+        "max": 222
+      }
+    },
+    "rapidClickWallMs": 122,
+    "rapidCommitWallMs": 256,
+    "sampledFrames": 766,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 108.3,
+    "warmP95Ms": 148,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 50,
+      "stockCropped": 3,
+      "lightReused": 0
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 0,
+      "peakPendingPrintBytes": 11214720
+    }
+  },
+  "candidate-reverse-perf": {
+    "cold": [
+      {
+        "nativeMs": 139,
+        "committedMs": 1832,
+        "firstNativeDataFrameMs": 57.8,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 228,
+          "materialMs": 57,
+          "geometryMs": 1,
+          "compileMs": 41,
+          "uploadMs": 17,
+          "drawMs": 8,
+          "bitmapMs": 325
+        }
+      },
+      {
+        "nativeMs": 125,
+        "committedMs": 1809,
+        "firstNativeDataFrameMs": 31.8,
+        "longTasks": [
+          54
+        ],
+        "phases": {
+          "captureMs": 206,
+          "materialMs": 55,
+          "geometryMs": 1,
+          "compileMs": 37,
+          "uploadMs": 15,
+          "drawMs": 7,
+          "bitmapMs": 333
+        }
+      },
+      {
+        "nativeMs": 105,
+        "committedMs": 1773,
+        "firstNativeDataFrameMs": 30.2,
+        "longTasks": [
+          55
+        ],
+        "phases": {
+          "captureMs": 204,
+          "materialMs": 56,
+          "geometryMs": 1,
+          "compileMs": 43,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 319
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.5,
+      "p95": 1.0,
+      "max": 7.8
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 23.9,
+      "p95": 27.8,
+      "max": 65.1
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 40,
+      "p95": 48,
+      "max": 96
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 60.0,
+      "p95": 76,
+      "max": 228
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 96.0,
+      "p95": 197,
+      "max": 269
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 104,
+        "max": 151
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 1
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 7.0,
+        "p95": 10,
+        "max": 12
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      }
+    },
+    "steadyLongTasks": [
+      52
+    ],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 98.5,
+        "p95": 269,
+        "max": 269
+      },
+      "30d": {
+        "count": 10,
+        "median": 98.0,
+        "p95": 189,
+        "max": 189
+      },
+      "Agents": {
+        "count": 10,
+        "median": 82.5,
+        "p95": 133,
+        "max": 133
+      },
+      "Requests": {
+        "count": 10,
+        "median": 80.0,
+        "p95": 246,
+        "max": 246
+      },
+      "All": {
+        "count": 10,
+        "median": 96.0,
+        "p95": 197,
+        "max": 197
+      }
+    },
+    "rapidClickWallMs": 129,
+    "rapidCommitWallMs": 317,
+    "sampledFrames": 767,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 105.3,
+    "warmP95Ms": 125,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 50,
+      "stockCropped": 3,
+      "lightReused": 0
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 0,
+      "peakPendingPrintBytes": 11214720
+    }
+  },
+  "control-reverse-perf": {
+    "cold": [
+      {
+        "nativeMs": 126,
+        "committedMs": 1835,
+        "firstNativeDataFrameMs": 59.2,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 211,
+          "materialMs": 56,
+          "geometryMs": 1,
+          "compileMs": 36,
+          "uploadMs": 15,
+          "drawMs": 8,
+          "bitmapMs": 333
+        }
+      },
+      {
+        "nativeMs": 126,
+        "committedMs": 1764,
+        "firstNativeDataFrameMs": 30.3,
+        "longTasks": [
+          56
+        ],
+        "phases": {
+          "captureMs": 204,
+          "materialMs": 55,
+          "geometryMs": 1,
+          "compileMs": 36,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 322
+        }
+      },
+      {
+        "nativeMs": 111,
+        "committedMs": 1770,
+        "firstNativeDataFrameMs": 31.7,
+        "longTasks": [
+          57
+        ],
+        "phases": {
+          "captureMs": 211,
+          "materialMs": 61,
+          "geometryMs": 1,
+          "compileMs": 35,
+          "uploadMs": 19,
+          "drawMs": 7,
+          "bitmapMs": 323
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.5,
+      "p95": 0.7,
+      "max": 28.6
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 24.0,
+      "p95": 25.9,
+      "max": 65.1
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 40,
+      "p95": 56,
+      "max": 96
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 60.0,
+      "p95": 72,
+      "max": 209
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 97.5,
+      "p95": 197,
+      "max": 252
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 96,
+        "max": 153
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 1
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 7.0,
+        "p95": 9,
+        "max": 15
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      }
+    },
+    "steadyLongTasks": [
+      51
+    ],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 99.0,
+        "p95": 252,
+        "max": 252
+      },
+      "30d": {
+        "count": 10,
+        "median": 97.0,
+        "p95": 179,
+        "max": 179
+      },
+      "Agents": {
+        "count": 10,
+        "median": 96.5,
+        "p95": 120,
+        "max": 120
+      },
+      "Requests": {
+        "count": 10,
+        "median": 97.0,
+        "p95": 247,
+        "max": 247
+      },
+      "All": {
+        "count": 10,
+        "median": 97.5,
+        "p95": 197,
+        "max": 197
+      }
+    },
+    "rapidClickWallMs": 224,
+    "rapidCommitWallMs": 266,
+    "sampledFrames": 789,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 110.8,
+    "warmP95Ms": 103,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 50,
+      "stockCropped": 3,
+      "lightReused": 0
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 0,
+      "peakPendingPrintBytes": 11214720
+    }
+  },
+  "control-scar-perf": {
+    "cold": [
+      {
+        "nativeMs": 128,
+        "committedMs": 3361,
+        "firstNativeDataFrameMs": 55.3,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 219,
+          "materialMs": 59,
+          "geometryMs": 103,
+          "compileMs": 35,
+          "uploadMs": 16,
+          "drawMs": 7,
+          "bitmapMs": 935
+        }
+      },
+      {
+        "nativeMs": 111,
+        "committedMs": 3283,
+        "firstNativeDataFrameMs": 39,
+        "longTasks": [
+          58
+        ],
+        "phases": {
+          "captureMs": 203,
+          "materialMs": 56,
+          "geometryMs": 98,
+          "compileMs": 35,
+          "uploadMs": 15,
+          "drawMs": 7,
+          "bitmapMs": 930
+        }
+      },
+      {
+        "nativeMs": 107,
+        "committedMs": 3390,
+        "firstNativeDataFrameMs": 30.4,
+        "longTasks": [
+          54
+        ],
+        "phases": {
+          "captureMs": 206,
+          "materialMs": 56,
+          "geometryMs": 106,
+          "compileMs": 34,
+          "uploadMs": 19,
+          "drawMs": 7,
+          "bitmapMs": 959
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.6,
+      "p95": 1.0,
+      "max": 8.1
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 22.9,
+      "p95": 26.2,
+      "max": 73.5
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 40,
+      "p95": 48,
+      "max": 104
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 59.0,
+      "p95": 72,
+      "max": 145
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 181.0,
+      "p95": 1031,
+      "max": 1114
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 101,
+        "max": 155
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 85.0,
+        "p95": 97,
+        "max": 97
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 6.0,
+        "p95": 8,
+        "max": 8
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 3,
+        "max": 5
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 692,
+        "max": 698
+      }
+    },
+    "steadyLongTasks": [
+      60
+    ],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 183.0,
+        "p95": 1114,
+        "max": 1114
+      },
+      "30d": {
+        "count": 10,
+        "median": 181.0,
+        "p95": 1048,
+        "max": 1048
+      },
+      "Agents": {
+        "count": 10,
+        "median": 180.5,
+        "p95": 198,
+        "max": 198
+      },
+      "Requests": {
+        "count": 10,
+        "median": 97.0,
+        "p95": 246,
+        "max": 246
+      },
+      "All": {
+        "count": 10,
+        "median": 180.5,
+        "p95": 280,
+        "max": 280
+      }
+    },
+    "rapidClickWallMs": 140,
+    "rapidCommitWallMs": 333,
+    "sampledFrames": 1190,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 220.0,
+    "warmP95Ms": 198,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 47,
+      "stockCropped": 0,
+      "lightReused": 0
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 0,
+      "peakPendingPrintBytes": 11214720
+    }
+  },
+  "candidate-scar-perf": {
+    "cold": [
+      {
+        "nativeMs": 131,
+        "committedMs": 3278,
+        "firstNativeDataFrameMs": 65.6,
+        "longTasks": [],
+        "phases": {
+          "captureMs": 216,
+          "materialMs": 56,
+          "geometryMs": 100,
+          "compileMs": 36,
+          "uploadMs": 15,
+          "drawMs": 14,
+          "bitmapMs": 849
+        }
+      },
+      {
+        "nativeMs": 104,
+        "committedMs": 3152,
+        "firstNativeDataFrameMs": 29.8,
+        "longTasks": [
+          54
+        ],
+        "phases": {
+          "captureMs": 196,
+          "materialMs": 56,
+          "geometryMs": 98,
+          "compileMs": 34,
+          "uploadMs": 14,
+          "drawMs": 14,
+          "bitmapMs": 785
+        }
+      },
+      {
+        "nativeMs": 107,
+        "committedMs": 3226,
+        "firstNativeDataFrameMs": 30.4,
+        "longTasks": [
+          56
+        ],
+        "phases": {
+          "captureMs": 205,
+          "materialMs": 59,
+          "geometryMs": 99,
+          "compileMs": 38,
+          "uploadMs": 15,
+          "drawMs": 15,
+          "bitmapMs": 775
+        }
+      }
+    ],
+    "nativeClickDispatchMs": {
+      "count": 71,
+      "median": 0.6,
+      "p95": 1.0,
+      "max": 7.9
+    },
+    "nativeClickToAnimationFrameMs": {
+      "count": 71,
+      "median": 23.8,
+      "p95": 25.1,
+      "max": 63.8
+    },
+    "reportedClickEventDurationMs": {
+      "count": 71,
+      "median": 48,
+      "p95": 48,
+      "max": 96
+    },
+    "automationDispatchWallMs": {
+      "count": 50,
+      "median": 60.0,
+      "p95": 74,
+      "max": 197
+    },
+    "physicalCommitWallMs": {
+      "count": 50,
+      "median": 97.0,
+      "p95": 548,
+      "max": 645
+    },
+    "workerAndCaptureMs": {
+      "captureMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 97,
+        "max": 161
+      },
+      "materialMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "geometryMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 83,
+        "max": 96
+      },
+      "compileMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 0,
+        "max": 0
+      },
+      "uploadMs": {
+        "count": 50,
+        "median": 7.0,
+        "p95": 10,
+        "max": 11
+      },
+      "drawMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 2,
+        "max": 3
+      },
+      "bitmapMs": {
+        "count": 50,
+        "median": 0.0,
+        "p95": 296,
+        "max": 309
+      }
+    },
+    "steadyLongTasks": [
+      51
+    ],
+    "samplesByRange": {
+      "7d": {
+        "count": 10,
+        "median": 97.5,
+        "p95": 645,
+        "max": 645
+      },
+      "30d": {
+        "count": 10,
+        "median": 98.0,
+        "p95": 585,
+        "max": 585
+      },
+      "Agents": {
+        "count": 10,
+        "median": 81.0,
+        "p95": 147,
+        "max": 147
+      },
+      "Requests": {
+        "count": 10,
+        "median": 88.0,
+        "p95": 247,
+        "max": 247
+      },
+      "All": {
+        "count": 10,
+        "median": 97.0,
+        "p95": 181,
+        "max": 181
+      }
+    },
+    "rapidClickWallMs": 118,
+    "rapidCommitWallMs": 250,
+    "sampledFrames": 865,
+    "inconsistentFrames": 0,
+    "allRoundMeanMs": 128.4,
+    "warmP95Ms": 99,
+    "cacheHitsIn50": {
+      "inkReused": 44,
+      "stockReused": 50,
+      "stockCropped": 3,
+      "lightReused": 47
+    },
+    "peakMeasuredBytes": {
+      "inkCacheBytes": 1952234,
+      "stockCacheBytes": 44282880,
+      "lightCacheBytes": 5990760,
+      "peakPendingPrintBytes": 11214720
+    }
+  }
+}

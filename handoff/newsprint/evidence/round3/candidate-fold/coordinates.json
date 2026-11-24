@@ -1,0 +1,4206 @@
+{
+  "samples": [
+    {
+      "label": "53w",
+      "round": 0,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": false,
+      "inkReused": false,
+      "lightReused": false,
+      "creaseLighting": true,
+      "stockCacheBytes": 9417600,
+      "lightCacheBytes": 1198152,
+      "inkCacheBytes": 232664,
+      "geometryMs": 1,
+      "captureMs": 200,
+      "drawMs": 7,
+      "bitmapMs": 335
+    },
+    {
+      "label": "All",
+      "round": 1,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": false,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 9417600,
+      "lightCacheBytes": 1198152,
+      "inkCacheBytes": 232664,
+      "geometryMs": 0,
+      "captureMs": 119,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 225
+    },
+    {
+      "label": "53w",
+      "round": 1,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": false,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 9417600,
+      "lightCacheBytes": 1198152,
+      "inkCacheBytes": 466301,
+      "geometryMs": 0,
+      "captureMs": 102,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 204
+    },
+    {
+      "label": "7d",
+      "round": 1,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": false,
+      "lightReused": false,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 699904,
+      "geometryMs": 99,
+      "captureMs": 85,
+      "drawMs": 3,
+      "bitmapMs": 377,
+      "readyMs": 651
+    },
+    {
+      "label": "30d",
+      "round": 1,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": false,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 893161,
+      "geometryMs": 0,
+      "captureMs": 85,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 178
+    },
+    {
+      "label": "53w",
+      "round": 1,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 110
+    },
+    {
+      "label": "All",
+      "round": 2,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 95
+    },
+    {
+      "label": "53w",
+      "round": 2,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "7d",
+      "round": 2,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 82
+    },
+    {
+      "label": "30d",
+      "round": 2,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 83
+    },
+    {
+      "label": "53w",
+      "round": 2,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 102
+    },
+    {
+      "label": "All",
+      "round": 3,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "53w",
+      "round": 3,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 85
+    },
+    {
+      "label": "7d",
+      "round": 3,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 82
+    },
+    {
+      "label": "30d",
+      "round": 3,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 83
+    },
+    {
+      "label": "53w",
+      "round": 3,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 101
+    },
+    {
+      "label": "All",
+      "round": 4,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 102
+    },
+    {
+      "label": "53w",
+      "round": 4,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 98
+    },
+    {
+      "label": "7d",
+      "round": 4,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 84
+    },
+    {
+      "label": "30d",
+      "round": 4,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "53w",
+      "round": 4,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "All",
+      "round": 5,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "53w",
+      "round": 5,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "7d",
+      "round": 5,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 111
+    },
+    {
+      "label": "30d",
+      "round": 5,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 73
+    },
+    {
+      "label": "53w",
+      "round": 5,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "All",
+      "round": 6,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 102
+    },
+    {
+      "label": "53w",
+      "round": 6,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "7d",
+      "round": 6,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 82
+    },
+    {
+      "label": "30d",
+      "round": 6,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 84
+    },
+    {
+      "label": "53w",
+      "round": 6,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 101
+    },
+    {
+      "label": "All",
+      "round": 7,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "53w",
+      "round": 7,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "7d",
+      "round": 7,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 101
+    },
+    {
+      "label": "30d",
+      "round": 7,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 102
+    },
+    {
+      "label": "53w",
+      "round": 7,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 114
+    },
+    {
+      "label": "All",
+      "round": 8,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "53w",
+      "round": 8,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 133
+    },
+    {
+      "label": "7d",
+      "round": 8,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 112
+    },
+    {
+      "label": "30d",
+      "round": 8,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 72
+    },
+    {
+      "label": "53w",
+      "round": 8,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "All",
+      "round": 9,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 120
+    },
+    {
+      "label": "53w",
+      "round": 9,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 96
+    },
+    {
+      "label": "7d",
+      "round": 9,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 83
+    },
+    {
+      "label": "30d",
+      "round": 9,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "53w",
+      "round": 9,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 99
+    },
+    {
+      "label": "All",
+      "round": 10,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 101
+    },
+    {
+      "label": "53w",
+      "round": 10,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "7d",
+      "round": 10,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 100
+    },
+    {
+      "label": "30d",
+      "round": 10,
+      "height": 1286,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.5382712474619
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 83
+    },
+    {
+      "label": "53w",
+      "round": 10,
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": true,
+      "inkReused": true,
+      "lightReused": true,
+      "creaseLighting": true,
+      "stockCacheBytes": 16824960,
+      "lightCacheBytes": 2396304,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 0,
+      "captureMs": 0,
+      "drawMs": 0,
+      "bitmapMs": 0,
+      "readyMs": 101
+    }
+  ],
+  "topError": 5.684341886080802e-14,
+  "warmMissing": 0,
+  "frames": [
+    {
+      "now": 8340.4,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8357,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8373.7,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8390.4,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8407.1,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8423.8,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8473.8,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8490.3,
+      "revision": 2,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 8507,
+      "revision": 2,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 9257.1,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9273.6,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9290.4,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9307,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9323.7,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9340.4,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9357,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9373.6,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9390.4,
+      "revision": 3,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 9407,
+      "revision": 3,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 10123.666,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10140.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10157,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10173.7,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10190.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10207,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10223.7,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10240.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10256.9,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10273.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10290.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10307,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10323.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10340.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10357,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10373.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10390.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10407,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10423.7,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10440.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10456.9,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10473.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10490.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10507,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10523.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10540.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10557,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10573.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10590.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10606.9,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10623.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10640.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10657,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10673.7,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10690.3,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10706.9,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10723.6,
+      "revision": 4,
+      "ready": false,
+      "light": false,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 10740.3,
+      "revision": 4,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 11323.6,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11340.3,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11356.9,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11373.6,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11390.2,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11406.9,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11423.6,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11440.3,
+      "revision": 5,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 11456.9,
+      "revision": 5,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 12056.966,
+      "revision": 6,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12073.6,
+      "revision": 6,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12090.2,
+      "revision": 6,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12106.9,
+      "revision": 6,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12840.2,
+      "revision": 7,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 12856.9,
+      "revision": 7,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 12873.5,
+      "revision": 7,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 12890.2,
+      "revision": 7,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 12940.2,
+      "revision": 8,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12956.8,
+      "revision": 8,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12973.5,
+      "revision": 8,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 12990.2,
+      "revision": 8,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13006.9,
+      "revision": 8,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13040.266,
+      "revision": 9,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13056.9,
+      "revision": 9,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13073.5,
+      "revision": 9,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13123.6,
+      "revision": 10,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13140.2,
+      "revision": 10,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13156.9,
+      "revision": 10,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13206.866,
+      "revision": 11,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13223.5,
+      "revision": 11,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13240.2,
+      "revision": 11,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13256.8,
+      "revision": 11,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13306.866,
+      "revision": 12,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13323.5,
+      "revision": 12,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13340.2,
+      "revision": 12,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13356.8,
+      "revision": 12,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13406.9,
+      "revision": 13,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13423.5,
+      "revision": 13,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13440.2,
+      "revision": 13,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13456.9,
+      "revision": 13,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13490.266,
+      "revision": 14,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13506.9,
+      "revision": 14,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13523.5,
+      "revision": 14,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13573.5,
+      "revision": 15,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13590.1,
+      "revision": 15,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13606.8,
+      "revision": 15,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 13656.866,
+      "revision": 16,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13673.5,
+      "revision": 16,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13690.2,
+      "revision": 16,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13706.8,
+      "revision": 16,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13756.866,
+      "revision": 17,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13773.5,
+      "revision": 17,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13790.2,
+      "revision": 17,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13806.8,
+      "revision": 17,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 13856.866,
+      "revision": 18,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13873.5,
+      "revision": 18,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13890.1,
+      "revision": 18,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13906.8,
+      "revision": 18,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 13956.866,
+      "revision": 19,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13973.5,
+      "revision": 19,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 13990.2,
+      "revision": 19,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14040.2,
+      "revision": 20,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14056.8,
+      "revision": 20,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14073.5,
+      "revision": 20,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14090.2,
+      "revision": 20,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14140.166,
+      "revision": 21,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14156.8,
+      "revision": 21,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14173.5,
+      "revision": 21,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14190.2,
+      "revision": 21,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14240.2,
+      "revision": 22,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14256.8,
+      "revision": 22,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14273.5,
+      "revision": 22,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14290.1,
+      "revision": 22,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14340.166,
+      "revision": 23,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14356.8,
+      "revision": 23,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14373.5,
+      "revision": 23,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14390.1,
+      "revision": 23,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14440.1,
+      "revision": 24,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14456.8,
+      "revision": 24,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14473.5,
+      "revision": 24,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14490.1,
+      "revision": 24,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14540.1,
+      "revision": 25,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14556.8,
+      "revision": 25,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14573.5,
+      "revision": 25,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 14623.5,
+      "revision": 26,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14640.2,
+      "revision": 26,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14656.8,
+      "revision": 26,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14673.5,
+      "revision": 26,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14723.466,
+      "revision": 27,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14740.2,
+      "revision": 27,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14756.8,
+      "revision": 27,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14773.5,
+      "revision": 27,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 14823.466,
+      "revision": 28,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14840.1,
+      "revision": 28,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14856.8,
+      "revision": 28,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14873.4,
+      "revision": 28,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 14923.5,
+      "revision": 29,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14940.2,
+      "revision": 29,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 14956.7,
+      "revision": 29,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15006.8,
+      "revision": 30,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15023.5,
+      "revision": 30,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15040.1,
+      "revision": 30,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15090.1,
+      "revision": 31,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15106.8,
+      "revision": 31,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15123.5,
+      "revision": 31,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15140.1,
+      "revision": 31,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15190.166,
+      "revision": 32,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15206.8,
+      "revision": 32,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15223.4,
+      "revision": 32,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15240.1,
+      "revision": 32,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15290.1,
+      "revision": 33,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15306.8,
+      "revision": 33,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15323.5,
+      "revision": 33,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15340.1,
+      "revision": 33,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15390.1,
+      "revision": 34,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15406.8,
+      "revision": 34,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15423.4,
+      "revision": 34,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15440.1,
+      "revision": 34,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15490.166,
+      "revision": 35,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15506.7,
+      "revision": 35,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15523.4,
+      "revision": 35,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 15606.766,
+      "revision": 36,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15623.4,
+      "revision": 36,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15640.1,
+      "revision": 36,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15656.8,
+      "revision": 36,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15706.8,
+      "revision": 37,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15723.5,
+      "revision": 37,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15740.1,
+      "revision": 37,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15756.8,
+      "revision": 37,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 15806.8,
+      "revision": 38,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15823.4,
+      "revision": 38,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15856.7,
+      "revision": 38,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15873.4,
+      "revision": 38,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15890.1,
+      "revision": 38,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 15940.1,
+      "revision": 39,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15956.8,
+      "revision": 39,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15973.4,
+      "revision": 39,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 15990,
+      "revision": 39,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16040.1,
+      "revision": 40,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16056.7,
+      "revision": 40,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16073.4,
+      "revision": 40,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16123.4,
+      "revision": 41,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16140.1,
+      "revision": 41,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16156.8,
+      "revision": 41,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16173.4,
+      "revision": 41,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16223.5,
+      "revision": 42,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16240,
+      "revision": 42,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16256.8,
+      "revision": 42,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16273.4,
+      "revision": 42,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16290.1,
+      "revision": 42,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16340.1,
+      "revision": 43,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16356.8,
+      "revision": 43,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16373.4,
+      "revision": 43,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16390.1,
+      "revision": 43,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16440.066,
+      "revision": 44,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16456.7,
+      "revision": 44,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16473.4,
+      "revision": 44,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16540.032,
+      "revision": 45,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16540.032,
+      "revision": 45,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16556.7,
+      "revision": 45,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16573.4,
+      "revision": 45,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16590.1,
+      "revision": 45,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 16623.4,
+      "revision": 46,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16640.1,
+      "revision": 46,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16656.7,
+      "revision": 46,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16673.4,
+      "revision": 46,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16723.4,
+      "revision": 47,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16740,
+      "revision": 47,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16756.7,
+      "revision": 47,
+      "ready": false,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16773.4,
+      "revision": 47,
+      "ready": true,
+      "light": true,
+      "title": "21.55B",
+      "range": "All"
+    },
+    {
+      "now": 16823.4,
+      "revision": 48,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16840.1,
+      "revision": 48,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16856.7,
+      "revision": 48,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16873.4,
+      "revision": 48,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 16923.4,
+      "revision": 49,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16956.7,
+      "revision": 49,
+      "ready": false,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 16973.4,
+      "revision": 49,
+      "ready": true,
+      "light": true,
+      "title": "894.38M",
+      "range": "7d"
+    },
+    {
+      "now": 17023.366,
+      "revision": 50,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 17040,
+      "revision": 50,
+      "ready": false,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 17056.7,
+      "revision": 50,
+      "ready": true,
+      "light": true,
+      "title": "3.59B",
+      "range": "30d"
+    },
+    {
+      "now": 17106.766,
+      "revision": 51,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 17140.1,
+      "revision": 51,
+      "ready": false,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    },
+    {
+      "now": 17156.7,
+      "revision": 51,
+      "ready": true,
+      "light": true,
+      "title": "21.53B",
+      "range": "53w"
+    }
+  ],
+  "extras": {
+    "detailsOpen": {
+      "label": "Technical details",
+      "height": 2232,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": false,
+      "inkReused": false,
+      "lightReused": false,
+      "creaseLighting": true,
+      "stockCacheBytes": 29681280,
+      "lightCacheBytes": 3594456,
+      "inkCacheBytes": 1090582,
+      "geometryMs": 102,
+      "captureMs": 83,
+      "drawMs": 4,
+      "bitmapMs": 413
+    },
+    "fractional": {
+      "label": "1280 DPR 1.25",
+      "height": 1635,
+      "crease": {
+        "anchor": {
+          "x": "left",
+          "y": "top",
+          "dx": 0,
+          "dy": 0
+        },
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "start": {
+          "x": 362.538271247462,
+          "y": 0
+        },
+        "end": {
+          "x": 0,
+          "y": 362.538271247462
+        },
+        "normal": [
+          -0.7071067811865475,
+          0.7071067811865475
+        ],
+        "depth": 256.3532700387283,
+        "strength": 0.9927757051402178
+      },
+      "stockReused": false,
+      "inkReused": false,
+      "lightReused": false,
+      "creaseLighting": true,
+      "stockCacheBytes": 42756480,
+      "lightCacheBytes": 5464632,
+      "inkCacheBytes": 1414388,
+      "geometryMs": 89,
+      "captureMs": 146,
+      "drawMs": 5,
+      "bitmapMs": 419,
+      "scale": 1.25
+    }
+  },
+  "nativeSelection": "21.53B"
+}

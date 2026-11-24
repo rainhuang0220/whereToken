@@ -1,0 +1,32 @@
+[
+  {
+    "width": 1440,
+    "deviceScaleFactor": 1,
+    "colorScheme": "light",
+    "tallScale": 1,
+    "shortScale": 1,
+    "cropped": true,
+    "directDelta": 1,
+    "tallDelta": 0
+  },
+  {
+    "width": 1440,
+    "deviceScaleFactor": 2,
+    "colorScheme": "dark",
+    "tallScale": 2,
+    "shortScale": 2,
+    "cropped": true,
+    "directDelta": 1,
+    "tallDelta": 0
+  },
+  {
+    "width": 1920,
+    "deviceScaleFactor": 2,
+    "colorScheme": "light",
+    "tallScale": 1.9551547175144377,
+    "shortScale": 2,
+    "cropped": false,
+    "directDelta": 0,
+    "tallDelta": 8
+  }
+]
