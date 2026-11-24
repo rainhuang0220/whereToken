@@ -1,4 +1,5 @@
 import { PaperResponsive } from './paper-responsive.js';
+import { creaseAnchor } from './crease-memory.js';
 
 const PI=Math.PI;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -86,7 +87,8 @@ export class PaperFoldSheet extends PaperResponsive {
     }
     const cut=intersection||this.lineIntersections(nx,ny,depth,origin);
     if(!cut)throw new Error('Crease must intersect original sheet boundary twice');
-    return {nx,ny,depth,origin,kind,fullSpan:true,
+    const anchor=creaseAnchor(origin,this.width,this.height,grab.sx,grab.sy);
+    return {nx,ny,depth,origin,kind,anchor,fullSpan:true,
       start:cut.start,end:cut.end,length:cut.length,span:cut.length,
       alongShift:0};
   }
@@ -113,8 +115,10 @@ export class PaperFoldSheet extends PaperResponsive {
       if(extent<1e-4)continue;
       const q=this.q({x,y},h);
       if(Math.abs(q)>.185)continue;
-      const longitudinal=t/len;
-      const irregular=.0025*Math.sin(t*32.1)+.0015*Math.sin(t*83.7+.7);
+      const fiberT=h.fiberStart===undefined ? t :
+        h.direction*((x-h.origin.x)*-h.ny+(y-h.origin.y)*h.nx)-h.fiberStart;
+      const longitudinal=fiberT/(h.fiberLength??len);
+      const irregular=.0025*Math.sin(fiberT*32.1)+.0015*Math.sin(fiberT*83.7+.7);
       const offset=q-irregular;
       const core=.024+.008*m.strength;
       const valley=Math.exp(-((offset/core)**2));

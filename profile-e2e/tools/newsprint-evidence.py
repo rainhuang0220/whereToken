@@ -87,26 +87,35 @@ def scar_measurements(directory):
         flat = Image.open(directory / f"{name}-flat.png").convert("L")
         released = Image.open(directory / f"{name}-released.png").convert("L")
         memory = state["memories"]
-        hinge = memory["memories"][0]["hinge"]
+        positions = state["diagnostic"].get("creasePositions")
+        if positions:
+            hinge = positions[0]
+            start = (hinge["start"]["x"], hinge["start"]["y"])
+            end = (hinge["end"]["x"], hinge["end"]["y"])
+            nx, ny = hinge["normal"]
+        else:
+            hinge = memory["memories"][0]["hinge"]
 
-        def coordinates(point):
-            return point["x"] * 100 + flat.width / 2, memory["height"] * 50 - point["y"] * 100
+            def coordinates(point):
+                return point["x"] * 100 + flat.width / 2, memory["height"] * 50 - point["y"] * 100
+
+            start, end = coordinates(hinge["start"]), coordinates(hinge["end"])
+            nx, ny = hinge["nx"], hinge["ny"]
 
         def difference(x, y):
             if 0 <= x < flat.width and 0 <= y < flat.height:
                 return flat.getpixel((x, y)) - released.getpixel((x, y))
             return None
 
-        start, end = coordinates(hinge["start"]), coordinates(hinge["end"])
         darkness, outside = [], []
         for percent in range(10, 91):
             x = start[0] + (end[0] - start[0]) * percent / 100
             y = start[1] + (end[1] - start[1]) * percent / 100
-            differences = [difference(round(x + offset * hinge["nx"]), round(y - offset * hinge["ny"]))
+            differences = [difference(round(x + offset * nx), round(y - offset * ny))
                            for offset in range(-8, 9)]
             darkness.append(max(value for value in differences if value is not None))
             for offset in (-30, 30):
-                value = difference(round(x + offset * hinge["nx"]), round(y - offset * hinge["ny"]))
+                value = difference(round(x + offset * nx), round(y - offset * ny))
                 if value is not None:
                     outside.append(abs(value))
         corner = []
@@ -114,7 +123,7 @@ def scar_measurements(directory):
                        min(flat.height, int(max(start[1], end[1]) + 30))):
             for x in range(max(0, int(min(start[0], end[0]) - 30)),
                            min(flat.width, int(max(start[0], end[0]) + 30))):
-                offset = (x - start[0]) * hinge["nx"] - (y - start[1]) * hinge["ny"]
+                offset = (x - start[0]) * nx - (y - start[1]) * ny
                 if abs(offset) > 22:
                     corner.append(abs(difference(x, y)))
         results[name] = {

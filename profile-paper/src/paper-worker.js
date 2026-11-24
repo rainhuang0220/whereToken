@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { PaperFoldSheet } from './scene/paper-foldsheet.js';
-import { restoreCreases } from './scene/crease-memory.js';
+import { CSS_PIXELS_PER_UNIT as PIXELS_PER_UNIT, creasePositions, restoreCreases, storeCreases } from './scene/crease-memory.js';
 import { buildScannedStock, toCanvas } from './paper/browser-maps.js';
+import { lightFrameKey, stockFrameKey } from './paper/paper-frame-keys.js';
 import { RasterCache } from './paper/raster-cache.js';
 import { tintStock } from './paper/surface-maps.js';
 
-const PIXELS_PER_UNIT = 100;
-const MAX_PIXELS = 12_000_000;
 const canvas = new OffscreenCanvas(1, 1);
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 250);
 const scene = new THREE.Scene();
@@ -14,7 +13,9 @@ const tiles = new Map();
 const ink = { value: null };
 const inkAmount = { value: 0 };
 const reverseInk = { value: 0 };
-let renderer, sun, ground, front, back, saved, stockReady, stock;
+const lightHighlights = { value: false };
+let renderer, sun, ground, front, back, light, saved, stockReady, stock;
+const flatStock = new THREE.PlaneGeometry();
 let creaseRevision = 0;
 const printCache = new RasterCache(8 * 1024 * 1024, 12, () => {});
 const MAX_PENDING_PRINT_BYTES = 48 * 1024 * 1024;
@@ -45,12 +46,49 @@ function texture(source, colorSpace = THREE.NoColorSpace) {
   return result;
 }
 
-function material(side, amount) {
+function material(side, amount, lighting = false) {
   const stock = new THREE.MeshPhongMaterial({
     side, color: 0xffffff, shininess: 12, specular: 0x080808,
     normalScale: new THREE.Vector2(.13, .13),
   });
   stock.onBeforeCompile = shader => {
+    if (lighting) {
+      // Both plates encode the same scalar gain over the stock's flat
+      // lighting. A shadow multiplies by 1-alpha; color dodge divides by
+      // 1-color. Ink stays proportionate to the paper under both.
+      shader.uniforms.paperHighlights = lightHighlights;
+      shader.fragmentShader = 'uniform bool paperHighlights;\n' + shader.fragmentShader
+        .replace('#include <logdepthbuf_fragment>', `
+          #include <logdepthbuf_fragment>
+          if (max(abs(vNormal.x), abs(vNormal.y)) < 0.00005) {
+            gl_FragColor = vec4(0.0);
+            return;
+          }
+        `)
+        .replace('#include <opaque_fragment>', `
+          ReflectedLight flatReflection = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
+          #if NUM_DIR_LIGHTS > 0
+            IncidentLight flatSun;
+            getDirectionalLightInfo(directionalLights[0], flatSun);
+            RE_Direct_BlinnPhong(flatSun, geometryPosition, normalize(mapN),
+              geometryViewDir, geometryClearcoatNormal, material, flatReflection);
+          #endif
+          vec3 flatLight = flatReflection.directDiffuse + flatReflection.directSpecular + reflectedLight.indirectDiffuse;
+          vec3 luma = vec3(0.2126, 0.7152, 0.0722);
+          float base = dot(clamp(linearToOutputTexel(vec4(flatLight, 1.0)).rgb, 0.0, 1.0), luma);
+          float lit = dot(clamp(linearToOutputTexel(vec4(outgoingLight, 1.0)).rgb, 0.0, 1.0), luma);
+          float gain = max(0.01, lit) / max(0.01, base);
+          if (paperHighlights && gain > 1.0) {
+            gl_FragColor = vec4(vec3(1.0 - 1.0 / gain), 1.0);
+          } else if (!paperHighlights && gain < 1.0) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - gain);
+          } else {
+            gl_FragColor = vec4(0.0);
+          }
+          return;
+        `);
+      return;
+    }
     Object.assign(shader.uniforms, { paperInk: ink, paperInkAmount: amount });
     shader.vertexShader = 'varying vec2 printUV;\n' + shader.vertexShader
       .replace('#include <uv_vertex>', '#include <uv_vertex>\nprintUV = uv;');
@@ -67,7 +105,7 @@ function material(side, amount) {
         }
       `);
   };
-  stock.customProgramCacheKey = () => 'newsprint-stock-' + side;
+  stock.customProgramCacheKey = () => lighting ? 'newsprint-crease-light' : 'newsprint-stock-' + side;
   return stock;
 }
 
@@ -97,13 +135,15 @@ async function initialize(message) {
   scene.add(sun);
   front = new THREE.Mesh(undefined, material(THREE.FrontSide, inkAmount));
   back = new THREE.Mesh(undefined, material(THREE.BackSide, reverseInk));
+  light = new THREE.Mesh(undefined, material(THREE.FrontSide, inkAmount, true));
+  light.visible = false;
   ground = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.ShadowMaterial({ opacity: .165 }));
   ground.position.z = -.045;
   ground.receiveShadow = true;
   front.castShadow = true;
   front.receiveShadow = true;
   back.receiveShadow = true;
-  scene.add(ground, front, back);
+  scene.add(ground, front, back, light);
   stockReady = (async () => {
     const response = await fetch('./newsprint-height.jpg');
     if (!response.ok) throw new Error('Newsprint height scan unavailable');
@@ -152,12 +192,16 @@ function getTile(layout, maps) {
   return tile;
 }
 
-function updateGeometry(layout) {
+function updateGeometry(layout, reuseLight) {
   const width = layout.width / PIXELS_PER_UNIT, height = layout.height / PIXELS_PER_UNIT;
   if (!model || model.width !== width || model.height !== height) {
     const previous = model;
     model = new PaperFoldSheet({ width, height });
-    restoreCreases(saved, model);
+    // The exact-size light bitmap already contains the resting mesh's
+    // shading. Fold motion uses the analytic height field; tessellate
+    // on demand if this view ever needs a new light bitmap.
+    restoreCreases(saved, model, { refresh: !reuseLight });
+    light.geometry = model.restingGeometry;
     disposeMesh(previous);
     ground.geometry.dispose();
     ground.geometry = new THREE.PlaneGeometry(width, height);
@@ -174,6 +218,7 @@ function view(layout, height, offset) {
   const halfWidth = layout.width / PIXELS_PER_UNIT / 2;
   const halfHeight = height / PIXELS_PER_UNIT / 2;
   const y = model.height / 2 - offset / PIXELS_PER_UNIT - halfHeight;
+  camera.clearViewOffset();
   Object.assign(camera, { left: -halfWidth, right: halfWidth, top: halfHeight, bottom: -halfHeight });
   camera.position.set(0, y, Math.max(30, model.height));
   camera.far = Math.max(250, model.height * 2);
@@ -182,12 +227,14 @@ function view(layout, height, offset) {
   camera.updateMatrixWorld();
 }
 
-function configureView(layout, folding) {
+function configureView(layout, folding, bounds) {
   const height = folding ? layout.viewportHeight : layout.height;
-  const w = Math.floor(layout.width * layout.scale);
-  const h = Math.floor(height * layout.scale);
+  const w = bounds?.w ?? Math.floor(layout.width * layout.scale);
+  const h = bounds?.h ?? Math.floor(height * layout.scale);
   if (canvas.width !== w || canvas.height !== h) renderer.setSize(w, h, false);
   view(layout, height, folding ? scrollY : 0);
+  front.visible = true;
+  light.visible = false;
   front.geometry = back.geometry = model.renderGeometry;
   back.visible = ground.visible = sun.castShadow = folding;
   inkAmount.value = folding ? 1 : 0;
@@ -216,7 +263,7 @@ function draw() {
 
 function diagnostics() {
   return {
-    ...model.getDiagnostics(), frameCount, geometryVertices: model.restingGeometry.attributes.position.count,
+    ...model.getDiagnostics(), creaseRevision, creasePositions: creasePositions(model), frameCount, geometryVertices: model.restingGeometry.attributes.position.count,
     materialMaps: true, printedInkResident: !!print, textureSize: [print.image.width, print.image.height],
     meshCssWidth: Math.round(model.width * PIXELS_PER_UNIT),
     meshCssHeight: Math.round(model.height * PIXELS_PER_UNIT),
@@ -237,40 +284,90 @@ function flapPoints(layout) {
   return points;
 }
 
-function stockKey(layout) {
-  return JSON.stringify([layout.width, layout.height, layout.scale, layout.rgb, creaseRevision]);
-}
-
 function cropSource(layout, stockKeys) {
-  if (model.memories.length || !Number.isInteger(layout.scale)) return undefined;
-  // A flat stock sample is periodic, with vertical phase fixed at the
-  // bottom edge by the sheet UV. The bottom rows of a taller homogeneous
-  // sheet therefore cover the shorter sheet at the same texel pitch.
+  if (!Number.isInteger(layout.scale)) return undefined;
+  // All stock maps share top-left phase and fixed CSS pixel pitch. Only
+  // the uncreased, same-width stock can be cropped at the top.
   let sourceHeight = Infinity;
   for (const key of stockKeys) {
     const [, height] = JSON.parse(key);
-    if (height > layout.height && height < sourceHeight && key === stockKey({ ...layout, height })) {
+    if (height > layout.height && height < sourceHeight && key === stockFrameKey({ ...layout, height })) {
       sourceHeight = height;
     }
   }
-  return Number.isFinite(sourceHeight) ? stockKey({ ...layout, height: sourceHeight }) : undefined;
+  return Number.isFinite(sourceHeight) ? stockFrameKey({ ...layout, height: sourceHeight }) : undefined;
 }
 
-function sendReady(layout, fields, stockKeys = []) {
-  const key = stockKey(layout);
-  const cropFrom = stockKeys.includes(key) ? undefined : cropSource(layout, stockKeys);
-  if (cropFrom || stockKeys.includes(key)) {
-    post('ready', { layout, diagnostics: diagnostics(), ...fields, stockKey: key, cropFrom, drawMs: 0, transferMs: 0 });
-    return;
+function lightBox(layout) {
+  const points = creasePositions(model).flatMap(({ start, end }) => [start, end]);
+  const width = Math.floor(layout.width * layout.scale);
+  const height = Math.floor(layout.height * layout.scale);
+  // The residual solver's 18.5 CSS px support plus mesh interpolation.
+  const pad = 24;
+  function edges(axis, size, full) {
+    const coords = points.map(p => p[axis]);
+    return [
+      Math.max(0, Math.floor((Math.min(...coords) - pad) * full / size)),
+      Math.min(full, Math.ceil((Math.max(...coords) + pad) * full / size)),
+    ];
   }
-  configureView(layout, false);
-  const [, drawMs] = measure('flat draw', draw);
-  sendFrame('ready', layout, { ...fields, drawMs });
+  const [x, endX] = edges('x', layout.width, width);
+  const [y, endY] = edges('y', layout.height, height);
+  return { x, y, w: endX - x, h: endY - y, width, height };
+}
+
+function configureLight(layout, bounds) {
+  if (model.restingGeometry.attributes.position.count === 4) model.refreshRestingGeometry();
+  configureView(layout, false, bounds);
+  front.visible = false;
+  light.visible = true;
+  light.geometry = model.restingGeometry;
+  const { x, y, w, h, width, height } = bounds;
+  camera.setViewOffset(width, height, x, y, w, h);
+}
+
+function sendRest(type, layout, fields, stockKeys = [], lightKeys = []) {
+  const key = stockFrameKey(layout);
+  const cropFrom = stockKeys.includes(key) ? undefined : cropSource(layout, stockKeys);
+  let bitmap, lightingBitmaps, lightBounds, lightKey;
+  let drawMs = 0, transferMs = 0;
+  const transfer = () => {
+    const [result, ms] = measure('bitmap', () => canvas.transferToImageBitmap());
+    transferMs += ms;
+    return result;
+  };
+  if (!cropFrom && !stockKeys.includes(key)) {
+    configureView(layout, false);
+    front.geometry = flatStock;
+    front.scale.set(model.width, model.height, 1);
+    try {
+      [, drawMs] = measure('flat draw', draw);
+      bitmap = transfer();
+    } finally {
+      front.scale.set(1, 1, 1);
+      front.geometry = model.renderGeometry;
+    }
+  }
+  if (model.memories.length) {
+    lightKey = lightFrameKey(key, creaseRevision);
+    if (!lightKeys.includes(lightKey)) {
+      lightBounds = lightBox(layout);
+      configureLight(layout, lightBounds);
+      lightingBitmaps = [false, true].map(highlights => {
+        lightHighlights.value = highlights;
+        const [, lightMs] = measure(highlights ? 'crease highlights' : 'crease shadows', draw);
+        drawMs += lightMs;
+        return transfer();
+      });
+    }
+  }
+  post(type, { layout, bitmap, lightingBitmaps, lightKey, lightBounds, diagnostics: diagnostics(),
+    ...fields, stockKey: key, cropFrom, drawMs, transferMs }, [bitmap, ...(lightingBitmaps ?? [])].filter(Boolean));
 }
 
 function sendFrame(type, layout, fields) {
   const [bitmap, transferMs] = measure('bitmap', () => canvas.transferToImageBitmap());
-  post(type, { layout, bitmap, diagnostics: diagnostics(), transferMs, stockKey: stockKey(layout), ...fields }, [bitmap]);
+  post(type, { layout, bitmap, diagnostics: diagnostics(), transferMs, ...fields }, [bitmap]);
 }
 
 function rememberPrint(id, canvas) {
@@ -288,7 +385,7 @@ function rememberPrint(id, canvas) {
   });
 }
 
-async function prepare({ layout, bitmap, inkID, stockKeys }) {
+async function prepare({ layout, bitmap, inkID, stockKeys, lightKeys }) {
   const maps = await stockReady;
   if (layout.revision !== latestRevision) {
     bitmap?.close();
@@ -327,8 +424,9 @@ async function prepare({ layout, bitmap, inkID, stockKeys }) {
   const previousMaterialBuilds = materialBuilds;
   const [tile, materialMs] = measure('material', () => getTile(layout, maps));
   if (previousMaterialBuilds === materialBuilds) fastInkUpdates++;
-  const [, geometryMs] = measure('geometry', () => updateGeometry(layout));
-  for (const mesh of [front, back]) {
+  const reuseLight = lightKeys.includes(lightFrameKey(stockFrameKey(layout), creaseRevision));
+  const [, geometryMs] = measure('geometry', () => updateGeometry(layout, reuseLight));
+  for (const mesh of [front, back, light]) {
     if (!mesh.material.map) mesh.material.needsUpdate = true;
     mesh.material.map = tile.albedo;
     mesh.material.normalMap = tile.normal;
@@ -336,6 +434,7 @@ async function prepare({ layout, bitmap, inkID, stockKeys }) {
   }
   for (const map of [tile.albedo, tile.normal, tile.roughness]) {
     map.repeat.set(layout.width / tile.width, layout.height / tile.height);
+    map.offset.y = -map.repeat.y;
   }
   releasePrint();
   // Keep upload orientation and alpha identical to the baseline capture.
@@ -351,24 +450,25 @@ async function prepare({ layout, bitmap, inkID, stockKeys }) {
   scrollY = layout.scrollY;
   let compileMs = 0;
   if (first) {
+    const ownedPrint = print;
     configureView(layout, true);
     const start = performance.now();
     if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera);
     else renderer.compile(scene, camera);
+    if (layout.revision !== latestRevision) {
+      if (print === ownedPrint) releasePrint();
+      post('discarded', { revision: layout.revision });
+      return;
+    }
     // Warm the shadowed front, reverse and depth programs before any fold.
     draw();
     compileMs = Math.round(performance.now() - start);
     performance.measure('Newsprint worker compile and warmup', { start, duration: compileMs });
   }
   captureCount++;
-  if (layout.revision !== latestRevision) {
-    releasePrint();
-    post('discarded', { revision: layout.revision });
-    return;
-  }
   current = layout;
   readyFields = { materialMs, stockMs: maps.stockMs, geometryMs, uploadMs, compileMs, inkReused };
-  sendReady(layout, readyFields, stockKeys);
+  sendRest('ready', layout, readyFields, stockKeys, lightKeys);
   if (!inkReused && inkID !== null) rememberPrint(inkID, optical);
 }
 
@@ -398,11 +498,15 @@ function tick(now) {
     lastTime = now;
     model.step(dt);
     const folding = model.phase !== 'resting';
-    configureView(current, folding);
-    draw();
     outstanding = ++frameID;
-    sendFrame('motion', current, { folding, scrollY, motionEpoch, frameID,
-      flapPoints: folding ? flapPoints(current) : [] });
+    const fields = { folding, scrollY, motionEpoch, frameID };
+    if (folding) {
+      configureView(current, true);
+      draw();
+      sendFrame('motion', current, { ...fields, flapPoints: flapPoints(current) });
+    } else {
+      sendRest('motion', current, fields, [stockFrameKey(current)]);
+    }
     const bending = model.phase === 'dragging' &&
       (Math.abs(model.target - model.theta) > .003 || Math.abs(model.velocity) > .008);
     if (bending || model.phase === 'settling') wake();
@@ -436,8 +540,7 @@ async function receive(message) {
   if (message.type === 'invalidate') {
     latestRevision = message.revision;
     if (model?.phase === 'dragging') {
-      model.release();
-      storeCreases();
+      releaseFold();
     }
     if (current) releasePrint();
     current = null;
@@ -446,7 +549,7 @@ async function receive(message) {
   }
   if (message.type === 'prepare') return prepare(message);
   if (message.type === 'render-stock') {
-    if (current?.revision === message.revision) sendReady(current, readyFields);
+    if (current?.revision === message.revision) sendRest('ready', current, readyFields);
     return;
   }
   if (message.type === 'visibility') {
@@ -468,8 +571,7 @@ async function receive(message) {
     model.dragDelta(message.dx, message.dy, message.time);
     wake();
   } else if (message.type === 'release') {
-    model.release();
-    storeCreases();
+    releaseFold();
     wake();
   } else if (message.type === 'reset') {
     model.reset();
@@ -477,11 +579,18 @@ async function receive(message) {
   }
 }
 
-function storeCreases() {
-  if (!model.memories.length) return;
-  saved = { width: model.width, height: model.height, memories: model.memories };
+function releaseFold() {
+  const before = model.memories.slice();
+  model.release();
+  const updated = storeCreases(model, before, saved);
+  if (updated === saved) return;
+  saved = updated;
   creaseRevision++;
-  post('creases', { saved });
+  // A previous renderer can still read this tab's visible marks. Only
+  // the anchored records are authoritative for this renderer.
+  const legacy = { width: model.width, height: model.height,
+    memories: model.memories.map(({ hinge, strength, band, times }) => ({ hinge, strength, band, times })) };
+  post('creases', { saved: { ...legacy, anchored: saved }, creaseRevision });
 }
 
 self.onmessage = ({ data }) => receive(data).catch(reportError);

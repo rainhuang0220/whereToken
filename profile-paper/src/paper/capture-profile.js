@@ -82,10 +82,10 @@ export async function captureProfile(layout, signal, regionCache, styleKey) {
   const cloner = new DocumentCloner(context, document.body, {
     checkpoint,
     waitForFrame: iframe => waitForFrame(iframe, signal),
-    ignoreElements: node => node.id === 'wt-paper-stock' || node.id === 'wt-paper-fold' ||
+    ignoreElements: node => node.id === 'wt-paper-stock' || node.id === 'wt-paper-fold' || node.id === 'wt-paper-light' ||
       node.id === 'tip' || node.tagName === 'DIALOG',
     onclone: doc => {
-      doc.documentElement.classList.remove('wt-physical-print', 'wt-paper-folding');
+      doc.documentElement.classList.remove('wt-physical-print', 'wt-paper-folding', 'wt-paper-flat');
       doc.documentElement.classList.add('wt-paper-capture');
       // Match the live content box while preserving the iframe's media-query viewport.
       doc.documentElement.style.width = width + 'px';

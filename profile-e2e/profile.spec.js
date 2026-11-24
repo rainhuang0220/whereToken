@@ -732,6 +732,19 @@ test("Newsprint clicks update ink promptly and preserve real crease memories",as
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().phase),{timeout:10000}).toBe("resting");
   const scarred=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
   expect(scarred.plasticCreases).toBeGreaterThan(0);
+  const initialLine = scarred.creasePositions[0];
+  expect(initialLine.anchor).toEqual({ x: "right", y: "top", dx: 0, dy: 0 });
+  await expect(page.locator("#wt-paper-shadow")).toBeVisible();
+  await expect(page.locator("#wt-paper-shadow")).toHaveCSS("pointer-events", "none");
+  await expect(page.locator("#hero-value")).toHaveCSS("opacity", "1");
+  const checkLine = diagnostic => {
+    const line = diagnostic.creasePositions[0];
+    expect(line.anchor).toEqual(initialLine.anchor);
+    for (const end of ["start", "end"]) {
+      expect(Math.hypot(line[end].x - initialLine[end].x, line[end].y - initialLine[end].y)).toBeLessThanOrEqual(2);
+    }
+    expect(diagnostic.creaseLighting).toBe(true);
+  };
   await page.evaluate(() => {
     window.__WT_STALE_PRINTS = 0;
     const sample = () => {
@@ -750,6 +763,7 @@ test("Newsprint clicks update ink promptly and preserve real crease memories",as
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:25000}).toBe(true);
   const afterRange=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
   expect(afterRange.plasticCreases).toBeGreaterThan(0);
+  checkLine(afterRange);
   expect(afterRange.printedInkResident).toBe(true);
   expect(await page.evaluate(()=>window.__WT_STALE_PRINTS)).toBe(0);
   const previousFast=afterRange.fastInkUpdates;
@@ -778,6 +792,7 @@ test("Newsprint clicks update ink promptly and preserve real crease memories",as
   await expect.poll(()=>page.evaluate(()=>window.__WT_PAPER3D__?.getDiagnostics().snapshotReady),{timeout:25000}).toBe(true);
   const resized=await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics());
   expect(resized.plasticCreases).toBeGreaterThan(0);
+  checkLine(resized);
   expect(resized.fullMaterialBuilds).toBe(afterMetric.fullMaterialBuilds);
   expect(await page.evaluate(()=>window.__WT_STALE_PRINTS)).toBe(0);
   await page.evaluate(() => document.querySelector("#wt-simulated-report-expansion").remove());
@@ -786,11 +801,13 @@ test("Newsprint clicks update ink promptly and preserve real crease memories",as
   const shrank = await waitForPhysicalPaper(page);
   expect(shrank.sheetCssHeight).toBe(beforeResize);
   expect(shrank.plasticCreases).toBeGreaterThan(0);
+  checkLine(shrank);
+  expect(shrank.lightReused).toBe(true);
+  expect(shrank.lightCacheBytes).toBeLessThanOrEqual(16 * 1024 * 1024);
   // A browser reload in the SAME tab restores the physical scar; changing
   // palette deliberately forgets it. Closing the tab clears sessionStorage.
   await page.reload();
-  await waitForPhysicalPaper(page);
-  expect((await page.evaluate(()=>window.__WT_PAPER3D__.getDiagnostics())).plasticCreases).toBeGreaterThan(0);
+  checkLine(await waitForPhysicalPaper(page));
   await page.getByRole("tab",{name:"Cobalt",exact:true}).click();
   await page.getByRole("tab",{name:"Newsprint",exact:true}).click();
   await waitForPhysicalPaper(page);
@@ -1489,6 +1506,8 @@ test("revisiting a report reuses its exact ink and stock within bounded caches",
   const seven = await choose("7d");
   expect(seven.sheetCssHeight).toBeLessThan(original.sheetCssHeight);
   expect(seven.stockCropped).toBe(true);
+  const shortStock = await page.locator("#wt-paper-resident").evaluate(canvas => [canvas.width, canvas.height]);
+  expect(shortStock).toEqual(seven.textureSize);
   const revisited = await choose("All");
   expect(revisited.inkReused).toBe(true);
   expect(revisited.stockReused).toBe(true);

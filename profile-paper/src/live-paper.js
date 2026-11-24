@@ -1,3 +1,4 @@
+import { lightFrameKey, stockFrameKey } from './paper/paper-frame-keys.js';
 import { RasterCache } from './paper/raster-cache.js';
 import { captureStyleKey } from './paper/capture-style.js';
 import { captureProfile } from './paper/capture-profile.js';
@@ -14,6 +15,7 @@ const workerURL = new URL(PAPER_WORKER_FILE, document.currentScript.src);
 
 let worker, limit, renderer, observer, degraded, capture, captureAbort, pendingFrame, scheduled = 0;
 let revision = 0, layout, committed, drag, rest, fold, shownScroll, foldShown = false;
+let lighting, creaseRevision = 0;
 let skippedFrames = 0, lastError, captureTimes, workerTimes, dprQuery;
 let latestMotion, motionEpoch = 0, motionActive = false;
 const inkIndex = new Map();
@@ -21,6 +23,7 @@ const regionCache = new Map();
 let nextInkID = 0;
 let cachedInkIDs = new Set();
 const stockFrames = new RasterCache(48 * 1024 * 1024, 6, disposeLayer);
+const lightFrames = new RasterCache(16 * 1024 * 1024, 6, disposeLighting);
 
 function disposeLayer(frame) {
   frame.node.remove();
@@ -34,6 +37,23 @@ function detachStock() {
   rest = null;
 }
 
+function disposeLighting(frame) {
+  frame.node.remove();
+  for (const plane of frame.planes) disposeLayer(plane);
+}
+
+function detachLight() {
+  if (!lighting) return;
+  if (lightFrames.has(lighting.key)) lighting.node.remove();
+  else disposeLighting(lighting);
+  lighting = null;
+}
+
+function closeBitmaps(message) {
+  message.bitmap?.close();
+  for (const bitmap of message.lightingBitmaps ?? []) bitmap.close();
+}
+
 // Capture keys use the rendered DOM rather than a filter name. Runtime
 // labels, language, hosted refresh, dialogs and open details can all change
 // the ink without changing the URL.
@@ -41,7 +61,8 @@ function inkFingerprint(target, styleKey) {
   // These elements can change their pixels without a markup change.
   if (!styleKey || document.querySelector('main img, main canvas, main video, main iframe, main input, main textarea, main select')) return null;
   const content = Array.from(document.body.children)
-    .filter(node => !['SCRIPT', 'IFRAME'].includes(node.tagName))
+    .filter(node => !['SCRIPT', 'IFRAME'].includes(node.tagName) &&
+      !['wt-paper-stock', 'wt-paper-light', 'wt-paper-fold'].includes(node.id))
     .map(node => node.outerHTML);
   const heat = document.getElementById('heat-scroll');
   return JSON.stringify([
@@ -89,13 +110,13 @@ function layer(id) {
     wrapper.append(canvas);
     return { canvas, context, node: wrapper };
   }
-  document.body.append(canvas);
   return { canvas, context, node: canvas };
 }
 
 function paint(target, bitmap, width, height) {
-  if (target.canvas.width !== bitmap.width) target.canvas.width = bitmap.width;
-  if (target.canvas.height !== bitmap.height) target.canvas.height = bitmap.height;
+  const { width: pixelsWide, height: pixelsHigh } = bitmap;
+  if (target.canvas.width !== pixelsWide) target.canvas.width = pixelsWide;
+  if (target.canvas.height !== pixelsHigh) target.canvas.height = pixelsHigh;
   if (target.width !== width) {
     target.width = width;
     target.canvas.style.width = width + 'px';
@@ -105,6 +126,9 @@ function paint(target, bitmap, width, height) {
     target.canvas.style.height = height + 'px';
   }
   target.context.transferFromImageBitmap(bitmap);
+  if (target.canvas.width !== pixelsWide || target.canvas.height !== pixelsHigh) {
+    throw new Error('Paper bitmap backing store size mismatch');
+  }
 }
 
 function showFold(visible) {
@@ -113,10 +137,13 @@ function showFold(visible) {
   root.classList.toggle('wt-paper-folding', visible);
 }
 
-function hide() {
+function hide(keepBackdrop = false) {
   showFold(false);
-  root.classList.remove('wt-physical-print');
-  detachStock();
+  root.classList.remove('wt-physical-print', 'wt-paper-flat');
+  if (!keepBackdrop) {
+    detachStock();
+    detachLight();
+  }
   if (fold) disposeLayer(fold);
   fold = null;
   committed = latestMotion = null;
@@ -131,7 +158,7 @@ function invalidate() {
   captureAbort?.abort();
   drag = null;
   layout = null;
-  hide();
+  hide(true);
   worker.postMessage({ type: 'invalidate', revision });
   schedule();
 }
@@ -158,7 +185,9 @@ function stop() {
   if (scheduled) cancelAnimationFrame(scheduled);
   scheduled = 0;
   hide();
+  creaseRevision = 0;
   stockFrames.clear();
+  lightFrames.clear();
   inkIndex.clear();
   cachedInkIDs.clear();
   regionCache.clear();
@@ -180,7 +209,7 @@ function sync() {
     worker = instance;
     instance.onmessage = ({ data }) => {
       if (worker === instance) receive(data);
-      else data.bitmap?.close();
+      else closeBitmaps(data);
     };
     instance.onerror = event => {
       if (worker === instance) fail(event.message || 'Paper worker unavailable');
@@ -210,6 +239,7 @@ function receive(message) {
       fail(message.error);
       break;
     case 'creases':
+      creaseRevision = message.creaseRevision;
       try { sessionStorage.setItem(CREASE_SESSION_KEY, JSON.stringify(message.saved)); } catch {}
       break;
     case 'ink-cache':
@@ -238,28 +268,28 @@ function receive(message) {
   }
 }
 
-async function stageReady(message) {
-  const owner = worker;
+function stageReady(message) {
   if (message.cropFrom && isCurrentFrame(message)) {
     const source = stockFrames.get(message.cropFrom)?.canvas;
     const { width, height, scale } = message.layout;
     const w = Math.floor(width * scale), h = Math.floor(height * scale);
     const start = performance.now();
     try {
-      message.bitmap = await createImageBitmap(source, 0, source.height - h, w, h);
+      // A cropped ImageBitmap can still expose its original backing size
+      // after transfer to Firefox's bitmaprenderer. Materialize the crop.
+      const crop = new OffscreenCanvas(w, h);
+      crop.getContext('2d').drawImage(source, 0, 0, w, h, 0, 0, w, h);
+      message.bitmap = crop.transferToImageBitmap();
       message.cropMs = Math.round(performance.now() - start);
       performance.clearMeasures('Newsprint stock crop');
       performance.measure('Newsprint stock crop', { start });
     } catch {
       if (isCurrentFrame(message) && worker) {
+        closeBitmaps(message);
         worker.postMessage({ type: 'render-stock', revision });
         return;
       }
     }
-  }
-  if (!worker || worker !== owner) {
-    message.bitmap?.close();
-    return;
   }
   if (capture?.revision === message.layout.revision) capture = null;
   queueFrame(message);
@@ -272,7 +302,7 @@ function acknowledge(message) {
 
 function discardFrame(message) {
   skippedFrames++;
-  message.bitmap?.close();
+  closeBitmaps(message);
   acknowledge(message);
 }
 
@@ -293,6 +323,7 @@ function queueFrame(message) {
 
 function presentStock(message) {
   const { layout: frameLayout, bitmap, stockKey } = message;
+  if (!bitmap && rest?.stockKey === stockKey) return;
   detachStock();
   if (bitmap) {
     rest = layer('wt-paper-resident');
@@ -305,23 +336,69 @@ function presentStock(message) {
   document.body.append(rest.node);
 }
 
+function presentLight(message) {
+  const { lightKey, lightingBitmaps, lightBounds, layout } = message;
+  if (!lightingBitmaps && lighting?.key === lightKey) return;
+  detachLight();
+  if (!lightKey) return;
+  if (lightingBitmaps) {
+    const { x, y, w, h, width, height } = lightBounds;
+    const sx = layout.width / width, sy = layout.height / height;
+    const node = document.createElement('div');
+    node.id = 'wt-paper-light';
+    node.setAttribute('aria-hidden', 'true');
+    const planes = lightingBitmaps.map((bitmap, index) => {
+      const plane = layer(index === 0 ? 'wt-paper-shadow' : 'wt-paper-highlight');
+      paint(plane, bitmap, w * sx, h * sy);
+      plane.canvas.style.left = x * sx + 'px';
+      plane.canvas.style.top = y * sy + 'px';
+      node.append(plane.node);
+      return plane;
+    });
+    lighting = { key: lightKey, node, planes };
+    lightFrames.put(lightKey, lighting, w * h * 8);
+  } else {
+    lighting = lightFrames.get(lightKey);
+  }
+  document.body.append(lighting.node);
+}
+
+function presentCachedBackdrop(layout) {
+  const stockKey = stockFrameKey(layout);
+  const lightKey = lightFrameKey(stockKey, creaseRevision);
+  if (rest?.stockKey === stockKey || stockFrames.has(stockKey)) presentStock({ stockKey });
+  else detachStock();
+  if (lighting?.key === lightKey || lightFrames.has(lightKey)) presentLight({ lightKey });
+  else detachLight();
+  root.classList.toggle('wt-paper-flat', !!rest || !!lighting);
+}
+
 function present(message) {
   const { layout: frameLayout, bitmap } = message;
   const height = message.folding ? frameLayout.viewportHeight : frameLayout.height;
-  const cachedStock = bitmap ? null : stockFrames.get(message.stockKey)?.canvas;
+  const cachedStock = bitmap ? null : rest?.stockKey === message.stockKey
+    ? rest?.canvas : stockFrames.get(message.stockKey)?.canvas;
+  const { lightingBitmaps, lightBounds, lightKey } = message;
+  const validLight = lightingBitmaps
+    ? lightingBitmaps.length === 2 &&
+      lightingBitmaps.every(plane => plane.width === lightBounds?.w && plane.height === lightBounds?.h)
+    : !lightKey || lighting?.key === lightKey || lightFrames.has(lightKey);
   const surface = bitmap ?? cachedStock;
-  if (surface?.width !== Math.floor(frameLayout.width * frameLayout.scale) ||
+  if (!validLight || surface?.width !== Math.floor(frameLayout.width * frameLayout.scale) ||
       surface?.height !== Math.floor(height * frameLayout.scale) ||
       message.diagnostics.meshCssWidth !== frameLayout.width ||
       message.diagnostics.meshCssHeight !== frameLayout.height ||
       message.diagnostics.textureSize[0] !== Math.floor(frameLayout.width * frameLayout.scale) ||
       message.diagnostics.textureSize[1] !== Math.floor(frameLayout.height * frameLayout.scale)) {
-    bitmap?.close();
+    closeBitmaps(message);
     fail('Paper frame size mismatch');
     return;
   }
-  if (message.type === 'ready') {
+  if (!message.folding) {
     presentStock(message);
+    presentLight(message);
+  }
+  if (message.type === 'ready') {
     committed = frameLayout;
     latestMotion = message;
     workerTimes = {
@@ -329,16 +406,19 @@ function present(message) {
       compileMs: message.compileMs, drawMs: message.drawMs, bitmapMs: message.transferMs,
       inkReused: message.inkReused, stockReused: !bitmap || !!message.cropFrom,
       stockCropped: !!message.cropFrom, cropMs: message.cropMs ?? 0,
+      lightReused: !!lightKey && !lightingBitmaps,
     };
     showFold(false);
-    root.classList.add('wt-physical-print');
+    root.classList.add('wt-physical-print', 'wt-paper-flat');
   } else if (!message.folding) {
-    presentStock(message);
     showFold(false);
     motionActive = false;
     latestMotion = message;
   } else if (Math.abs(message.scrollY - scrollY) < 1) {
-    fold ??= layer('wt-paper-fold');
+    if (!fold) {
+      fold = layer('wt-paper-fold');
+      document.body.append(fold.node);
+    }
     paint(fold, bitmap, frameLayout.width, height);
     shownScroll = message.scrollY;
     showFold(true);
@@ -371,7 +451,10 @@ function advance() {
       discardFrame(message);
     }
   }
-  if (worker && !capture && !committed) startCapture(now);
+  if (worker && !capture && !committed) {
+    presentCachedBackdrop(now);
+    startCapture(now);
+  }
 }
 
 async function startCapture(target) {
@@ -402,7 +485,7 @@ async function startCapture(target) {
       if (inkIndex.size > 12) inkIndex.delete(inkIndex.keys().next().value);
     }
     instance.postMessage({ type: 'prepare', layout: target, bitmap, inkID: fingerprint ? inkID : null,
-      stockKeys: Array.from(stockFrames.keys()) }, bitmap ? [bitmap] : []);
+      stockKeys: Array.from(stockFrames.keys()), lightKeys: Array.from(lightFrames.keys()) }, bitmap ? [bitmap] : []);
   } catch (error) {
     bitmap?.close();
     if (capture === target) capture = null;
@@ -533,7 +616,8 @@ window.__WT_PAPER3D__ = {
     viewportHeight: committed?.viewportHeight, cameraScrollY: scrollY,
     flapPoints: latestMotion?.flapPoints ?? [], skippedFrames, error: lastError ?? null,
     ...latestMotion?.diagnostics, ...captureTimes, ...workerTimes,
-    stockCacheBytes: stockFrames.bytes,
+    stockCacheBytes: stockFrames.bytes, lightCacheBytes: lightFrames.bytes,
+    creaseLighting: !!lighting && !foldShown && root.classList.contains('wt-paper-flat'),
     lastInkUpdateMs: workerTimes?.materialMs,
   }),
   refresh: sync,

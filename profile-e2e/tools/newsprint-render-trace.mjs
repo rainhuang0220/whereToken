@@ -102,6 +102,7 @@ async function collectTrace(page, name, exercise) {
 }
 
 const viewport = { width: 1440, height: 900 };
+const scarred = process.env.WT_TRACE_SCAR === '1';
 const baseline = process.argv.includes('--baseline');
 const waitReady = (page, old = -2) => page.waitForFunction(revision => {
   const paper = window.__WT_PAPER3D__?.getDiagnostics();
@@ -117,6 +118,20 @@ try {
     browser = await chromium.launch({ headless: process.env.WT_HEADFUL !== '1' });
     const context = await browser.newContext({ viewport, recordVideo: { dir: output, size: viewport } });
     const page = await context.newPage();
+    if (scarred) await page.addInitScript(() => {
+      // Same physical line as the 1440px drag-and-reopen evidence.
+      const width = 14.4, height = 16.35, edge = 3.625;
+      const nx = -Math.SQRT1_2, ny = Math.SQRT1_2;
+      const origin = { x: -width / 2, y: height / 2 };
+      const start = { x: origin.x + edge, y: origin.y };
+      const end = { x: origin.x, y: origin.y - edge };
+      const length = Math.hypot(edge, edge);
+      sessionStorage.setItem('wheretoken.newsprint.creases.v1', JSON.stringify({
+        width, height, memories: [{ strength: .85, band: .2, times: 1,
+          hinge: { kind: 'corner', nx, ny, depth: edge * ny, origin, start, end, length, span: length,
+            fullSpan: true, alongShift: 0 } }],
+      }));
+    });
     await setup(page);
     page.on('pageerror', error => console.error(error.message));
     if (process.env.WT_TRACE_DEBUG) page.on('console', message => console.log(message.text()));
@@ -205,7 +220,7 @@ try {
     await browser.close();
     browser = null;
   }
-  await writeFile(path.join(output, 'measurements.json'), JSON.stringify({ viewport, cold, operations, rapid }, null, 2) + '\n');
+  await writeFile(path.join(output, 'measurements.json'), JSON.stringify({ viewport, scarred, cold, operations, rapid }, null, 2) + '\n');
   console.log(output, cold.map(run => [run.nativeMs, run.readyMs]), operations.length);
 } finally {
   await browser?.close();
